@@ -1,0 +1,14 @@
+id: task-260915031110-mastra-admin-mcp
+title: ローカル管理者のMCP接続をMastraから利用する
+category: backend
+status: open
+depends_on:
+  - task-260915031110-mastra-studio-session-memory
+superseded_by: null
+review: APPROVED
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-15
+closed_at: null
+legacy_ids: []

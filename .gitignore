@@ -34,6 +34,7 @@ work/private-artifacts/
 samples
 volumes/consul-data
 volumes/sincro-cache
+volumes/llama-models
 volumes/minio
 sincromisor-server/log/*.log
 sincromisor-server/log/voice

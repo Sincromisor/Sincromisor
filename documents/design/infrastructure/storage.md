@@ -43,6 +43,19 @@ S3のバケット・認証準備は `s3-bootstrap` が担い、認識と音声�
 モデルキャッシュとは別の保存領域であり、旧initializerの `mc alias set` はこの準備に使われていなかった。
 旧initializerだけがマウントしていた `configs/config.yml` の権限変更も現行サービスには不要である。
 
+## チャット用GGUF
+
+管理者が事前取得したGemma 4 E2Bの指示調整済みテキストモデルを、Git管理外の `volumes/llama-models` に置く。
+取得元は [ggml-org/gemma-4-E2B-it-GGUF](https://huggingface.co/ggml-org/gemma-4-E2B-it-GGUF/tree/b4243c156154b6dca9324415f8c7ccc098b4aed1)、
+固定リビジョンは `b4243c156154b6dca9324415f8c7ccc098b4aed1`、ファイルは `gemma-4-E2B-it-Q4_0.gguf`、量子化はQ4_0である（2026-09-15確認）。
+画像・音声入力と投機的デコードの追加ファイルは使わない。
+
+`SINCRO_LLAMA_MODEL_DIR` を `/models` へ読み取り専用でマウントする。
+相対パスは `compose/` を基準とし、別の保存先には絶対パスを使う。
+ディレクトリ未配置時の自動作成を禁止し、ファイル未配置や破損はモデル読込みエラーで起動に失敗する。
+取得中は `.part` に保存し、成功後だけ最終ファイル名へ変更する。
+保存先を維持すれば、コンテナ再作成でも同じモデルを外部取得なしで読み込む。
+
 ## 変更時の確認
 
 - 保存領域エンドポイントや認証情報を変える場合は `examples/compose.env` と Docker Compose を同時更新する。

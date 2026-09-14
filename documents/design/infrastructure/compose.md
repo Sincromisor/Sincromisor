@@ -11,7 +11,7 @@
 - 手順の入口は[README](../../../README.md#とにかくローカル環境でサーバーを動かす)。`examples/compose.env` をリポジトリのルートの `.env` へコピーし、例示の広告IPv4を必ず編集する。
 - イメージ・依存パッケージ・モデルの取得準備と、サービス実行時の接続条件を分ける。認識サービス自身がNeMoのキャッシュを優先して読み、欠損時だけ自動取得する。保存先と初回の権限準備は[モデルキャッシュ](storage.md#モデルキャッシュ)を参照する。
 - `sincro` はDify設定不要。フロントの初回既定値は `chat` なので、Difyなしで試す場合は開始前に `sincro` へ変更する。
-- `chat` は管理下に配置したDifyとLLMを使う。Dify・LLMの配備はこのComposeに含めない。ルート `.env` の `SINCRO_PROCESSOR_DIFY_URL` / `SINCRO_PROCESSOR_DIFY_TOKEN` を `compose/text-processor.yml` が環境変数へ渡し、Pythonの `TextProcessorProcessArgument` が読む。
+- `chat` は管理下に配置したDifyとLLMを使う。Difyの配備はこのComposeに含めない。同梱LLMは追加の `chat` プロファイルで別途起動する。ルート `.env` の `SINCRO_PROCESSOR_DIFY_URL` / `SINCRO_PROCESSOR_DIFY_TOKEN` を `compose/text-processor.yml` が環境変数へ渡し、Pythonの `TextProcessorProcessArgument` が読む。
 - DifyのURLは `text-processor` コンテナから到達できるホストのLANアドレスや共有ネットワーク上のサービス名とし、APIの `/v1` までを指定する。`127.0.0.1` はコンテナ自身であり、別のDifyへは接続できない。
 
 ## プロファイルの選択
@@ -24,6 +24,21 @@
 一時的な選択変更は `COMPOSE_PROFILES=backend docker compose config --services` のように環境変数を上書きし、
 対象を確認してから起動する。`COMPOSE_PROFILES` が空でプロファイルも指定しなければ、起動対象は0件となる。
 `--profile` と環境変数の併用時の選択範囲は、起動前に `config --services` で確認する。
+
+## チャット用LLM
+
+`compose/llama-server.yml` は `chat` 専用で、`full` / `backend` / `rtc` 単独の起動範囲を増やさない。
+`full,chat` を選ぶと既存サービスにLLMを加える。現在のテキスト処理入口はDifyのままである。
+内部待受は `0.0.0.0:8080`、OpenAI互換URLは `http://llama-server:8080/v1`、
+モデル識別子は `gemma-4-E2B-it`。ホストへポートを公開しない。
+
+公式CPUイメージのダイジェストと推論設定の正本は `examples/compose.env` と `compose/llama-server.yml`。
+CPU・6スレッド・4096トークン・1スロットでGPU割当を行わない。ツール呼出しにはGGUF内のJinjaテンプレートを使い、
+`--reasoning off` で思考生成を無効にする。`SINCRO_LLAMA_*` はルート `.env` からコマンドとマウントへ渡す。
+イメージ内の `curl --fail` が `/health` を確認し、ロード中の503とロード済みの200を区別する。
+
+モデルの取得は[README](../../../README.md#gemma-4-e2bを準備する)、固定リビジョンと保存条件は
+[チャット用GGUF](storage.md#チャット用gguf)を参照する。通常起動時のモデル取得は行わない。
 
 ## コンテナの依存導入
 
