@@ -1,7 +1,7 @@
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
 import { Euler } from "three/src/math/Euler.js";
 import { Quaternion } from "three/src/math/Quaternion.js";
-import { toMinimalAvatarMotionProfile } from "../avatarProfile/avatarMotionProfile";
+import { toMinimalAvatarMotionProfile } from "../avatarProfile/avatarMotionProfileClone";
 import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfileTypes";
 import type { MinimalAvatarMotionProfile } from "../avatarProfile/minimalAvatarMotionProfile";
 import type {
