@@ -1,14 +1,14 @@
 id: task-260915031110-mastra-studio-session-memory
 title: Mastra APIとStudio Editorを同梱し会話文脈を隔離する
 category: backend
-status: open
+status: done
 depends_on:
   - task-260915031109-gemma4-llama-server
 superseded_by: null
 review: APPROVED
 reviewed_sha: null
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 2
 created_at: 2026-09-15
-closed_at: null
+closed_at: 2026-09-15
 legacy_ids: []
