@@ -3,6 +3,7 @@ import { TalkManager } from "../../features/conversation/talk/talkManager";
 import { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
 import { DialogManager } from "../../features/dialog/model/dialogManager";
 import { SincroRTCConfigManager } from "../../features/rtc/sincroRtcConfigManager";
+import type { SincroAppSettingsPersistence } from "../settings/sincroAppSettingsPersistence";
 import type { SincroAppEvent } from "./sincroAppTypes";
 import { SincroAudioInputController } from "./sincroAudioInputController";
 import { SincroCharacterGazeController } from "./sincroCharacterGazeController";
@@ -50,6 +51,11 @@ export class SincroController {
             talkManager,
             this.rtcConfigManager,
         );
+    }
+
+    /** 通常設定確定後、音声取得を開始する前に保存された診断調整を適用する。 */
+    restoreAudioTuning(persistence: SincroAppSettingsPersistence): void {
+        this.audioInputController.restoreTuning(persistence);
     }
 
     // アプリ制御の開始点。

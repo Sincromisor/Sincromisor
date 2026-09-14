@@ -325,6 +325,7 @@ export class SincroAppController {
     ): void {
         this.persistence = new SincroAppSettingsPersistence(page);
         this.applySettings({ ...defaults, ...this.persistence.load(), ...url }, "restore");
+        this.runtime.coreController.restoreAudioTuning(this.persistence);
         this.eventUnsubscribers.push(
             this.runtime.dialogManager.subscribeSettingsEdit((partial) =>
                 this.persistence?.save(partial),
