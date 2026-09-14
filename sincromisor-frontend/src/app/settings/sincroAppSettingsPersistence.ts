@@ -56,6 +56,13 @@ const documentSchema = z.object({ version: z.literal(1), settings: settingsSchem
 
 /** 小さなページ別JSONを保持する。初期化・環境通知は書き込まず、利用者操作の差分だけを保存する。 */
 export class SincroAppSettingsPersistence {
+    private static writesStopped = false;
+
+    /** 全設定初期化後は、既存の通知や古いアプリ参照からの再保存も再読込まで受け付けない。 */
+    static stopSaving(): void {
+        SincroAppSettingsPersistence.writesStopped = true;
+    }
+
     private settings: z.infer<typeof settingsSchema> = {};
     constructor(private readonly page: SincroSettingsPage) {}
 
@@ -85,6 +92,7 @@ export class SincroAppSettingsPersistence {
 
     /** 適用済みの利用者入力だけをマージする。保存できなくても現在の設定は使い続ける。 */
     save(partial: Partial<SincroAppSettingsSnapshot>): void {
+        if (SincroAppSettingsPersistence.writesStopped) return;
         const encoded = {
             ...partial,
             ...("audioInputDeviceId" in partial

@@ -1,3 +1,4 @@
+import { ResetSettingsButton } from "../../../features/settings/react/actions/resetSettingsButton";
 import { SettingsShell } from "../../../features/settings/react/shell/settingsShell";
 import { panelStyles } from "./panelStyles";
 import { createSimpleVrmControlPanelPages } from "./simpleVrmControlPanelPages";
@@ -32,6 +33,7 @@ export function SimpleVrmControlPanel({
                 initialPageId={isLookingGlassFocused ? "looking-glass" : "conversation"}
                 pages={pages}
             />
+            <ResetSettingsButton />
         </section>
     );
 }

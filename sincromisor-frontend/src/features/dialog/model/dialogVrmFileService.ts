@@ -7,14 +7,17 @@ export class DialogVrmFileService {
     private static readonly vrmFileCacheKey: string = "sincroVrmFile";
     private static readonly vrmThumbnailCacheKey: string = "sincroVrmThumbnail";
 
+    /** 初期化後の古い選択処理・非同期サムネイル生成からの再保存を、再読込まで停止する。 */
+    private static writesStopped = false;
+    private static readonly pendingWrites = new Set<Promise<void>>();
+
     isVrmFile(file: File): boolean {
         // 拡張子判定のみ。内容検証は読み込み側/VRMロード側で扱う。
         return file.name.endsWith(".vrm");
     }
 
     async saveVrmFile(file: File): Promise<void> {
-        const cache = await caches.open(DialogVrmFileService.fileCacheName);
-        await cache.put(DialogVrmFileService.vrmFileCacheKey, new Response(file));
+        await this.saveBlob(DialogVrmFileService.vrmFileCacheKey, file);
     }
 
     async loadVrmFileBlob(): Promise<Blob | undefined> {
@@ -31,8 +34,7 @@ export class DialogVrmFileService {
 
     // 変換済みサムネイル画像(Blob)を保存する。
     async saveVrmThumbnailBlob(blob: Blob): Promise<void> {
-        const cache = await caches.open(DialogVrmFileService.fileCacheName);
-        await cache.put(DialogVrmFileService.vrmThumbnailCacheKey, new Response(blob));
+        await this.saveBlob(DialogVrmFileService.vrmThumbnailCacheKey, blob);
     }
 
     // 起動時に前回使用したサムネイルを復元する。
@@ -51,5 +53,48 @@ export class DialogVrmFileService {
     async clearVrmThumbnailCache(): Promise<void> {
         const cache = await caches.open(DialogVrmFileService.fileCacheName);
         await cache.delete(DialogVrmFileService.vrmThumbnailCacheKey);
+    }
+
+    /** 開始済みの書込みを待ってから、全対象ページで保存した本体・サムネイルだけを削除する。 */
+    static async clearSavedSelection(): Promise<void> {
+        DialogVrmFileService.writesStopped = true;
+        await Promise.allSettled(DialogVrmFileService.pendingWrites);
+        const cache = await caches.open(DialogVrmFileService.fileCacheName);
+        const directories = [
+            "/",
+            "/simple-vrm/",
+            "/vrm360/",
+            "/looking-glass-vrm/",
+            "/pages/simpleVrm/",
+            "/pages/vrm360/",
+            "/pages/lookingGlassVrm/",
+        ];
+        const paths = new Set(
+            directories.flatMap((directory) => [
+                directory + DialogVrmFileService.vrmFileCacheKey,
+                directory + DialogVrmFileService.vrmThumbnailCacheKey,
+            ]),
+        );
+        for (const request of await cache.keys()) {
+            const url = new URL(request.url);
+            if (url.origin === window.location.origin && paths.has(url.pathname)) {
+                await cache.delete(request);
+            }
+        }
+    }
+
+    /** 初期化との競合を避けるため、Cache Storageへの書込みをページ全体で追跡する。 */
+    private async saveBlob(key: string, blob: Blob): Promise<void> {
+        if (DialogVrmFileService.writesStopped) return;
+        const writing = (async () => {
+            const cache = await caches.open(DialogVrmFileService.fileCacheName);
+            await cache.put(key, new Response(blob));
+        })();
+        DialogVrmFileService.pendingWrites.add(writing);
+        try {
+            await writing;
+        } finally {
+            DialogVrmFileService.pendingWrites.delete(writing);
+        }
     }
 }

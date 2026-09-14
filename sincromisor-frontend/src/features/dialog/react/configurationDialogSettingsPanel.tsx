@@ -1,3 +1,4 @@
+import { ResetSettingsButton } from "../../settings/react/actions/resetSettingsButton";
 import { SettingsShell } from "../../settings/react/shell/settingsShell";
 import "./configurationDialogSettings.css";
 import { ConfigurationDialogSettingsFooter } from "./configurationDialogSettingsFooter";
@@ -59,6 +60,7 @@ export function ConfigurationDialogSettingsPanel() {
                     />
                 }
             />
+            <ResetSettingsButton />
         </fieldset>
     );
 }
