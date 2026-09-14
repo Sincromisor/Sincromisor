@@ -11,11 +11,8 @@ import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/
 import type { SincroGestureMotionSnapshot } from "../../features/gaze/gestureTracking/sincroGestureMotionSnapshot";
 import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
-import { createCanonicalUpperBodyState } from "../canonical/canonicalArmFeatureExtractor";
-import { estimateCanonicalTorsoFrame } from "../canonical/canonicalTorsoFrameEstimator";
-import { MotionIntentEstimator } from "../motionIntent/motionIntentEstimator";
 import { createPoseReliabilityMap } from "../reliability/poseReliabilityEstimator";
-import { TemporalStateEstimator } from "../temporal/temporalStateEstimator";
+import { computeSincroCanonicalMotion, SincroMotionComputation } from "./sincroMotionComputation";
 import {
     normalizeObserveOnlyVideoSize,
     resolveObserveOnlyTiming,
@@ -34,7 +31,7 @@ import {
     type SincroMotionPipelineState,
 } from "./sincroMotionPipelineState";
 
-// reason: structure-threshold-exception 既存の observe-only pipeline facade が行数上限を超えているため。本タスクでは既存境界への Gesture optional pass 接続だけに留める。
+// reason: structure-threshold-exception 観測の蓄積・公開要約と既存の関数窓口を同じ場所に保つ。状態付き計算はsincroMotionComputationへ分離する。
 
 export type {
     SincroMotionComposerDryRunSummary,
@@ -66,8 +63,7 @@ type PoseReliabilityPrevious = NonNullable<
  */
 export class SincroMotionObserveOnlyPipeline {
     private state = createDefaultSincroMotionPipelineState();
-    private readonly temporalEstimator = new TemporalStateEstimator();
-    private readonly intentEstimator = new MotionIntentEstimator();
+    private readonly computation = new SincroMotionComputation();
     private previousPose: PoseReliabilityPrevious | undefined;
     private hasFace = false;
     private hasPose = false;
@@ -105,8 +101,7 @@ export class SincroMotionObserveOnlyPipeline {
         this.hasFace = false;
         this.hasPose = false;
         this.gestureSummarySource = undefined;
-        this.temporalEstimator.reset();
-        this.intentEstimator.reset();
+        this.computation.reset();
     }
 
     /**
@@ -228,6 +223,7 @@ export class SincroMotionObserveOnlyPipeline {
             : this.createResult();
     }
 
+    /** 観測ごとの信頼性と共通表現を更新し、Pose到着時だけ共通推定の状態を進める。 */
     private updateDownstream(input: {
         mediaTimeMs: number;
         video: { width: number; height: number };
@@ -244,15 +240,9 @@ export class SincroMotionObserveOnlyPipeline {
             video: input.video,
             cameraQuality: input.cameraQuality,
         });
-        const canonical = createCanonicalUpperBodyState({
+        const canonical = computeSincroCanonicalMotion({
             pose: this.state.pose,
             face: this.hasFace ? this.state.face : undefined,
-            torso: estimateCanonicalTorsoFrame({
-                pose: this.state.pose,
-                face: this.hasFace ? this.state.face : undefined,
-                previous: this.state.canonical,
-                mediaTimeMs: input.mediaTimeMs,
-            }),
             previous: this.state.canonical,
             mediaTimeMs: input.mediaTimeMs,
             reliability,
@@ -267,13 +257,8 @@ export class SincroMotionObserveOnlyPipeline {
             return;
         }
 
-        const temporal = this.temporalEstimator.update({
+        const { temporal, intent } = this.computation.update({
             canonical,
-            reliability,
-            mediaTimeMs: input.mediaTimeMs,
-        });
-        const intent = this.intentEstimator.update({
-            temporal,
             reliability,
             hand: this.state.hand,
             gesture: this.state.gesture,

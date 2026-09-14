@@ -56,6 +56,8 @@
 - `src/character/temporal`
     - 標準化した / 信頼性の後段で共有する `TemporalUpperBodyState` v1 契約を置く。
     - 保存対象は時系列状態、標準化した腕スカラー、身体のローカル座標系の手首 / 肘タプル、速度、復帰中混合に限定し、VRM ボーン回転、クォータニオン、IK ソルバー出力は含めない。
+- `src/character/runtime/sincroMotionComputation.ts`
+    - 正規化済みPose・Faceと信頼性から体幹座標系と共通表現を生成し、時系列→意図の順に計算する。観測の蓄積と公開要約は呼び出し元が所有する。各入力系列は独立した推定状態を持ち、停止・切替時に初期化する。再生で保存値を採用できるよう各段階も個別に呼べる。
 - `src/character/runtime/sincroMotionObserveOnlyPipeline.ts`
     - 本番 `sincro` 実行時の Face / Pose コールバックから任意 `CameraQualityScore`、
       `ReliabilityMap`、`CanonicalUpperBodyState`、`TemporalUpperBodyState`、`MotionIntentState` を計算し、

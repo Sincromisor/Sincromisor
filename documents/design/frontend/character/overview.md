@@ -20,6 +20,8 @@
 
 - `src/character/scene`
     - VRM シーン、カメラ、照明を置く。ページ起動処理は `src/app/bootstrap` が所有する。
+- `src/character/runtime/sincroMotionComputation.ts`
+    - 共通表現生成と時系列・意図推定の共通手順を持つ。本番の観測蓄積と公開要約は `SincroMotionObserveOnlyPipeline` に残し、Pose以外の観測更新では状態付き推定を進めない。
 - `src/character/behavior`
     - 会話、VAD、視線、表情、視線、まばたきなどの振る舞い状態と制御処理を置く。
 - `src/character/retargeting`
