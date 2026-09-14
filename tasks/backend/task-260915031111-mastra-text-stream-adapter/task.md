@@ -7,12 +7,12 @@ DifyのSSEを文単位に分割し正常終端だけ確定する現行動作を�
 
 ## 完了条件
 
-- [ ] Mastra APIを非同期で呼ぶ処理担当を直接実行し、既存の `TextProcessorResult` を配信できる。
-- [ ] 句読点までの本文と終端記号のない末尾を重複なく渡し、分割された `^N` を既存の表情処理で扱える。
-- [ ] ツール・推論イベントを読み上げず、途中ステップを会話全体の完了と誤認しない。
-- [ ] 正常終端と成功理由を確認した場合だけ `finalize()` する。HTTP失敗、不正イベント、異常終端、取消、終端前EOFで成功結果を返さない。
-- [ ] WebSocket切断・送信失敗でHTTP読取りが取り消され、Mastraからllama-serverまで生成停止が伝わる。
-- [ ] `session_id` に対応するthreadへ新しい発話だけを送り、表示用履歴をMemoryへ重複投入しない。
+- [x] Mastra APIを非同期で呼ぶ処理担当を直接実行し、既存の `TextProcessorResult` を配信できる。
+- [x] 句読点までの本文と終端記号のない末尾を重複なく渡し、分割された `^N` を既存の表情処理で扱える。
+- [x] ツール・推論イベントを読み上げず、途中ステップを会話全体の完了と誤認しない。
+- [x] 正常終端と成功理由を確認した場合だけ `finalize()` する。HTTP失敗、不正イベント、異常終端、取消、終端前EOFで成功結果を返さない。
+- [x] WebSocket切断・送信失敗でHTTP読取りが取り消され、Mastraからllama-serverまで生成停止が伝わる。
+- [x] `session_id` に対応するthreadへ新しい発話だけを送り、表示用履歴をMemoryへ重複投入しない。
 
 ## 設計判断
 
@@ -45,3 +45,19 @@ DifyのSSEを文単位に分割し正常終端だけ確定する現行動作を�
 - [音声パイプライン](../../../documents/design/contracts/audio-pipeline-websocket.md)
 - [RTC契約](../../../documents/design/contracts/frontend-rtc.md)
 - [Mastraストリームイベント](https://mastra.ai/reference/streaming/ChunkType)（2026-09-15確認。実HTTP形式は前提タスクの採用版に従う）
+
+## 実装と確認結果
+
+- `mastra_client.py` で実SSE形式をPydantic検証し、本文と正常な最終理由だけを取り出す。検証例外には入力値を表示しない。`mastra_worker.py` は既存結果モデルとWebSocketの取消構造を利用する。入口はDifyのままとした。
+- TextProcessorのテスト31件がPASS。実イベント例の再生、分割表情、10文超と末尾、ツール・推論除外、異常理由、不正JSON・欠損、EOF、HTTP失敗、時間切れ、送受信失敗と親取消を確認した。MCP相当の待機通知が届き続ける場合に、生成全体を30秒で打ち切らない構造も確認した。
+- 実Mastra・Gemmaで、表示用履歴を渡さず2ターン目に「青い桃891」を復元し、本文増分と最終本文の一致を確認した。切断と送信失敗の両方で、直前のllamaスロットが生成中、取消後は停止となった。確認スクリプトは [mastra_smoke.py](acceptance/mastra_smoke.py)。
+- 対象のRuff・整形・tyを実施。共通処理担当の既存PascalCaseモジュール名はRuffのN999に該当するため、対象確認ではこの既存命名の指摘だけを除外した。新規モジュールは抑制なしでPASS。
+- コメント点検: 新規の境界モデル・HTTP所有者・SSE終端判定・本文分割は説明を追加。共通処理担当のDify固有の説明を一般化し、既存の取消・終了待機・結果モデルの説明は保持した。
+- `npm run gate` は対象外のフロントエンド既存警告（18 warnings / 6 infos）でlint段階が失敗した。フロントエンド差分はなく、今回のPython対象確認はPASS。
+- 実MCPの全経路は後続タスクの範囲。無受信30秒を維持し、MCP待ち上限をそれより短くする必要を設計に明記した。
+
+実接続確認の実行例（指定ファイルの管理者トークンを読み、出力しない）:
+
+```sh
+uv run --group dev --group text-processor python tasks/backend/task-260915031111-mastra-text-stream-adapter/acceptance/mastra_smoke.py --env-file /path/to/private.env
+```
