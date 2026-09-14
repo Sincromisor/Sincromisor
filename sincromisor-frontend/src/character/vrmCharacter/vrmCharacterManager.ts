@@ -14,10 +14,8 @@ import { Vector3 } from "three/src/math/Vector3.js";
 import type { Scene } from "three/src/scenes/Scene.js";
 import { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
 import { frontendLogger } from "../../shared/logging/appLogger";
-import {
-    type AvatarMotionProfile,
-    toMinimalAvatarMotionProfile,
-} from "../avatarProfile/avatarMotionProfile";
+import { toMinimalAvatarMotionProfile } from "../avatarProfile/avatarMotionProfile";
+import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfileTypes";
 import {
     type CharacterBehaviorSnapshot,
     CharacterBehaviorState,

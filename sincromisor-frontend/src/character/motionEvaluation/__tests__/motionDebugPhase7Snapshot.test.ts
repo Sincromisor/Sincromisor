@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
     AVATAR_MOTION_PROFILE_SCHEMA_VERSION,
     type AvatarMotionProfile,
-} from "../../avatarProfile/avatarMotionProfile";
+} from "../../avatarProfile/avatarMotionProfileTypes";
 import { SINCRO_INITIAL_CALIBRATION_SCHEMA_VERSION } from "../../calibration/initialSincroCalibration";
 import { SINCRO_ONLINE_CALIBRATION_SCHEMA_VERSION } from "../../calibration/onlineSincroCalibrationTypes";
 import type { CanonicalCalibrationSnapshot } from "../../canonical/canonicalUpperBodyState";

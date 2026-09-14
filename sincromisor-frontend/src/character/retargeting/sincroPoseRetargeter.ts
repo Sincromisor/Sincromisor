@@ -1,11 +1,9 @@
 import type { VRM } from "@pixiv/three-vrm";
 import { MathUtils } from "three/src/math/MathUtils.js";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
-import {
-    type AvatarMotionProfile,
-    cloneAvatarMotionProfile,
-    createAvatarMotionProfile,
-} from "../avatarProfile/avatarMotionProfile";
+import { createAvatarMotionProfile } from "../avatarProfile/avatarMotionProfile";
+import { cloneAvatarMotionProfile } from "../avatarProfile/avatarMotionProfileClone";
+import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfileTypes";
 import type { MinimalAvatarMotionProfile } from "../avatarProfile/minimalAvatarMotionProfile";
 import type { SincroArmIkSolveResult } from "../ik/sincroArmIkSolver";
 import { SincroArmIkSolver } from "../ik/sincroArmIkSolver";

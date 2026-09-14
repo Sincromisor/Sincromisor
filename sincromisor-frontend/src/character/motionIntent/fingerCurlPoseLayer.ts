@@ -4,7 +4,7 @@
  */
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
 import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
-import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfile";
+import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfileTypes";
 import type { VrmNormalizedLocalPose, VrmPoseLayer } from "../vrmPose/vrmPoseTypes";
 import {
     addGroupPose,

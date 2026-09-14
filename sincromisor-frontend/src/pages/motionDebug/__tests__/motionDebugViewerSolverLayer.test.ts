@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AVATAR_MOTION_PROFILE_SCHEMA_VERSION } from "../../../character/avatarProfile/avatarMotionProfile";
+import { AVATAR_MOTION_PROFILE_SCHEMA_VERSION } from "../../../character/avatarProfile/avatarMotionProfileTypes";
 import { MOTION_DEBUG_PHASE7_SCHEMA_VERSION } from "../../../character/motionEvaluation/motionDebugPhase7Snapshot";
 import { createDefaultMotionIntentState } from "../../../character/motionIntent/motionIntentState";
 import { createDefaultSnapshot } from "../../../features/debug/model/debugConsoleSnapshot";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AvatarMotionProfile } from "../../avatarProfile/avatarMotionProfile";
+import type { AvatarMotionProfile } from "../../avatarProfile/avatarMotionProfileTypes";
 import { type ArmMotionIntent, createDefaultMotionIntentState } from "../motionIntentState";
 import { createSemanticMotionPoseLayer } from "../semanticMotionPoseLayer";
 

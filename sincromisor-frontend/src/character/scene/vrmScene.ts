@@ -4,7 +4,7 @@ import { Vector3 } from "three/src/math/Vector3.js";
 import { WebGLRenderer } from "three/src/renderers/WebGLRenderer.js";
 import { Scene } from "three/src/scenes/Scene.js";
 import { frontendLogger } from "../../shared/logging/appLogger";
-import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfile";
+import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfileTypes";
 import type { SincroPoseRetargetConfig } from "../retargeting/sincroPoseRetargeter";
 import type { CharacterMotionTuning } from "../vrmCharacter/characterMotionConfig";
 import { VRMCharacterManager } from "../vrmCharacter/vrmCharacterManager";

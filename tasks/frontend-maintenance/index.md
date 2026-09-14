@@ -2,9 +2,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 17 件）
+## タスク一覧（自動生成 / 全 18 件）
 
-### done（完了） — 17 件
+### done（完了） — 18 件
 
 | タスク                                                                                                                     | タイトル                                         | 判定    | 依存                                                                                                                                                          |
 | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -25,5 +25,6 @@
 | [task-260914172950-remove-unused-torso-writer](./task-260914172950-remove-unused-torso-writer/task.md)                     | 未使用の上半身直接制御を削除して腰の安定化を残す | ✅ PASS | —                                                                                                                                                             |
 | [task-260914172950-share-vrm-frame-render](./task-260914172950-share-vrm-frame-render/task.md)                             | 通常・XR・単発描画のフレーム処理を集約する       | ✅ PASS | —                                                                                                                                                             |
 | [task-260914172952-share-skipped-gesture-notification](./task-260914172952-share-skipped-gesture-notification/task.md)     | 追跡のジェスチャー省略通知を共通化する           | ✅ PASS | —                                                                                                                                                             |
+| [task-260914172952-split-avatar-profile-schema](./task-260914172952-split-avatar-profile-schema/task.md)                   | アバタープロファイルの保存データ検証を分離する   | ✅ PASS | —                                                                                                                                                             |
 
 <!-- AUTOGEN:tasks END -->

@@ -7,7 +7,7 @@ import { MathUtils } from "three/src/math/MathUtils.js";
 import { Quaternion } from "three/src/math/Quaternion.js";
 import { Vector3 } from "three/src/math/Vector3.js";
 import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
-import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfile";
+import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfileTypes";
 import type { VrmNormalizedLocalPose } from "../vrmPose/vrmPoseTypes";
 import type { FingerCurlGroupState, FingerCurlPoseLayerInput } from "./fingerCurlPoseLayer";
 

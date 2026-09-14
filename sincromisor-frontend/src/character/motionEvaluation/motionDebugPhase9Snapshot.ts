@@ -5,7 +5,7 @@
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
 import { z } from "zod";
 import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
-import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfile";
+import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfileTypes";
 import {
     createFingerCurlPoseLayers,
     type FingerCurlPoseDebugSnapshot,

@@ -1,7 +1,7 @@
 import {
     AVATAR_MOTION_PROFILE_SCHEMA_VERSION,
     type AvatarMotionProfile,
-} from "../../../character/avatarProfile/avatarMotionProfile";
+} from "../../../character/avatarProfile/avatarMotionProfileTypes";
 import {
     CANONICAL_UPPER_BODY_SCHEMA_VERSION,
     type CanonicalArmState,
