@@ -149,3 +149,7 @@
 - `documents/design/frontend/setting-and-debug-ui/README.md`
 - `documents/design/archive/legacy-flat/frontend_ui.md`
 - `documents/design/archive/legacy-flat/frontend_migration_react.md`
+
+## 通常設定の保存と起動順序
+
+機器・ページの利用可否確定後、`restoreSettings` がページ既定値、保存した利用者設定、有効なURL設定を一括適用する。完了してから設定購読・シーン接続と手動・OBS開始へ進む。利用者操作の保存購読は復元後に接続し、有効アプリの差し替えで解除する。保存形式と対象は[設定UI設計](setting-and-debug-ui/settings-design.md#保存と復元)を参照する。

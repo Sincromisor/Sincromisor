@@ -4,6 +4,7 @@ import { VRM360Scene } from "./vrm360Scene";
 // VRM1.0 + 360動画背景ページの initializer。
 // 基本フローは SincroVRMInitializer を再利用し、360 向け差分だけを override する。
 export class SincroVRM360Initializer extends SincroVRMInitializer {
+    protected override readonly settingsPage = "vrm360";
     // 基底の機器利用可否確認後、購読・OBS開始より前に適用するページ既定値。
     protected override readonly initialSettings = {
         enableCharacter: true,

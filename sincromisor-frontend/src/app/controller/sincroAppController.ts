@@ -23,6 +23,10 @@ import { SincroAppEventHub } from "../events/sincroAppEventHub";
 import { SincroAppLookingGlassStateTracker } from "../events/sincroAppLookingGlassStateTracker";
 import { applySincroAppControllerSettings } from "../settings/sincroAppSettingsApplyFlow";
 import { createDefaultSincroAppStartupSettingsCapabilities } from "../settings/sincroAppSettingsDefaults";
+import {
+    SincroAppSettingsPersistence,
+    type SincroSettingsPage,
+} from "../settings/sincroAppSettingsPersistence";
 import { buildSincroAppSettingsRelatedSnapshotPayload } from "../settings/sincroAppSettingsRelatedSnapshotBuilder";
 import { buildSincroAppSettingsSnapshot } from "../settings/sincroAppSettingsSnapshotBuilder";
 import { SincroAppSettingsStore } from "../settings/sincroAppSettingsStore";
@@ -67,6 +71,7 @@ export type {
 
 /** 起動処理とReactの共通窓口。下位サービスを束ね、設定購読と起動・接続イベントを公開する。 */
 export class SincroAppController {
+    // reason: structure-threshold-exception 既存の公開窓口と購読の所有権を同じクラスで保つ。保存の検証・I/Oは設定層へ分離する。
     private static readonly activeRegistry = new SincroAppActiveControllerRegistry();
 
     private readonly runtime: SincroAppControllerRuntimeBundle;
@@ -84,6 +89,7 @@ export class SincroAppController {
     private startupAppliedSettings: SincroAppStartupAppliedSettings | undefined;
     private startupSettingsCapabilities: SincroAppStartupSettingsCapabilities =
         createDefaultSincroAppStartupSettingsCapabilities();
+    private persistence?: SincroAppSettingsPersistence;
     private readonly lookingGlassTracker = new SincroAppLookingGlassStateTracker();
     /** 起動前ダイアログの操作とVRM選択を公開する。 */
     get dialog(): SincroAppDialogBridge {
@@ -311,11 +317,30 @@ export class SincroAppController {
         });
     }
 
+    /** 利用可否確定後、ページ既定値・保存値・URL指定の順で復元し、その後の利用者操作を保存する。 */
+    restoreSettings(
+        page: SincroSettingsPage,
+        defaults: Partial<SincroAppSettingsSnapshot>,
+        url: Partial<SincroAppSettingsSnapshot>,
+    ): void {
+        this.persistence = new SincroAppSettingsPersistence(page);
+        this.applySettings({ ...defaults, ...this.persistence.load(), ...url }, "restore");
+        this.eventUnsubscribers.push(
+            this.runtime.dialogManager.subscribeSettingsEdit((partial) =>
+                this.persistence?.save(partial),
+            ),
+        );
+    }
+
     /** 設定を正本へ一括適用し、完了後の値と操作可否を設定購読へ同時に公開する。 */
-    applySettings(partial: Partial<SincroAppSettingsSnapshot>): void {
+    applySettings(
+        partial: Partial<SincroAppSettingsSnapshot>,
+        source: "user" | "restore" = "user",
+    ): void {
         applySincroAppControllerSettings({
             dialogManager: this.runtime.dialogManager,
             partial,
+            source,
             settingsStore: this.settingsStore,
             buildStartupSettingsStatus: (settings) =>
                 this.buildStartupSettingsStatusFromSnapshot(settings),
@@ -326,6 +351,14 @@ export class SincroAppController {
                 this.suppressSettingsSnapshotEvent = value;
             },
         });
+        if (source === "user") {
+            // 通常設定はDialogManagerが適用済み入力を通知する。別所有のLooking Glass値だけをここで保存する。
+            const current = this.getSettingsSnapshot();
+            const lookingGlass = Object.fromEntries(
+                Object.entries(current).filter(([key]) => key.startsWith("lg") && key in partial),
+            );
+            if (Object.keys(lookingGlass).length > 0) this.persistence?.save(lookingGlass);
+        }
     }
 
     // lifecycle event は startup settings status と一緒に流し、UI 側の再起動案内判定を安定させる。

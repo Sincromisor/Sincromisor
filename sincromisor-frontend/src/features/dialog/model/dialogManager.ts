@@ -26,6 +26,10 @@ export class DialogManager {
     private static instance: DialogManager;
     private readonly stateStore = new DialogStateStore();
     private readonly eventHub = new DialogEventHub();
+    /** 初期化・利用不可通知と区別し、利用者が指定した適用済み項目を保存側へ渡す。 */
+    private readonly settingsEditListeners = new Set<
+        (partial: Partial<DialogBackedSincroAppSettings>) => void
+    >();
     private readonly settingsPolicy = new DialogSettingsPolicy();
     private readonly settingsChangeBatcher = new DialogSettingsChangeBatcher(() => {
         this.eventHub.emitSettingsChanged();
@@ -114,7 +118,10 @@ export class DialogManager {
      * 操作可能な設定をまとめて反映する。空の題名を補正し、機器選択の表示状態を更新してから一度通知する。
      * 数値入力の正規化と会話モードの動作反映はアプリの設定適用処理が担う。
      */
-    updateSettings(partial: Partial<DialogBackedSincroAppSettings>): void {
+    updateSettings(
+        partial: Partial<DialogBackedSincroAppSettings>,
+        source: "user" | "restore" = "user",
+    ): void {
         // 視線を先に確定し、更新後の依存条件で自動ミュートを受け付ける。
         // 入力の列挙順や直前の操作可否に結果を依存させない。
         const { enableCharacterGaze, ...remaining } = partial;
@@ -138,6 +145,23 @@ export class DialogManager {
             this.mediaDeviceUiController.refreshDerivedUiState();
         }
         this.settingsChangeBatcher.emit();
+        if (source === "user") {
+            const current = this.getSettings();
+            const edited = Object.fromEntries(
+                Object.entries(current).filter(([key]) => key in applied),
+            );
+            // 視線オフに付随する自動ミュート解除も、同じ利用者操作として保存する。
+            if (applied.enableCharacterGaze === false) edited.enableAutoMute = false;
+            for (const listener of this.settingsEditListeners) listener(edited);
+        }
+    }
+
+    /** 利用者操作だけを購読する。同値の明示入力も通知し、復元・利用不可による更新は除外する。 */
+    subscribeSettingsEdit(
+        listener: (partial: Partial<DialogBackedSincroAppSettings>) => void,
+    ): () => void {
+        this.settingsEditListeners.add(listener);
+        return () => this.settingsEditListeners.delete(listener);
     }
 
     /** 設定反映後に通知する。返された関数で購読を解除する。 */
