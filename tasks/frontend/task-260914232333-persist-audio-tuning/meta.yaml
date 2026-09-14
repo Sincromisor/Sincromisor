@@ -1,0 +1,14 @@
+id: task-260914232333-persist-audio-tuning
+title: 音声デバッグ調整を保存して再読込後に復元する
+category: frontend
+status: open
+depends_on:
+  - task-260914232327-reset-webui-settings
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-14
+closed_at: null
+legacy_ids: []

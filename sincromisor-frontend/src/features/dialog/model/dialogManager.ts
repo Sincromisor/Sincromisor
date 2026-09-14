@@ -115,7 +115,12 @@ export class DialogManager {
      * 数値入力の正規化と会話モードの動作反映はアプリの設定適用処理が担う。
      */
     updateSettings(partial: Partial<DialogBackedSincroAppSettings>): void {
-        const applied = this.stateStore.updateSettings(partial);
+        // 視線を先に確定し、更新後の依存条件で自動ミュートを受け付ける。
+        // 入力の列挙順や直前の操作可否に結果を依存させない。
+        const { enableCharacterGaze, ...remaining } = partial;
+        const gazeApplied = this.stateStore.updateSettings({ enableCharacterGaze });
+        this.settingsPolicy.applyAutoMuteAvailability(this.stateStore);
+        const applied = { ...gazeApplied, ...this.stateStore.updateSettings(remaining) };
         if (Object.keys(applied).length === 0) {
             return;
         }
@@ -172,7 +177,6 @@ export class DialogManager {
         this.settingsChangeBatcher.run(() => {
             this.updateEnableCharacterStatus(available);
             this.updateEnableCharacterGazeStatus(available);
-            this.updateAutoMuteStatus();
             // disabled/checked 状態の変化も React 側へ同期する。
             this.settingsChangeBatcher.emit();
         });
@@ -182,11 +186,7 @@ export class DialogManager {
     updateUserMediaAvailabilityStatus(available: boolean): void {
         this.mediaDeviceUiController.setUserMediaAvailability(available);
         this.settingsChangeBatcher.run(() => {
-            if (!available) {
-                this.updateEnableCharacterGazeStatus(false);
-                this.updateAutoMuteStatus();
-            }
-            this.mediaDeviceUiController.refreshDerivedUiState();
+            this.updateEnableCharacterGazeStatus(!this.stateStore.isDisabled("enableCharacter"));
             // getUserMedia 可否に連動した設定項目の disabled 変化を通知する。
             this.settingsChangeBatcher.emit();
         });
@@ -196,14 +196,14 @@ export class DialogManager {
         this.settingsPolicy.applyCharacterAvailability(this.stateStore, available);
     }
 
-    updateEnableCharacterGazeStatus(available: boolean): void {
-        this.settingsPolicy.applyCharacterGazeAvailability(this.stateStore, available);
-        this.mediaDeviceUiController.refreshDerivedUiState();
-        this.settingsChangeBatcher.emit();
-    }
-
-    updateAutoMuteStatus(): void {
+    /** ページと端末の両方が利用可能な場合だけ視線を操作可能にし、依存値確定後に通知する。 */
+    private updateEnableCharacterGazeStatus(available: boolean): void {
+        this.settingsPolicy.applyCharacterGazeAvailability(
+            this.stateStore,
+            available && this.mediaDeviceUiController.buildUiContext().isUserMediaAvailable,
+        );
         this.settingsPolicy.applyAutoMuteAvailability(this.stateStore);
+        this.mediaDeviceUiController.refreshDerivedUiState();
         this.settingsChangeBatcher.emit();
     }
 

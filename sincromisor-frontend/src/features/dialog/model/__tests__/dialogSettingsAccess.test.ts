@@ -110,3 +110,52 @@ it("起動前後で設定を共有し、操作制限・補正・機器表示と�
     expect(buildSincroAppSettingsSnapshot(dialog).lgNumViews).toBe(32);
     expect(snapshots).toHaveLength(count);
 });
+
+it("視線と自動ミュートを順序に依存せず確定し、通知時にも矛盾を残さない", () => {
+    vi.stubGlobal("window", new EventTarget());
+    const dialog = DialogManager.getManager();
+    dialog.updateUserMediaAvailabilityStatus(true);
+    dialog.updateCharacterStatus(true);
+    dialog.updateSettings({ enableCharacterGaze: false, videoInputDeviceId: "missing" });
+    const read = () => ({
+        gaze: dialog.getSetting("enableCharacterGaze"),
+        mute: dialog.getSetting("enableAutoMute"),
+        disabled: dialog.settingsUiState().enableAutoMuteDisabled,
+        hint: dialog.settingsUiHints().enableAutoMuteReason,
+    });
+    const notifications = vi.fn(read);
+    const unsubscribe = dialog.subscribeSettingsChange(notifications);
+    const stopUi = dialog.subscribeDialogUiState(() => {
+        const state = read();
+        expect(state.disabled).toBe(!state.gaze);
+        if (!state.gaze) expect(state.mute).toBe(false);
+    });
+    for (const patch of [
+        { enableCharacterGaze: true, enableAutoMute: true },
+        { enableAutoMute: true, enableCharacterGaze: true },
+    ]) {
+        notifications.mockClear();
+        dialog.updateSettings(patch);
+        expect(notifications).toHaveBeenCalledOnce();
+        expect(read()).toEqual({ gaze: true, mute: true, disabled: false, hint: undefined });
+        dialog.updateSettings({ enableCharacterGaze: false, enableAutoMute: true });
+        expect(read()).toMatchObject({ gaze: false, mute: false, disabled: true });
+        expect(read().hint).toContain("Gaze");
+    }
+    dialog.updateSettings({ enableCharacterGaze: true });
+    expect(read()).toMatchObject({ gaze: true, mute: false, disabled: false });
+    for (const unavailable of ["media", "page"]) {
+        if (unavailable === "media") {
+            dialog.updateUserMediaAvailabilityStatus(false);
+            dialog.updateCharacterStatus(true);
+        } else {
+            dialog.updateCharacterStatus(false);
+            dialog.updateUserMediaAvailabilityStatus(true);
+        }
+        dialog.updateSettings({ enableAutoMute: true, enableCharacterGaze: true });
+        expect(read()).toMatchObject({ gaze: false, mute: false, disabled: true });
+        expect(dialog.settingsUiState().enableCharacterGazeDisabled).toBe(true);
+    }
+    unsubscribe();
+    stopUi();
+});
