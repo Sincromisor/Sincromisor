@@ -1,3 +1,6 @@
+// reason: structure-threshold-exception 左右割当は分離済み。推論・正規化・特徴量の整理は task-260914172953-split-hand-normalization で扱う。
+/** 推論結果の座標復元と特徴量を作る。左右の対応付けはsincroHandAssignmentが担当する。 */
+
 import type { Category, HandLandmarkerResult, NormalizedLandmark } from "@mediapipe/tasks-vision";
 import { mapCropPointToFullFrame } from "../trackingRuntime/roiTracking/roiCoordinateMapping";
 import type {
@@ -5,24 +8,22 @@ import type {
     SincroRoiPoint,
     SincroRoiRect,
 } from "../trackingRuntime/roiTracking/roiTrackingTypes";
+import { handWarningsFromRoi, type SincroHandObservation } from "./sincroHandAssignmentSnapshot";
 import {
-    cloneSincroHandSideSnapshot,
-    createLostHandSideSnapshot,
     type SincroHandFeatureSnapshot,
-    type SincroHandMotionSnapshot,
     type SincroHandPoint2,
-    type SincroHandSideSnapshot,
-    type SincroHandSource,
     type SincroHandTuple3,
     type SincroHandWarningCode,
     uniqueHandWarnings,
 } from "./sincroHandMotionSnapshot";
 
+/** 手推論の実行と解放に必要なMediaPipeの窓口。モデルの生成・破棄は追跡制御が所有する。 */
 export type SincroHandLandmarkerLike = {
     detectForVideo(videoFrame: TexImageSource, timestampMs: number): HandLandmarkerResult;
     close(): void;
 };
 
+/** 未加工の推論結果と性能計測値。所要時間・終了時刻はperformance.now基準のミリ秒。 */
 export type SincroHandLandmarkerInference = {
     result: HandLandmarkerResult;
     inferenceTimeMs: number;
@@ -33,27 +34,6 @@ type FullFrameHandLandmark = {
     x: number;
     y: number;
     z: number;
-};
-
-export type SincroHandObservation = {
-    handIndex: number;
-    wrist: SincroHandPoint2;
-    confidence: number;
-    handednessLabel?: string;
-    handednessScore: number;
-    features: SincroHandFeatureSnapshot;
-    warnings: SincroHandWarningCode[];
-};
-
-export type SincroHandPoseWrist = {
-    side: "left" | "right";
-    point?: SincroHandPoint2;
-    confidence: number;
-};
-
-export type SincroHandAssignmentResult = {
-    leftHand: SincroHandSideSnapshot;
-    rightHand: SincroHandSideSnapshot;
 };
 
 const HAND_LANDMARK = {
@@ -80,9 +60,7 @@ const HAND_LANDMARK = {
     littleTip: 20,
 };
 
-const HAND_ASSIGNMENT_MAX_DISTANCE = 0.18;
-const HAND_TIE_EPSILON = 1e-6;
-
+/** 指定した動画時刻で推論し、実時間の計測値を添える。モデル未読込と推論失敗は呼び出し元へ伝播する。 */
 export function runSincroHandLandmarker(input: {
     handLandmarker: SincroHandLandmarkerLike | undefined;
     videoFrame: TexImageSource;
@@ -101,6 +79,7 @@ export function runSincroHandLandmarker(input: {
     };
 }
 
+/** 推論終了時刻の差から頻度を算出する。初回は0、同時刻は1ミリ秒として扱う。 */
 export function calculateHandInferenceFps(input: {
     lastInferenceEndedAtMs: number | undefined;
     inferenceEndedAtMs: number;
@@ -110,6 +89,7 @@ export function calculateHandInferenceFps(input: {
         : 1000 / Math.max(1, input.inferenceEndedAtMs - input.lastInferenceEndedAtMs);
 }
 
+/** Pose手首由来で信頼度と面積を持つROIだけを切り抜き推論に使う。 */
 export function handRoiIsUsable(roi: SincroRoiObservation): boolean {
     return (
         roi.source === "pose-wrist" &&
@@ -119,6 +99,7 @@ export function handRoiIsUsable(roi: SincroRoiObservation): boolean {
     );
 }
 
+/** 切り抜き内の座標を全画面へ復元する。点数不足は拒否し、非有限値はゼロと欠損警告へ置き換える。 */
 export function restoreHandLandmarksToFullFrame(input: {
     landmarks: readonly NormalizedLandmark[];
     roi?: SincroRoiRect;
@@ -147,6 +128,7 @@ export function restoreHandLandmarksToFullFrame(input: {
     return { landmarks: restored, warnings };
 }
 
+/** ROI座標を全画面へ戻して観測値を作る。左右はまだ割り当てず、後段でPose手首と照合する。 */
 export function normalizeSincroHandLandmarkerResult(input: {
     result: HandLandmarkerResult;
     roi?: SincroRoiObservation;
@@ -188,229 +170,7 @@ export function normalizeSincroHandLandmarkerResult(input: {
     return observations;
 }
 
-export function assignSincroHandObservationsToPose(input: {
-    observations: readonly SincroHandObservation[];
-    leftWrist: SincroHandPoseWrist;
-    rightWrist: SincroHandPoseWrist;
-    source: SincroHandSource;
-    roi?: SincroRoiObservation;
-    previous?: SincroHandMotionSnapshot;
-}): SincroHandAssignmentResult {
-    if (input.source === "full-frame-fallback") {
-        return assignFullFrameObservationsToPose(input);
-    }
-    const assigned = new Map<number, "left" | "right">();
-    const leftHand = selectObservationForSide({
-        side: "left",
-        wrist: input.leftWrist,
-        observations: input.observations,
-        assigned,
-        source: input.source,
-        roi: input.roi,
-        previous: input.previous,
-    });
-    const rightHand = selectObservationForSide({
-        side: "right",
-        wrist: input.rightWrist,
-        observations: input.observations,
-        assigned,
-        source: input.source,
-        roi: input.roi,
-        previous: input.previous,
-    });
-    return { leftHand, rightHand };
-}
-
-function assignFullFrameObservationsToPose(input: {
-    observations: readonly SincroHandObservation[];
-    leftWrist: SincroHandPoseWrist;
-    rightWrist: SincroHandPoseWrist;
-    source: SincroHandSource;
-    roi?: SincroRoiObservation;
-    previous?: SincroHandMotionSnapshot;
-}): SincroHandAssignmentResult {
-    const candidates = input.observations
-        .map((observation) =>
-            createFullFrameCandidate({
-                observation,
-                leftWrist: input.leftWrist,
-                rightWrist: input.rightWrist,
-                previous: input.previous,
-            }),
-        )
-        .filter((candidate) => candidate !== undefined)
-        .sort((left, right) => {
-            if (left.distance !== right.distance) {
-                return left.distance - right.distance;
-            }
-            return right.observation.confidence - left.observation.confidence;
-        });
-    const assigned = new Map<"left" | "right", SincroHandObservation>();
-    const usedHandIndexes = new Set<number>();
-    const duplicateSides = new Set<"left" | "right">();
-    for (const candidate of candidates) {
-        if (usedHandIndexes.has(candidate.observation.handIndex)) {
-            duplicateSides.add(candidate.side);
-            continue;
-        }
-        if (assigned.has(candidate.side)) {
-            duplicateSides.add(candidate.side);
-            continue;
-        }
-        assigned.set(candidate.side, candidate.observation);
-        usedHandIndexes.add(candidate.observation.handIndex);
-        if (candidate.tieRejectedSide !== undefined) {
-            duplicateSides.add(candidate.tieRejectedSide);
-        }
-    }
-    return {
-        leftHand: assigned.has("left")
-            ? sideSnapshotFromObservation({
-                  observation: readAssignedObservation(assigned, "left"),
-                  side: "left",
-                  source: input.source,
-                  roi: input.roi,
-              })
-            : lostHand(
-                  "left",
-                  input.roi,
-                  fullFrameLostWarnings(input.observations, duplicateSides, "left"),
-              ),
-        rightHand: assigned.has("right")
-            ? sideSnapshotFromObservation({
-                  observation: readAssignedObservation(assigned, "right"),
-                  side: "right",
-                  source: input.source,
-                  roi: input.roi,
-              })
-            : lostHand(
-                  "right",
-                  input.roi,
-                  fullFrameLostWarnings(input.observations, duplicateSides, "right"),
-              ),
-    };
-}
-
-function createFullFrameCandidate(input: {
-    observation: SincroHandObservation;
-    leftWrist: SincroHandPoseWrist;
-    rightWrist: SincroHandPoseWrist;
-    previous?: SincroHandMotionSnapshot;
-}):
-    | {
-          observation: SincroHandObservation;
-          side: "left" | "right";
-          distance: number;
-          tieRejectedSide?: "left" | "right";
-      }
-    | undefined {
-    const leftDistance =
-        input.leftWrist.point === undefined
-            ? undefined
-            : distance2d(input.observation.wrist, input.leftWrist.point);
-    const rightDistance =
-        input.rightWrist.point === undefined
-            ? undefined
-            : distance2d(input.observation.wrist, input.rightWrist.point);
-    const leftValid = leftDistance !== undefined && leftDistance <= HAND_ASSIGNMENT_MAX_DISTANCE;
-    const rightValid = rightDistance !== undefined && rightDistance <= HAND_ASSIGNMENT_MAX_DISTANCE;
-    if (!leftValid && !rightValid) {
-        return undefined;
-    }
-    if (leftValid && !rightValid && leftDistance !== undefined) {
-        return { observation: input.observation, side: "left", distance: leftDistance };
-    }
-    if (rightValid && !leftValid && rightDistance !== undefined) {
-        return { observation: input.observation, side: "right", distance: rightDistance };
-    }
-    if (leftDistance === undefined || rightDistance === undefined) {
-        return undefined;
-    }
-    if (Math.abs(leftDistance - rightDistance) > HAND_TIE_EPSILON) {
-        return leftDistance < rightDistance
-            ? { observation: input.observation, side: "left", distance: leftDistance }
-            : { observation: input.observation, side: "right", distance: rightDistance };
-    }
-    const preferredSide =
-        preferredTieSideForFullFrame({
-            observation: input.observation,
-            previous: input.previous,
-            leftWrist: input.leftWrist,
-            rightWrist: input.rightWrist,
-        }) ?? "left";
-    return {
-        observation: input.observation,
-        side: preferredSide,
-        distance: preferredSide === "left" ? leftDistance : rightDistance,
-        tieRejectedSide: preferredSide === "left" ? "right" : "left",
-    };
-}
-
-function preferredTieSideForFullFrame(input: {
-    observation: SincroHandObservation;
-    previous: SincroHandMotionSnapshot | undefined;
-    leftWrist: SincroHandPoseWrist;
-    rightWrist: SincroHandPoseWrist;
-}): "left" | "right" | undefined {
-    const previousSide = previousSideForObservation(input.previous, input.observation.wrist);
-    if (previousSide !== undefined) {
-        return previousSide;
-    }
-    if (input.leftWrist.confidence > input.rightWrist.confidence) {
-        return "left";
-    }
-    if (input.rightWrist.confidence > input.leftWrist.confidence) {
-        return "right";
-    }
-    return undefined;
-}
-
-function previousSideForObservation(
-    previous: SincroHandMotionSnapshot | undefined,
-    point: SincroHandPoint2,
-): "left" | "right" | undefined {
-    const leftDistance =
-        previous?.leftHand.detected && previous.leftHand.fullFrameWrist !== undefined
-            ? distance2d(previous.leftHand.fullFrameWrist, point)
-            : undefined;
-    const rightDistance =
-        previous?.rightHand.detected && previous.rightHand.fullFrameWrist !== undefined
-            ? distance2d(previous.rightHand.fullFrameWrist, point)
-            : undefined;
-    if (leftDistance !== undefined && rightDistance !== undefined) {
-        return leftDistance <= rightDistance ? "left" : "right";
-    }
-    if (leftDistance !== undefined && leftDistance <= 0.08) {
-        return "left";
-    }
-    if (rightDistance !== undefined && rightDistance <= 0.08) {
-        return "right";
-    }
-    return undefined;
-}
-
-function readAssignedObservation(
-    assigned: Map<"left" | "right", SincroHandObservation>,
-    side: "left" | "right",
-): SincroHandObservation {
-    const observation = assigned.get(side);
-    if (observation === undefined) {
-        throw new Error(`Assigned ${side} hand is missing.`);
-    }
-    return observation;
-}
-
-function fullFrameLostWarnings(
-    observations: readonly SincroHandObservation[],
-    duplicateSides: ReadonlySet<"left" | "right">,
-    side: "left" | "right",
-): SincroHandWarningCode[] {
-    if (duplicateSides.has(side)) {
-        return ["duplicate_assignment"];
-    }
-    return observations.length === 0 ? [] : ["side_inconsistent"];
-}
-
+/** 復元済みランドマークから手のひら方向と指の低次元特徴を作る。手の開閉は信頼度と欠損を考慮する。 */
 export function createSincroHandFeatureSnapshot(input: {
     landmarks: readonly FullFrameHandLandmark[];
     confidence: number;
@@ -482,6 +242,7 @@ export function createSincroHandFeatureSnapshot(input: {
     };
 }
 
+/** 信頼度0.2未満・欠損は不明とし、親指以外の平均曲げ量0.35・0.72を境に開閉を判定する。 */
 export function determineSincroHandOpenness(input: {
     fingerCurl: Pick<SincroHandFeatureSnapshot, "fingerCurl">["fingerCurl"];
     confidence: number;
@@ -503,159 +264,6 @@ export function determineSincroHandOpenness(input: {
         return "half";
     }
     return "closed";
-}
-
-export function handWarningsFromRoi(
-    roi: SincroRoiObservation | undefined,
-): SincroHandWarningCode[] {
-    if (roi === undefined) {
-        return [];
-    }
-    const warnings: SincroHandWarningCode[] = [];
-    if (roi.warnings.includes("roi_missing") || roi.source === "none") {
-        warnings.push("roi_missing");
-    }
-    if (roi.warnings.includes("roi_inconsistent")) {
-        warnings.push("roi_inconsistent");
-    }
-    return warnings;
-}
-
-function selectObservationForSide(input: {
-    side: "left" | "right";
-    wrist: SincroHandPoseWrist;
-    observations: readonly SincroHandObservation[];
-    assigned: Map<number, "left" | "right">;
-    source: SincroHandSource;
-    roi?: SincroRoiObservation;
-    previous?: SincroHandMotionSnapshot;
-}): SincroHandSideSnapshot {
-    if (input.wrist.point === undefined || input.observations.length === 0) {
-        return lostHand(
-            input.side,
-            input.roi,
-            input.observations.length === 0 ? [] : ["roi_missing"],
-        );
-    }
-    const candidates = rankedCandidates(input.observations, input.wrist.point);
-    const best = candidates[0];
-    if (best === undefined || best.distance > HAND_ASSIGNMENT_MAX_DISTANCE) {
-        return lostHand(input.side, input.roi, best === undefined ? [] : ["side_inconsistent"]);
-    }
-    if (input.assigned.has(best.observation.handIndex)) {
-        return lostHand(input.side, input.roi, ["duplicate_assignment"]);
-    }
-    if (isAmbiguousTie(candidates)) {
-        const preferredSide = preferredTieSide({
-            observation: best.observation,
-            previous: input.previous,
-            leftWrist: input.side === "left" ? input.wrist : undefined,
-            rightWrist: input.side === "right" ? input.wrist : undefined,
-        });
-        if (preferredSide !== undefined && preferredSide !== input.side) {
-            return lostHand(input.side, input.roi, ["duplicate_assignment"]);
-        }
-    }
-    input.assigned.set(best.observation.handIndex, input.side);
-    return sideSnapshotFromObservation({
-        observation: best.observation,
-        side: input.side,
-        source: input.source,
-        roi: input.roi,
-    });
-}
-
-function rankedCandidates(
-    observations: readonly SincroHandObservation[],
-    wrist: SincroHandPoint2,
-): { observation: SincroHandObservation; distance: number }[] {
-    return observations
-        .map((observation) => ({
-            observation,
-            distance: distance2d(observation.wrist, wrist),
-        }))
-        .sort((left, right) => left.distance - right.distance);
-}
-
-function isAmbiguousTie(
-    candidates: readonly { observation: SincroHandObservation; distance: number }[],
-): boolean {
-    const first = candidates[0];
-    const second = candidates[1];
-    if (first === undefined || second === undefined) {
-        return false;
-    }
-    return Math.abs(first.distance - second.distance) <= HAND_TIE_EPSILON;
-}
-
-function preferredTieSide(input: {
-    observation: SincroHandObservation;
-    previous: SincroHandMotionSnapshot | undefined;
-    leftWrist: SincroHandPoseWrist | undefined;
-    rightWrist: SincroHandPoseWrist | undefined;
-}): "left" | "right" | undefined {
-    const previous = input.previous;
-    if (previous?.leftHand.detected && previous.leftHand.fullFrameWrist !== undefined) {
-        const leftDistance = distance2d(previous.leftHand.fullFrameWrist, input.observation.wrist);
-        if (leftDistance <= 0.08) {
-            return "left";
-        }
-    }
-    if (previous?.rightHand.detected && previous.rightHand.fullFrameWrist !== undefined) {
-        const rightDistance = distance2d(
-            previous.rightHand.fullFrameWrist,
-            input.observation.wrist,
-        );
-        if (rightDistance <= 0.08) {
-            return "right";
-        }
-    }
-    if (input.leftWrist !== undefined && input.rightWrist !== undefined) {
-        if (input.leftWrist.confidence > input.rightWrist.confidence) {
-            return "left";
-        }
-        if (input.rightWrist.confidence > input.leftWrist.confidence) {
-            return "right";
-        }
-    }
-    return undefined;
-}
-
-function sideSnapshotFromObservation(input: {
-    observation: SincroHandObservation;
-    side: "left" | "right";
-    source: SincroHandSource;
-    roi?: SincroRoiObservation;
-}): SincroHandSideSnapshot {
-    return {
-        detected: true,
-        assignedSide: input.side,
-        source: input.source,
-        confidence: input.observation.confidence,
-        handednessLabel: input.observation.handednessLabel,
-        handednessScore: input.observation.handednessScore,
-        roi: input.roi,
-        fullFrameWrist: input.observation.wrist,
-        features: input.observation.features,
-        warnings: input.observation.warnings,
-    };
-}
-
-function lostHand(
-    side: "left" | "right",
-    roi: SincroRoiObservation | undefined,
-    warnings: SincroHandWarningCode[],
-): SincroHandSideSnapshot {
-    return {
-        ...cloneSincroHandSideSnapshot(
-            createLostHandSideSnapshot(side, [
-                "landmarks_missing",
-                ...handWarningsFromRoi(roi),
-                ...warnings,
-            ]),
-        ),
-        roi,
-    };
 }
 
 function readHandedness(categories: Category[] | undefined): {
@@ -754,10 +362,6 @@ function normalizeTuple3(value: SincroHandTuple3, fallback: SincroHandTuple3): S
         return fallback;
     }
     return [value[0] / length, value[1] / length, value[2] / length];
-}
-
-function distance2d(left: SincroHandPoint2, right: SincroHandPoint2): number {
-    return Math.hypot(left[0] - right[0], left[1] - right[1]);
 }
 
 function distance3d(

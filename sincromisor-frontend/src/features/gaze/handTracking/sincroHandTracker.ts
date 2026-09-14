@@ -7,6 +7,8 @@ import {
 import { loadMediaPipeVisionFileset } from "../trackingRuntime/mediaPipeVisionFileset";
 import { createHandRoiFromPoseArm } from "../trackingRuntime/roiTracking/roiCoordinateMapping";
 import type { SincroRoiObservation } from "../trackingRuntime/roiTracking/roiTrackingTypes";
+import { assignSincroHandObservationsToPose } from "./sincroHandAssignment";
+import { handWarningsFromRoi } from "./sincroHandAssignmentSnapshot";
 import {
     cloneSincroHandMotionSnapshot,
     createLostHandSideSnapshot,
@@ -22,10 +24,8 @@ import {
     type SincroHandRoiCropFactory,
 } from "./sincroHandRoiCropFrame";
 import {
-    assignSincroHandObservationsToPose,
     calculateHandInferenceFps,
     handRoiIsUsable,
-    handWarningsFromRoi,
     normalizeSincroHandLandmarkerResult,
     runSincroHandLandmarker,
     type SincroHandLandmarkerLike,
