@@ -4,12 +4,10 @@ import {
 } from "../../../features/settings/react/shell/settingsShell";
 import { BasicSettingsSection, LookingGlassSettingsSection } from "./components/settingsSections";
 import { panelStyles } from "./panelStyles";
-import type {
-    SimpleVrmControlPanelPageProps,
-    SimpleVrmPanelState,
-} from "./simpleVrmControlPanelTypes";
+import type { SincroControlPanelPageProps, SincroPanelState } from "./sincroControlPanelTypes";
 
-export function LookingGlassControlPage({ panelState }: SimpleVrmControlPanelPageProps) {
+/** Looking Glassの実行状態・開始停止・次回設定を専用の先頭カテゴリへまとめる。 */
+export function LookingGlassControlPage({ panelState }: SincroControlPanelPageProps) {
     const { settings, settingsUiState } = panelState;
 
     return (
@@ -34,7 +32,7 @@ export function LookingGlassControlPage({ panelState }: SimpleVrmControlPanelPag
     );
 }
 
-function LookingGlassStatusSummary({ panelState }: SimpleVrmControlPanelPageProps) {
+function LookingGlassStatusSummary({ panelState }: SincroControlPanelPageProps) {
     const { lookingGlass, lookingGlassConfigStatus } = panelState;
     const lookingGlassStatusText = lookingGlass.code
         ? `${lookingGlass.state} [${lookingGlass.code}]`
@@ -68,14 +66,14 @@ function LookingGlassStatusSummary({ panelState }: SimpleVrmControlPanelPageProp
     );
 }
 
-function getLookingGlassStatusTone(panelState: SimpleVrmPanelState): "neutral" | "good" | "warn" {
+function getLookingGlassStatusTone(panelState: SincroPanelState): "neutral" | "good" | "warn" {
     if (panelState.lookingGlass.state === "active") {
         return "good";
     }
     return panelState.lookingGlass.state === "error" ? "warn" : "neutral";
 }
 
-function LookingGlassActionButtons({ panelState }: SimpleVrmControlPanelPageProps) {
+function LookingGlassActionButtons({ panelState }: SincroControlPanelPageProps) {
     const canStart =
         panelState.lookingGlass.state !== "starting" && panelState.lookingGlass.state !== "active";
     const canStop =

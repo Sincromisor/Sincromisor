@@ -1,4 +1,4 @@
-import { UI_TUNING } from "../../../../app/react/uiTuning";
+import { UI_TUNING } from "../../../react/uiTuning";
 import type { PanelCameraGuideState } from "../panelCameraGuideState";
 import { panelStyles } from "../panelStyles";
 import type {
@@ -18,6 +18,7 @@ type DiagnosticsStatusCardsProps = {
     cameraGuide: PanelCameraGuideState;
 };
 
+/** アプリ通知の現在値と、表示抑制済みのカメラ案内を接続カテゴリへ表示する。 */
 export function DiagnosticsStatusCards({
     vadState,
     gaze,

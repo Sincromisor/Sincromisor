@@ -1,4 +1,4 @@
-import { UI_TUNING } from "../../../../app/react/uiTuning";
+import { UI_TUNING } from "../../../react/uiTuning";
 
 export const sectionSpacingPx = UI_TUNING.controlPanel.sectionSpacingPx;
 export const detailsContentTopMarginPx = UI_TUNING.controlPanel.detailsContentTopMarginPx;

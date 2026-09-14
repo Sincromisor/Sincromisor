@@ -11,6 +11,7 @@ type BasicSettingsSectionProps = {
     showSectionTitle?: boolean;
 };
 
+/** 共通会話入力に、常設パネル用の表示指定とアプリの変更操作を渡す。 */
 export function BasicSettingsSection({
     settings,
     uiState,

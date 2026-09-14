@@ -4,7 +4,7 @@ import {
     createDefaultSincroAppStartupSettingsCapabilities,
     createDefaultSincroAppStartupSettingsStatus,
     defaultSincroAppSettingsUiHints,
-} from "../../../app/settings/sincroAppSettingsDefaults";
+} from "../sincroAppSettingsDefaults";
 import type {
     PanelLookingGlassConfigStatus,
     PanelLookingGlassState,
@@ -17,33 +17,33 @@ import type {
 } from "./panelTypes";
 
 // AppController の初回 snapshot が届く前に control panel が表示する安全な既定値。
-export const defaultSimpleVrmPanelSettings: SincroAppSettingsSnapshot =
+export const defaultSincroPanelSettings: SincroAppSettingsSnapshot =
     createDefaultSincroAppSettingsSnapshot();
 
-export const defaultSimpleVrmPanelSettingsUiState: SincroAppSettingsUiState =
+export const defaultSincroPanelSettingsUiState: SincroAppSettingsUiState =
     createDefaultSincroAppSettingsUiState();
 
-export const defaultSimpleVrmPanelSettingsUiHints: SincroAppSettingsUiHints =
+export const defaultSincroPanelSettingsUiHints: SincroAppSettingsUiHints =
     defaultSincroAppSettingsUiHints;
 
-export const defaultSimpleVrmPanelStartupSettingsStatus: SincroAppStartupSettingsStatus =
+export const defaultSincroPanelStartupSettingsStatus: SincroAppStartupSettingsStatus =
     createDefaultSincroAppStartupSettingsStatus();
 
-export const defaultSimpleVrmPanelStartupSettingsCapabilities: SincroAppStartupSettingsCapabilities =
+export const defaultSincroPanelStartupSettingsCapabilities: SincroAppStartupSettingsCapabilities =
     createDefaultSincroAppStartupSettingsCapabilities();
 
-export const defaultSimpleVrmPanelRtcState: PanelRtcState = {
+export const defaultSincroPanelRtcState: PanelRtcState = {
     iceConnectionState: "-",
     signalingState: "-",
 };
 
-export const defaultSimpleVrmPanelLookingGlassState: PanelLookingGlassState = {
+export const defaultSincroPanelLookingGlassState: PanelLookingGlassState = {
     state: "idle",
     code: "",
     message: "",
 };
 
-export const defaultSimpleVrmPanelLookingGlassConfigStatus: PanelLookingGlassConfigStatus = {
+export const defaultSincroPanelLookingGlassConfigStatus: PanelLookingGlassConfigStatus = {
     pendingForNextSession: false,
     reloadRecommended: false,
     changedKeys: [],

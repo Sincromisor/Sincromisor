@@ -1,10 +1,10 @@
-import { defaultSincroAppSettingsSnapshot } from "../../../../app/settings/sincroAppSettingsDefaults";
 import { settingHelp } from "../../../../features/settings/react/fields/settingsFields";
 import {
     SettingsButton,
     SettingsHelpLabel,
     SettingsHint,
 } from "../../../../features/settings/react/primitives/settingsPrimitives";
+import { defaultSincroAppSettingsSnapshot } from "../../sincroAppSettingsDefaults";
 import type { ApplySettingsFn, SincroAppSettingsSnapshot } from "../panelTypes";
 import { NumericSettingField } from "./numericSettingField";
 
@@ -69,6 +69,7 @@ const LOOKING_GLASS_PRESETS: Array<{
     },
 ];
 
+/** 次回起動用の表示設定を、既存プリセットまたは数値入力からアプリへ渡す。 */
 export function LookingGlassSettingsSection({
     settings,
     onApplySettings,

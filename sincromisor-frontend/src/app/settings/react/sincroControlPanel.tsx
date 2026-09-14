@@ -1,23 +1,23 @@
 import { ResetSettingsButton } from "../../../features/settings/react/actions/resetSettingsButton";
 import { SettingsShell } from "../../../features/settings/react/shell/settingsShell";
 import { panelStyles } from "./panelStyles";
-import { createSimpleVrmControlPanelPages } from "./simpleVrmControlPanelPages";
-import { useSimpleVrmPanelState } from "./useSimpleVrmPanelState";
+import { createSincroControlPanelPages } from "./sincroControlPanelPages";
+import { useSincroPanelState } from "./useSincroPanelState";
 
-type SimpleVrmControlPanelProps = {
+type SincroControlPanelProps = {
     title?: string;
     variant?: "default" | "vrm360" | "looking-glass-vrm";
 };
 
 // simple-vrm / vrm360 / looking-glass-vrm 共通の常設設定パネル。
 // カテゴリナビで「探す場所」と「操作する場所」を揃え、接続操作は接続ページへ集約する。
-export function SimpleVrmControlPanel({
+export function SincroControlPanel({
     title = "基本設定",
     variant = "default",
-}: SimpleVrmControlPanelProps) {
-    const panelState = useSimpleVrmPanelState();
+}: SincroControlPanelProps) {
+    const panelState = useSincroPanelState();
     const isLookingGlassFocused = variant === "looking-glass-vrm";
-    const pages = createSimpleVrmControlPanelPages({
+    const pages = createSincroControlPanelPages({
         panelState,
         isLookingGlassFocused,
     });

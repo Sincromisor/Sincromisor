@@ -7,12 +7,10 @@ import {
     CharacterSettingsSection,
     MicSettingsSection,
 } from "./components/settingsSections";
-import type {
-    SimpleVrmControlPanelPageProps,
-    SimpleVrmPanelState,
-} from "./simpleVrmControlPanelTypes";
+import type { SincroControlPanelPageProps, SincroPanelState } from "./sincroControlPanelTypes";
 
-export function createSimpleVrmSettingsPages(panelState: SimpleVrmPanelState): SettingsShellPage[] {
+/** アプリの設定・操作を共通入力部品へ接続し、会話・機器・音声・表示を組み立てる。 */
+export function createSincroSettingsPages(panelState: SincroPanelState): SettingsShellPage[] {
     return createCoreSettingsPages({
         conversation: <ConversationSettingsPage panelState={panelState} />,
         devices: <DeviceSettingsPage panelState={panelState} />,
@@ -21,7 +19,7 @@ export function createSimpleVrmSettingsPages(panelState: SimpleVrmPanelState): S
     });
 }
 
-function ConversationSettingsPage({ panelState }: SimpleVrmControlPanelPageProps) {
+function ConversationSettingsPage({ panelState }: SincroControlPanelPageProps) {
     return (
         <SettingsCategorySection title={settingsPageCopy.conversation.sectionTitle}>
             <BasicSettingsSection
@@ -37,7 +35,7 @@ function ConversationSettingsPage({ panelState }: SimpleVrmControlPanelPageProps
     );
 }
 
-function DeviceSettingsPage({ panelState }: SimpleVrmControlPanelPageProps) {
+function DeviceSettingsPage({ panelState }: SincroControlPanelPageProps) {
     return (
         <SettingsCategorySection title={settingsPageCopy.devices.sectionTitle}>
             <MicSettingsSection
@@ -69,7 +67,7 @@ function DeviceSettingsPage({ panelState }: SimpleVrmControlPanelPageProps) {
     );
 }
 
-function AudioSettingsPage({ panelState }: SimpleVrmControlPanelPageProps) {
+function AudioSettingsPage({ panelState }: SincroControlPanelPageProps) {
     return (
         <SettingsCategorySection title={settingsPageCopy.audio.sectionTitle}>
             <MicSettingsSection
@@ -87,7 +85,7 @@ function AudioSettingsPage({ panelState }: SimpleVrmControlPanelPageProps) {
     );
 }
 
-function DisplaySettingsPage({ panelState }: SimpleVrmControlPanelPageProps) {
+function DisplaySettingsPage({ panelState }: SincroControlPanelPageProps) {
     return (
         <SettingsCategorySection title={settingsPageCopy.display.sectionTitle}>
             <CharacterSettingsSection

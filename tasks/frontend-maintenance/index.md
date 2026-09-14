@@ -30,15 +30,14 @@
 
 ## タスク一覧（自動生成 / 全 35 件）
 
-### open（未完） — 3 件
+### open（未完） — 2 件
 
-| タスク                                                                                                             | タイトル                                         | 判定 | 依存                                               |
-| ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ | ---- | -------------------------------------------------- |
-| [task-260915005054-centralize-calibration-lifecycle](./task-260915005054-centralize-calibration-lifecycle/task.md) | 較正を含む開始停止と設定変更をアプリ制御へ集約   | —    | `task-260915005054-relocate-shared-settings-panel` |
-| [task-260915005054-extract-pose-tuning-model](./task-260915005054-extract-pose-tuning-model/task.md)               | 姿勢調整の状態と通知を診断モデルから独立         | —    | `task-260915005054-extract-app-settings-model`     |
-| [task-260915005054-relocate-shared-settings-panel](./task-260915005054-relocate-shared-settings-panel/task.md)     | 共通設定パネルをページ固有領域からアプリ層へ移動 | —    | `task-260915005053-remove-unused-panel-logs`       |
+| タスク                                                                                                             | タイトル                                       | 判定 | 依存                                               |
+| ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------- | ---- | -------------------------------------------------- |
+| [task-260915005054-centralize-calibration-lifecycle](./task-260915005054-centralize-calibration-lifecycle/task.md) | 較正を含む開始停止と設定変更をアプリ制御へ集約 | —    | `task-260915005054-relocate-shared-settings-panel` |
+| [task-260915005054-extract-pose-tuning-model](./task-260915005054-extract-pose-tuning-model/task.md)               | 姿勢調整の状態と通知を診断モデルから独立       | —    | `task-260915005054-extract-app-settings-model`     |
 
-### done（完了） — 32 件
+### done（完了） — 33 件
 
 | タスク                                                                                                                     | タイトル                                          | 判定    | 依存                                                                                                                                                          |
 | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -74,5 +73,6 @@
 | [task-260915005053-remove-unused-panel-logs](./task-260915005053-remove-unused-panel-logs/task.md)                         | 設定パネルの未使用診断ログと状態更新を削除        | ✅ PASS | —                                                                                                                                                             |
 | [task-260915005054-consolidate-vrm-page-startup](./task-260915005054-consolidate-vrm-page-startup/task.md)                 | VRMページの起動処理をアプリ層へ移して共通化       | ✅ PASS | —                                                                                                                                                             |
 | [task-260915005054-extract-app-settings-model](./task-260915005054-extract-app-settings-model/task.md)                     | 通常設定の状態と適用規則をダイアログから独立      | ✅ PASS | —                                                                                                                                                             |
+| [task-260915005054-relocate-shared-settings-panel](./task-260915005054-relocate-shared-settings-panel/task.md)             | 共通設定パネルをページ固有領域からアプリ層へ移動  | ✅ PASS | `task-260915005053-remove-unused-panel-logs`                                                                                                                  |
 
 <!-- AUTOGEN:tasks END -->

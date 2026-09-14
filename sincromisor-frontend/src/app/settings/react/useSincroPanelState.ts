@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import type { SincroAppController, SincroAppLifecycleState } from "../../../app/controller";
-import { useSincroMediaDeviceState } from "../../../app/react/useSincroMediaDeviceState";
 import type { InitialCalibrationStepId } from "../../../character/calibration/initialSincroCalibration";
 import {
     InitialSincroCalibrationController,
     type InitialSincroCalibrationControllerState,
 } from "../../../character/calibration/initialSincroCalibrationController";
+import type { SincroAppController, SincroAppLifecycleState } from "../../controller";
+import { useSincroMediaDeviceState } from "../../react/useSincroMediaDeviceState";
 import type { PanelCameraGuideState } from "./panelCameraGuideState";
 import type {
     ApplySettingsFn,
@@ -21,9 +21,9 @@ import type {
     SincroAppStartupSettingsCapabilities,
     SincroAppStartupSettingsStatus,
 } from "./panelTypes";
-import { useSimpleVrmPanelEventState } from "./useSimpleVrmPanelEventState";
+import { useSincroPanelEventState } from "./useSincroPanelEventState";
 
-type SimpleVrmPanelState = {
+type SincroPanelState = {
     hasActiveController: boolean;
     currentController: SincroAppController | undefined;
     lifecycleState: SincroAppLifecycleState;
@@ -48,7 +48,7 @@ type SimpleVrmPanelState = {
 };
 
 // Control Panel から呼ぶ UI 操作。実処理は AppController に集約し、hook は委譲のみ行う。
-type SimpleVrmPanelActions = {
+type SincroPanelActions = {
     startAction: () => void;
     stopAction: () => void;
     applySettings: ApplySettingsFn;
@@ -59,8 +59,8 @@ type SimpleVrmPanelActions = {
 
 // AppController のイベント購読を React state に集約する、ページ共通の表示用 hook。
 // simple-vrm / vrm360 / looking-glass-vrm で同じ購読ロジックを再利用する。
-export function useSimpleVrmPanelState(): SimpleVrmPanelState & SimpleVrmPanelActions {
-    const eventState = useSimpleVrmPanelEventState();
+export function useSincroPanelState(): SincroPanelState & SincroPanelActions {
+    const eventState = useSincroPanelEventState();
     const calibrationController = useRef(InitialSincroCalibrationController.getManager());
     const [calibrationState, setCalibrationState] =
         useState<InitialSincroCalibrationControllerState>(calibrationController.current.getState());

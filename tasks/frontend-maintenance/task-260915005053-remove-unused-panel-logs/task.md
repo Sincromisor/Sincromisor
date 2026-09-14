@@ -27,9 +27,9 @@
 ## 実装の参照先
 
 - [diagnosticsLogSections.tsx](../../../sincromisor-frontend/src/pages/simpleVrm/react/components/diagnosticsLogSections.tsx)
-- [useSimpleVrmPanelEventState.ts](../../../sincromisor-frontend/src/pages/simpleVrm/react/useSimpleVrmPanelEventState.ts)
-- [simpleVrmPanelEventHandlers.ts](../../../sincromisor-frontend/src/pages/simpleVrm/react/simpleVrmPanelEventHandlers.ts)
-- [panelTypes.ts](../../../sincromisor-frontend/src/pages/simpleVrm/react/panelTypes.ts)
+- [useSimpleVrmPanelEventState.ts](../../../sincromisor-frontend/src/app/settings/react/useSincroPanelEventState.ts)
+- [simpleVrmPanelEventHandlers.ts](../../../sincromisor-frontend/src/app/settings/react/sincroPanelEventHandlers.ts)
+- [panelTypes.ts](../../../sincromisor-frontend/src/app/settings/react/panelTypes.ts)
 - [panelLogHelpers.ts](../../../sincromisor-frontend/src/app/react/panelLogHelpers.ts)
 - [dialogPopMessages.tsx](../../../sincromisor-frontend/src/features/dialog/react/dialogPopMessages.tsx)
 

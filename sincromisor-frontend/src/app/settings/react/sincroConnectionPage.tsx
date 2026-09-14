@@ -6,9 +6,10 @@ import { settingsPageCopy } from "../../../features/settings/react/shell/setting
 import { DiagnosticsStatusCards } from "./components/diagnosticsStatusCards";
 import { SettingsCategorySection, StartupSettingsSection } from "./components/settingsSections";
 import { panelStyles } from "./panelStyles";
-import type { SimpleVrmControlPanelPageProps } from "./simpleVrmControlPanelTypes";
+import type { SincroControlPanelPageProps } from "./sincroControlPanelTypes";
 
-export function ConnectionSettingsPage({ panelState }: SimpleVrmControlPanelPageProps) {
+/** 開始時の設定と接続状態・操作を共通パネルの接続カテゴリへまとめる。 */
+export function ConnectionSettingsPage({ panelState }: SincroControlPanelPageProps) {
     const hasStartupOptions = panelState.startupSettingsCapabilities.enableVR;
 
     return (
@@ -19,7 +20,7 @@ export function ConnectionSettingsPage({ panelState }: SimpleVrmControlPanelPage
     );
 }
 
-function StartupSettingsCategory({ panelState }: SimpleVrmControlPanelPageProps) {
+function StartupSettingsCategory({ panelState }: SincroControlPanelPageProps) {
     return (
         <SettingsCategorySection title={settingsPageCopy.connection.startupSectionTitle}>
             <StartupSettingsSection
@@ -35,7 +36,7 @@ function StartupSettingsCategory({ panelState }: SimpleVrmControlPanelPageProps)
     );
 }
 
-function ConnectionStatusCategory({ panelState }: SimpleVrmControlPanelPageProps) {
+function ConnectionStatusCategory({ panelState }: SincroControlPanelPageProps) {
     const detail =
         panelState.connectionState.detail ??
         (panelState.hasActiveController ? "接続済みです。" : "");
@@ -90,7 +91,7 @@ function ConnectionStatusCard({ value, detail, startupOptionHint }: ConnectionSt
     );
 }
 
-function ConnectionActionButtons({ panelState }: SimpleVrmControlPanelPageProps) {
+function ConnectionActionButtons({ panelState }: SincroControlPanelPageProps) {
     return (
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
             <button

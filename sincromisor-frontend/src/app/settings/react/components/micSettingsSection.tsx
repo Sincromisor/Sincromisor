@@ -12,6 +12,7 @@ import type { DeviceSettingsProps } from "./settingsSectionTypes";
 
 type MicSettingsSectionMode = "full" | "device" | "processing";
 
+/** 機器選択と音声処理をカテゴリ別に表示し、機器再取得の案内は共通フックへ委譲する。 */
 export function MicSettingsSection({
     settings,
     uiState,
