@@ -1,14 +1,14 @@
 id: task-260914232327-reset-webui-settings
 title: WebUIの全設定を初期状態に戻す操作を追加する
 category: frontend
-status: open
+status: done
 depends_on:
   - task-260914232323-persist-webui-settings
 superseded_by: null
 review: null
 reviewed_sha: null
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 1
 created_at: 2026-09-14
-closed_at: null
+closed_at: 2026-09-14
 legacy_ids: []

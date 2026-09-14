@@ -123,3 +123,7 @@ Use case: precise-object-edit. Edit the supplied full-body dark-brown-haired too
 - `documents/design/frontend/app-shell.md`
 - `documents/design/archive/legacy-flat/frontend_ui.md`
 - `documents/design/archive/legacy-flat/frontend_migration_react.md`
+
+## 初期設定への復帰
+
+共通3ページの設定画面から全ページの保存設定とVRMを初期化できる。この操作に限り `talkMode` を解除して同じページを再読込し、その他のクエリーとハッシュは保つ。通常起動のURL優先とOBS自動開始は維持する。削除対象と失敗時の扱いは[全設定の初期化](setting-and-debug-ui/settings-design.md#全設定の初期化)を参照する。

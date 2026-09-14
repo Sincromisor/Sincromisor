@@ -4,15 +4,14 @@
 
 ## タスク一覧（自動生成 / 全 11 件）
 
-### open（未完） — 3 件
+### open（未完） — 2 件
 
-| タスク                                                                                           | タイトル                                     | 判定 | 依存                                       |
-| ------------------------------------------------------------------------------------------------ | -------------------------------------------- | ---- | ------------------------------------------ |
-| [task-260914232327-reset-webui-settings](./task-260914232327-reset-webui-settings/task.md)       | WebUIの全設定を初期状態に戻す操作を追加する  | —    | `task-260914232323-persist-webui-settings` |
-| [task-260914232333-persist-audio-tuning](./task-260914232333-persist-audio-tuning/task.md)       | 音声デバッグ調整を保存して再読込後に復元する | —    | `task-260914232327-reset-webui-settings`   |
-| [task-260914232333-persist-tracking-tuning](./task-260914232333-persist-tracking-tuning/task.md) | 視線と姿勢のデバッグ調整を保存して復元する   | —    | `task-260914232327-reset-webui-settings`   |
+| タスク                                                                                           | タイトル                                     | 判定 | 依存                                     |
+| ------------------------------------------------------------------------------------------------ | -------------------------------------------- | ---- | ---------------------------------------- |
+| [task-260914232333-persist-audio-tuning](./task-260914232333-persist-audio-tuning/task.md)       | 音声デバッグ調整を保存して再読込後に復元する | —    | `task-260914232327-reset-webui-settings` |
+| [task-260914232333-persist-tracking-tuning](./task-260914232333-persist-tracking-tuning/task.md) | 視線と姿勢のデバッグ調整を保存して復元する   | —    | `task-260914232327-reset-webui-settings` |
 
-### done（完了） — 8 件
+### done（完了） — 9 件
 
 | タスク                                                                                                         | タイトル                                        | 判定    | 依存                                          |
 | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------- | --------------------------------------------- |
@@ -24,5 +23,6 @@
 | [task-260914144148-rtc-event-lifecycle](./task-260914144148-rtc-event-lifecycle/task.md)                       | RTCイベントの通知順序と旧接続の購読解除を修正   | ✅ PASS | —                                             |
 | [task-260914232318-settings-gaze-consistency](./task-260914232318-settings-gaze-consistency/task.md)           | 視線設定と自動ミュートの整合性を修正する        | ✅ PASS | —                                             |
 | [task-260914232323-persist-webui-settings](./task-260914232323-persist-webui-settings/task.md)                 | 通常設定をブラウザーに保存してURL優先で復元する | ✅ PASS | `task-260914232318-settings-gaze-consistency` |
+| [task-260914232327-reset-webui-settings](./task-260914232327-reset-webui-settings/task.md)                     | WebUIの全設定を初期状態に戻す操作を追加する     | ✅ PASS | `task-260914232323-persist-webui-settings`    |
 
 <!-- AUTOGEN:tasks END -->
