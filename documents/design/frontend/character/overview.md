@@ -46,6 +46,8 @@
     - 描画処理、カメラ、照明、サイズ変更、描画ループを持つ。
 - `VRMCharacterManager`
     - VRM 読み込み、制御処理初期化、毎フレーム更新を持つ。
+- [`normalizedPoseWriter.ts`](../../../../sincromisor-frontend/src/character/vrmCharacter/normalizedPoseWriter.ts)
+    - 現在フレームの最終姿勢の検査、所有ボーンの欠損補完、VRMへの一括書き込みを担う。管理処理は適用順序と診断への注釈付与を保持する。
 - `CharacterBehaviorState`
     - VAD、視線、テキスト / テロップ、AI 発話、エラー、会話モードをスナップショット化する。
 - `CharacterRootStabilizer`
