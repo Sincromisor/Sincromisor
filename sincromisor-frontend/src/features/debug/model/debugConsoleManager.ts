@@ -311,10 +311,11 @@ export class DebugConsoleManager {
         this.sincroMotionControls.setSincroPoseRetargetConfig(config);
     }
 
+    /** 診断操作の反映先を登録し、登録自身だけを外す解除関数を返す。 */
     setSincroPoseRetargetConfigChangeCallback(
         callback: (config: Partial<SincroPoseRetargetConfig>) => void,
-    ): void {
-        this.sincroMotionControls.setSincroPoseRetargetConfigChangeCallback(callback);
+    ): () => void {
+        return this.sincroMotionControls.setSincroPoseRetargetConfigChangeCallback(callback);
     }
 
     applySincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {

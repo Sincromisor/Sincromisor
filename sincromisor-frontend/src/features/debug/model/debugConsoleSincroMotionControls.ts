@@ -32,8 +32,7 @@ type DebugConsoleSincroMotionControlsParams = {
 // Sincro motion 関連 snapshot の更新を一箇所に集める。
 // face / pose / retarget runtime の深いコピー規則を manager から隠すための責務分割。
 export class DebugConsoleSincroMotionControls {
-    private onSincroPoseRetargetConfigChange: (config: Partial<SincroPoseRetargetConfig>) => void =
-        () => {};
+    private onSincroPoseRetargetConfigChange?: (config: Partial<SincroPoseRetargetConfig>) => void;
 
     constructor(private readonly params: DebugConsoleSincroMotionControlsParams) {}
 
@@ -151,14 +150,23 @@ export class DebugConsoleSincroMotionControls {
         }));
     }
 
+    /** 操作通知の所有者を置換する。古い解除を再実行しても、新しい登録は消さない。 */
     setSincroPoseRetargetConfigChangeCallback(
         callback: (config: Partial<SincroPoseRetargetConfig>) => void,
-    ): void {
-        this.onSincroPoseRetargetConfigChange = callback;
+    ): () => void {
+        const notify = (config: Partial<SincroPoseRetargetConfig>) => callback(config);
+        this.onSincroPoseRetargetConfigChange = notify;
+        return () => {
+            if (this.onSincroPoseRetargetConfigChange === notify) {
+                this.onSincroPoseRetargetConfigChange = undefined;
+            }
+        };
     }
 
     applySincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
         this.setSincroPoseRetargetConfig(config);
-        this.onSincroPoseRetargetConfigChange(this.params.readSnapshot().sincroMotion.poseRetarget);
+        this.onSincroPoseRetargetConfigChange?.(
+            this.params.readSnapshot().sincroMotion.poseRetarget,
+        );
     }
 }

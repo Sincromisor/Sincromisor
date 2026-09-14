@@ -1,3 +1,5 @@
+import type { SincroPoseRetargetConfig } from "../../character/retargeting/sincroPoseRetargeter";
+
 /** アプリから初期化処理とReactへ公開する操作窓口。サービスの所有権は移さない。 */
 
 /** ダイアログ操作とVRM保存・現在の起動設定を取得する窓口。 */
@@ -54,4 +56,11 @@ export type SincroAppStateBridge = {
     getDialogVrmUiState: () => import("../controller/sincroAppTypes").SincroAppDialogVrmUiState;
     getStartupSettingsStatus: () => import("../controller/sincroAppTypes").SincroAppStartupSettingsStatus;
     getTelopTextSegmentsSnapshot: () => import("../controller/sincroAppTypes").TelopTextSegment[];
+};
+
+/** 姿勢設定の正本は診断モデル。取得・正規化を伴う適用・操作通知だけを公開する。 */
+export type SincroAppPoseBridge = {
+    getConfig: () => Partial<SincroPoseRetargetConfig>;
+    applyConfig: (config: Partial<SincroPoseRetargetConfig>) => void;
+    subscribe: (listener: (config: Partial<SincroPoseRetargetConfig>) => void) => () => void;
 };

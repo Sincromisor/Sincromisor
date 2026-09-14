@@ -27,6 +27,7 @@ export class SincroLookingGlassVRMInitializer extends SincroVRMInitializer {
         vrmScene.enableLookingGlassStartButton();
         vrmScene.start();
         this.activeScene = vrmScene;
+        vrmScene.setSincroPoseRetargetConfig(this.appController.pose.getConfig());
         this.syncSceneRuntimeSettings(this.appController.state.getSettingsSnapshot());
         return vrmScene;
     }

@@ -1,5 +1,4 @@
 import { SincroAppController } from "../../app/controller";
-import { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
 import { UserMediaManager } from "../../features/media/userMedia/userMediaManager";
 import { frontendLogger } from "../../shared/logging/appLogger";
 import { VRMScene } from "./vrmScene";
@@ -54,7 +53,7 @@ export class SincroVRMInitializer {
         this.appController.debug.setRTCStopButtonEventListener(() => {
             this.appController.rtc.stop();
         });
-        DebugConsoleManager.getManager().setSincroPoseRetargetConfigChangeCallback((config) => {
+        this.appController.connectPoseSettings((config) => {
             this.activeScene?.setSincroPoseRetargetConfig(config);
         });
         this.bindRuntimeSettingsSync();
@@ -175,6 +174,7 @@ export class SincroVRMInitializer {
         });
         vrmScene.start();
         this.activeScene = vrmScene;
+        vrmScene.setSincroPoseRetargetConfig(this.appController.pose.getConfig());
         this.syncSceneRuntimeSettings(this.appController.state.getSettingsSnapshot());
         return vrmScene;
 
@@ -276,12 +276,6 @@ export class SincroVRMInitializer {
             motionScale: settings.characterMotionScale,
             eyeTrackingScale: settings.characterEyeTrackingScale,
         });
-        const poseRetargetConfig = {
-            ...DebugConsoleManager.getManager().getSnapshot().sincroMotion.poseRetarget,
-            intensityScale: settings.sincroPoseRetargetScale,
-        };
-        DebugConsoleManager.getManager().setSincroPoseRetargetConfig(poseRetargetConfig);
-        this.activeScene.setSincroPoseRetargetConfig(poseRetargetConfig);
     }
 }
 

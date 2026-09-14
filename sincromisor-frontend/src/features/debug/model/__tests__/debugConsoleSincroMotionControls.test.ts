@@ -3,6 +3,29 @@ import { DebugConsoleSincroMotionControls } from "../debugConsoleSincroMotionCon
 import { createDefaultSnapshot, type DebugConsoleSnapshot } from "../debugConsoleSnapshot";
 
 describe("DebugConsoleSincroMotionControls", () => {
+    it("同じ通知先の再登録後も古い解除で新登録を消さない", () => {
+        let snapshot = createDefaultSnapshot();
+        const controls = new DebugConsoleSincroMotionControls({
+            readSnapshot: () => snapshot,
+            updateSnapshot: (update) => {
+                snapshot = update(snapshot);
+            },
+        });
+        let calls = 0;
+        const listener = () => {
+            calls += 1;
+        };
+        const old = controls.setSincroPoseRetargetConfigChangeCallback(listener);
+        const current = controls.setSincroPoseRetargetConfigChangeCallback(listener);
+        old();
+        old();
+        controls.applySincroPoseRetargetConfig({ intensityScale: 0.5 });
+        expect(calls).toBe(1);
+        current();
+        current();
+        controls.applySincroPoseRetargetConfig({ intensityScale: 0.6 });
+        expect(calls).toBe(1);
+    });
     it("initializes semantic/finger composer mode with the production default", () => {
         const snapshot = createDefaultSnapshot();
 
