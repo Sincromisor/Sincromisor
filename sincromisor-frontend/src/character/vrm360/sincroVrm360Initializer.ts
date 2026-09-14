@@ -18,6 +18,7 @@ export class SincroVRM360Initializer extends SincroVRMInitializer {
     protected override initializeSincroScene(): VRM360Scene {
         // 360 ページも VRM サムネイル生成/保存フローは base と同じ callback を使う。
         const vrmScene: VRM360Scene = new VRM360Scene({
+            diagnostics: this.appController.debug.vrmDiagnostics,
             canvasRoot: this.charCanvas,
             characterControlLayer: this.characterControlLayer,
             vrmUrl: this.appController.dialog.getSelectedVrmUrl(),

@@ -163,6 +163,7 @@ export class SincroVRMInitializer {
     protected initializeSincroScene(): VRMScene {
         // scene 初期値（VRM URL）は dialog bridge 経由で取得し、DialogManager 実装に直接依存しない。
         const vrmScene: VRMScene = new VRMScene({
+            diagnostics: this.appController.debug.vrmDiagnostics,
             canvasRoot: this.charCanvas,
             characterControlLayer: this.characterControlLayer,
             vrmUrl: this.appController.dialog.getSelectedVrmUrl(),

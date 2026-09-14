@@ -1,10 +1,45 @@
-# frontend-maintenance タスク一覧
+# フロントエンド保守タスク一覧
+
+## 2026年9月14日起票のリファクタリング
+
+`work/frontend-refacter.md` の10候補を、各段階で実装・確認を完了できる16タスクへ分割した。元資料はGit管理外のため、各タスク本文に必要な背景・根拠・範囲を記載している。依存関係は各 `meta.yaml` の `depends_on` を使い、下の同一候補内の順序も参照する。
+
+| 元候補 | 対象                     | 分割したタスク                                                                                                                                                                                                                                                                                    |
+| ------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1      | 旧上半身制御の削除       | [未使用の上半身直接制御を削除して腰の安定化を残す](./task-260914172950-remove-unused-torso-writer/task.md)                                                                                                                                                                                        |
+| 2      | 本番姿勢合成の命名       | [本番の姿勢合成サービスの名前と説明を整理する](./task-260914172951-rename-production-pose-composer/task.md)                                                                                                                                                                                       |
+| 3      | キャラクターと診断の接続 | [VRMの診断結果をコールバックでアプリへ返す](./task-260914172951-decouple-vrm-diagnostics/task.md)、[表情制御のログ出力をコールバックへ分離する](./task-260914172951-decouple-emotion-log/task.md)、[姿勢設定とシーンの接続をアプリ側へ集約する](./task-260914172951-bridge-pose-settings/task.md) |
+| 4      | 最終姿勢の適用境界       | [VRM管理から最終姿勢の適用処理を分離する](./task-260914172950-extract-normalized-pose-writer/task.md)                                                                                                                                                                                             |
+| 5      | ヘッダーのReact描画      | [ヘッダーの題名をReactの設定購読へ統一する](./task-260914172950-react-header-title/task.md)                                                                                                                                                                                                       |
+| 6      | ページの起動順序         | [VRMページの初期化と自動開始を明示的な段階へ分ける](./task-260914172951-explicit-vrm-initialization/task.md)、[Reactの配置完了からVRMページを初期化する](./task-260914172952-mount-driven-vrm-bootstrap/task.md)                                                                                  |
+| 7      | 追跡経路の共通処理       | [追跡のジェスチャー省略通知を共通化する](./task-260914172952-share-skipped-gesture-notification/task.md)、[追跡経路の共通状態更新コールバックをまとめる](./task-260914172952-share-tracker-state-callbacks/task.md)                                                                               |
+| 8      | アバタープロファイル     | [アバタープロファイルの保存データ検証を分離する](./task-260914172952-split-avatar-profile-schema/task.md)、[アバタープロファイルの計測と値の組み立てを分ける](./task-260914172952-split-avatar-profile-measurement/task.md)                                                                       |
+| 9      | 手追跡の責務             | [手追跡の左右割当を専用モジュールへ分離する](./task-260914172952-split-hand-assignment/task.md)、[手追跡の正規化と特徴量計算を整理する](./task-260914172953-split-hand-normalization/task.md)                                                                                                     |
+| 10     | フレーム描画の集約       | [通常・XR・単発描画のフレーム処理を集約する](./task-260914172950-share-vrm-frame-render/task.md)                                                                                                                                                                                                  |
+
+小さく独立して着手できるのはヘッダーの題名、フレーム描画、ジェスチャー省略通知。旧上半身制御→最終姿勢適用の分離→合成サービス改名→診断結果の分離は、この順に進める。診断分離後は表情ログと姿勢設定の接続へ分岐し、後者から起動段階の分離→React配置完了による起動へ進む。プロファイルと手追跡はそれぞれ2段階とする。
+
+### 範囲と確認の方針
+
+- 公開URL、通信契約、保存形式、動作アルゴリズムは維持する。OBS自動開始より前にページ設定を確定する順序の是正だけは、起動段階タスクに影響を明記する。
+- 既存の切り戻しフック削除と実機基準値取得は別タスクとして維持し、今回の16件の必須依存にしない。未再現の追跡開始・停止競合と、ページ内再生成を前提としたシーン破棄APIは起票対象外とした。
+- 大きな既存ファイルの段階分割では、1タスクで別責務の整理まで広げない。分割途中の超過が残る場合は[構造規則の例外](../../documents/rules/code-structure.md#5-例外の扱い)に従い、残る責務と解消先の後続タスクを明示する。最終分割タスクでは不要になった例外も削除する。
+- 各タスクの対象確認を基本とし、起動・購読の生存期間を扱う3件だけ独立レビューと高リスク変更の確認を行う。新しいライブラリ、全体置換、実機の組み合わせ試験は追加しない。
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 24 件）
+## タスク一覧（自動生成 / 全 29 件）
 
-### done（完了） — 24 件
+### open（未完） — 4 件
+
+| タスク                                                                                                   | タイトル                                          | 判定 | 依存                                            |
+| -------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ---- | ----------------------------------------------- |
+| [task-260914172951-bridge-pose-settings](./task-260914172951-bridge-pose-settings/task.md)               | 姿勢設定とシーンの接続をアプリ側へ集約する        | —    | `task-260914172951-decouple-vrm-diagnostics`    |
+| [task-260914172951-decouple-emotion-log](./task-260914172951-decouple-emotion-log/task.md)               | 表情制御のログ出力をコールバックへ分離する        | —    | `task-260914172951-decouple-vrm-diagnostics`    |
+| [task-260914172951-explicit-vrm-initialization](./task-260914172951-explicit-vrm-initialization/task.md) | VRMページの初期化と自動開始を明示的な段階へ分ける | —    | `task-260914172951-bridge-pose-settings`        |
+| [task-260914172952-mount-driven-vrm-bootstrap](./task-260914172952-mount-driven-vrm-bootstrap/task.md)   | Reactの配置完了からVRMページを初期化する          | —    | `task-260914172951-explicit-vrm-initialization` |
+
+### done（完了） — 25 件
 
 | タスク                                                                                                                     | タイトル                                         | 判定    | 依存                                                                                                                                                          |
 | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -25,6 +60,7 @@
 | [task-260914172950-react-header-title](./task-260914172950-react-header-title/task.md)                                     | ヘッダーの題名をReactの設定購読へ統一する        | ✅ PASS | —                                                                                                                                                             |
 | [task-260914172950-remove-unused-torso-writer](./task-260914172950-remove-unused-torso-writer/task.md)                     | 未使用の上半身直接制御を削除して腰の安定化を残す | ✅ PASS | —                                                                                                                                                             |
 | [task-260914172950-share-vrm-frame-render](./task-260914172950-share-vrm-frame-render/task.md)                             | 通常・XR・単発描画のフレーム処理を集約する       | ✅ PASS | —                                                                                                                                                             |
+| [task-260914172951-decouple-vrm-diagnostics](./task-260914172951-decouple-vrm-diagnostics/task.md)                         | VRMの診断結果をコールバックでアプリへ返す        | ✅ PASS | `task-260914172951-rename-production-pose-composer`                                                                                                           |
 | [task-260914172951-rename-production-pose-composer](./task-260914172951-rename-production-pose-composer/task.md)           | 本番の姿勢合成サービスの名前と説明を整理する     | ✅ PASS | `task-260914172950-extract-normalized-pose-writer`                                                                                                            |
 | [task-260914172952-share-skipped-gesture-notification](./task-260914172952-share-skipped-gesture-notification/task.md)     | 追跡のジェスチャー省略通知を共通化する           | ✅ PASS | —                                                                                                                                                             |
 | [task-260914172952-share-tracker-state-callbacks](./task-260914172952-share-tracker-state-callbacks/task.md)               | 追跡経路の共通状態更新コールバックをまとめる     | ✅ PASS | `task-260914172952-share-skipped-gesture-notification`                                                                                                        |

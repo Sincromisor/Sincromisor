@@ -83,6 +83,16 @@ export function createSincroAppRuntimeBundle(params: {
             getSystemIconUrl: () => chatMessageService.getSystemIconUrl(),
         },
         debugBridge: {
+            vrmDiagnostics: {
+                onAvatarMotionProfile: (profile) =>
+                    debugConsoleManager.updateAvatarMotionProfile(profile),
+                onPoseRetargetFrame: (frame) =>
+                    debugConsoleManager.updateSincroPoseRetargetFrame(frame),
+                onComposerSummary: (summary) =>
+                    debugConsoleManager.updateSincroComposerDryRunSummary(summary),
+                onComposerResult: (result) =>
+                    debugConsoleManager.updateSincroComposerDryRunResult(result),
+            },
             setRTCStopButtonEventListener: (stopFunction) =>
                 debugConsoleManager.setRTCStopButtonEventListener(stopFunction),
             getRightToolPanelState: () => rightToolPanelService.getState(),

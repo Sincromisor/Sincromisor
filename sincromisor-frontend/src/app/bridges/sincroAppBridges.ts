@@ -27,6 +27,7 @@ export type SincroAppChatBridge = {
 
 /** 診断画面の停止操作と右側パネルの表示・購読を扱う窓口。 */
 export type SincroAppDebugBridge = {
+    vrmDiagnostics: import("../../character/vrmCharacter/vrmDiagnostics").VRMDiagnostics;
     setRTCStopButtonEventListener: (stopFunction: () => void) => void;
     getRightToolPanelState: () => import("./sincroAppRightToolPanelService").RightToolPanelState;
     subscribeRightToolPanelState: (listener: () => void) => () => void;

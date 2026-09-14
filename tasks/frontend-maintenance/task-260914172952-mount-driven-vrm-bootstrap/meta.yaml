@@ -1,0 +1,14 @@
+id: task-260914172952-mount-driven-vrm-bootstrap
+title: Reactの配置完了からVRMページを初期化する
+category: frontend-maintenance
+status: open
+depends_on:
+  - task-260914172951-explicit-vrm-initialization
+superseded_by: null
+review: APPROVED
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-14
+closed_at: null
+legacy_ids: []
