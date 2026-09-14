@@ -1,3 +1,4 @@
+import type { InitialSincroCalibrationController } from "../../character/calibration/initialSincroCalibrationController";
 import { ChatMessageService } from "../../features/conversation/chat/model/chatMessageService";
 import { TalkManager } from "../../features/conversation/talk/talkManager";
 import { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
@@ -10,13 +11,12 @@ import { SincroCharacterGazeController } from "./sincroCharacterGazeController";
 import { SincroRtcSessionController } from "./sincroRtcSessionController";
 
 type SincroControllerOptions = {
+    calibrationController: InitialSincroCalibrationController;
     settingsModel: SincroAppSettingsModel;
     emitEvent: (event: SincroAppEvent) => void;
 };
 
-// 旧来のアプリ本体 controller。
-// 以前は巨大 constructor に UI/RTC/Media/Gaze の配線を集中させていたが、
-// React移行に合わせて各責務を App/*Controller へ分離し、ここは起動順序の統括に寄せている。
+/** アプリの音声・追跡・RTCを接続する。追跡終了だけを較正へ返し、音声・RTC失敗は独立して扱う。 */
 export class SincroController {
     private readonly settingsModel: SincroAppSettingsModel;
     private readonly debugConsoleManager: DebugConsoleManager;
@@ -46,6 +46,7 @@ export class SincroController {
             this.debugConsoleManager,
             this.chatMessageService,
             options.emitEvent,
+            options.calibrationController,
         );
         this.rtcSessionController = new SincroRtcSessionController(
             this.debugConsoleManager,
@@ -59,10 +60,9 @@ export class SincroController {
         this.audioInputController.restoreTuning(persistence);
     }
 
-    // アプリ制御の開始点。
-    // UserMedia -> (audio)RTC / (video)CharacterGaze の分岐だけを担い、個別処理は各 controller へ委譲する。
-    start(): void {
-        this.startCharacterGaze();
+    /** カメラ追跡と音声取得を独立して開始し、音声取得成功時だけRTCへ進む。 */
+    start(onTrackingStopped: (reason: string) => void): void {
+        this.startCharacterGaze(onTrackingStopped);
         this.audioInputController.start(
             (audioTrack: MediaStreamTrack) => {
                 this.startRTC(audioTrack);
@@ -84,9 +84,14 @@ export class SincroController {
     }
 
     // 顔認識を開始し、視線・AutoMute状態をデバッグUIとRTC mute制御へ反映する。
-    private startCharacterGaze(): void {
+    private startCharacterGaze(onTrackingStopped: (reason: string) => void): void {
         this.characterGazeController.start((mute) => {
             this.rtcSessionController.setMute(mute);
-        });
+        }, onTrackingStopped);
+    }
+
+    /** アプリ差し替えで古い追跡通知を無効化する。RTC停止のリソース範囲は変えない。 */
+    releaseTrackingSubscriptions(): void {
+        this.characterGazeController.releaseSubscriptions();
     }
 }

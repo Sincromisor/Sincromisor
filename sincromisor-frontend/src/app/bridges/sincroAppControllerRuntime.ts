@@ -1,3 +1,4 @@
+import type { InitialSincroCalibrationController } from "../../character/calibration/initialSincroCalibrationController";
 import { ChatMessageService } from "../../features/conversation/chat/model/chatMessageService";
 import { TalkManager } from "../../features/conversation/talk/talkManager";
 import { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
@@ -41,10 +42,15 @@ export type SincroAppControllerRuntimeBundle = {
 export function createSincroAppRuntimeBundle(params: {
     emitEvent: (event: SincroAppEvent) => void;
     stopRTC: () => void;
+    calibrationController: InitialSincroCalibrationController;
     state: SincroAppStateBridge;
 }): SincroAppControllerRuntimeBundle {
     const settingsModel = SincroAppSettingsModel.getShared();
-    const coreController = new SincroController({ emitEvent: params.emitEvent, settingsModel });
+    const coreController = new SincroController({
+        emitEvent: params.emitEvent,
+        settingsModel,
+        calibrationController: params.calibrationController,
+    });
     const chatMessageService = ChatMessageService.getService();
     const debugConsoleManager = DebugConsoleManager.getManager();
     const talkManager = TalkManager.getManager();

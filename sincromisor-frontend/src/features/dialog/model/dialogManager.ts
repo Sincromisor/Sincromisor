@@ -84,6 +84,11 @@ export class DialogManager {
         return this.stateStore.getSelectedVrmUrl();
     }
 
+    /** 利用者のVRM選択開始を購読する。初期復元や状態文言の変更では通知しない。 */
+    subscribeVrmSelectionChange(listener: () => void): () => void {
+        return this.eventHub.subscribeVrmSelectionChange(listener);
+    }
+
     /** VRM選択の現在状態を即時通知し、以後の変更を購読する。 */
     subscribeVrmUiState(listener: (state: DialogVrmUiState) => void): () => void {
         return this.eventHub.subscribeVrmUiState(listener, this.stateStore.getDialogVrmUiState());

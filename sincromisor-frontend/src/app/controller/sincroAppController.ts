@@ -36,6 +36,7 @@ import {
 } from "../settings/sincroAppStartupSettings";
 import { buildSincroAppUiStateSnapshot } from "../settings/sincroAppUiStateSnapshotBuilder";
 import { SincroAppActiveControllerRegistry } from "./sincroAppActiveControllerRegistry";
+import { SincroAppCalibration } from "./sincroAppCalibration";
 import type {
     SincroAppDialogUiState,
     SincroAppDialogVrmUiState,
@@ -78,6 +79,9 @@ export class SincroAppController {
     private readonly eventHub = new SincroAppEventHub();
     /** このインスタンスが登録した外部通知だけを所有し、差し替え時に解除する。 */
     private readonly eventUnsubscribers: (() => void)[] = [];
+    /** 開始入口とPose観測が共有する、このアプリ専用の較正。 */
+    readonly calibration = new SincroAppCalibration();
+    private released = false;
     private lifecycleState: SincroAppLifecycleState = "idle";
     private iceConnectionState: string = "";
     private signalingState: string = "";
@@ -132,6 +136,7 @@ export class SincroAppController {
         const runtime = createSincroAppRuntimeBundle({
             emitEvent: (event) => this.emitEvent(event),
             stopRTC: () => this.stopRTC(),
+            calibrationController: this.calibration.controller,
             state: {
                 getSettingsSnapshot: () => this.getSettingsSnapshot(),
                 getDialogUiState: () => this.getDialogUiState(),
@@ -154,6 +159,12 @@ export class SincroAppController {
         // 旧制御の外部購読を解除してReactを切り替え、登録時の即時通知を新購読へ届ける。
         SincroAppController.setCurrent(this);
         this.eventUnsubscribers.push(this.bindUiSubscriptions());
+        this.eventUnsubscribers.push(this.calibration.connectSettings(runtime.settingsModel));
+        this.eventUnsubscribers.push(
+            runtime.dialogManager.subscribeVrmSelectionChange(() =>
+                this.calibration.cancel("vrm_source_changed"),
+            ),
+        );
         this.eventUnsubscribers.push(runtime.settingsModel.connectMediaDevices());
         this.eventUnsubscribers.push(
             runtime.settingsModel.subscribeSettingsEdit((partial) => {
@@ -186,8 +197,12 @@ export class SincroAppController {
         return SincroAppController.activeRegistry.subscribe(listener);
     }
 
-    /** 外部イベント購読だけを解除する。再実行は無処理とし、RTCや共有サービスは停止しない。 */
+    /** 外部購読・較正・追跡結果の反映を終了する。再実行は無処理とし、RTCや機器は停止しない。 */
     releaseEventSubscriptions(): void {
+        if (this.released) return;
+        this.released = true;
+        this.calibration.cancel("app_released");
+        this.runtime.coreController.releaseTrackingSubscriptions();
         for (const unsubscribe of this.eventUnsubscribers.splice(0)) {
             unsubscribe();
         }
@@ -223,8 +238,13 @@ export class SincroAppController {
         this.afterStartHook = hooks.afterStart ?? (() => {});
     }
 
+    /** 全開始入口の重複を抑止し、較正・シーン・機器を順に開始する。同期失敗時は較正を中断する。 */
     start(): void {
-        if (this.lifecycleState === "starting" || this.lifecycleState === "running") {
+        if (
+            this.released ||
+            this.lifecycleState === "starting" ||
+            this.lifecycleState === "running"
+        ) {
             return;
         }
         const startupSnapshot = this.getSettingsSnapshot();
@@ -236,11 +256,19 @@ export class SincroAppController {
             enableInspector: startupSnapshot.enableInspector,
             enableVR: startupSnapshot.enableVR,
         };
-        this.beforeStartHook();
-        this.runtime.coreController.start();
-        this.afterStartHook();
-        this.emitLifecycle("running");
-        this.emitDerivedConnectionState();
+        const cancelStart = this.calibration.start(startupSnapshot.talkMode);
+        try {
+            this.beforeStartHook();
+            this.runtime.coreController.start(cancelStart);
+            this.afterStartHook();
+            this.emitLifecycle("running");
+            this.emitDerivedConnectionState();
+        } catch (error) {
+            cancelStart("start_failed");
+            this.emitLifecycle("stopped");
+            this.emitDerivedConnectionState();
+            throw error;
+        }
     }
 
     /** RTCだけを停止して状態を通知する。設定などの外部購読は維持し、未起動・停止済みなら何もしない。 */
@@ -252,6 +280,7 @@ export class SincroAppController {
         ) {
             return;
         }
+        this.calibration.cancel("connection_stopped");
         this.emitLifecycle("stopping");
         this.emitDerivedConnectionState();
         this.runtime.coreController.stopRTC();

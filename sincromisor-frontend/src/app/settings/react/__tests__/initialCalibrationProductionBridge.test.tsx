@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import { InitialSincroCalibrationController } from "../../../../character/calibration/initialSincroCalibrationController";
 import { InitialSincroCalibrationPoseBridge } from "../../../../character/calibration/initialSincroCalibrationPoseBridge";
 import { createDefaultReliabilityMap } from "../../../../character/reliability/reliabilityMap";
+import { SincroAppCalibration } from "../../../controller/sincroAppCalibration";
 import { InitialCalibrationRetryCard } from "../components/initialCalibrationRetryCard";
-import { cancelActiveCalibration } from "../useSincroPanelState";
 
 function findButtonClick(node: ReactNode): (() => void) | undefined {
     if (!isValidElement<{ children?: ReactNode; onClick?: () => void }>(node)) {
@@ -65,7 +65,8 @@ describe("initial calibration production bridge", () => {
     });
 
     it("cancels on VRM source change and rejects an old-session callback after restart", () => {
-        const controller = new InitialSincroCalibrationController();
+        const calibration = new SincroAppCalibration();
+        const controller = calibration.controller;
         controller.dispatch({ type: "start", sessionId: "session-a", mediaTimeMs: 0 });
         const oldResult = {
             id: "precheck" as const,
@@ -77,7 +78,7 @@ describe("initial calibration production bridge", () => {
             debug: {},
         };
 
-        cancelActiveCalibration(controller, "vrm_source_changed");
+        calibration.cancel("vrm_source_changed");
         expect(controller.getState()).toEqual({
             status: "cancelled",
             reason: "vrm_source_changed",

@@ -1,9 +1,9 @@
 import type { CameraQualityScore } from "../../features/gaze/trackingRuntime/cameraQualityScore";
 import type { CanonicalUpperBodyState } from "../canonical/canonicalUpperBodyState";
 import type { ReliabilityMap } from "../reliability/reliabilityMap";
-import {
+import type {
     InitialSincroCalibrationController,
-    type InitialSincroCalibrationControllerResult,
+    InitialSincroCalibrationControllerResult,
 } from "./initialSincroCalibrationController";
 import { evaluateInitialCalibrationStep } from "./initialSincroCalibrationStepEvaluation";
 
@@ -24,7 +24,8 @@ export class InitialSincroCalibrationPoseBridge {
     private stepKey: string | undefined;
     private stepStartedAtMs = 0;
 
-    constructor(private readonly controller = InitialSincroCalibrationController.getManager()) {}
+    /** アプリが所有する較正を明示的に受け取り、別アプリの状態を参照しない。 */
+    constructor(private readonly controller: InitialSincroCalibrationController) {}
 
     record(
         observation: InitialSincroCalibrationPoseObservation,

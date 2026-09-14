@@ -50,27 +50,24 @@ export type InitialSincroCalibrationControllerResult =
  * session id を cancel action に渡し、再開時は別 id で start しなければならない。
  */
 export class InitialSincroCalibrationController {
-    private static manager: InitialSincroCalibrationController | undefined;
     private state: InitialSincroCalibrationControllerState = { status: "idle" };
     private readonly listeners = new Set<
         (state: InitialSincroCalibrationControllerState) => void
     >();
 
-    static getManager(): InitialSincroCalibrationController {
-        InitialSincroCalibrationController.manager ??= new InitialSincroCalibrationController();
-        return InitialSincroCalibrationController.manager;
-    }
-
+    /** 現在の評価結果を即時通知し、同じアプリの較正状態を購読する。 */
     subscribe(listener: (state: InitialSincroCalibrationControllerState) => void): () => void {
         this.listeners.add(listener);
         listener(this.state);
         return () => this.listeners.delete(listener);
     }
 
+    /** 現在の段階と評価結果を読み取る。変更はsessionを指定したdispatchだけが行う。 */
     getState(): InitialSincroCalibrationControllerState {
         return this.state;
     }
 
+    /** 所有アプリの開始・中断・再試行とPose評価を受け、古いsessionの操作は拒否する。 */
     dispatch(
         action: InitialSincroCalibrationControllerAction,
     ): InitialSincroCalibrationControllerResult {

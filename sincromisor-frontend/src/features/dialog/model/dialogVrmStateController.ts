@@ -17,7 +17,9 @@ export class DialogVrmStateController {
         private readonly eventHub: DialogEventHub,
     ) {}
 
+    /** 利用者の選択を先に通知し、保存・読込の結果は従来の表示通知へ渡す。 */
     applySelectedVrmFile(file: File): void {
+        this.eventHub.emitVrmSelectionChange();
         this.vrmWorkflowService
             .applySelectedVrmFile(file)
             .then((result) => {
@@ -41,6 +43,7 @@ export class DialogVrmStateController {
             });
     }
 
+    /** キャッシュ復元は利用者の選択変更として通知しない。 */
     async loadInitialVrmSelection(): Promise<void> {
         const result = await this.vrmWorkflowService.loadInitialVrmSelection();
         if (result.vrmUrl !== undefined) {
