@@ -30,13 +30,7 @@
 
 ## タスク一覧（自動生成 / 全 29 件）
 
-### open（未完） — 1 件
-
-| タスク                                                                                                 | タイトル                                 | 判定 | 依存                                            |
-| ------------------------------------------------------------------------------------------------------ | ---------------------------------------- | ---- | ----------------------------------------------- |
-| [task-260914172952-mount-driven-vrm-bootstrap](./task-260914172952-mount-driven-vrm-bootstrap/task.md) | Reactの配置完了からVRMページを初期化する | —    | `task-260914172951-explicit-vrm-initialization` |
-
-### done（完了） — 28 件
+### done（完了） — 29 件
 
 | タスク                                                                                                                     | タイトル                                          | 判定    | 依存                                                                                                                                                          |
 | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -62,6 +56,7 @@
 | [task-260914172951-decouple-vrm-diagnostics](./task-260914172951-decouple-vrm-diagnostics/task.md)                         | VRMの診断結果をコールバックでアプリへ返す         | ✅ PASS | `task-260914172951-rename-production-pose-composer`                                                                                                           |
 | [task-260914172951-explicit-vrm-initialization](./task-260914172951-explicit-vrm-initialization/task.md)                   | VRMページの初期化と自動開始を明示的な段階へ分ける | ✅ PASS | `task-260914172951-bridge-pose-settings`                                                                                                                      |
 | [task-260914172951-rename-production-pose-composer](./task-260914172951-rename-production-pose-composer/task.md)           | 本番の姿勢合成サービスの名前と説明を整理する      | ✅ PASS | `task-260914172950-extract-normalized-pose-writer`                                                                                                            |
+| [task-260914172952-mount-driven-vrm-bootstrap](./task-260914172952-mount-driven-vrm-bootstrap/task.md)                     | Reactの配置完了からVRMページを初期化する          | ✅ PASS | `task-260914172951-explicit-vrm-initialization`                                                                                                               |
 | [task-260914172952-share-skipped-gesture-notification](./task-260914172952-share-skipped-gesture-notification/task.md)     | 追跡のジェスチャー省略通知を共通化する            | ✅ PASS | —                                                                                                                                                             |
 | [task-260914172952-share-tracker-state-callbacks](./task-260914172952-share-tracker-state-callbacks/task.md)               | 追跡経路の共通状態更新コールバックをまとめる      | ✅ PASS | `task-260914172952-share-skipped-gesture-notification`                                                                                                        |
 | [task-260914172952-split-avatar-profile-measurement](./task-260914172952-split-avatar-profile-measurement/task.md)         | アバタープロファイルの計測と値の組み立てを分ける  | ✅ PASS | `task-260914172952-split-avatar-profile-schema`                                                                                                               |
