@@ -7,11 +7,11 @@ Difyに代わるAPIとローカル管理者用の編集画面を1サービスで
 
 ## 完了条件
 
-- [ ] ビルド済みMastra APIとStudio Editorが同じコンテナで起動し、Gemma 4 E2Bのストリーミング応答を取得できる。
-- [ ] 同一セッションの次の発話は履歴を参照し、別セッションとStudioの試験会話には混入しない。
-- [ ] 管理者がStudioで指示を編集・試験・公開でき、APIへ反映され、コンテナ再作成後も保持される。
-- [ ] Studio・管理APIはローカル管理者向けに限定し、未認証で構成を変更できない。
-- [ ] Python側が使うAPIパス、要求、本文・正常終端・失敗イベントを採用バージョンの実HTTP応答で確認し、設計へ記録する。
+- [x] ビルド済みMastra APIとStudio Editorが同じコンテナで起動し、Gemma 4 E2Bのストリーミング応答を取得できる。
+- [x] 同一セッションの次の発話は履歴を参照し、別セッションとStudioの試験会話には混入しない。
+- [x] 管理者がStudioで指示を編集・試験・公開でき、APIへ反映され、コンテナ再作成後も保持される。
+- [x] Studio・管理APIはローカル管理者向けに限定し、未認証で構成を変更できない。
+- [x] Python側が使うAPIパス、要求、本文・正常終端・失敗イベントを採用バージョンの実HTTP応答で確認し、設計へ記録する。
 
 ## 設計判断
 
@@ -51,3 +51,20 @@ Difyに代わるAPIとローカル管理者用の編集画面を1サービスで
 - [Studio認証](https://mastra.ai/docs/studio/auth)
 - [ローカルモデル](https://mastra.ai/models#use-local-models-with-mastra)
 - [会話履歴](https://mastra.ai/docs/memory/message-history)
+
+## 実装・確認結果
+
+- 専用ワークツリーで固定依存、Studio込み本番イメージ、SimpleAuth、libSQLとMemoryを追加した。公開済み指示をコードの初期値で上書きしないEditorの既定動作を使う。
+- `npm run check`、`npm run test`（認証設定と、LLMへ実送信する履歴のthread分離）、`npm run build`、Dockerの本番ビルド、Compose構成テスト: PASS。
+- 実Gemmaの標準HTTPで、日本語の分割本文、step-finishとfinish、stop/length/error、DONEを確認した。最小化した実イベントを `acceptance/` に保存した。
+- HTTPを本文生成中に切断し、llama-serverの `/slots` が `is_processing: true` からfalseへ変わることを確認した。標準経路で取消が伝播するため独自ルートは追加していない。
+- playwright-cliで標準ログイン、Editorの下書き保存・試験・公開を実行した。下書きに「公開確認」への応答規則を追加し、試験と公開後APIの両方で `^4設定を反映しました。` を得た。公開前の通常APIには変更が混入せず、コンテナ再作成後も公開指示とStudioへのアクセスを維持した。
+- 標準ログインのAPI URLが0.0.0.0へ向く問題を実画面で再現し、標準の `MASTRA_AUTO_DETECT_URL=true` で同一オリジンを使うよう修正した。
+- 未認証のAPI読取り、設定作成と更新は401。設定不足の実イメージは起動失敗。ホスト公開は127.0.0.1:4111のみ、永続領域はnode所有・700、正常時の死活確認はhealthy。
+- LLM接続失敗の採取では今回追加したllama-serverだけを停止し、証拠採取後に直ちに復旧した。既存Dify・音声サービスとルート.envは変更していない。
+- コメント点検・変更Markdown整形: PASS。
+
+## 制限と未実行事項
+
+- 全体ゲートは変更外の既存Markdown 15件の整形不一致でlintが停止した。変更した文書は対象整形で確認した。失敗箇所は `documents/design/frontend/character/rigging/rig-binding.md`、`documents/research/character_animation/answers/09-canonical-upper-body-state.md`、既存のcharacter-sincro-motionタスク12件とsincro-rtcタスク1件である。
+- 採用libSQLはStudioのフィードバック一覧に未対応で、同APIが500を返す。指示編集・試験・公開と会話は確認済み。フィードバック管理は対象外として設計にも明記した。

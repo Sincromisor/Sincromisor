@@ -1,0 +1,28 @@
+{
+	"name": "sincromisor-agent-server",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"engines": {
+		"node": ">=22.13.0"
+	},
+	"scripts": {
+		"build": "mastra build --studio",
+		"start": "node .mastra/output/index.mjs",
+		"check": "tsc --noEmit",
+		"test": "node --import tsx --test src/mastra/__tests__/*.test.ts"
+	},
+	"dependencies": {
+		"@mastra/core": "1.66.0",
+		"@mastra/editor": "0.14.5",
+		"@mastra/libsql": "1.22.5",
+		"@mastra/memory": "1.29.0",
+		"zod": "4.3.6"
+	},
+	"devDependencies": {
+		"mastra": "1.29.0",
+		"typescript": "5.9.3",
+		"tsx": "4.21.0",
+		"@types/node": "22.19.15"
+	}
+}

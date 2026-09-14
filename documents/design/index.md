@@ -83,6 +83,8 @@
     - 音声認識と固有名詞補強の接続点
 - [TextProcessor](backend/services/text-processor.md)
     - 応答テキスト、チャットメッセージ、テロップ生成
+- [AgentServer](backend/services/agent-server.md)
+    - Mastra API、管理者用Studio、会話履歴と認証
 - [VoiceSynthesizer](backend/services/voice-synthesizer.md)
     - 応答テキストから音声フレームへの変換
 

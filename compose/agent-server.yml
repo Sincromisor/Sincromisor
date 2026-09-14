@@ -1,0 +1,32 @@
+services:
+    agent-server:
+        profiles: [chat]
+        build:
+            context: ../sincromisor-server/agent-server
+            dockerfile: ../../Docker/agent-server/Dockerfile
+        image: ${SINCRO_REGISTRY_NAME}/agent-server:latest
+        environment:
+            SINCRO_AGENT_ADMIN_TOKEN: ${SINCRO_AGENT_ADMIN_TOKEN:-}
+            SINCRO_AGENT_LLM_URL: ${SINCRO_AGENT_LLM_URL:-http://llama-server:8080/v1}
+            SINCRO_AGENT_LLM_MODEL: ${SINCRO_AGENT_LLM_MODEL:-gemma-4-E2B-it}
+            SINCRO_AGENT_DB_URL: file:/data/mastra.db
+        ports: ["127.0.0.1:4111:4111"]
+        volumes:
+            - agent-data:/data
+        networks: [sincromisor-net]
+        depends_on:
+            llama-server:
+                condition: service_healthy
+        healthcheck:
+            # 実行イメージ内のNodeで、認証付きのAPI起動確認を行う。トークンは出力しない。
+            test: [CMD, node, -e, "fetch('http://localhost:4111/api/agents',{headers:{Authorization:'Bearer '+process.env.SINCRO_AGENT_ADMIN_TOKEN}}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+            start_period: 30s
+            interval: 10s
+            timeout: 5s
+            retries: 6
+
+volumes:
+    agent-data:
+
+networks:
+    sincromisor-net:

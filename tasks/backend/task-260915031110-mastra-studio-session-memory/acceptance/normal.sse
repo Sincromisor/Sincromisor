@@ -1,0 +1,22 @@
+data: {"type": "start", "payload": {}}
+
+data: {"type": "step-start", "payload": {}}
+
+data: {"type": "text-start", "payload": {}}
+
+data: {"type": "text-delta", "payload": {"text": "^"}}
+
+data: {"type": "text-delta", "payload": {"text": "0"}}
+
+data: {"type": "text-delta", "payload": {"text": "こんにちは"}}
+
+data: {"type": "text-delta", "payload": {"text": "！"}}
+
+data: {"type": "text-end", "payload": {}}
+
+data: {"type": "step-finish", "payload": {"stepResult": {"reason": "stop", "rawReason": "stop", "isContinued": false}}}
+
+data: {"type": "finish", "payload": {"stepResult": {"reason": "stop", "rawReason": "stop", "isContinued": false}}}
+
+data: [DONE]
+
