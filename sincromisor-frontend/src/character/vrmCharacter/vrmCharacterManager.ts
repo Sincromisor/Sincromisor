@@ -176,7 +176,10 @@ export class VRMCharacterManager {
         );
         if (vrm.expressionManager) {
             this.mouthMorphController = new FaceMorphController(vrm.expressionManager);
-            this.emotionMorphController = new FaceEmotionController(vrm.expressionManager);
+            this.emotionMorphController = new FaceEmotionController(
+                vrm.expressionManager,
+                this.diagnostics?.onEmotionLog,
+            );
             this.eyeBehaviorController = new EyeBehaviorController(vrm, vrm.expressionManager);
         }
     }

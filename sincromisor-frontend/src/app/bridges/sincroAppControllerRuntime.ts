@@ -86,6 +86,7 @@ export function createSincroAppRuntimeBundle(params: {
         },
         debugBridge: {
             vrmDiagnostics: {
+                onEmotionLog: (message) => debugConsoleManager.addTextChannelLog(message),
                 onAvatarMotionProfile: (profile) =>
                     debugConsoleManager.updateAvatarMotionProfile(profile),
                 onPoseRetargetFrame: (frame) =>

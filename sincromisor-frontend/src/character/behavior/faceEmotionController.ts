@@ -1,5 +1,4 @@
 import type { VRMExpressionManager, VRMExpressionPresetName } from "@pixiv/three-vrm";
-import { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
 import type { CharacterBehaviorSnapshot } from "./characterBehaviorState";
 
 type EmotionPreset = "neutral" | "relaxed" | "happy" | "sad" | "angry" | "surprised";
@@ -29,7 +28,6 @@ type ExpressionWithMutableBinds = ExpressionWithBinds & {
 //   口表現との干渉を最小化する（完全分離ではなく、汎用性重視の折衷）
 export class FaceEmotionController {
     private readonly expressionManager: VRMExpressionManager;
-    private readonly logger: DebugConsoleManager;
     private handledMessageId: string | undefined;
     private neutralizedSpeechId: number | undefined;
     private activeEmotion:
@@ -50,15 +48,18 @@ export class FaceEmotionController {
         "surprised",
     ];
 
-    constructor(expressionManager: VRMExpressionManager) {
+    /** 口形との重複を除去して表情を初期化する。ログ通知先の省略は制御に影響しない。 */
+    constructor(
+        expressionManager: VRMExpressionManager,
+        private readonly onLog?: (message: string) => void,
+    ) {
         this.expressionManager = expressionManager;
-        this.logger = DebugConsoleManager.getManager();
         // 口パク(aa/ih/...)と同じ morph target を感情プリセットが触るVRMでは、
         // 表情と口の競合で破綻しやすい。初期化時に重複bindを除去して干渉を減らす。
         this.detachEmotionBindsOverlappingMouthVisemes();
         // モデル差で感情プリセット未実装のことがあるため、起動時に一覧を出しておく。
         this.logAvailableExpressions();
-        this.logger.addTextChannelLog("[emotion] FaceEmotionController initialized\n");
+        this.onLog?.("[emotion] FaceEmotionController initialized\n");
     }
 
     // 感情表情も CharacterBehaviorSnapshot を正本にし、text_ch/telop_ch の順序差を状態層へ閉じ込める。
@@ -112,7 +113,7 @@ export class FaceEmotionController {
         const presetExists = expression !== undefined;
         // 同じコードでもVRMごとに見え方がかなり違うため、実機調整しやすいよう
         // 適用先プリセット名と強度をログに残す。
-        this.logger.addTextChannelLog(
+        this.onLog?.(
             `[emotion] apply message_id=${msg.message_id} code=${code} preset=${preset} exists=${presetExists} intensity=${intensity.toFixed(2)}\n`,
         );
         this.playEmotion({ preset, intensity, holdMs, transitionMs, nowMs: snapshot.nowMs });
@@ -214,8 +215,8 @@ export class FaceEmotionController {
             .map((name) => `${name}:${names.includes(name) ? "yes" : "no"}`)
             .join(", ");
         const expressionList = names.length === 0 ? "(none)" : names.join(", ");
-        this.logger.addTextChannelLog(`[emotion] available expressions: ${expressionList}\n`);
-        this.logger.addTextChannelLog(`[emotion] preset availability: ${availability}\n`);
+        this.onLog?.(`[emotion] available expressions: ${expressionList}\n`);
+        this.onLog?.(`[emotion] preset availability: ${availability}\n`);
     }
 
     private detachEmotionBindsOverlappingMouthVisemes(): void {
@@ -224,7 +225,7 @@ export class FaceEmotionController {
         // これにより、モデル差が大きい「目/眉個別morph名」の知識を持たなくても競合を減らせる。
         const mouthMorphBindKeys = this.collectMouthMorphBindKeys();
         if (mouthMorphBindKeys.size === 0) {
-            this.logger.addTextChannelLog(
+            this.onLog?.(
                 "[emotion] mouth-viseme morph bind overlap check skipped (no viseme morph binds)\n",
             );
             return;
@@ -235,7 +236,7 @@ export class FaceEmotionController {
             removedBindCount += this.detachOverlappingEmotionBinds(preset, mouthMorphBindKeys);
         }
 
-        this.logger.addTextChannelLog(
+        this.onLog?.(
             `[emotion] detached ${removedBindCount} emotion morph binds overlapping mouth visemes\n`,
         );
     }
