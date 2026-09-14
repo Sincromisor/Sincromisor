@@ -5,6 +5,7 @@ import {
     type SincroAppNumericSettingKey,
     sincroAppNumericSettingConstraints,
 } from "./sincroAppSettingsDefaults";
+import { type SincroAudioTuning, sincroAudioTuningSchema } from "./sincroAudioTuningSchema";
 
 /** URL表記に依存しない、共通枠組みを使うページの保存単位。 */
 export type SincroSettingsPage = "simple-vrm" | "vrm360" | "looking-glass-vrm";
@@ -52,7 +53,11 @@ const settingsSchema = z.object({
     lgDepthiness: numeric("lgDepthiness"),
     lgFovyDeg: numeric("lgFovyDeg"),
 });
-const documentSchema = z.object({ version: z.literal(1), settings: settingsSchema });
+const documentSchema = z.object({
+    version: z.literal(1),
+    settings: settingsSchema,
+    audio: sincroAudioTuningSchema.optional().catch(undefined),
+});
 
 /** 小さなページ別JSONを保持する。初期化・環境通知は書き込まず、利用者操作の差分だけを保存する。 */
 export class SincroAppSettingsPersistence {
@@ -63,6 +68,7 @@ export class SincroAppSettingsPersistence {
         SincroAppSettingsPersistence.writesStopped = true;
     }
 
+    private audio: SincroAudioTuning = {};
     private settings: z.infer<typeof settingsSchema> = {};
     constructor(private readonly page: SincroSettingsPage) {}
 
@@ -72,6 +78,7 @@ export class SincroAppSettingsPersistence {
             const raw = window.localStorage.getItem(sincroSettingsStorageKey(this.page));
             const parsed = documentSchema.safeParse(raw === null ? undefined : JSON.parse(raw));
             this.settings = parsed.success ? parsed.data.settings : {};
+            this.audio = parsed.success ? (parsed.data.audio ?? {}) : {};
         } catch (error) {
             frontendLogger.warn("Failed to load settings.", { error });
         }
@@ -107,10 +114,34 @@ export class SincroAppSettingsPersistence {
             this.settings,
             Object.fromEntries(Object.entries(valid).filter(([, value]) => value !== undefined)),
         );
+        this.write();
+    }
+
+    /** 通常設定の復元後に音声コールバックから使用する。診断通知のスナップショットは保存しない。 */
+    getAudioTuning(): SincroAudioTuning {
+        return this.audio;
+    }
+
+    saveAudioTuning(partial: SincroAudioTuning): void {
+        if (SincroAppSettingsPersistence.writesStopped) return;
+        this.audio = { ...this.audio, ...sincroAudioTuningSchema.parse(partial) };
+        this.write();
+    }
+
+    /** 会場プリセットの明示切替では、そのプリセットが所有する個別調整だけを解除する。 */
+    clearVenueAudioTuning(): void {
+        delete this.audio.filterConfig;
+        delete this.audio.vadRmsThreshold;
+        delete this.audio.peakThreshold;
+        this.write();
+    }
+
+    private write(): void {
+        if (SincroAppSettingsPersistence.writesStopped) return;
         try {
             window.localStorage.setItem(
                 sincroSettingsStorageKey(this.page),
-                JSON.stringify({ version: 1, settings: this.settings }),
+                JSON.stringify({ version: 1, settings: this.settings, audio: this.audio }),
             );
         } catch (error) {
             frontendLogger.warn("Failed to save settings.", { error });

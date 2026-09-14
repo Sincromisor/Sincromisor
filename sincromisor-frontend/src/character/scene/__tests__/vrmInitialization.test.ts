@@ -3,6 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 const { coreStart, sceneStart } = vi.hoisted(() => ({ coreStart: vi.fn(), sceneStart: vi.fn() }));
 vi.mock("../../../app/controller/sincroController", () => ({
     SincroController: class {
+        restoreAudioTuning() {}
         start() {
             coreStart();
         }

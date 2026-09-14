@@ -1,10 +1,6 @@
 import { CharacterBehaviorState } from "../../character/behavior/characterBehaviorState";
 import type { ChatMessageService } from "../../features/conversation/chat/model/chatMessageService";
-import type {
-    AudioFilterControlConfig,
-    DebugConsoleManager,
-    LearnedVadPerformanceMode,
-} from "../../features/debug/model/debugConsoleManager";
+import type { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
 import type { DialogManager } from "../../features/dialog/model/dialogManager";
 import {
     type AudioConstraintRuntimeApplyReport,
@@ -12,10 +8,13 @@ import {
     type VadStateReport,
 } from "../../features/media/userMedia/userMediaManager";
 import type { DialogBackedSincroAppSettings } from "../settings/sincroAppSettingsDefaults";
+import type { SincroAppSettingsPersistence } from "../settings/sincroAppSettingsPersistence";
+import { SincroAudioTuningBinding } from "./sincroAudioTuningBinding";
 
 // getUserMedia と VAD/音声フィルタ設定の結線をまとめる controller。
 // DialogManager(設定入力) / UserMediaManager(実処理) / DebugConsoleManager(診断UI) の橋渡し役。
 export class SincroAudioInputController {
+    private tuningBinding?: SincroAudioTuningBinding;
     private readonly dialogManager: DialogManager;
     private readonly debugConsoleManager: DebugConsoleManager;
     private readonly chatMessageService: ChatMessageService;
@@ -89,7 +88,11 @@ export class SincroAudioInputController {
     private bindDebugConsoleAndVadState(): void {
         // DebugConsole の初期表示値を UserMediaManager の内部状態に合わせる。
         this.syncInitialDebugConsoleAudioState();
-        this.bindDebugConsoleAudioControlCallbacks();
+        this.tuningBinding = new SincroAudioTuningBinding({
+            debug: this.debugConsoleManager,
+            media: this.userMediaManager,
+            clearVenuePreset: () => this.clearVenuePresetIfEnabledWithoutResync(),
+        });
         this.bindUserMediaStateCallbacks();
     }
 
@@ -113,37 +116,12 @@ export class SincroAudioInputController {
         this.debugConsoleManager.setLocalLearnedVadPerformanceMode("balanced");
     }
 
-    private bindDebugConsoleAudioControlCallbacks(): void {
-        // DebugConsole での調整操作を UserMediaManager 側の実処理へ反映する。
-        this.debugConsoleManager.setLocalAudioFilterChangeCallback(
-            (config: AudioFilterControlConfig) => {
-                this.userMediaManager.setAudioFilterConfig(config);
-                // Venue preset 有効中にDebugで個別調整した場合は、preset状態を解除して表示を実効値へ揃える。
-                this.clearVenuePresetIfEnabledWithoutResync();
-            },
+    /** 通常設定の復元後・音声取得前に診断調整を実処理へ戻し、利用者操作の保存を開始する。 */
+    restoreTuning(persistence: SincroAppSettingsPersistence): void {
+        this.tuningBinding?.restore(
+            persistence,
+            this.dialogManager.getSetting("enableVenueNoiseMode"),
         );
-        this.debugConsoleManager.setLocalVadThresholdModeChangeCallback((mode) => {
-            this.userMediaManager.setVadThresholdMode(mode);
-        });
-        this.debugConsoleManager.setLocalLearnedVadPerformanceModeChangeCallback(
-            (mode: LearnedVadPerformanceMode) => {
-                this.userMediaManager.setLearnedVadPerformanceMode(mode);
-                this.debugConsoleManager.setLocalLearnedVadTuning(
-                    this.userMediaManager.getLearnedVadTuning(),
-                );
-            },
-        );
-        this.debugConsoleManager.setLocalLearnedVadTuningChangeCallback((config) => {
-            this.userMediaManager.setLearnedVadTuning(config);
-        });
-        this.debugConsoleManager.setLocalLearnedVadStrictModeChangeCallback((enabled) => {
-            this.userMediaManager.setLearnedVadStrictMode(enabled);
-        });
-        this.debugConsoleManager.setLocalVadRmsThresholdChangeCallback((threshold: number) => {
-            this.userMediaManager.setVadThresholds({ rmsThreshold: threshold });
-            // Venue preset が保持する閾値から外れるため、UI上の preset 表示は解除しておく。
-            this.clearVenuePresetIfEnabledWithoutResync();
-        });
     }
 
     private bindUserMediaStateCallbacks(): void {
@@ -216,6 +194,7 @@ export class SincroAudioInputController {
             prev.enableVenueNoiseMode !== next.enableVenueNoiseMode
         ) {
             this.userMediaManager.setVenueNoiseModeEnabled(next.enableVenueNoiseMode);
+            if (!forceAll) this.tuningBinding?.clearVenueOverrides();
             // Venue preset は HPF/LPF と VAD閾値を同時変更するため、Debug UI も合わせて更新する。
             this.syncDebugConsoleFromUserMedia();
         }
@@ -267,14 +246,15 @@ export class SincroAudioInputController {
     }
 
     /** 診断画面の個別調整時は騒音プリセット表示だけ解除し、通知による音声設定の再適用を一度抑止する。 */
-    private clearVenuePresetIfEnabledWithoutResync(): void {
+    private clearVenuePresetIfEnabledWithoutResync(): boolean {
         if (!this.dialogManager.getSetting("enableVenueNoiseMode")) {
-            return;
+            return false;
         }
         // dialog state だけ更新し、settingsChange 経由の「デフォルトプロファイル再適用」を抑止する。
         this.suppressNextDialogMicSettingsSync = true;
         this.dialogManager.updateSettings({ enableVenueNoiseMode: false });
         this.dialogMicSettingsSnapshot = this.readDialogMicSettingsSnapshot();
+        return true;
     }
 
     /** 設定変更通知の差分判定に使う、現在の音声設定を取得する。 */

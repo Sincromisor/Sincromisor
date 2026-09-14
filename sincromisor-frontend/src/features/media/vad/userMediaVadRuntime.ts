@@ -128,6 +128,11 @@ export class UserMediaVadRuntime {
         this.learnedVadClient.setTuningConfig(preset);
     }
 
+    /** 自動追従中の計測閾値と区別し、利用者が選んだ手動閾値を保存用に返す。 */
+    getManualVadThresholds(): VadThresholdConfig {
+        return { ...this.manualVadThresholdConfig };
+    }
+
     getVadThresholds(): VadThresholdConfig {
         return { ...this.vadThresholdConfig };
     }
