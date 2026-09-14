@@ -15,7 +15,7 @@ class TextProcessorWorker:
     """要求ごとの応答生成とWebSocket送信を結ぶ基底処理担当。
 
     接続ごとに生成され、受信と直列応答を別処理で管理する。いずれかが終われば
-    他方を必ず終了させるため、Difyなどの応答待ちを接続終了後に残さない。
+    他方を必ず終了させるため、外部APIの応答待ちを接続終了後に残さない。
     """
 
     def __init__(self) -> None:
@@ -71,7 +71,7 @@ class TextProcessorWorker:
         ws: WebSocket,
         request: TextProcessorRequest,
     ) -> None:
-        """Dify応答の送信と終了記録を一つの取消可能な処理として所有する。"""
+        """応答の送信と終了記録を一つの取消可能な処理として所有する。"""
         start_t = perf_counter()
         response_t = -1.0
         self.logger.info(["process_request", request])
