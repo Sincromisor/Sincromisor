@@ -32,7 +32,8 @@
 - `src/features/gaze/poseTracking`
     - PoseLandmarker 結果から姿勢動作スナップショット / 姿勢目標を作る追跡処理と試作検証ページ実行時を置く。
 - `src/features/gaze/handTracking`
-    - HandLandmarker 結果から手動作スナップショットを作る追跡処理を置く。
+    - `sincroHandTracker.ts`がモデルと推論・時間計測を所有する。`sincroHandNormalization.ts`がROI座標復元と非有限値補正、`sincroHandFeatures.ts`が掌・指の特徴量計算、`sincroHandAssignment.ts`がPose手首に基づく左右割当を担う。
+    - 推論後は正規化→特徴量→左右割当の順に処理する。再生側も同じ正規化を使い、ROI座標復元は既存の`mapCropPointToFullFrame()`を使う。
     - Hand スナップショットは `SincroHandMotionSnapshot`、左右 `SincroHandSideSnapshot`、`SincroHandFeatureSnapshot` の通常のオブジェクトに固定する。
     - 保存対象は `fullFrameWrist`、手のひらの法線・方向、指の曲げ / 指の開き、親指の対向動作、開き具合、信頼度、左右判定要約、ROI 観測値、警告だけに限定する。MediaPipe ランドマークオブジェクト、切り抜きオブジェクト、未加工のランドマークは保存しない。
     - `openness` は索引 / 中指 / 薬指 / 小指の平均曲げから決め、`<= 0.35` を `open`、`0.35..0.72` を `half`、`>= 0.72` を `closed`、ランドマーク欠損または信頼度 `< 0.2` を `unknown` とする。

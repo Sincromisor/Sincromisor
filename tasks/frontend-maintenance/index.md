@@ -2,9 +2,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 22 件）
+## タスク一覧（自動生成 / 全 23 件）
 
-### done（完了） — 22 件
+### done（完了） — 23 件
 
 | タスク                                                                                                                     | タイトル                                         | 判定    | 依存                                                                                                                                                          |
 | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -30,5 +30,6 @@
 | [task-260914172952-split-avatar-profile-measurement](./task-260914172952-split-avatar-profile-measurement/task.md)         | アバタープロファイルの計測と値の組み立てを分ける | ✅ PASS | `task-260914172952-split-avatar-profile-schema`                                                                                                               |
 | [task-260914172952-split-avatar-profile-schema](./task-260914172952-split-avatar-profile-schema/task.md)                   | アバタープロファイルの保存データ検証を分離する   | ✅ PASS | —                                                                                                                                                             |
 | [task-260914172952-split-hand-assignment](./task-260914172952-split-hand-assignment/task.md)                               | 手追跡の左右割当を専用モジュールへ分離する       | ✅ PASS | —                                                                                                                                                             |
+| [task-260914172953-split-hand-normalization](./task-260914172953-split-hand-normalization/task.md)                         | 手追跡の正規化と特徴量計算を整理する             | ✅ PASS | `task-260914172952-split-hand-assignment`                                                                                                                     |
 
 <!-- AUTOGEN:tasks END -->
