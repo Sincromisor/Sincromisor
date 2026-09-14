@@ -157,6 +157,35 @@ afterEach(() => {
 });
 
 describe("TrackerRuntime", () => {
+    it("状態を置き換えた後も共通コールバックが現在の状態を更新する", () => {
+        const { video } = createFakeVideo();
+        const runtime = new TrackerRuntime(video);
+        // 非公開の更新口を保持し、停止時の状態置換をまたいだ参照先だけを確認する。
+        const callbacks = runtime["createStateUpdateCallbacks"]();
+        const previousState = runtime["state"];
+        const previousValues = { ...previousState };
+        runtime.stopFaceTracking();
+        const pose = createFreshPose(1000);
+
+        callbacks.markPoseInference(1000);
+        callbacks.markHandInference(1001);
+        callbacks.markGestureInference(1002);
+        callbacks.markFaceRoiInference(1003);
+        callbacks.setLatestPoseSnapshot(pose);
+
+        expect(runtime["state"]).not.toBe(previousState);
+        expect(previousState).toEqual(previousValues);
+        expect(runtime["state"]).toMatchObject({
+            lastPoseInferenceAtMs: 1000,
+            lastHandInferenceAtMs: 1001,
+            lastGestureInferenceAtMs: 1002,
+            lastFaceRoiInferenceAtMs: 1003,
+            latestPoseSnapshot: pose,
+        });
+        callbacks.setLatestPoseSnapshot();
+        expect(runtime["state"].latestPoseSnapshot).toBeUndefined();
+    });
+
     it("keeps full-frame Face detect when fresh Pose makes Face ROI due", async () => {
         vi.stubGlobal("HTMLMediaElement", { HAVE_CURRENT_DATA: 2 });
         vi.stubGlobal("MediaStream", FakeMediaStream);

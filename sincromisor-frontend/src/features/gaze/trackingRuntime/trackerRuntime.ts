@@ -300,12 +300,26 @@ export class TrackerRuntime {
         });
     }
 
+    /** 両推論経路へ渡す更新口。時刻は映像時刻のミリ秒で、実行時点の状態を参照して再開始前の状態を保持しない。 */
+    private createStateUpdateCallbacks() {
+        return {
+            markPoseInference: (nowMs: number) => (this.state.lastPoseInferenceAtMs = nowMs),
+            markHandInference: (nowMs: number) => (this.state.lastHandInferenceAtMs = nowMs),
+            markGestureInference: (nowMs: number) => (this.state.lastGestureInferenceAtMs = nowMs),
+            markFaceRoiInference: (nowMs: number) => (this.state.lastFaceRoiInferenceAtMs = nowMs),
+            setLatestPoseSnapshot: (snapshot?: SincroPoseMotionSnapshot) =>
+                (this.state.latestPoseSnapshot = snapshot),
+        };
+    }
+
+    // 同期推論固有の性能判定・失敗処理・次フレーム予約を既存の順序で接続する。
     private createMainThreadPipelineInput(
         timing: TrackerVideoFrameTiming,
         plan: ReturnType<typeof createTrackerRuntimePredictionPlan>,
         callbacks: TrackerRuntimeCallbacks,
     ): MainThreadPipelineInput {
         return {
+            ...this.createStateUpdateCallbacks(),
             videoElement: this.videoElement,
             callbacks,
             faceTracker: this.faceTracker,
@@ -321,16 +335,10 @@ export class TrackerRuntime {
             faceRoiTrackingEnabled: this.state.faceRoiTrackingEnabled,
             handRoiPaused: this.roiBudget.handIsPaused(),
             faceRoiPaused: this.roiBudget.faceRoiIsPaused(),
-            setLatestPoseSnapshot: (snapshot?: SincroPoseMotionSnapshot) =>
-                (this.state.latestPoseSnapshot = snapshot),
             applyPosePerformanceGate: (snapshot, nowMs, frameTiming) =>
                 this.applyPosePerformanceGate(snapshot, nowMs, frameTiming),
             degradePoseToFaceOnly: (reason, nowMs, frameTiming) =>
                 this.degradePoseToFaceOnly(reason, nowMs, frameTiming),
-            markPoseInference: (nowMs) => (this.state.lastPoseInferenceAtMs = nowMs),
-            markHandInference: (nowMs) => (this.state.lastHandInferenceAtMs = nowMs),
-            markGestureInference: (nowMs) => (this.state.lastGestureInferenceAtMs = nowMs),
-            markFaceRoiInference: (nowMs) => (this.state.lastFaceRoiInferenceAtMs = nowMs),
             recordRoiFrame: (frame: TrackerRuntimeRoiFrameInput) => this.recordRoiFrame(frame),
             publishStats: (stats) => {
                 callbacks.onTrackerStats?.(
@@ -349,12 +357,14 @@ export class TrackerRuntime {
         };
     }
 
+    // Worker固有の非同期完了・同期推論への切替は共通状態更新とは別に接続する。
     private createWorkerPipelineInput(
         timing: TrackerVideoFrameTiming,
         plan: ReturnType<typeof createTrackerRuntimePredictionPlan>,
         callbacks: TrackerRuntimeCallbacks,
     ): WorkerPipelineInput {
         return {
+            ...this.createStateUpdateCallbacks(),
             videoElement: this.videoElement,
             callbacks,
             workerClient: this.workerClient,
@@ -369,12 +379,6 @@ export class TrackerRuntime {
             frameLoopIsEnabled: () => this.frameLoop.enabled,
             markFrameLoopStopped: () => this.frameLoop.markStopped(),
             scheduleFrame: () => this.frameLoop.schedule(),
-            markPoseInference: (nowMs) => (this.state.lastPoseInferenceAtMs = nowMs),
-            markHandInference: (nowMs) => (this.state.lastHandInferenceAtMs = nowMs),
-            markGestureInference: (nowMs) => (this.state.lastGestureInferenceAtMs = nowMs),
-            markFaceRoiInference: (nowMs) => (this.state.lastFaceRoiInferenceAtMs = nowMs),
-            setLatestPoseSnapshot: (snapshot?: SincroPoseMotionSnapshot) =>
-                (this.state.latestPoseSnapshot = snapshot),
             applyPosePerformanceGate: (snapshot, nowMs, frameTiming) =>
                 this.applyPosePerformanceGate(snapshot, nowMs, frameTiming),
             recordRoiFrame: (frame: TrackerRuntimeRoiFrameInput) => this.recordRoiFrame(frame),
