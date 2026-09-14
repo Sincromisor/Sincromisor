@@ -1,7 +1,9 @@
+import type { SincroPoseRetargetConfig } from "../../character/retargeting/sincroPoseRetargeter";
 import type {
     SincroAppChatBridge,
     SincroAppDebugBridge,
     SincroAppDialogBridge,
+    SincroAppPoseBridge,
     SincroAppRtcBridge,
     SincroAppStateBridge,
 } from "../bridges/sincroAppBridges";
@@ -95,6 +97,36 @@ export class SincroAppController {
     get debug(): SincroAppDebugBridge {
         return this.runtime.debugBridge;
     }
+    /** 診断モデルが正規化した姿勢設定をシーンへ公開する。 */
+    get pose(): SincroAppPoseBridge {
+        return this.runtime.poseBridge;
+    }
+
+    /**
+     * シーンの姿勢設定接続をこのアプリに所有させ、差し替え時に両方の購読を外す。
+     * 通常設定の強度変更だけを診断モデルへ入力し、診断通知はシーンへ渡すだけにする。
+     */
+    connectPoseSettings(listener: (config: Partial<SincroPoseRetargetConfig>) => void): () => void {
+        let scale = this.getSettingsSnapshot().sincroPoseRetargetScale;
+        const unsubscribePose = this.pose.subscribe(listener);
+        this.pose.applyConfig({ intensityScale: scale });
+        const unsubscribeSettings = this.subscribe((event) => {
+            if (
+                event.type !== "settings_snapshot" ||
+                event.settings.sincroPoseRetargetScale === scale
+            )
+                return;
+            scale = event.settings.sincroPoseRetargetScale;
+            this.pose.applyConfig({ intensityScale: scale });
+        });
+        const release = () => {
+            unsubscribePose();
+            unsubscribeSettings();
+        };
+        this.eventUnsubscribers.push(release);
+        return release;
+    }
+
     /** アプリの状態遷移を通したRTC停止操作を公開する。 */
     get rtc(): SincroAppRtcBridge {
         return this.runtime.rtcBridge;

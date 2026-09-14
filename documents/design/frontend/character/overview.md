@@ -48,6 +48,7 @@
     - 描画処理、カメラ、照明、サイズ変更、描画ループを持つ。
 - `VRMCharacterManager`
     - VRM 読み込み、制御処理初期化、毎フレーム更新を持つ。
+    - ページ初期化処理はアプリの姿勢設定窓口を使い、生成済みシーンへ正規化後の設定を適用する。設定の所有と操作通知はアプリ側、motion-debugの明示適用は独立ページ側が担う。
     - 診断は任意の `VRMDiagnostics` コールバックへプロファイル、姿勢変換結果、合成要約、適用注釈付き詳細の順に返す。診断未接続でも姿勢計算・適用は継続し、通常・360度・Looking Glassのアプリ窓口とmotion-debugの入口が診断管理へ接続する。
 - [`normalizedPoseWriter.ts`](../../../../sincromisor-frontend/src/character/vrmCharacter/normalizedPoseWriter.ts)
     - 現在フレームの最終姿勢の検査、所有ボーンの欠損補完、VRMへの一括書き込みを担う。管理処理は適用順序と診断への注釈付与を保持する。

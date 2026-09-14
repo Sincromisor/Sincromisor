@@ -24,13 +24,14 @@ vi.mock("../../lookingGlass/lookingGlassVrmScene", async () => ({
 it("3ページの診断引数と独立ページの診断保存先を接続する", () => {
     const diagnostics = { onComposerResult: vi.fn() };
     const start = vi.fn();
-    vi.mocked(VRMScene).mockImplementation(() =>
-        Object.assign(Object.create(VRMScene.prototype), {
+    vi.mocked(VRMScene).mockImplementation(function () {
+        Object.assign(this, {
             start,
             enableLookingGlassStartButton: vi.fn(),
             setSincroPoseRetargetConfig: vi.fn(),
-        }),
-    );
+        });
+        return this;
+    });
     for (const Initializer of [
         SincroVRMInitializer,
         SincroVRM360Initializer,
@@ -39,6 +40,7 @@ it("3ページの診断引数と独立ページの診断保存先を接続する
         const initializer = Object.assign(Object.create(Initializer.prototype), {
             appController: {
                 debug: { vrmDiagnostics: diagnostics },
+                pose: { getConfig: () => ({}) },
                 dialog: { getSelectedVrmUrl: () => "model.vrm" },
                 state: { getSettingsSnapshot: () => ({}) },
             },

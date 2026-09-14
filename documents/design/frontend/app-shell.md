@@ -31,6 +31,7 @@
     - UI と中核処理の共通窓口。
     - 起動設定、RTC、メディア機器、診断用スナップショット、右側ツールパネル状態を束ねる。
     - `debug.vrmDiagnostics` はVRMからの診断通知を既存の診断管理へ渡す。結果の複製・保存は診断側が所有する。
+    - `pose` は診断モデルの姿勢設定を取得・適用する窓口。`connectPoseSettings` は初期強度と通常設定の強度変更を正規化してシーンへ通知し、診断側操作も同じ通知先へ渡す。接続の解除は有効アプリが所有し、差し替え時に旧シーンへの通知を止める。
 - `SincroController`
     - UserMedia 取得、RTC 開始、CharacterGaze 開始、TalkManager 連携の実行時制御を担う。
 - `RTCTalkClient`

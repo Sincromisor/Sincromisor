@@ -9,6 +9,7 @@ import type {
     SincroAppChatBridge,
     SincroAppDebugBridge,
     SincroAppDialogBridge,
+    SincroAppPoseBridge,
     SincroAppRtcBridge,
     SincroAppStateBridge,
 } from "./sincroAppBridges";
@@ -25,6 +26,7 @@ export type SincroAppControllerRuntimeBundle = {
     dialogBridge: SincroAppDialogBridge;
     chatBridge: SincroAppChatBridge;
     debugBridge: SincroAppDebugBridge;
+    poseBridge: SincroAppPoseBridge;
     rtcBridge: SincroAppRtcBridge;
     stateBridge: SincroAppStateBridge;
 };
@@ -106,6 +108,12 @@ export function createSincroAppRuntimeBundle(params: {
             showRightToolSettingsPanel: () => rightToolPanelService.showSettingsPanel(),
             hideRightToolSettingsPanel: () => rightToolPanelService.hideSettingsPanel(),
             toggleRightToolSettingsPanel: () => rightToolPanelService.toggleSettingsPanel(),
+        },
+        poseBridge: {
+            getConfig: () => debugConsoleManager.getSnapshot().sincroMotion.poseRetarget,
+            applyConfig: (config) => debugConsoleManager.applySincroPoseRetargetConfig(config),
+            subscribe: (listener) =>
+                debugConsoleManager.setSincroPoseRetargetConfigChangeCallback(listener),
         },
         rtcBridge: { stop: params.stopRTC },
         stateBridge: params.state,
