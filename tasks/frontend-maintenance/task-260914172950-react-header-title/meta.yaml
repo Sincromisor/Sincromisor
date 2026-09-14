@@ -1,0 +1,13 @@
+id: task-260914172950-react-header-title
+title: ヘッダーの題名をReactの設定購読へ統一する
+category: frontend-maintenance
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-09-14
+closed_at: 2026-09-14
+legacy_ids: []

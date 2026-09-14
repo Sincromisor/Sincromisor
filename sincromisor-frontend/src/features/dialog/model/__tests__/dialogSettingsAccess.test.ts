@@ -5,14 +5,9 @@ import { DialogManager } from "../dialogManager";
 
 afterEach(() => vi.unstubAllGlobals());
 
-const effects = vi.hoisted(() => ({ title: vi.fn(), talkMode: vi.fn() }));
+const effects = vi.hoisted(() => ({ talkMode: vi.fn() }));
 
 // ブラウザーとVRM保存だけを置き換え、設定の状態・表示規則・通知は本番実装を通す。
-vi.mock("../../../../app/shell/headerTitleDomAdapter", () => ({
-    HeaderTitleDomAdapter: class {
-        setHeaderTitle = effects.title;
-    },
-}));
 vi.mock("../../../../character/behavior/characterBehaviorState", () => ({
     CharacterBehaviorState: { getManager: () => ({ setTalkMode: effects.talkMode }) },
 }));
@@ -73,7 +68,6 @@ it("起動前後で設定を共有し、操作制限・補正・機器表示と�
         sincroPoseRetargetScale: 0.7,
         characterEyeTrackingScale: 0,
     });
-    expect(effects.title).toHaveBeenLastCalledWith("Sincromisor");
     expect(effects.talkMode).toHaveBeenLastCalledWith("sincro");
     expect(dialog.getDialogUiState().startButtonDisabled).toBe(true);
     expect(dialog.settingsUiHints().audioInputDeviceReason).toContain("見つからない");

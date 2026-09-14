@@ -23,6 +23,7 @@
 
 - `src/app/shell/sincroPageAppShell.tsx`
     - 現行 3D ページの React ルート。
+    - ヘッダーの題名は既存の設定購読で文字列として描画する。起動前後と有効な制御処理の差し替えに追従し、空文字はモデル側で `Sincromisor` へ補正する。
     - ダイアログ、header、チャット、テロップ、右側ツールパネル、設定、デバッグをまとめて描画する。
 - `src/app/shell/bootstrapSincroPageAppShell.tsx`
     - ページの起動処理から React ルートを取り付けし、ページ別操作パネルをアプリの共通枠組みへ渡す。
