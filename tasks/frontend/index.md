@@ -2,9 +2,18 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 6 件）
+## タスク一覧（自動生成 / 全 11 件）
 
-### done（完了） — 6 件
+### open（未完） — 4 件
+
+| タスク                                                                                           | タイトル                                        | 判定 | 依存                                          |
+| ------------------------------------------------------------------------------------------------ | ----------------------------------------------- | ---- | --------------------------------------------- |
+| [task-260914232323-persist-webui-settings](./task-260914232323-persist-webui-settings/task.md)   | 通常設定をブラウザーに保存してURL優先で復元する | —    | `task-260914232318-settings-gaze-consistency` |
+| [task-260914232327-reset-webui-settings](./task-260914232327-reset-webui-settings/task.md)       | WebUIの全設定を初期状態に戻す操作を追加する     | —    | `task-260914232323-persist-webui-settings`    |
+| [task-260914232333-persist-audio-tuning](./task-260914232333-persist-audio-tuning/task.md)       | 音声デバッグ調整を保存して再読込後に復元する    | —    | `task-260914232327-reset-webui-settings`      |
+| [task-260914232333-persist-tracking-tuning](./task-260914232333-persist-tracking-tuning/task.md) | 視線と姿勢のデバッグ調整を保存して復元する      | —    | `task-260914232327-reset-webui-settings`      |
+
+### done（完了） — 7 件
 
 | タスク                                                                                                         | タイトル                                       | 判定    | 依存 |
 | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ------- | ---- |
@@ -14,5 +23,6 @@
 | [task-260914002336-remove-home-explanatory-labels](./task-260914002336-remove-home-explanatory-labels/task.md) | トップの自明な説明ラベルを整理する             | ✅ PASS | —    |
 | [task-260914012033-complete-production-home](./task-260914012033-complete-production-home/task.md)             | トップページの本番移行を完了する               | ✅ PASS | —    |
 | [task-260914144148-rtc-event-lifecycle](./task-260914144148-rtc-event-lifecycle/task.md)                       | RTCイベントの通知順序と旧接続の購読解除を修正  | ✅ PASS | —    |
+| [task-260914232318-settings-gaze-consistency](./task-260914232318-settings-gaze-consistency/task.md)           | 視線設定と自動ミュートの整合性を修正する       | ✅ PASS | —    |
 
 <!-- AUTOGEN:tasks END -->

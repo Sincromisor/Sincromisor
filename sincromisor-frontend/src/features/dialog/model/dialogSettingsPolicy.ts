@@ -235,7 +235,8 @@ export class DialogSettingsPolicy {
 
     applyAutoMuteAvailability(stateStore: DialogStateStore): void {
         // AutoMute は Gaze に依存するため、Gaze 無効時は自動的に OFF に戻す。
-        const enabled = stateStore.get("enableCharacterGaze");
+        const enabled =
+            stateStore.get("enableCharacterGaze") && !stateStore.isDisabled("enableCharacterGaze");
         stateStore.setDisabled("enableAutoMute", !enabled);
         if (!enabled) {
             stateStore.set("enableAutoMute", false);
