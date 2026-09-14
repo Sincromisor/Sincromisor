@@ -8,7 +8,7 @@
 
 | 旧文書                                                | 主な移行先                                                                                         |
 | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `frontend_ui.md`                                      | `frontend/app-shell.md`, `frontend/settings-and-debug-ui.md`                                       |
+| `frontend_ui.md`                                      | `frontend/app-shell.md`, `frontend/setting-and-debug-ui/README.md`                                 |
 | `frontend_migration_react.md`                         | `initiatives/react-migration.md`, `decisions/ADR-260222-react-migration.md`                        |
 | `frontend_character.md`                               | `frontend/character/overview.md`, `frontend/character/motion.md`, `frontend/character/tracking.md` |
 | `frontend_vad.md`                                     | `frontend/audio/vad.md`                                                                            |

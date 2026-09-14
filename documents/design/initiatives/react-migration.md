@@ -53,6 +53,6 @@
 ## 参照
 
 - `documents/design/frontend/app-shell.md`
-- `documents/design/frontend/settings-and-debug-ui.md`
+- `documents/design/frontend/setting-and-debug-ui/README.md`
 - `documents/design/decisions/ADR-260222-react-migration.md`
 - `documents/design/archive/legacy-flat/frontend_migration_react.md`

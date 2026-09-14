@@ -35,5 +35,5 @@
 
 ## 参照
 
-- `documents/design/frontend/settings-and-debug-ui.md`
+- `documents/design/frontend/setting-and-debug-ui/README.md`
 - `documents/design/archive/legacy-flat/frontend_ui.md`

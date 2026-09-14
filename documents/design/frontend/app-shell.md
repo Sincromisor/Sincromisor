@@ -129,7 +129,7 @@
 
 ## 変更時の確認
 
-- UIの共通枠組みを変更したら `frontend/pages.md` と `frontend/settings-and-debug-ui.md` の影響を確認する。
+- UIの共通枠組みを変更したら `frontend/pages.md` と `frontend/setting-and-debug-ui/README.md` の影響を確認する。
 - RTC 接続仕様を変更したら `contracts/frontend-rtc.md` とバックエンドを同時確認する。
 - メディア機器設定を変更したら起動前ダイアログと設定パネルの両方を確認する。
 - 設定既定値を変更したら起動前ダイアログ、設定パネル、Looking Glass 実行時スナップショットの初期値一致を確認する。
@@ -138,6 +138,6 @@
 ## 参照
 
 - `documents/design/frontend/pages.md`
-- `documents/design/frontend/settings-and-debug-ui.md`
+- `documents/design/frontend/setting-and-debug-ui/README.md`
 - `documents/design/archive/legacy-flat/frontend_ui.md`
 - `documents/design/archive/legacy-flat/frontend_migration_react.md`
