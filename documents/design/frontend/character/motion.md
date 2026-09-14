@@ -120,8 +120,8 @@
     - 視線表情または目ボーン代替処理で視線を制御する。
 - `HeadBoneController`
     - 視線 / 動作の変換 / カメラ代替処理を元に首・頭部回転を適用する。
-- `CharacterMotionOrchestrator`
-    - 待機呼吸、傾聴姿勢、AI 発話拍に合わせたジェスチャー、動作方針を統括する。
+- `CharacterRootStabilizer`
+    - VRM内部更新後、腰の位置と読込時回転だけを復元する。未使用の上半身直接制御と専用状態・設定転送は削除し、共有定数と体幹合成レイヤーは維持する。
 - `ArmBoneController`
     - 待機ジェスチャーと任意姿勢の変換の腕補正を加算する。
     - `world_3d_ik` では `SincroArmIkSolver` が返すローカルクォータニオンを優先し、同じ腕の待機 / 発話ジェスチャーは競合させない。
@@ -211,7 +211,7 @@
     - 体幹代替処理補助処理は完成版 `AvatarMotionProfile.torso.distribution` を正本として体幹差分クォータニオンを `spine` / `chest` / `upperChest` に分配する。プロファイル配分が非有限、負の、または合計 `1.0 ± 0.001` から外れる場合は対応能力既定へ戻し、警告コードは `invalid_torso_distribution_profile_defaulted` だけを使う。
     - 対応能力既定配分は `spine+chest+upperChest` で `{ spine: 0.25, chest: 0.40, upperChest: 0.35 }`、`spine+chest` で `{ spine: 0.35, chest: 0.65, upperChest: 0 }`、それ以外で `{ spine: 1, chest: 0, upperChest: 0 }` とする。補助処理は存在する体幹ボーンだけを `ownedBones` に含め、姿勢合成処理は欠損 `upperChest` を `missing_optional_bone` として抑制する。
     - 最終制限 / 値の制限段階はクォータニオン正規化と角速度制限フックを持つ。角速度制限は `previousFinalPose` と `deltaSeconds > 0` がある場合だけ実行し、既定値は `720deg/sec` とする。
-    - v1 は開発者専用パスとして motion-debug / 補助処理から同じ入力で呼べる契約を固める段階であり、本番の `ArmBoneController` / `CharacterMotionTorsoApplier` ボーン書き込みや `VRMCharacterManager.update()` の順序は変更しない。motion-debug は記録 / ライブスナップショット用に追跡層由来の姿勢合成処理結果を生成し、`finalPose`、`ownedBones`、`suppressedLayers`、`clampedBones`、`warnings` を保存・表示する。
+    - v1 は開発者専用パスとして motion-debug / 補助処理から同じ入力で呼べる契約を固める段階であり、本番の上半身一括適用や `VRMCharacterManager.update()` の順序は変更しない。motion-debug は記録 / ライブスナップショット用に追跡層由来の姿勢合成処理結果を生成し、`finalPose`、`ownedBones`、`suppressedLayers`、`clampedBones`、`warnings` を保存・表示する。
     - 本番 `sincro` 実行時では `src/character/runtime/sincroVrmPoseComposerDryRun.ts` の試行サービスが `VRMCharacterManager.update()` 内で `composeVrmPose()` を観測専用実行する。入力は最新 `SincroPoseRetargetFrame`、`AvatarMotionProfile` / `MinimalAvatarMotionProfile`、サービスが保持する任意前回の最終姿勢、`deltaSeconds` に限定し、生成層は代替処理と追跡だけにする。意味に基づく動作 / 指層は後続の適用機能フラグで所有境界を確定するまで混ぜない。
     - 本番試行結果は `{ status: "available" | "not_ready" | "invalid_input" | "missing_profile"; result?: VrmPoseComposerResult; warnings: string[] }` とし、`status !== "available"` では `result` を持たない。利用可能結果の `finalPose` は次フレームの角速度制限入力としてだけ保持し、診断 Console には状態、警告、抑制済み層、制限済みボーンの要約を表示する。
     - `face-only` / `comfortable-idle` などで最新動作の変換フレームが無いフレームは `not_ready` として扱い、前回
@@ -225,7 +225,7 @@
     - 本番実行時の現行所有権 map はタスク成果物
       [runtime-motion-ownership-map](../../../../tasks/character-sincro-motion/task-260629225907-sincro-runtime-motion-ownership-map/artifacts/runtime-motion-ownership-map.md)
       を正本にする。移行前の `move-to-composer` / `keep-controller-owned` / `needs-decision` 分類は設計本文へ重複展開しない。
-    - `CharacterMotionTorsoApplier` の置き換え計画はタスク成果物
+    - 削除済みの体幹直接書き込み処理の置き換え計画はタスク成果物
       [torso-shoulder-composer-migration-plan](../../../../tasks/character-sincro-motion/task-260629225951-torso-shoulder-composer-ownership-migration-plan/artifacts/torso-shoulder-composer-migration-plan.md)
       を正本にする。体幹 / 肩移行は腕姿勢合成処理適用フラグと別段階で進め、肩ボーン欠損時の `upperArm` 代替処理だけを境界確認点にする。
     - `vrm.humanoid.setNormalizedPose(finalPose)` への全面移行は後続タスクに残す。移行ゲートは、頭部 / 首 / 脚 / 表情の所有境界、motion-debug 最終姿勢再生、既存制御処理との二重書き込み排除、複数 VRM での値の制限 / 任意ボーン検証が揃うこととする。
@@ -496,9 +496,9 @@
 腕 / 体幹 / 全面適用の段階別の切り戻しパスは削除済みである。`composerArmApplicationMode`、
 `composerTorsoShoulderApplicationMode`、`fullNormalizedPoseApplicationMode`、`composer_arm_application_*` 警告、
 `composer_torso_shoulder_application_*` 警告、`full_normalized_pose_application_off` は本番コード /
-診断 Console 操作部品 / スナップショット / テストの正本から外した。`ArmBoneController.update()` と
-`CharacterMotionOrchestrator.update()` は全面適用利用不可フレームの復旧フックとして自動実行しない。
-`CharacterMotionOrchestrator.updateRootStabilization()` だけはルート位置 / hips 回転の非対象制御処理境界として
+診断 Console 操作部品 / スナップショット / テストの正本から外した。`ArmBoneController.update()` は全面適用利用不可フレームの復旧フックとして自動実行しない。
+上半身の旧直接書き込み処理は削除済みである。
+`CharacterRootStabilizer.update()` だけはルート位置 / hips 回転の非対象制御処理境界として
 維持する。
 
 腕 IK 目標の本番主入力は `TemporalUpperBodyState` と `MinimalAvatarMotionProfile` から作る
@@ -545,7 +545,7 @@ Pose 追跡無効、カメラ停止、Pose 未検出、顔のみなど最新動�
 
 頭部 / 首 / 脚 / 表情 / ルート位置は全面上半身 finalPose の所有対象に追加しない。Face / Eye /
 Mouth / Emotion 制御処理、`LegBoneController`、`vrm.update(deltaSeconds)`、ルート位置処理群、
-`CharacterMotionOrchestrator.updateRootStabilization()` は従来どおり更新する。診断専用の姿勢合成処理比較 /
+`CharacterRootStabilizer.update()` は従来どおり更新する。診断専用の姿勢合成処理比較 /
 試行要約は引き続き残し、公開 WebRTC / バックエンド契約や DataChannel 送受信データは変更しない。
 
 補助リンク: [runtime-motion-ownership-map](../../../../tasks/character-sincro-motion/task-260629225907-sincro-runtime-motion-ownership-map/artifacts/runtime-motion-ownership-map.md)、[torso-shoulder-composer-migration-plan](../../../../tasks/character-sincro-motion/task-260629225951-torso-shoulder-composer-ownership-migration-plan/artifacts/torso-shoulder-composer-migration-plan.md)、[optional-bone-fallback-vrm-verification](../../../../tasks/character-sincro-motion/task-260629225957-composer-optional-bone-fallback-vrm-verification/artifacts/optional-bone-fallback-vrm-verification.md)。
