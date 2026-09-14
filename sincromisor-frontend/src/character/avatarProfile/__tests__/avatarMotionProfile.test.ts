@@ -1,13 +1,10 @@
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
 import { Object3D } from "three/src/core/Object3D.js";
 import { describe, expect, it } from "vitest";
-import {
-    AVATAR_MOTION_PROFILE_SCHEMA_VERSION,
-    cloneAvatarMotionProfile,
-    createAvatarMotionProfile,
-    parseAvatarMotionProfile,
-    toMinimalAvatarMotionProfile,
-} from "../avatarMotionProfile";
+import { createAvatarMotionProfile, toMinimalAvatarMotionProfile } from "../avatarMotionProfile";
+import { cloneAvatarMotionProfile } from "../avatarMotionProfileClone";
+import { parseAvatarMotionProfile } from "../avatarMotionProfileSchema";
+import { AVATAR_MOTION_PROFILE_SCHEMA_VERSION } from "../avatarMotionProfileTypes";
 
 type TestVrmSource = Parameters<typeof createAvatarMotionProfile>[0];
 
@@ -94,7 +91,14 @@ describe("AvatarMotionProfile", () => {
         expect(profile.fingers.curlMode).toBe("grouped");
         expect(profile.warnings).toEqual([]);
         expect(JSON.parse(JSON.stringify(profile))).toEqual(profile);
-        expect(parseAvatarMotionProfile(profile)).toMatchObject({ ok: true });
+        const before = structuredClone(profile);
+        const parsed = parseAvatarMotionProfile(profile);
+        expect(parsed.ok).toBe(true);
+        if (!parsed.ok) throw new Error("Profile parsing failed");
+        parsed.profile.capabilities.fingerChains.left.index.proximal = false;
+        parsed.profile.metrics.upperArmLength.left = 999;
+        parsed.profile.warnings.push("changed");
+        expect(profile).toEqual(before);
     });
 
     it("keeps upperChest optional and switches torso distribution", () => {

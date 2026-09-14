@@ -1,5 +1,5 @@
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
-import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfile";
+import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfileTypes";
 import { dampQuaternion } from "./vrmPoseQuaternionMath";
 import type {
     VrmNormalizedLocalPose,

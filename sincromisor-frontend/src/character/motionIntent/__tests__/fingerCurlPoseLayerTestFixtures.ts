@@ -5,7 +5,7 @@ import {
     type SincroHandFeatureSnapshot,
     type SincroHandMotionSnapshot,
 } from "../../../features/gaze/handTracking/sincroHandMotionSnapshot";
-import type { AvatarMotionProfile } from "../../avatarProfile/avatarMotionProfile";
+import type { AvatarMotionProfile } from "../../avatarProfile/avatarMotionProfileTypes";
 import type { FingerCurlPoseDebugSnapshot } from "../fingerCurlPoseLayer";
 import {
     type ArmMotionIntent,

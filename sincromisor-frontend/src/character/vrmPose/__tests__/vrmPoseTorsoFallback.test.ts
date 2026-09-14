@@ -1,7 +1,7 @@
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
 import { MathUtils } from "three/src/math/MathUtils.js";
 import { describe, expect, it } from "vitest";
-import type { AvatarMotionProfile } from "../../avatarProfile/avatarMotionProfile";
+import type { AvatarMotionProfile } from "../../avatarProfile/avatarMotionProfileTypes";
 import type { MinimalAvatarMotionProfile } from "../../avatarProfile/minimalAvatarMotionProfile";
 import { composeVrmPose } from "../vrmPoseComposer";
 import { createTorsoFallbackLayer, resolveTorsoDistribution } from "../vrmPoseTorsoFallback";

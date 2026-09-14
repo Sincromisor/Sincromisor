@@ -3,7 +3,7 @@
  * Temporal / Hand / raw gesture を再解釈せず、intent と profile preset だけを入力にして replay と live の出力差を抑える。
  */
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
-import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfile";
+import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfileTypes";
 import type { VrmNormalizedLocalPose, VrmPoseLayer } from "../vrmPose/vrmPoseTypes";
 import type {
     ArmMotionIntent,

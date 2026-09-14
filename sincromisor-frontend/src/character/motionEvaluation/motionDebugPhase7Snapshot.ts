@@ -3,11 +3,9 @@
  * profile / calibration の invalid slot は debug 表示の parse error に留め、recording 全体の replay 互換性は壊さない。
  */
 import { z } from "zod";
-import {
-    type AvatarMotionProfile,
-    cloneAvatarMotionProfile,
-    parseAvatarMotionProfile,
-} from "../avatarProfile/avatarMotionProfile";
+import { cloneAvatarMotionProfile } from "../avatarProfile/avatarMotionProfileClone";
+import { parseAvatarMotionProfile } from "../avatarProfile/avatarMotionProfileSchema";
+import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfileTypes";
 import {
     type InitialSincroCalibrationSession,
     SINCRO_INITIAL_CALIBRATION_SCHEMA_VERSION,
