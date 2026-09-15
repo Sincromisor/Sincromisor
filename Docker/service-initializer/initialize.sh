@@ -2,20 +2,28 @@
 # Composeの初回準備を担う。モデル検証失敗時は依存サービスを起動させない。
 set -eu
 
+# 秘密値は専用ボリュームで一度だけ生成する。配下を共有するサービスのUIDは異なる。
+generate_secret() {
+    if [ ! -e "$1" ]; then
+        umask 077
+        od -An -N32 -tx1 /dev/urandom | tr -d ' \n' > "$1.part"
+        chmod 444 "$1.part"
+        mv "$1.part" "$1"
+    fi
+    test "$(wc -c < "$1")" -ge 32
+}
+
 case "${1:?初期化対象が必要です}" in
     services)
         # Dockerが作る空の保存先を認識サービスのUIDへ渡す。既存内容は変更しない。
         if [ "$(stat -c %u /cache)" = 0 ]; then
             chown 1001:1001 /cache
         fi
-        # 認証は専用ボリュームを共有する2サービスだけに渡し、再起動でも維持する。
-        if [ ! -e /auth/token ]; then
-            umask 077
-            od -An -N32 -tx1 /dev/urandom | tr -d ' \n' > /auth/token.part
-            chmod 444 /auth/token.part
-            mv /auth/token.part /auth/token
-        fi
-        test "$(wc -c < /auth/token)" -ge 32
+        generate_secret /auth/token
+        ;;
+    s3)
+        # AgentServerのトークンとは別のボリュームへ保存する。
+        generate_secret /auth/secret
         ;;
     llama)
         cd /models

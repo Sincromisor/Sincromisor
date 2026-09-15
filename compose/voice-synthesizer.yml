@@ -8,6 +8,11 @@ services:
             dockerfile: ./Docker/voice-synthesizer/Dockerfile
         image: ${SINCRO_REGISTRY_NAME}/voice-synthesizer:latest
         pull_policy: build
+        entrypoint: [sh, /with-s3-secret.sh]
+        command: [uv, run, --no-sync, voice-synthesizer/VoiceSynthesizerProcess.py]
+        volumes:
+            - s3-auth:/run/sincromisor-s3-auth:ro
+            - ../Docker/service-initializer/with-s3-secret.sh:/with-s3-secret.sh:ro
         networks:
             - sincromisor-net
         environment:

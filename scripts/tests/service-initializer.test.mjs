@@ -60,6 +60,32 @@ test("配布設定だけでchatを含む全体を起動し、初期化と同じ�
 		const config = parse(readFileSync(`compose/${name}.yml`, "utf8"));
 		assert.equal(config.services[name].volumes[0].bind.create_host_path, true);
 	}
+	for (const name of [
+		"speech-recognizer",
+		"voice-synthesizer",
+		"s3-bootstrap",
+	]) {
+		assert(
+			services[name].volumes.some((v) => v.source === "s3-auth" && v.read_only),
+		);
+		assert(!services[name].volumes.some((v) => v.source === "service-auth"));
+		assert.deepEqual(services[name].entrypoint, ["sh", "/with-s3-secret.sh"]);
+		assert(services[name].command.length > 0);
+	}
+	assert.equal(
+		services["s3-bootstrap"].depends_on["s3-credential-initializer"].condition,
+		"service_completed_successfully",
+	);
+	assert(
+		services["seaweed-master"].volumes.some(
+			(v) => v.source === "sincro-s3-master-data" && v.target === "/data",
+		),
+	);
+	assert(
+		services["seaweed-filer"].volumes.some(
+			(v) => v.source === "sincro-s3-filer-data" && v.target === "/data",
+		),
+	);
 	const init = services["service-initializer"];
 	assert.equal(init.user, "0:0");
 	assert.equal(

@@ -10,6 +10,8 @@ services:
                 SINCRO_RECOGNIZER_MODEL: ${SINCRO_RECOGNIZER_MODEL:?nemoを指定してください}
         image: ${SINCRO_REGISTRY_NAME}/speech-recognizer-${SINCRO_RECOGNIZER_MODEL}:latest
         pull_policy: build
+        entrypoint: [sh, /with-s3-secret.sh]
+        command: [uv, run, --no-sync, speech-recognizer-nemo/SpeechRecognizerNemoProcess.py]
         volumes:
             # 初期化コンテナがUID 1001の書込み権限を準備する。
             - type: bind
@@ -18,6 +20,8 @@ services:
               bind:
                   create_host_path: true
             - ../volumes/proper-noun-dictionaries:/opt/sincromisor/proper-noun-dictionaries:ro
+            - s3-auth:/run/sincromisor-s3-auth:ro
+            - ../Docker/service-initializer/with-s3-secret.sh:/with-s3-secret.sh:ro
         networks:
             - sincromisor-net
         environment:

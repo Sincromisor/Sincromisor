@@ -7,6 +7,8 @@ services:
             - s3
         image: chrislusf/seaweedfs
         command: 'master -ip=seaweed-master -ip.bind=0.0.0.0 -metricsPort=9324'
+        volumes:
+            - sincro-s3-master-data:/data
         networks:
             - s3-internal-net
         deploy:
@@ -57,6 +59,9 @@ services:
             - s3
         image: chrislusf/seaweedfs
         command: 'filer -ip=seaweed-filer -master="seaweed-master:9333" -ip.bind=0.0.0.0 -metricsPort=9326'
+        # オブジェクトの場所と認証設定をdown/up後も同じ領域から読み込む。
+        volumes:
+            - sincro-s3-filer-data:/data
         tty: true
         stdin_open: true
         networks:
@@ -172,6 +177,8 @@ services:
         networks:
             - s3-internal-net
         depends_on:
+            s3-credential-initializer:
+                condition: service_completed_successfully
             sincro-s3:
                 condition: service_healthy
         environment:
@@ -179,19 +186,20 @@ services:
             - S3_USER=sincromisor
             - S3_ACCESS_KEY=${SINCRO_S3_ACCESS_KEY}
             - S3_SECRET_KEY=${SINCRO_S3_SECRET_KEY}
-            # 既存の同一 access_key が見つかったが secret が異なる場合の挙動
-            # 0: 失敗して止める（デフォルト、安全）
-            # 1: 上書きローテーションを許可する（意図がある時だけ）
-            - ALLOW_SECRET_ROTATION=0
             - S3_ACTIONS=Read,Write,List
         volumes:
             - ../Docker/seaweedfs/s3-bootstrap.sh:/s3-bootstrap.sh:ro
-        entrypoint: ["/bin/sh","/s3-bootstrap.sh"]
+            - s3-auth:/run/sincromisor-s3-auth:ro
+            - ../Docker/service-initializer/with-s3-secret.sh:/with-s3-secret.sh:ro
+        entrypoint: [sh, /with-s3-secret.sh]
+        command: [sh, /s3-bootstrap.sh]
         restart: "no"
 
 volumes:
     consul-agent-s3-data:
     sincro-s3-data:
+    sincro-s3-master-data:
+    sincro-s3-filer-data:
 
 networks:
     sincromisor-net:
