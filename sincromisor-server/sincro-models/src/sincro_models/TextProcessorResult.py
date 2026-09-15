@@ -70,7 +70,7 @@ class TextProcessorResult(BaseModel):
         if self._response_prefix_checked:
             return text
 
-        # Dify等の streaming では "^" と "1" が別チャンクになることがあるため、
+        # ストリーミングでは "^" と "1" が別チャンクになることがあるため、
         # 先頭2文字が確定するまで内部バッファで保留する。
         self._response_prefix_buffer += text
         if self._response_prefix_buffer == "":

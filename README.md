@@ -11,7 +11,7 @@ Webブラウザ上でかわいいキャラになっておしゃべりしたり�
     - Linuxサーバー(x86_64)
     - Transformersが動作するNVIDIA GPU
         - シンクロモード: VRAM 4GB程度(NeMo)。
-        - チャットモード: 追加で8GB程度、合計16GB以上のVRAMが必要(Dify用)
+        - チャットモード: 追加で8GB程度、合計16GB以上のVRAMが必要(LLM用)
     - [Docker Engine](https://docs.docker.com/engine/install/ubuntu/)
     - [NVIDIA Driver(nvidia-open)](https://www.nvidia.com/en-us/drivers/)
     - [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
@@ -69,7 +69,7 @@ chmod 600 .env
 - 分散配置では `COMPOSE_FILE` で追加Composeを選択し、`SINCRO_CONSUL_PUBLISH_HOST` に管理IPv4を指定する。RTCから下流APIへの直接接続とConsulのホスト間通信を維持する。設定と既存環境の移行は[公開ポートの選択](documents/design/infrastructure/compose.md#公開ポートの選択)を参照する。
 - `SINCRO_CONSUL_SERVER_HOST`: `rtc`プロファイルでは既存サーバーのホスト名または管理IPv4を指定する。RTCは同一ホストのエージェントを通して参加する。
 - `SINCRO_COMPOSE_NETWORK_SUBNET`: 既存のDockerネットワークやLANと重複する場合は未使用の範囲へ変更する。
-- Difyなしで最初に試す場合、Dify設定2項目は空のままでよい。ブラウザで開始前に `sincro` を選ぶ。既定の `chat` を使う場合は、先に[チャットモードの設定](#チャットモードを利用する)を行う。
+- chat設定なしで最初に試す場合、Mastraトークンは空のままでよい。ブラウザで開始前に `sincro` を選ぶ。既定の `chat` を使う場合は、先に[チャットモードの設定](#チャットモードを利用する)を行う。
 
 4. コンテナイメージ・モデルの取得を準備する。設定したレジストリから取得する場合は次を実行する。
 
@@ -77,7 +77,7 @@ chmod 600 .env
 docker compose pull
 ```
 
-ソースからイメージを作る場合は `docker compose build` を使う。取得元のイメージやビルド時の依存パッケージ、音声認識モデルには取得先への通信が必要になる。認識サービスは起動時にNeMoのキャッシュを読み、モデルがない場合だけ自動取得して `volumes/sincro-cache` に保存する。チャット用LLMのモデルとDifyも管理下の環境へ事前に配置する。
+ソースからイメージを作る場合は `docker compose build` を使う。取得元のイメージやビルド時の依存パッケージ、音声認識モデルには取得先への通信が必要になる。認識サービスは起動時にNeMoのキャッシュを読み、モデルがない場合だけ自動取得して `volumes/sincro-cache` に保存する。チャット用LLMのモデルとAgentServerも管理下の環境へ事前に配置する。
 
 サービス実行時に外部サービスのAPIを使わない構成と、導入時に何も取得しない完全オフライン構成は区別する。モデル取得先と再利用条件は[モデルキャッシュ](documents/design/infrastructure/storage.md#モデルキャッシュ)を参照する。完全オフライン導入にはイメージとモデルの事前搬入が必要となる。
 
@@ -96,8 +96,8 @@ docker compose up -d
 
 ## Gemma 4 E2Bを準備する
 
-同梱の `llama-server` は `chat` プロファイルで起動する。現時点の会話入口はDifyのままであり、
-この手順だけでは会話の接続先は切り替わらない。モデルは管理者が一度取得し、通常起動時はローカルファイルだけを読む。
+同梱の `llama-server` は `chat` プロファイルで起動する。会話入口は同じプロファイルのAgentServerを経由する。
+モデルは管理者が一度取得し、通常起動時はローカルファイルだけを読む。
 
 リポジトリのルートで、固定リビジョンのテキスト用Q4_0（約2.84GB）を取得する。
 画像・音声用のmmprojと投機的デコード用のmtpは不要である。
@@ -138,7 +138,7 @@ LANの別端末から使う場合は、管理下のHTTPS終端とブラウザが
 - `360deg Camera (VRM 1.0)`: 360 動画/カメラ向けの 実験用の導線
 - `Looking Glass (VRM 1.0 / Three.js)`: [Looking Glass](https://lookingglassfactory.com/looking-glass-portrait) 向けの 実験用の導線
 
-`Simple Interface (VRM 1.0)` の起動前設定で、Dify未設定なら会話モードを `sincro`（シンクロモード）へ変更してから「開始する」を押す。`sincro` は認識文を変換して読み上げ、Difyを使わない。初回の既定値は `chat` のため、設定を空にしただけではチャットは動作しない。
+`Simple Interface (VRM 1.0)` の起動前設定で、Mastraトークン未設定なら会話モードを `sincro`（シンクロモード）へ変更してから「開始する」を押す。`sincro` は認識文を変換して読み上げ、AgentServerを使わない。初回の既定値は `chat` のため、設定を空にしただけではチャットは動作しない。
 
 ## キャラクターを差し替える
 
@@ -226,31 +226,34 @@ $ docker compose logs speech-recognizer
 
 ## チャットモードを利用する
 
-`chat` は管理下の環境に配置したDifyとLLMを使う。Dify上でローカルLLMへ接続するチャットボットを作り、そのアプリのAPIキーを発行する。DifyとLLMの配備はSincromisorのComposeには含まれない。
-
-リポジトリのルートの `.env` に、`text-processor` コンテナから到達できるDifyのAPI URLとキーを設定する。値は `compose/text-processor.yml` の環境変数を経由してPython設定へ渡る。
+`chat` は管理下のAgentServerと同梱LLMを使う。`full,chat` プロファイルで両サービスを起動する。
+リポジトリのルートの `.env` に、管理者トークンを設定する。`text-processor` は同じトークンを使い、Compose内の `agent-server` へ接続する。
 
 ```dotenv
-SINCRO_PROCESSOR_DIFY_URL=http://192.168.1.20/v1
-SINCRO_PROCESSOR_DIFY_TOKEN=app-xxxxxxxxxxxxxxxxxxxxxxxx
+SINCRO_AGENT_ADMIN_TOKEN=32文字以上のランダムな管理者トークン
+SINCRO_PROCESSOR_MASTRA_URL=http://agent-server:4111
+SINCRO_PROCESSOR_MASTRA_TOKEN=
+SINCRO_PROCESSOR_MASTRA_AGENT_ID=sincromisor-character
 ```
 
-上記は例示であり、Difyを配置したホストのLANアドレスや、共有Dockerネットワークで解決できるサービス名へ置き換える。ポートが異なる場合はURLへ含める。`127.0.0.1` は `text-processor` コンテナ自身を指すため、別コンテナやホスト上のDifyの接続先には使えない。
+`SINCRO_PROCESSOR_MASTRA_TOKEN` が空の場合は `SINCRO_AGENT_ADMIN_TOKEN` を使う。別の認証情報を使う場合だけ明示する。`SINCRO_PROCESSOR_MASTRA_URL` の `agent-server` はCompose内のサービス名であり、`127.0.0.1` はtext-processor自身を指す。
 
 設定後はリポジトリのルートでコンテナを再作成して反映する。
 
 ```sh
-docker compose up -d text-processor
+docker compose --profile full --profile chat up -d
 ```
 
-ブラウザの起動前設定で `chat` を選び、開始する。Difyと接続先LLMも管理下で動かし、外部サービスのAPI認証を前提にしない。
+ブラウザの起動前設定で `chat` を選び、開始する。AgentServerと接続先LLMは管理下で動き、外部サービスのAPI認証を前提にしない。
 
-### チャットモードの表情連動を使う場合（Dify/LLM設定が必須）
+以前の `SINCRO_PROCESSOR_DIFY_URL` と `SINCRO_PROCESSOR_DIFY_TOKEN`、対応するCLI引数は廃止した。Difyの環境、履歴、資格情報は削除・変換しない。切替前の会話を終了し、切替後は新しいセッションを開始する。
+
+### チャットモードの表情連動を使う場合（AgentServer/LLM設定が必須）
 
 チャットモードでは、LLM応答の先頭2文字に `^N`（感情コード）を付けると、
 フロントエンドがそれを表情ヒントとして解釈し、VRMの目/眉の表情を切り替えます。
 
-この機能は **Dify側のプロンプト設定が必須** です。設定されていない場合、応答本文は表示されますが表情は変化しません。
+この機能は **Studioで公開したAgentServerの指示設定が必要** です。設定されていない場合、応答本文は表示されますが表情は変化しません。
 
 - 感情コード（応答先頭に1回だけ出力）
     - `^0` = 標準（neutral）
@@ -266,7 +269,7 @@ docker compose up -d text-processor
 ^4それはいいですね。すぐに試してみましょう。
 ```
 
-- Dify/LLMへの指示例（そのまま利用可）
+- Studioの指示例（そのまま利用可）
 
 ```txt
 重要: 各応答の先頭に、感情コードを必ず1回だけ付けてください。

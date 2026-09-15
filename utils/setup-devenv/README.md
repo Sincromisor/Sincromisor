@@ -38,7 +38,7 @@ Ubuntu 標準の Node.js / npm、Go、C/C++ ビルドツール、FFmpeg、Opus�
 
 ルートとフロントエンドで `npm ci` を実行し、MediaPipe の WASM を配置する。`.env` とモデルキャッシュ用ディレクトリは存在しない場合だけ作る。再実行できるが、`node_modules` と Python 仮想環境はロックに同期され、Docker の GPU 設定時はデーモンを再起動する。APT リポジトリは `sincromisor-*` 名で登録する。既存環境への移植・他方式との混在は対象外とする。
 
-Docker グループへの自動追加は行わない。以降の Docker 操作には `sudo docker` を使う。Compose のサービス、認識モデル、Dify、LLM、VRM 素材はこのスクリプトでは起動・取得しない。
+Docker グループへの自動追加は行わない。以降の Docker 操作には `sudo docker` を使う。Compose のサービス、認識モデル、AgentServer、LLM、VRM 素材はこのスクリプトでは起動・取得しない。
 
 ## 導入後の確認と起動
 
@@ -53,7 +53,7 @@ uv run --group dev --group full pytest
 (cd sincromisor-server/sincro-rtc && GOTOOLCHAIN=auto go test ./...)
 ```
 
-会話の確認では、[起動手順](../../README.md#とにかくローカル環境でサーバーを動かす)に従って `.env` の広告 IPv4 などを編集し、`sudo docker compose pull`（ソースから作る場合は `sudo docker compose build`）、`sudo docker compose up -d` を実行する。Windows 側のブラウザーで `http://localhost:8086` を開き、マイク・カメラを許可する。Dify 未配置なら開始前に `sincro` モードを選ぶ。
+会話の確認では、[起動手順](../../README.md#とにかくローカル環境でサーバーを動かす)に従って `.env` の広告 IPv4 などを編集し、`sudo docker compose pull`（ソースから作る場合は `sudo docker compose build`）、`sudo docker compose up -d` を実行する。Windows 側のブラウザーで `http://localhost:8086` を開き、マイク・カメラを許可する。AgentServerを起動しない場合は開始前に `sincro` モードを選ぶ。
 
 HTTP が開けても WebRTC の UDP が到達するとは限らない。既定の WSL NAT では Windows から到達できる WSL の IPv4 を広告し、再起動で変わった場合は `.env` を更新する。LAN の別端末から確認する場合は、Windows 11 の WSL ミラーネットワーク、Windows / Hyper-V ファイアウォール、HTTPS を別途設定し、TCP 8001 と `.env` のメディア UDP ポートへの到達性を確認する。TCP 用の `netsh interface portproxy` だけでは UDP を中継できない。スクリプトはネットワークやファイアウォールを変更しない。
 

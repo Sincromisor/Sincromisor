@@ -4,7 +4,7 @@
 
 `agent-server` はMastra APIとStudio Editorを同じコンテナで提供する。
 内部のllama-serverへ直接接続し、指示と会話履歴を単一のローカルlibSQLへ保存する。
-現在のTextProcessor入口はDifyのままであり、このサービスの追加だけでは会話先を切り替えない。
+TextProcessorのchat入口はこのサービスへ接続し、Mastraのストリームを既存の音声処理契約へ変換する。
 
 ## 構成と起動
 

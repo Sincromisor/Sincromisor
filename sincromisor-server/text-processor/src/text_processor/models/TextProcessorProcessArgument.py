@@ -4,12 +4,15 @@ from sincro_config import SincromisorArgumentParser
 
 
 class TextProcessorProcessArgument(SincromisorArgumentParser):
+    """TextProcessorの待受と、チャット時だけ使うMastra接続設定を保持する。"""
+
     host: str
     port: int
     public_bind_host: str
     public_bind_port: int
-    dify_url: str | None
-    dify_token: str | None
+    mastra_url: str
+    mastra_token: str | None
+    mastra_agent_id: str
 
     @classmethod
     def set_args(cls, parser: ArgumentParser) -> None:
@@ -51,18 +54,24 @@ class TextProcessorProcessArgument(SincromisorArgumentParser):
 
         cls.add_argument(
             parser=parser,
-            cmd_name="--dify-url",
-            env_name="SINCRO_PROCESSOR_DIFY_URL",
-            default=None,
-            help="Dify URL(default: None)",
+            cmd_name="--mastra-url",
+            env_name="SINCRO_PROCESSOR_MASTRA_URL",
+            default="http://agent-server:4111",
+            help="MastraのURL（既定: http://agent-server:4111）",
         )
 
         cls.add_argument(
             parser=parser,
-            cmd_name="--dify-token",
-            env_name="SINCRO_PROCESSOR_DIFY_TOKEN",
+            cmd_name="--mastra-token",
+            env_name="SINCRO_PROCESSOR_MASTRA_TOKEN",
             default=None,
-            help="Dify access token(default: None)",
+            help="Mastraのアクセストークン（既定: なし）",
         )
 
-        return
+        cls.add_argument(
+            parser=parser,
+            cmd_name="--mastra-agent-id",
+            env_name="SINCRO_PROCESSOR_MASTRA_AGENT_ID",
+            default="sincromisor-character",
+            help="MastraのエージェントID（既定: sincromisor-character）",
+        )
