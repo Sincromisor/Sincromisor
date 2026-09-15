@@ -121,7 +121,7 @@ docker compose --profile chat ps llama-server
 docker compose --profile chat logs llama-server
 ```
 
-CPUを6スレッド、コンテキストを4096トークン、並列生成を1件としている。
+NVIDIA GPUを1台割り当て、モデル全層をGPUへ配置する。CPU側は6スレッド、コンテキストは4096トークン、並列生成は1件としている。音声認識・音声合成と同じGPUを使う場合は、各モデルと推論用メモリーが同時に収まる容量を確保する。
 ホストへのポート公開はなく、同じCompose内では `http://llama-server:8080/v1` を使う。
 ロード完了後だけ死活確認が成功する。保存先がない場合はマウントエラー、モデルファイルがない場合は
 llama-serverのモデル読込みエラーで停止する。保存条件は[保存領域設計](documents/design/infrastructure/storage.md#チャット用gguf)を参照する。

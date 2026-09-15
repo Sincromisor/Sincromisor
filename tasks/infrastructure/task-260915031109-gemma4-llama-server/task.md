@@ -16,7 +16,7 @@ DifyとLLMの外部配備に依存する構成を、管理下のComposeへ移す
 ## 設計判断
 
 - テキスト生成だけを使う。画像・音声入力や投機的デコード用の追加モデルは導入しない。
-- 取得元候補は `ggml-org/gemma-4-E2B-it-GGUF`。量子化、コンテキスト長、GPU割当は検証ホストで動く最小構成を実装者が選び固定する。モデル系列は無断で変更しない。
+- 取得元候補は `ggml-org/gemma-4-E2B-it-GGUF`。NVIDIA GPU動作を前提とする。量子化、コンテキスト長、GPU割当は検証ホストで動く最小構成を実装者が選び固定する。モデル系列は無断で変更しない。
 - モデルは管理者が事前取得し、Git管理外の専用保存先を読み取り専用でマウントする。通常起動・会話時の外部APIやモデル取得を必須にしない。
 - 新サービス `llama-server` は `sincromisor-net` 内の `0.0.0.0:8080` で待ち受け、ホストへ公開しない。利用URLは `http://llama-server:8080/v1`。
 - 追加プロファイル `chat` で起動する。既存の `full` / `backend` / `rtc` 単独の起動範囲は増やさない。
@@ -66,3 +66,17 @@ DifyとLLMの外部配備に依存する構成を、管理下のComposeへ移す
 docker exec -i sincromisor-text-processor-1 /opt/sincromisor/.venv/bin/python - \
   < tasks/infrastructure/task-260915031109-gemma4-llama-server/acceptance/llama_smoke.py
 ```
+
+## GPU前提への変更
+
+2026-09-15のユーザー指示により、初回のCPU構成をCUDA 13構成へ変更した。
+公式 `server-cuda13` イメージを `sha256:92f75345eeeffa2e76e0e47526f310d0aca36b523bfe514a7dfda5bb1185f256` に固定。
+ビルド10975、コミット `4c9233c03`。NVIDIA GPUを1台予約し、`--n-gpu-layers 99` で全層を配置する。
+モデル・4096トークン・1スロットは維持し、CPU側の補助処理は6スレッド。
+
+RTX 5060 Tiで `--list-devices` のCUDA0認識、コンテナのNVIDIA DeviceRequests、
+起動前1858MiBから起動後3841MiBへのGPU使用量増加を確認した。
+日本語ストリーミングと `get_secret_word({})` の実呼出し、その結果「青空みかん742」を用いた回答はPASS。
+ComposeのGPU予約・プロファイル分離テストもPASS。既存サービスの停止や `.env` の上書きは行っていない。
+
+公式イメージの根拠: [llama.cppのDocker構成](https://github.com/ggml-org/llama.cpp/blob/master/docs/docker.md)。

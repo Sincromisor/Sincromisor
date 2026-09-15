@@ -2,7 +2,7 @@
 services:
     llama-server:
         profiles: [chat]
-        image: ${SINCRO_LLAMA_IMAGE:-ghcr.io/ggml-org/llama.cpp@sha256:e271606125389acbd8aec0481e7ea0627f12d7edd4412c19dbc0d427227a737e}
+        image: ${SINCRO_LLAMA_IMAGE:-ghcr.io/ggml-org/llama.cpp@sha256:92f75345eeeffa2e76e0e47526f310d0aca36b523bfe514a7dfda5bb1185f256}
         command:
             - --host
             - 0.0.0.0
@@ -17,7 +17,7 @@ services:
             - --threads
             - ${SINCRO_LLAMA_THREADS:-6}
             - --n-gpu-layers
-            - "0"
+            - "99"
             - --parallel
             - "1"
             - --jinja
@@ -31,6 +31,13 @@ services:
               read_only: true
               bind:
                   create_host_path: false
+        deploy:
+            resources:
+                reservations:
+                    devices:
+                        - driver: nvidia
+                          count: 1
+                          capabilities: [gpu]
         networks: [sincromisor-net]
         healthcheck:
             # 採用イメージに含まれるcurlで、モデルのロード中は失敗させる。
