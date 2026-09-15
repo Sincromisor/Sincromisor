@@ -5,6 +5,7 @@ services:
             - backend
             - external
         image: ${SINCRO_REGISTRY_NAME}/redis:latest
+        pull_policy: build
         build:
             context: ..
             dockerfile: ./Docker/redis/Dockerfile

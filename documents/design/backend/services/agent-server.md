@@ -18,18 +18,14 @@ StudioのAPI接続先は `MASTRA_AUTO_DETECT_URL=true` によりページと同�
 内部は `0.0.0.0:4111`、ホスト公開は `127.0.0.1:4111` のみ。
 公開フロントから管理画面へ転送しない。設定サンプルの正本は `examples/compose.env`。
 
-- `SINCRO_AGENT_ADMIN_TOKEN`: 管理者トークン。32文字以上を必須とし、既定値を置かない。
+- `SINCRO_AGENT_ADMIN_TOKEN`: 管理者トークン。未指定なら初期化コンテナが生成・保存した値を使う。明示する場合は32文字以上を必須とする。
 - `SINCRO_AGENT_LLM_URL`: `http://llama-server:8080/v1`。
 - `SINCRO_AGENT_LLM_MODEL`: `gemma-4-E2B-it`。
 - `SINCRO_AGENT_DB_URL`: Compose内で `file:/data/mastra.db` に固定する。
 
-ルート `.env` に上記設定を追加し、トークンは `openssl rand -hex 32` などで作る。
-モデル準備は[README](../../../../README.md#gemma-4-e2bを準備する)に従う。
-
-```sh
-docker compose --profile chat build agent-server
-docker compose --profile chat up -d agent-server
-```
+既定の `.env` は `full,chat` を選び、`docker compose up` でモデル取得と認証準備を自動実行する。
+[初期化の流れ](../../infrastructure/compose.md#ローカル起動の原則)と
+[認証情報の保存](../../infrastructure/storage.md#サービス間の認証)を参照する。
 
 死活確認はイメージ内のNodeが認証付き `GET /api/agents` を呼ぶ。
 設定不足は秘密値を含まないキー名のエラーで起動を拒否する。
@@ -38,6 +34,13 @@ docker compose --profile chat up -d agent-server
 ## 管理者認証とEditor
 
 `http://127.0.0.1:4111` を開き、標準のSign in画面でログインする。
+自動生成された管理者トークンは、管理者がローカルで次のコマンドで確認する。
+表示した値をログや共有資料へ転載しない。
+
+```sh
+docker compose exec agent-server cat /run/sincromisor-auth/token
+```
+
 Email欄は形式上有効な例 `admin@example.test`、Password欄は管理者トークンを入力する。
 SimpleAuthはEmailを利用者識別に使わず、トークンで管理者を判定する。
 ログインCookieとBearer認証でStudioとAPIを共通に保護し、会話ユーザー登録やRBACは追加しない。

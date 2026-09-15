@@ -7,6 +7,12 @@ services:
             context: ..
             dockerfile: ./Docker/text-processor/Dockerfile
         image: ${SINCRO_REGISTRY_NAME}/text-processor:latest
+        pull_policy: build
+        entrypoint: [sh, /with-token.sh]
+        command: [uv, run, --no-sync, text-processor/TextProcessorProcess.py]
+        volumes:
+            - service-auth:/run/sincromisor-auth:ro
+            - ../Docker/service-initializer/with-token.sh:/with-token.sh:ro
         networks:
             - sincromisor-net
         environment:
@@ -24,6 +30,8 @@ services:
                 condition: any
                 delay: 10s
         depends_on:
+            service-initializer:
+                condition: service_completed_successfully
             consul-agent-processor:
                 condition: service_healthy
         healthcheck:

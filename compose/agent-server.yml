@@ -5,6 +5,9 @@ services:
             context: ../sincromisor-server/agent-server
             dockerfile: ../../Docker/agent-server/Dockerfile
         image: ${SINCRO_REGISTRY_NAME}/agent-server:latest
+        pull_policy: build
+        entrypoint: [sh, /with-token.sh]
+        command: [node, .mastra/output/index.mjs]
         environment:
             SINCRO_AGENT_ADMIN_TOKEN: ${SINCRO_AGENT_ADMIN_TOKEN:-}
             SINCRO_AGENT_LLM_URL: ${SINCRO_AGENT_LLM_URL:-http://llama-server:8080/v1}
@@ -13,13 +16,17 @@ services:
         ports: ["127.0.0.1:4111:4111"]
         volumes:
             - agent-data:/data
+            - service-auth:/run/sincromisor-auth:ro
+            - ../Docker/service-initializer/with-token.sh:/with-token.sh:ro
         networks: [sincromisor-net]
         depends_on:
+            service-initializer:
+                condition: service_completed_successfully
             llama-server:
                 condition: service_healthy
         healthcheck:
             # 実行イメージ内のNodeで、認証付きのAPI起動確認を行う。トークンは出力しない。
-            test: [CMD, node, -e, "fetch('http://localhost:4111/api/agents',{headers:{Authorization:'Bearer '+process.env.SINCRO_AGENT_ADMIN_TOKEN}}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+            test: [CMD, sh, /with-token.sh, node, -e, "fetch('http://localhost:4111/api/agents',{headers:{Authorization:'Bearer '+process.env.SINCRO_AGENT_ADMIN_TOKEN}}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
             start_period: 30s
             interval: 10s
             timeout: 5s

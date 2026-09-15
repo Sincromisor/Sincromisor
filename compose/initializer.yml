@@ -1,0 +1,28 @@
+# 保存領域と認証の準備を終えてから利用サービスを起動する。
+services:
+    service-initializer:
+        profiles: [full, backend, chat]
+        image: curlimages/curl:8.12.1
+        user: "0:0"
+        entrypoint: [sh, /initialize.sh, services]
+        volumes:
+            - ../Docker/service-initializer/initialize.sh:/initialize.sh:ro
+            - ../volumes/sincro-cache:/cache
+            - service-auth:/auth
+        network_mode: none
+        restart: "no"
+
+    llama-model-initializer:
+        profiles: [chat]
+        image: curlimages/curl:8.12.1
+        user: "0:0"
+        entrypoint: [sh, /initialize.sh, llama]
+        environment:
+            SINCRO_LLAMA_MODEL_FILE: ${SINCRO_LLAMA_MODEL_FILE:-gemma-4-E2B-it-Q4_0.gguf}
+        volumes:
+            - ../Docker/service-initializer/initialize.sh:/initialize.sh:ro
+            - ${SINCRO_LLAMA_MODEL_DIR:-../volumes/llama-models}:/models
+        restart: "no"
+
+volumes:
+    service-auth:

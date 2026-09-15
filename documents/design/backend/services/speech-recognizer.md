@@ -50,3 +50,78 @@
 - `documents/design/initiatives/proper-noun-biasing.md`
 - `documents/design/archive/legacy-flat/backend_speech_recognizer.md`
 - `documents/design/archive/legacy-flat/backend_speech_recognizer_proper_noun_biasing.md`
+
+## 辞書の追加手順
+
+音声認識の固有名詞辞書は `speech-recognizer` コンテナに
+読み込ませます。固有名詞補強は `SINCRO_RECOGNIZER_MODEL=nemo` を前提にしています。
+
+1. 辞書配置用ディレクトリを作成します。
+
+```sh
+$ mkdir -p volumes/proper-noun-dictionaries
+```
+
+2. UTF-8 の CSV で辞書ファイルを作成します。
+   最低限 `surface` と `yomi` が必要です。運用上は
+   `surface,yomi,priority,category,enabled,ambiguous` の構成を推奨します。
+   **ヘッダが適切に記述されていないとエラーになります。注意してください。**
+
+```csv
+surface,yomi,priority,category,enabled,ambiguous
+Sincromisor,しんくろみそーる,200,product,true,false
+ピカチュウ,ぴかちゅう,100,pokemon,true,false
+タブンネ,たぶんね,100,pokemon,true,true
+たぶんね,たぶんね,10,common,true,true
+```
+
+3. 作成した CSV を `volumes/proper-noun-dictionaries/` 配下へ置きます。
+   たとえば `volumes/proper-noun-dictionaries/proper_nouns.csv` のようなパスにします。
+
+    `speech-recognizer` コンテナは非rootユーザーで動作するため、権限が厳しすぎると
+    辞書を読めません。配置後に次のスクリプトで権限を整えておくのを推奨します。
+
+```sh
+$ ./utils/setup/proper_noun_dictionary.sh
+```
+
+このスクリプトは `volumes/proper-noun-dictionaries/` 配下を
+`directory=755`、`file=644` にそろえます。あわせて `.csv` の先頭行を確認し、
+`surface,yomi,priority,category,enabled,ambiguous` ヘッダが無ければ自動で補います。
+個別パスを指定することもできます。
+
+```sh
+$ ./utils/setup/proper_noun_dictionary.sh volumes/proper-noun-dictionaries/proper_nouns.csv
+```
+
+4. ルートの `.env` を更新します。
+
+```dotenv
+SINCRO_RECOGNIZER_MODEL=nemo
+SINCRO_RECOGNIZER_PROPER_NOUN_ENABLE=true
+SINCRO_RECOGNIZER_PROPER_NOUN_DICT_PATH=/opt/sincromisor/proper-noun-dictionaries/proper_nouns.csv
+```
+
+必要に応じて、confirmed 時の補強を強めたい場合は以下も有効化できます。
+
+```dotenv
+SINCRO_RECOGNIZER_PROPER_NOUN_CONTEXT_BIASING_ENABLE=true
+SINCRO_RECOGNIZER_PROPER_NOUN_NBEST_ENABLE=true
+```
+
+5. `speech-recognizer` コンテナを再作成して反映します。
+
+```sh
+$ docker compose up -d speech-recognizer
+```
+
+6. ログを確認し、辞書がロードされていることを確認します。
+
+```sh
+$ docker compose logs speech-recognizer
+```
+
+`Proper noun dictionary loaded:` が出力されれば、辞書ファイルのマウントと読み込みは成功です。
+反映されない場合は、CSV のヘッダ、`.env` の `SINCRO_RECOGNIZER_PROPER_NOUN_DICT_PATH`、
+`volumes/proper-noun-dictionaries` 配下のファイル配置、ディレクトリ/ファイル権限
+（`755/644`）を見直してください。
