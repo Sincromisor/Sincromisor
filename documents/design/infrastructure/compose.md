@@ -32,8 +32,8 @@
 内部待受は `0.0.0.0:8080`、OpenAI互換URLは `http://llama-server:8080/v1`、
 モデル識別子は `gemma-4-E2B-it`。ホストへポートを公開しない。
 
-公式CPUイメージのダイジェストと推論設定の正本は `examples/compose.env` と `compose/llama-server.yml`。
-CPU・6スレッド・4096トークン・1スロットでGPU割当を行わない。ツール呼出しにはGGUF内のJinjaテンプレートを使い、
+公式CUDA 13イメージのダイジェストと推論設定の正本は `examples/compose.env` と `compose/llama-server.yml`。
+NVIDIA GPUを1台予約し、`--n-gpu-layers 99` でモデル全層を配置する。CPU側は6スレッド、4096トークン・1スロットとする。音声認識・音声合成とGPUメモリーを共有するため、同時稼働時の容量を確保する。ツール呼出しにはGGUF内のJinjaテンプレートを使い、
 `--reasoning off` で思考生成を無効にする。`SINCRO_LLAMA_*` はルート `.env` からコマンドとマウントへ渡す。
 イメージ内の `curl --fail` が `/health` を確認し、ロード中の503とロード済みの200を区別する。
 

@@ -29,6 +29,13 @@ test("llama-serverはchat専用で固定イメージと読み取り専用モデ�
 		}
 		assert.match(llama.image, /@sha256:[a-f0-9]{64}$/);
 		assert.equal(llama.ports, undefined);
+		assert.equal(
+			llama.command[llama.command.indexOf("--n-gpu-layers") + 1],
+			"99",
+		);
+		assert.deepEqual(llama.deploy.resources.reservations.devices, [
+			{ driver: "nvidia", count: 1, capabilities: ["gpu"] },
+		]);
 		assert.deepEqual(Object.keys(llama.networks), ["sincromisor-net"]);
 		assert.equal(llama.volumes[0].target, "/models");
 		assert.equal(llama.volumes[0].read_only, true);
