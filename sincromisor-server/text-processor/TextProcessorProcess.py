@@ -1,6 +1,5 @@
 import logging
 import logging.config
-import traceback
 from logging import Logger
 from threading import Event
 
@@ -9,9 +8,9 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from setproctitle import setproctitle
 from sincro_config import ServiceDiscoveryReporter, SincromisorLoggerConfig
+from text_processor.mastra_worker import MastraTextProcessorWorker
 from text_processor.models import TextProcessorProcessArgument
 from text_processor.TextProcessor import (
-    DifyTextProcessorWorker,
     PokeTextProcessorWorker,
     TextProcessorWorker,
 )
@@ -25,13 +24,16 @@ logging.config.dictConfig(
 
 
 class TextProcessorProcess:
-    def __init__(self, args: TextProcessorProcessArgument):
+    """TextProcessorのHTTP入口と、接続ごとの処理担当を組み立てる。"""
+
+    def __init__(self, args: TextProcessorProcessArgument) -> None:
         self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.__logger.info("===== Starting TextProcessorProcess =====")
         self.__args: TextProcessorProcessArgument = args
         self.__sessions: int = 0
 
-    def start(self):
+    def start(self) -> None:
+        """Consulへ登録して、chatとsincroのWebSocket入口を開始する。"""
         if not self.__args.consul_agent_host or not self.__args.consul_agent_port:
             raise RuntimeError(
                 "Consul agent is not set. Service discovery will not be available.",
@@ -61,22 +63,22 @@ class TextProcessorProcess:
             try:
                 text_worker: TextProcessorWorker
                 await ws.accept()
-                if self.__args.dify_url and self.__args.dify_token:
-                    text_worker = DifyTextProcessorWorker(
-                        base_url=self.__args.dify_url,
-                        api_key=self.__args.dify_token,
+                # sincro単独の起動を維持するため、Mastra設定はchat接続時だけ拒否する。
+                if self.__args.mastra_token:
+                    text_worker = MastraTextProcessorWorker(
+                        base_url=self.__args.mastra_url,
+                        api_key=self.__args.mastra_token,
+                        agent_id=self.__args.mastra_agent_id,
                     )
                     await text_worker.communicate(ws=ws)
                 else:
                     raise RuntimeError(
-                        "Dify URL and token are required for chat mode.",
+                        "Mastra token is required for chat mode.",
                     )
             except WebSocketDisconnect:
                 self.__logger.info("Disconnected WebSocket.")
-            except Exception as e:
-                self.__logger.error(
-                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}",
-                )
+            except Exception:
+                self.__logger.exception("Chat WebSocket processing failed.")
             finally:
                 self.__sessions -= 1
                 try:
@@ -97,10 +99,8 @@ class TextProcessorProcess:
                 await text_worker.communicate(ws=ws)
             except WebSocketDisconnect:
                 self.__logger.info("Disconnected WebSocket.")
-            except Exception as e:
-                self.__logger.error(
-                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}",
-                )
+            except Exception:
+                self.__logger.exception("Sincro WebSocket processing failed.")
             finally:
                 self.__sessions -= 1
                 try:

@@ -4,7 +4,7 @@ Sincromisor を変更するエージェントの入口。共通の制約をこ�
 
 ## プロジェクト
 
-ブラウザー上で好きなキャラクターと会話し、そのキャラクターになれるサービス基盤。ローカル／オンプレミス提供を前提とし、外部サービスのAPIを採用前提にしない。Difyと接続先LLMも管理下の環境へ配置する。
+ブラウザー上で好きなキャラクターと会話し、そのキャラクターになれるサービス基盤。ローカル／オンプレミス提供を前提とし、外部サービスのAPIを採用前提にしない。AgentServerと接続先LLMも管理下の環境へ配置する。
 
 - `sincromisor-server/`: Go/PionがWebRTCと音声パイプラインを調停し、Pythonの音声区間抽出・認識・応答生成・音声合成へ接続する。サービス発見はConsul。
 - `sincromisor-frontend/src/`: TypeScript、Vite MPA、Reactの共通枠組み、Three.js / VRM 1.0。`app/` はアプリ制御、`features/` は機能、`character/` は描画・動作、`pages/` はページ。

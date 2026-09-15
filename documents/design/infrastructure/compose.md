@@ -10,9 +10,9 @@
 
 - 手順の入口は[README](../../../README.md#とにかくローカル環境でサーバーを動かす)。`examples/compose.env` をリポジトリのルートの `.env` へコピーし、例示の広告IPv4を必ず編集する。
 - イメージ・依存パッケージ・モデルの取得準備と、サービス実行時の接続条件を分ける。認識サービス自身がNeMoのキャッシュを優先して読み、欠損時だけ自動取得する。保存先と初回の権限準備は[モデルキャッシュ](storage.md#モデルキャッシュ)を参照する。
-- `sincro` はDify設定不要。フロントの初回既定値は `chat` なので、Difyなしで試す場合は開始前に `sincro` へ変更する。
-- `chat` は管理下に配置したDifyとLLMを使う。Difyの配備はこのComposeに含めない。同梱LLMは追加の `chat` プロファイルで別途起動する。ルート `.env` の `SINCRO_PROCESSOR_DIFY_URL` / `SINCRO_PROCESSOR_DIFY_TOKEN` を `compose/text-processor.yml` が環境変数へ渡し、Pythonの `TextProcessorProcessArgument` が読む。
-- DifyのURLは `text-processor` コンテナから到達できるホストのLANアドレスや共有ネットワーク上のサービス名とし、APIの `/v1` までを指定する。`127.0.0.1` はコンテナ自身であり、別のDifyへは接続できない。
+- `sincro` はMastra設定不要。フロントの初回既定値は `chat` なので、AgentServerなしで試す場合は開始前に `sincro` へ変更する。
+- `chat` は同梱のAgentServerとLLMを使う。ルート `.env` の `SINCRO_PROCESSOR_MASTRA_URL`、`SINCRO_PROCESSOR_MASTRA_TOKEN`、`SINCRO_PROCESSOR_MASTRA_AGENT_ID` を `compose/text-processor.yml` が環境変数へ渡し、Pythonの `TextProcessorProcessArgument` が読む。トークンが空なら `SINCRO_AGENT_ADMIN_TOKEN` を使う。
+- `agent-server` はCompose内サービス名であり、`text-processor` からは `http://agent-server:4111` へ接続する。`127.0.0.1` はtext-processor自身を指す。
 
 ## プロファイルの選択
 
@@ -28,7 +28,7 @@
 ## チャット用LLM
 
 `compose/llama-server.yml` は `chat` 専用で、`full` / `backend` / `rtc` 単独の起動範囲を増やさない。
-`full,chat` を選ぶと既存サービスにLLMを加える。現在のテキスト処理入口はDifyのままである。
+`full,chat` を選ぶと既存サービスにLLMとAgentServerを加え、TextProcessorのchat入口がMastraへ接続する。
 内部待受は `0.0.0.0:8080`、OpenAI互換URLは `http://llama-server:8080/v1`、
 モデル識別子は `gemma-4-E2B-it`。ホストへポートを公開しない。
 

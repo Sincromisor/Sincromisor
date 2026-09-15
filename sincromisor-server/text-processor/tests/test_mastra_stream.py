@@ -13,6 +13,7 @@ from pydantic import ValidationError
 from sincro_models import ChatHistory, ChatMessage, TextProcessorRequest
 from text_processor.mastra_client import MastraClient, MastraResponseError
 from text_processor.mastra_worker import MastraTextProcessorWorker
+from text_processor.TextProcessor import PokeTextProcessorWorker
 
 FIXTURES = (
     Path(__file__).parents[3]
@@ -28,13 +29,13 @@ FINISH = _event("finish", {"stepResult": {"reason": "stop", "isContinued": False
 DONE = b"data: [DONE]\n\n"
 
 
-def _request() -> TextProcessorRequest:
+def _request(message_text: str = "新しい質問") -> TextProcessorRequest:
     message = ChatMessage(
         speech_id=1,
         message_type="user",
         speaker_id="user",
         speaker_name="利用者",
-        message="新しい質問",
+        message=message_text,
     )
     previous = message.model_copy(update={"message": "表示だけの履歴"})
     return TextProcessorRequest(
@@ -156,6 +157,18 @@ def test_text_expression_steps_and_thread_mapping() -> None:
                 ]
                 * 2
             )
+
+    asyncio.run(run())
+
+
+def test_poke_worker_uses_sync_process_adapter() -> None:
+    """Mastra切替後も、sincroの同期変換は既存の非同期入口で送信できる。"""
+
+    async def run() -> None:
+        result = await anext(
+            PokeTextProcessorWorker().process_async(_request("こんにちは"))
+        )
+        assert result.voice_text == "こんにちは"
 
     asyncio.run(run())
 
