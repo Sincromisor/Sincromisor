@@ -9,7 +9,7 @@
 ## 構成と起動
 
 実装は `sincromisor-server/agent-server/`、配備は `Docker/agent-server/` と `compose/agent-server.yml`。
-Mastra CLI 1.29.0、core 1.66.0、Editor 0.14.5、Memory 1.29.0、libSQL 1.22.5をロックし、
+Mastra CLI 1.29.0、core 1.66.0、Editor 0.14.5、Memory 1.29.0、libSQL 1.22.5、MCPClient 1.17.3をロックし、
 `mastra build --studio` の本番成果物をNode 24.18.1で実行する。
 StudioのAPI接続先は `MASTRA_AUTO_DETECT_URL=true` によりページと同一オリジンにする。
 待受アドレス `0.0.0.0` をブラウザー向けURLとして使わない。
@@ -45,8 +45,56 @@ SimpleAuthはEmailを利用者識別に使わず、トークンで管理者を�
 
 Agentsから「Sincromisorのキャラクター」を開き、Editorで指示を編集する。
 下書きを保存して試験し、Publishで公開する。公開前の変更は通常APIへ反映しない。
-コードの標準指示は日本語会話と先頭の表情コード `^N`。Editorの既定動作を使い、公開済み設定があればそれを優先する。
+コードの標準指示は日本語会話と任意の先頭表情コード `^N`。省略時は既存契約の標準表情になる。
+Gemmaで必須の本文形式がツール選択を妨げることを確認したため、ツール呼出しへ表情コードを強制しない。Editorの既定動作を使い、公開済み設定があればそれを優先する。
 初期化で保存済み指示を上書きしない。エージェントID `sincromisor-character`、モデルと実行設定はコード側に置く。
+
+## 管理者のMCP接続
+
+現時点の接続設定は `/data/mcp.json`。未配置または `{"servers": {}}` ならMCPを使わない。
+管理者がローカルJSONを編集し、専用永続領域へコピーして再作成する。
+接続先と認証はこのファイル、使用ツールの選択・公開はStudioのEditorで扱う。
+会話ユーザーは公開されたツールを管理者の権限で利用する。ユーザー別資格情報は設けない。
+
+```json
+{
+    "servers": {
+        "local": {
+            "url": "http://managed-mcp:8080/mcp",
+            "headers": { "Authorization": "Bearer 設定する資格情報" },
+            "timeoutMs": 20000
+        }
+    }
+}
+```
+
+サーバー識別子は英小文字で始まる英小文字・数字・ハイフン、接続先はHTTP(S)とする。
+認証情報をURLやエージェントの指示へ埋め込まない。認証ヘッダーはモデルへ渡さない。
+`timeoutMs` は省略時20000ミリ秒、上限も20000ミリ秒で、Pythonの無受信30秒より先に失敗を通知する。
+設定は[空の例](../../../../examples/mcp.json)から作り、秘密を含む実ファイルはGitへ追加しない。
+
+```sh
+chmod 600 /path/to/private/mcp.json
+docker cp /path/to/private/mcp.json sincromisor-agent-server-1:/data/mcp.json
+docker compose exec -u root agent-server chown node:node /data/mcp.json
+docker compose exec -u node agent-server chmod 600 /data/mcp.json
+docker compose --profile chat up -d --force-recreate --no-deps agent-server
+```
+
+ファイルは `agent-data` に保持される。JSON・設定不正と管理者以外へ読取り権限がある設定は起動を拒否する。
+接続・一覧取得の失敗はサーバー名だけを記録して、その接続のツールを登録せず通常会話を起動する。
+設定を直した後も再作成する。正常接続から得た `接続識別子_ツール名` がStudioのTools選択に現れる。
+EditorのToolsで選択してSave New Version、Publishを行う。選択しないツールは会話へ渡さない。
+Studio内のMCP Serversで任意ヘッダーを保存する経路は、この構成では使わない。
+
+MCPClientは接続と非同期終了hookを所有し、プロセス終了時に切断完了を待つ。
+`Mastra.shutdown()` 単独ではMCP接続を閉じないため、同一プロセス内の試験は登録結果の `disconnect()` を明示的に待つ。
+呼出しには要求のAbortSignalを渡す。ツールエラーと時間切れは出力processorで会話を中断し、成功回答へ丸めない。
+MCPエラー全文・接続認証・サーバーのログをモデルや公開ログへ流さない。
+
+`mcp.ts` の設定スキーマ・`parseMcpConfig` と接続処理はファイルI/Oから分けている。
+将来WebUIを追加する場合も同じ設定境界を使い、管理者認証下で `/data/mcp.json` を更新する。
+現在は設定変更APIや画面、稼働中の接続入替えは提供しない。
 
 ## 会話履歴
 
