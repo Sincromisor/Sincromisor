@@ -1,4 +1,4 @@
-# 事前取得済みのテキストモデルだけを使う。chatを選んだホストで起動する。
+# 初期化コンテナが取得・検証した会話用モデルを読み込む。
 services:
     llama-server:
         profiles: [chat]
@@ -24,13 +24,16 @@ services:
             - --reasoning
             - "off"
         volumes:
-            # 未配置ディレクトリを自動作成せず、通常起動で外部取得もしない。
+            # 取得処理だけに書込みを許可し、推論時は読み取り専用にする。
             - type: bind
               source: ${SINCRO_LLAMA_MODEL_DIR:-../volumes/llama-models}
               target: /models
               read_only: true
               bind:
-                  create_host_path: false
+                  create_host_path: true
+        depends_on:
+            llama-model-initializer:
+                condition: service_completed_successfully
         deploy:
             resources:
                 reservations:

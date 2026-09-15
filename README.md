@@ -9,9 +9,10 @@ Webブラウザ上でかわいいキャラになっておしゃべりしたり�
 
 - サーバー側
     - Linuxサーバー(x86_64)
-    - Transformersが動作するNVIDIA GPU
+    - NVIDIA GPUとCUDA 13対応ドライバー（580系以降）
         - シンクロモード: VRAM 4GB程度(NeMo)。
         - チャットモード: 追加で8GB程度、合計16GB以上のVRAMが必要(LLM用)
+    - モデル・コンテナの初回取得に使うインターネット接続
     - [Docker Engine](https://docs.docker.com/engine/install/ubuntu/)
     - [NVIDIA Driver(nvidia-open)](https://www.nvidia.com/en-us/drivers/)
     - [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
@@ -20,7 +21,7 @@ Webブラウザ上でかわいいキャラになっておしゃべりしたり�
     - マイク
     - カメラ
     - Webブラウザ
-    - かわいいVRM-1.0モデル
+    - 好きなVRM-1.0モデル（同梱モデルも利用できます）
 
 ## 検証済み環境
 
@@ -43,102 +44,31 @@ Webブラウザ上でかわいいキャラになっておしゃべりしたり�
 
 ## とにかくローカル環境でサーバーを動かす
 
-ローカル／オンプレミスでの提供を前提とする。[CUDA 13系のホスト条件](documents/design/infrastructure/compose.md#nemoのgpu基盤)に従ってNVIDIA DriverとNVIDIA Container Toolkitを準備し、コンテナ内の `nvidia-smi` でGPUを確認する。
-
-1. ソースコードを取得し、リポジトリのルートへ移動する。
+ソースコードを取得し、リポジトリのルートで起動します。
 
 ```sh
 git clone https://github.com/Sincromisor/Sincromisor.git
 cd Sincromisor
-```
-
-2. 設定サンプルをルートの `.env` へコピーする。
-
-```sh
 cp examples/compose.env .env
-chmod 600 .env
+docker compose up
 ```
 
-3. 起動前に `.env` を編集する。サンプルのままでは広告IPv4が例示値のため接続できない。
-
-- `COMPOSE_PROFILES`: サンプルは `full`。既存の `.env` には `COMPOSE_PROFILES=full` を追加すると、以降のコマンドでプロファイル指定を省略できる。分散配置ではホストの担当に合わせて変更する。
-- `SINCRO_RECOGNIZER_MODEL`: `nemo` のみ対応する。以前の `nue` 指定は非互換となり、ビルド時に拒否する。配布イメージを使う場合も `nemo` へ変更する。
-- `SINCRO_PION_PUBLIC_IPV4`: ブラウザから到達できるサーバーホストのIPv4へ置き換える。閉じたLANではホストのLANアドレスを使い、インターネット上の公開IPは必須ではない。`203.0.113.10` は説明用の値である。
-- `SINCRO_PION_STUN`: サンプルは外部STUNを指定している。閉じたLANで直接UDP通信ができる構成では `SINCRO_PION_STUN=` と空にできる。STUNの有無にかかわらず、広告IPv4とメディアUDPポートへの到達性が必要である。
-- `SINCRO_CONSUL_ADVERTISE_ADDR`: 分散配置では、全Consulメンバーが相互に到達できる管理IPv4を指定する。空欄ではConsulが自動選択する。
-- 分散配置では `COMPOSE_FILE` で追加Composeを選択し、`SINCRO_CONSUL_PUBLISH_HOST` に管理IPv4を指定する。RTCから下流APIへの直接接続とConsulのホスト間通信を維持する。設定と既存環境の移行は[公開ポートの選択](documents/design/infrastructure/compose.md#公開ポートの選択)を参照する。
-- `SINCRO_CONSUL_SERVER_HOST`: `rtc`プロファイルでは既存サーバーのホスト名または管理IPv4を指定する。RTCは同一ホストのエージェントを通して参加する。
-- `SINCRO_COMPOSE_NETWORK_SUBNET`: 既存のDockerネットワークやLANと重複する場合は未使用の範囲へ変更する。
-- chat設定なしで最初に試す場合、Mastraトークンは空のままでよい。ブラウザで開始前に `sincro` を選ぶ。既定の `chat` を使う場合は、先に[チャットモードの設定](#チャットモードを利用する)を行う。
-
-4. コンテナイメージ・モデルの取得を準備する。設定したレジストリから取得する場合は次を実行する。
-
-```sh
-docker compose pull
-```
-
-ソースからイメージを作る場合は `docker compose build` を使う。取得元のイメージやビルド時の依存パッケージ、音声認識モデルには取得先への通信が必要になる。認識サービスは起動時にNeMoのキャッシュを読み、モデルがない場合だけ自動取得して `volumes/sincro-cache` に保存する。チャット用LLMのモデルとAgentServerも管理下の環境へ事前に配置する。
-
-サービス実行時に外部サービスのAPIを使わない構成と、導入時に何も取得しない完全オフライン構成は区別する。モデル取得先と再利用条件は[モデルキャッシュ](documents/design/infrastructure/storage.md#モデルキャッシュ)を参照する。完全オフライン導入にはイメージとモデルの事前搬入が必要となる。
-
-5. 初回のみモデルの保存先をUID 1001で作り、全サービスを起動する。既存キャッシュは削除せず、所有者・権限を維持する。
-
-```sh
-# 保存先がない場合のみ実行する。モデル本体は認識サービスが自動取得する。
-test -d volumes/sincro-cache || sudo install -d -o 1001 -g 1001 volumes/sincro-cache
-```
-
-```sh
-docker compose up -d
-```
-
-ネットワークの制約と設定の受け渡しは[Compose設計](documents/design/infrastructure/compose.md)を参照する。
-
-## Gemma 4 E2Bを準備する
-
-同梱の `llama-server` は `chat` プロファイルで起動する。会話入口は同じプロファイルのAgentServerを経由する。
-モデルは管理者が一度取得し、通常起動時はローカルファイルだけを読む。
-
-リポジトリのルートで、固定リビジョンのテキスト用Q4_0（約2.84GB）を取得する。
-画像・音声用のmmprojと投機的デコード用のmtpは不要である。
-
-```sh
-mkdir -p volumes/llama-models
-curl --fail --location --retry 2 \
-  --output volumes/llama-models/gemma-4-E2B-it-Q4_0.gguf.part \
-  https://huggingface.co/ggml-org/gemma-4-E2B-it-GGUF/resolve/b4243c156154b6dca9324415f8c7ccc098b4aed1/gemma-4-E2B-it-Q4_0.gguf
-echo '8e30dff3ac4c8434c49a7036fa15564bdbb6044e42bf04550bf1a096ad7e6a52  volumes/llama-models/gemma-4-E2B-it-Q4_0.gguf.part' | sha256sum --check
-mv volumes/llama-models/gemma-4-E2B-it-Q4_0.gguf.part volumes/llama-models/gemma-4-E2B-it-Q4_0.gguf
-```
-
-既存ファイルは再取得せず再利用する。チェックサム確認に失敗した場合は改名・起動せず再取得する。取得完了後、[例示設定](examples/compose.env)の `SINCRO_LLAMA_*` を
-ルート `.env` へ追加する。イメージの取得後は `--pull never` で外部取得を避けて起動できる。
-
-```sh
-docker compose --profile chat pull llama-server
-docker compose --profile chat up -d --pull never llama-server
-docker compose --profile chat ps llama-server
-docker compose --profile chat logs llama-server
-```
-
-NVIDIA GPUを1台割り当て、モデル全層をGPUへ配置する。CPU側は6スレッド、コンテキストは4096トークン、並列生成は1件としている。音声認識・音声合成と同じGPUを使う場合は、各モデルと推論用メモリーが同時に収まる容量を確保する。
-ホストへのポート公開はなく、同じCompose内では `http://llama-server:8080/v1` を使う。
-ロード完了後だけ死活確認が成功する。保存先がない場合はマウントエラー、モデルファイルがない場合は
-llama-serverのモデル読込みエラーで停止する。保存条件は[保存領域設計](documents/design/infrastructure/storage.md#チャット用gguf)を参照する。
+同梱の設定で会話に必要なサービスが起動します。
+初回はコンテナイメージのビルドと会話・音声認識用モデルのダウンロードを自動で行います。
+保存先とサービス間の接続設定も自動で準備され、次回からは保存済みのモデルを再利用します。
 
 ## クライアント側のつかいかた
 
-サーバーと同じPCのブラウザでは [http://localhost:8086](http://localhost:8086) を開く。別端末のLAN利用ではHTTPの公開先は `http://<サーバーのLANアドレス>:8086` だが、マイク・カメラの利用にはブラウザが安全な接続と認める条件が必要である。通常のブラウザでは同じPCの `localhost` はHTTPでも対象となり、利用許可を与えて使える。
+1. サーバーを起動したPCのブラウザーで [http://localhost:8086/](http://localhost:8086/) を開きます。
+2. `Simple Interface` を選びます。
+3. マイク・カメラの利用を許可し、「開始する」を押してキャラクターに話しかけます。
 
-LANの別端末から使う場合は、管理下のHTTPS終端とブラウザが信頼する証明書を別途準備し、そのHTTPSのURLを開く。現在の `configs/Caddyfile` は `:80` のHTTPだけを提供する。標準ComposeはHTTPの `8086:80` とメディアUDP（サンプルは3479）だけを公開する。HTTPS・証明書は未設定で、未使用の8443は公開しない。HTTPのLANアドレスではマイク・カメラを利用できるとは限らない。
+起動前の設定で会話モードを切り替えられます。
 
-通常利用ではトップページから次の導線を使います。
+- `chat`: キャラクターと会話します。
+- `sincro`: あなたの発話をキャラクターの声で読み上げます。
 
-- `Simple Interface (VRM 1.0)`: 通常会話の正規導線
-- `360deg Camera (VRM 1.0)`: 360 動画/カメラ向けの 実験用の導線
-- `Looking Glass (VRM 1.0 / Three.js)`: [Looking Glass](https://lookingglassfactory.com/looking-glass-portrait) 向けの 実験用の導線
-
-`Simple Interface (VRM 1.0)` の起動前設定で、Mastraトークン未設定なら会話モードを `sincro`（シンクロモード）へ変更してから「開始する」を押す。`sincro` は認識文を変換して読み上げ、AgentServerを使わない。初回の既定値は `chat` のため、設定を空にしただけではチャットは動作しない。
+`360deg Camera` は360度動画・カメラ、`Looking Glass` は [Looking Glass](https://lookingglassfactory.com/looking-glass-portrait) 向けの画面です。
 
 ## キャラクターを差し替える
 
@@ -151,178 +81,37 @@ LANの別端末から使う場合は、管理下のHTTPS終端とブラウザが
 
 ## 音声認識の固有名詞辞書を追加する
 
-音声認識の固有名詞辞書は `speech-recognizer` コンテナに
-読み込ませます。固有名詞補強は `SINCRO_RECOGNIZER_MODEL=nemo` を前提にしています。
+名前や作品名の読み方を辞書に登録できます。
+[辞書の追加手順](documents/design/backend/services/speech-recognizer.md#辞書の追加手順)を参照してください。
 
-1. 辞書配置用ディレクトリを作成します。
+## 会話の設定を変える
 
-```sh
-$ mkdir -p volumes/proper-noun-dictionaries
-```
+キャラクターの話し方や指示は、同梱の管理画面で編集できます。
+[管理画面の使い方](documents/design/backend/services/agent-server.md#管理者認証とeditor)を参照してください。
 
-2. UTF-8 の CSV で辞書ファイルを作成します。
-   最低限 `surface` と `yomi` が必要です。運用上は
-   `surface,yomi,priority,category,enabled,ambiguous` の構成を推奨します。
-   **ヘッダが適切に記述されていないとエラーになります。注意してください。**
+## 別の端末から使う・処理を分散させる
 
-```csv
-surface,yomi,priority,category,enabled,ambiguous
-Sincromisor,しんくろみそーる,200,product,true,false
-ピカチュウ,ぴかちゅう,100,pokemon,true,false
-タブンネ,たぶんね,100,pokemon,true,true
-たぶんね,たぶんね,10,common,true,true
-```
-
-3. 作成した CSV を `volumes/proper-noun-dictionaries/` 配下へ置きます。
-   たとえば `volumes/proper-noun-dictionaries/proper_nouns.csv` のようなパスにします。
-
-    `speech-recognizer` コンテナは非rootユーザーで動作するため、権限が厳しすぎると
-    辞書を読めません。配置後に次のスクリプトで権限を整えておくのを推奨します。
-
-```sh
-$ ./utils/setup/proper_noun_dictionary.sh
-```
-
-このスクリプトは `volumes/proper-noun-dictionaries/` 配下を
-`directory=755`、`file=644` にそろえます。あわせて `.csv` の先頭行を確認し、
-`surface,yomi,priority,category,enabled,ambiguous` ヘッダが無ければ自動で補います。
-個別パスを指定することもできます。
-
-```sh
-$ ./utils/setup/proper_noun_dictionary.sh volumes/proper-noun-dictionaries/proper_nouns.csv
-```
-
-4. ルートの `.env` を更新します。
-
-```dotenv
-SINCRO_RECOGNIZER_MODEL=nemo
-SINCRO_RECOGNIZER_PROPER_NOUN_ENABLE=true
-SINCRO_RECOGNIZER_PROPER_NOUN_DICT_PATH=/opt/sincromisor/proper-noun-dictionaries/proper_nouns.csv
-```
-
-必要に応じて、confirmed 時の補強を強めたい場合は以下も有効化できます。
-
-```dotenv
-SINCRO_RECOGNIZER_PROPER_NOUN_CONTEXT_BIASING_ENABLE=true
-SINCRO_RECOGNIZER_PROPER_NOUN_NBEST_ENABLE=true
-```
-
-5. `speech-recognizer` コンテナを再作成して反映します。
-
-```sh
-$ docker compose up -d speech-recognizer
-```
-
-6. ログを確認し、辞書がロードされていることを確認します。
-
-```sh
-$ docker compose logs speech-recognizer
-```
-
-`Proper noun dictionary loaded:` が出力されれば、辞書ファイルのマウントと読み込みは成功です。
-反映されない場合は、CSV のヘッダ、`.env` の `SINCRO_RECOGNIZER_PROPER_NOUN_DICT_PATH`、
-`volumes/proper-noun-dictionaries` 配下のファイル配置、ディレクトリ/ファイル権限
-（`755/644`）を見直してください。
-
-## チャットモードを利用する
-
-`chat` は管理下のAgentServerと同梱LLMを使う。`full,chat` プロファイルで両サービスを起動する。
-リポジトリのルートの `.env` に、管理者トークンを設定する。`text-processor` は同じトークンを使い、Compose内の `agent-server` へ接続する。
-
-```dotenv
-SINCRO_AGENT_ADMIN_TOKEN=32文字以上のランダムな管理者トークン
-SINCRO_PROCESSOR_MASTRA_URL=http://agent-server:4111
-SINCRO_PROCESSOR_MASTRA_TOKEN=
-SINCRO_PROCESSOR_MASTRA_AGENT_ID=sincromisor-character
-```
-
-`SINCRO_PROCESSOR_MASTRA_TOKEN` が空の場合は `SINCRO_AGENT_ADMIN_TOKEN` を使う。別の認証情報を使う場合だけ明示する。`SINCRO_PROCESSOR_MASTRA_URL` の `agent-server` はCompose内のサービス名であり、`127.0.0.1` はtext-processor自身を指す。
-
-設定後はリポジトリのルートでコンテナを再作成して反映する。
-
-```sh
-docker compose --profile full --profile chat up -d
-```
-
-ブラウザの起動前設定で `chat` を選び、開始する。AgentServerと接続先LLMは管理下で動き、外部サービスのAPI認証を前提にしない。
-
-以前の `SINCRO_PROCESSOR_DIFY_URL` と `SINCRO_PROCESSOR_DIFY_TOKEN`、対応するCLI引数は廃止した。Difyの環境、履歴、資格情報は削除・変換しない。切替前の会話を終了し、切替後は新しいセッションを開始する。
-
-### チャットモードの表情連動を使う場合（AgentServer/LLM設定が必須）
-
-チャットモードでは、LLM応答の先頭2文字に `^N`（感情コード）を付けると、
-フロントエンドがそれを表情ヒントとして解釈し、VRMの目/眉の表情を切り替えます。
-
-この機能は **Studioで公開したAgentServerの指示設定が必要** です。設定されていない場合、応答本文は表示されますが表情は変化しません。
-
-- 感情コード（応答先頭に1回だけ出力）
-    - `^0` = 標準（neutral）
-    - `^1` = 楽しい（relaxed）
-    - `^2` = 悲しい（sad）
-    - `^3` = 怒り（angry）
-    - `^4` = 喜び（happy）
-    - `^5` = 驚き（surprised）
-
-- 出力例
-
-```txt
-^4それはいいですね。すぐに試してみましょう。
-```
-
-- Studioの指示例（そのまま利用可）
-
-```txt
-重要: 各応答の先頭に、感情コードを必ず1回だけ付けてください。
-形式は半角2文字で ^N です（N は 0〜5）。
-
-感情コード対応:
-^0 = 標準（neutral）
-^1 = 楽しい（relaxed）
-^2 = 悲しい（sad）
-^3 = 怒り（angry）
-^4 = 喜び（happy）
-^5 = 驚き（surprised）
-
-出力ルール:
-- 応答の先頭は必ず ^N で開始する
-- ^N の直後に本文を続ける（改行しない）
-- 感情コードは先頭の1回だけ出力する
-- 本文中では ^0〜^5 を感情指定として使わない
-- 感情が不明な場合は ^0 を使う
-```
-
-注意:
-
-- `^N` はサーバー側で自動的に除去されるため、通常はチャット表示や音声合成には含まれません。
-- `text-processor` / `sincro-rtc` のどちらか片方だけ更新すると、表情コードが `text_ch` へ伝搬しない場合があります。通信仕様変更を含むため、関連コンテナを合わせて再デプロイしてください。
-
-## 処理を分散させる
-
-VRAM不足などで全てのワーカーコンテナを同じホスト内で動作させることができない場合や、
-ユーザー数の増加によりひとつのホストで全ての要求を捌ききれない場合は、
-各ワーカーを異なるホスト上で動作させることができます。
+LAN内の別端末からの利用や、複数サーバーへの分散配置にも対応しています。
+[接続先と配置の設定](documents/design/infrastructure/compose.md#ブラウザの公開先)を参照してください。
 
 ## OBSで利用する場合
 
 ### カメラ・マイクの利用許可
 
-デフォルトではブラウザソースのカメラ・マイク利用許可ダイアログの操作ができません。
-そのため、コマンドラインで自動的に許可するようにする必要があります。
-そのままではデバッグコンソールなども利用できないため、ついでにリモートデバッグポートも開けておくと便利です。
+次のオプションを指定してOBSを起動すると、ブラウザーソースでマイク・カメラを利用できます。
 
 ```bat
 cd "C:\Program Files\obs-studio\bin\64bit"
 obs64.exe --enable-media-stream ^
           --use-fake-ui-for-media-stream ^
           --auto-accept-camera-and-microphone-capture ^
-          --autoplay-policy=no-user-gesture-required ^
-          --remote-debugging-port=9222
+          --autoplay-policy=no-user-gesture-required
 ```
 
 ### キャラクターの制御に利用するカメラ・マイクの設定
 
 Google Chromeの設定を変えると、Chromium Embedded Framework側にも反映されます。
-カメラについては、OBSで利用するカメラやキャプチャーボードと重複すると動作しなくなるので注意してください。
+キャラクターの操作には、OBSの映像入力と別のカメラを選択してください。
 
 - <chrome://settings/content/camera>
 - [chrome://settings/content/microphone](chrome://settings/content/camera)

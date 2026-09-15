@@ -7,6 +7,7 @@ services:
             context: ..
             dockerfile: ./Docker/sincro-rtc/Dockerfile
         image: ${SINCRO_REGISTRY_NAME}/sincro-rtc:latest
+        pull_policy: build
         command:
             [
                 "--http",

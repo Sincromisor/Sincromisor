@@ -6,17 +6,22 @@
 - `.env`、Docker Compose サービス、Pion / フロントエンド設定の 3 点を常に整合させる。
 - `full` / `rtc` プロファイルはPion版 `sincro-rtc` を起動する。
 
-## ローカル起動の前提
+## ローカル起動の原則
 
-- 手順の入口は[README](../../../README.md#とにかくローカル環境でサーバーを動かす)。`examples/compose.env` をリポジトリのルートの `.env` へコピーし、例示の広告IPv4を必ず編集する。
-- イメージ・依存パッケージ・モデルの取得準備と、サービス実行時の接続条件を分ける。認識サービス自身がNeMoのキャッシュを優先して読み、欠損時だけ自動取得する。保存先と初回の権限準備は[モデルキャッシュ](storage.md#モデルキャッシュ)を参照する。
-- `sincro` はMastra設定不要。フロントの初回既定値は `chat` なので、AgentServerなしで試す場合は開始前に `sincro` へ変更する。
-- `chat` は同梱のAgentServerとLLMを使う。ルート `.env` の `SINCRO_PROCESSOR_MASTRA_URL`、`SINCRO_PROCESSOR_MASTRA_TOKEN`、`SINCRO_PROCESSOR_MASTRA_AGENT_ID` を `compose/text-processor.yml` が環境変数へ渡し、Pythonの `TextProcessorProcessArgument` が読む。トークンが空なら `SINCRO_AGENT_ADMIN_TOKEN` を使う。
-- `agent-server` はCompose内サービス名であり、`text-processor` からは `http://agent-server:4111` へ接続する。`127.0.0.1` はtext-processor自身を指す。
+利用者がプロジェクトやLLMの知識を持つことを前提にしない。
+配布用の設定を置いた後は `docker compose up` だけで起動し、同じホストの
+`http://localhost:8086/` から会話できる構成にする。
+READMEは起動と利用できる機能を案内し、内部のモデル形式や追加ファイルの選別を利用者に要求しない。
+
+- 手順の入口は[README](../../../README.md#とにかくローカル環境でサーバーを動かす)。`examples/compose.env` をルートの `.env` へコピーする。同じホストでは設定編集を要しない。
+- 既定プロファイルは `full,chat`。ブラウザーの初期モードである `chat` に必要なAgentServerとLLMも起動する。
+- Pionの広告IPv4は `127.0.0.1`、外部STUNは空欄とする。別端末の利用時だけ到達可能な広告先を指定する。
+- 保存先と認証情報は初期化コンテナが準備する。モデルの保存と再利用は[保存領域](storage.md)を参照する。
+- `text-processor` は `http://agent-server:4111` へ接続する。起動スクリプトが未指定のトークンを専用ボリュームから読み、既存の環境変数として渡す。
 
 ## プロファイルの選択
 
-`examples/compose.env` は `COMPOSE_PROFILES=full` を設定する。ルートの `.env` に同じ設定を置くと、
+`examples/compose.env` は `COMPOSE_PROFILES=full,chat` を設定する。ルートの `.env` に同じ設定を置くと、
 通常は `docker compose up -d` だけで全サービスを起動できる。既存の `.env` には必要に応じて追記する。
 この変数はCompose自身が読むため、サービスコンテナの環境変数には渡さない。
 
@@ -37,20 +42,26 @@ NVIDIA GPUを1台予約し、`--n-gpu-layers 99` でモデル全層を配置す�
 `--reasoning off` で思考生成を無効にする。`SINCRO_LLAMA_*` はルート `.env` からコマンドとマウントへ渡す。
 イメージ内の `curl --fail` が `/health` を確認し、ロード中の503とロード済みの200を区別する。
 
-モデルの取得は[README](../../../README.md#gemma-4-e2bを準備する)、固定リビジョンと保存条件は
-[チャット用GGUF](storage.md#チャット用gguf)を参照する。通常起動時のモデル取得は行わない。
+`llama-model-initializer` が保存先を自動作成し、モデルを欠損時だけ取得・検証する。
+llama-serverはその正常終了を待つ。固定リビジョンと保存条件は
+[チャット用GGUF](storage.md#チャット用gguf)を参照する。
 
 ## 管理者用Mastra
 
 `agent-server` は `chat` プロファイルでllama-serverを待って起動する。
 Mastra APIとStudio Editorを同じ本番コンテナに置き、内部4111をホストの `127.0.0.1:4111` だけへ公開する。
-管理者トークンとLLM設定を `.env` から渡し、設定不足はサービス起動で拒否する。
+LLM設定と管理者が指定したトークンは `.env` から渡す。トークン未指定時は
+`service-initializer` が生成・保存したものをAgentServerとTextProcessorで共有する。
+`with-token.sh` が読込み後に既存のサービスコマンドを `exec` し、死活確認も同じ読込みを使う。
 未選択のchat設定が空でも `full` / `backend` / `rtc` の構成確認は妨げない。
 死活確認は認証付きAPIを使う。認証・Editor・HTTP契約は[AgentServer](../backend/services/agent-server.md)を参照する。
 
 ## コンテナの依存導入
 
-配布イメージのビルドとGHCRへの月次更新は[コンテナイメージの公開](image-publishing.md)を参照する。
+プロジェクトのサービスは `pull_policy: build` で現在のソースから自動ビルドする。
+既存のビルドキャッシュを再利用し、起動前の手動ビルドを求めない。
+配布イメージを使う管理構成では `docker compose up -d --no-build --pull missing` を指定する。
+GHCRへの月次更新は[コンテナイメージの公開](image-publishing.md)を参照する。
 
 フロントエンドは `npm ci`、Pythonサービスは `uv sync --locked` で管理済みロックに従う。
 依存宣言とロックが不整合ならビルドを失敗させる。Pythonはソース配置前に
@@ -61,8 +72,12 @@ Mastra APIとStudio Editorを同じ本番コンテナに置き、内部4111を�
 
 音声認識モデルの指定は `SINCRO_RECOGNIZER_MODEL=nemo` のみ対応する。
 以前の `nue` 指定は非互換となり、ビルドでは依存導入前に拒否する。配布イメージも `nemo` を選ぶ。
-共通の `service-initializer` は使わない。フロントとテキスト処理はモデル準備やS3を待たず、
-認識と音声合成はS3のバケット・認証を準備する `s3-bootstrap` の正常終了を待つ。
+`service-initializer` はモデルキャッシュの書込み権限とサービス間認証を準備し、
+認識・テキスト処理・AgentServerが正常終了を待つ。
+会話モデルの取得は `chat` 専用の `llama-model-initializer` に分け、
+`backend` 単独起動でLLMの取得を要求しない。初期化は既存のcurlイメージとシェルで行う。
+認識モデルは認識サービスが欠損時に取得するため、初回の死活確認には30分の準備時間を設ける。
+認識と音声合成はS3のバケット・認証を準備する `s3-bootstrap` の正常終了も待つ。
 
 ## NeMoのGPU基盤
 
@@ -82,7 +97,8 @@ PTXや新機能には追加条件があるため、最低値だけで動作を�
 
 ## 公開ポートの選択
 
-標準の `compose.yml` は `8086/TCP` とメディアUDPだけをホストへ公開する。
+`full` は `8086/TCP` とメディアUDPをホストへ公開する。
+既定の `full,chat` では管理画面の `127.0.0.1:4111/TCP` も公開する。
 Redis、S3、VOICEVOX、下流4サービス、ConsulはCompose内部で通信し、`expose` の追加も不要である。
 単一ホストではConsul広告先を空欄とし、サービスの `PUBLIC_BIND_HOST` とPionの登録先はサンプルのサービス名を使う。
 コンテナ内の待受アドレスは `0.0.0.0` のままとする。
@@ -134,7 +150,7 @@ SeaweedFS内部サービスのネットワーク分離と保存ボリューム�
 `--media-udp-port ${SINCRO_PION_MEDIA_UDP_PORT}` と `--interface ${SINCRO_PION_INTERFACE}` はコンテナ内の
 共有UDP多重化処理待受先を選び、`--service-bind-host ${SINCRO_PION_SERVICE_BIND_HOST}` はConsul登録アドレスを決める。
 ローカル Docker Composeの既定サービスの待受ホストは`sincro-rtc`である。別ホスト Consulを使う場合はConsulから死活確認可能な
-Pion ホストのVPN アドレスを指定する。ブラウザへ広告するIPv4は別値とする。`SINCRO_PION_PUBLIC_IPV4` はブラウザから到達可能なホストのIPv4を指し、閉じたLANではLANアドレスを使う。インターネット上の公開IPを必須にしない。
+Pion ホストのVPN アドレスを指定する。ブラウザへ広告するIPv4は別値とする。`SINCRO_PION_PUBLIC_IPV4` の既定値は同じホスト向けの `127.0.0.1` とし、閉じたLANの別端末から使う場合はLANアドレスを指定する。インターネット上の公開IPを必須にしない。
 
 標準構成のPionは `${SINCRO_PION_MEDIA_UDP_PORT}`（サンプルは3479）をホスト・コンテナ同値のUDPポートとして公開する。
 TCP 8001は内部待受のみとし、ブラウザのHTTP通信はフロントのCaddyから転送する。
@@ -147,7 +163,7 @@ TCP 8001は内部待受のみとし、ブラウザのHTTP通信はフロント�
 エージェントのHTTP 8500はホストへ公開せず、Pionは`depends_on`で`consul-agent-rtc`の死活確認成功後に起動し、
 `/health/ready` を10秒間隔・5秒時間切れで監視する。管理ネットワークでの広告先とポートは[Consul設計](consul.md#複数ホストのエージェント)に従う。
 
-`SINCRO_PION_STUN` のサンプルは外部STUNを指定する。閉じたLANで直接UDP通信できる場合は空指定にできる。STUNを空にしても広告IPv4とメディアUDPポートへの到達性は必要であり、STUNだけでNATやファイアウォールの制約は解決しない。現行はIPv4・UDPでの直接接続が前提でTURNは未対応。詳細は[RTC運用方針](../../migration/pion/rollout-and-operations.md)を参照する。
+`SINCRO_PION_STUN` のサンプルは空欄とし、同じホストから直接UDP通信する。外部STUNを使う管理構成では接続先を指定する。STUNを空にしても広告IPv4とメディアUDPポートへの到達性は必要であり、STUNだけでNATやファイアウォールの制約は解決しない。現行はIPv4・UDPでの直接接続が前提でTURNは未対応。詳細は[RTC運用方針](../../migration/pion/rollout-and-operations.md)を参照する。
 
 既存Docker ネットワークとサブネットが重複する環境では、`SINCRO_COMPOSE_NETWORK_SUBNET`だけを未使用サブネットへ変更する。
 

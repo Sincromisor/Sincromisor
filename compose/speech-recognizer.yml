@@ -9,13 +9,14 @@ services:
             args:
                 SINCRO_RECOGNIZER_MODEL: ${SINCRO_RECOGNIZER_MODEL:?nemoを指定してください}
         image: ${SINCRO_REGISTRY_NAME}/speech-recognizer-${SINCRO_RECOGNIZER_MODEL}:latest
+        pull_policy: build
         volumes:
-            # UID 1001の既存キャッシュを再利用し、未準備ディレクトリをroot所有で作らせない。
+            # 初期化コンテナがUID 1001の書込み権限を準備する。
             - type: bind
               source: ../volumes/sincro-cache
               target: /opt/sincromisor/.cache
               bind:
-                  create_host_path: false
+                  create_host_path: true
             - ../volumes/proper-noun-dictionaries:/opt/sincromisor/proper-noun-dictionaries:ro
         networks:
             - sincromisor-net
@@ -46,6 +47,8 @@ services:
                           count: all
                           capabilities: [gpu]
         depends_on:
+            service-initializer:
+                condition: service_completed_successfully
             # バケットと認証の準備を待つ。モデル取得の完了とは独立して扱う。
             s3-bootstrap:
                 condition: service_completed_successfully
@@ -58,7 +61,8 @@ services:
                     "curl",
                     "http://localhost:8003/api/v1/SpeechRecognizer/statuses",
                 ]
-            start_period: 60s
+            # 初回のモデル取得中も待ち、APIが応答すれば直ちに起動完了とする。
+            start_period: 30m
             interval: 10s
             timeout: 5s
             retries: 15

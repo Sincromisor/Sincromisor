@@ -1,4 +1,4 @@
-/** chat専用の起動範囲と、モデルを外部取得しない内部API構成を確認する。 */
+/** chat専用の起動範囲と、初期化完了を待つ内部API構成を確認する。 */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import test from "node:test";
@@ -39,7 +39,15 @@ test("llama-serverはchat専用で固定イメージと読み取り専用モデ�
 		assert.deepEqual(Object.keys(llama.networks), ["sincromisor-net"]);
 		assert.equal(llama.volumes[0].target, "/models");
 		assert.equal(llama.volumes[0].read_only, true);
-		assert(!llama.volumes[0].bind?.create_host_path);
+
+		assert.equal(
+			llama.depends_on["llama-model-initializer"].condition,
+			"service_completed_successfully",
+		);
+		assert.equal(
+			services["llama-model-initializer"].volumes[1].source,
+			llama.volumes[0].source,
+		);
 		assert(llama.command.includes("/models/gemma-4-E2B-it-Q4_0.gguf"));
 		assert(!llama.command.includes("-hf"));
 		assert(llama.healthcheck.test.includes("--fail"));

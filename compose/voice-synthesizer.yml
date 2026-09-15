@@ -7,6 +7,7 @@ services:
             context: ..
             dockerfile: ./Docker/voice-synthesizer/Dockerfile
         image: ${SINCRO_REGISTRY_NAME}/voice-synthesizer:latest
+        pull_policy: build
         networks:
             - sincromisor-net
         environment:
@@ -49,6 +50,7 @@ services:
             - full
             - backend
         image: ${SINCRO_REGISTRY_NAME}/voicevox:latest
+        pull_policy: build
         build:
             context: ..
             dockerfile: ./Docker/voicevox/Dockerfile
