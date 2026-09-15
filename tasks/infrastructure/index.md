@@ -2,9 +2,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 20 件）
+## タスク一覧（自動生成 / 全 21 件）
 
-### done（完了） — 20 件
+### done（完了） — 21 件
 
 | タスク                                                                                                               | タイトル                                                | 判定    | 依存                                               |
 | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------- | -------------------------------------------------- |
@@ -28,5 +28,6 @@
 | [task-260913040803-compose-port-separation](./task-260913040803-compose-port-separation/task.md)                     | Composeの標準公開を絞り分散配置と管理用ポートを分離する | ✅ PASS | —                                                  |
 | [task-260915031109-gemma4-llama-server](./task-260915031109-gemma4-llama-server/task.md)                             | Gemma 4 E2Bのllama-serverをComposeへ同梱する            | ✅ PASS | —                                                  |
 | [task-260915234043-compose-local-first](./task-260915234043-compose-local-first/task.md)                             | Composeだけでローカル会話を開始できるようにする         | ✅ PASS | —                                                  |
+| [task-260916002554-s3-auto-secret](./task-260916002554-s3-auto-secret/task.md)                                       | S3秘密鍵の自動生成と変更手順を整える                    | ✅ PASS | —                                                  |
 
 <!-- AUTOGEN:tasks END -->

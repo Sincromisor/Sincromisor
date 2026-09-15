@@ -1,5 +1,16 @@
 # 保存領域と認証の準備を終えてから利用サービスを起動する。
 services:
+    s3-credential-initializer:
+        profiles: [full, backend, external, s3]
+        image: curlimages/curl:8.12.1
+        user: "0:0"
+        entrypoint: [sh, /initialize.sh, s3]
+        volumes:
+            - ../Docker/service-initializer/initialize.sh:/initialize.sh:ro
+            - s3-auth:/auth
+        network_mode: none
+        restart: "no"
+
     service-initializer:
         profiles: [full, backend, chat]
         image: curlimages/curl:8.12.1
@@ -26,3 +37,4 @@ services:
 
 volumes:
     service-auth:
+    s3-auth:
