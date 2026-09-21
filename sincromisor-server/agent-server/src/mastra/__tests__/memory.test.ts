@@ -5,6 +5,7 @@ import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { characterInstructions } from "../prompts/character.js";
 
 test("同じthreadだけに過去の発話を投入し、別会話とStudioに混入しない", async () => {
 	const requests: string[] = [];
@@ -89,6 +90,9 @@ test("同じthreadだけに過去の発話を投入し、別会話とStudioに�
 			assert.equal(await stream.finishReason, "stop");
 		}
 		assert.equal(requests.length, 4);
+		assert(
+			requests.every((request) => request.includes(characterInstructions)),
+		);
 		assert(!requests[1].includes("赤い森781"));
 		assert(
 			!requests[2].includes("赤い森781") && !requests[2].includes("白い雲923"),

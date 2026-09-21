@@ -33,6 +33,17 @@ AgentServer・llama-server・専用Consulエージェントは `restart: unless-
 設定不足は秘密値を含まないキー名のエラーで起動を拒否する。
 モデル一覧の定期外部取得とMastraのテレメトリーは無効にする。
 
+## エージェント定義とプロンプトの編集
+
+`src/mastra/` 内の編集箇所は次のとおり。
+
+- [agents/character.ts](../../../../sincromisor-server/agent-server/src/mastra/agents/character.ts): キャラクター定義、生成設定、履歴設定。`createCharacterAgent` がモデルと保存領域を受け取る。
+- [prompts/character.ts](../../../../sincromisor-server/agent-server/src/mastra/prompts/character.ts): 初期プロンプト。会話指示だけを変更するときはこのファイルを編集する。
+- [application.ts](../../../../sincromisor-server/agent-server/src/mastra/application.ts): 接続先、保存領域、認証、MCP、Editorを組み立て、エージェントを登録する。別の定義へ差し替えるときは生成関数のimportと呼出しを変更する。
+
+コード変更はビルドとサービス再作成で反映する。Studioの公開済み指示がある場合はそちらが優先されるため、稼働中の指示変更はEditorで編集・公開する。
+Pythonの呼出先と保存済み設定を引き継ぐ場合、登録キーとエージェントIDの `sincromisor-character` を維持する。
+
 ## 管理者認証とEditor
 
 `http://127.0.0.1:4111` を開き、標準のSign in画面でログインする。
