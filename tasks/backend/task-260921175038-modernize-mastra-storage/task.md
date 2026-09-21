@@ -51,3 +51,7 @@ node tasks/backend/task-260921175038-modernize-mastra-storage/artifacts/check-de
 ## 確認結果
 
 AgentServerの型検査と既存5テストに合格。保存領域型以外の動作・依存・DB・通信契約に変更はない。コメント点検: PASS。
+
+## 最終追補
+
+型診断の対象外だったVite設定にもrollupOptionsとmanualChunksが残っていたため、[Vite設定更新](../../frontend/task-260921175828-modernize-vite-config/task.md)を追加実行した。依存ライブラリの非推奨参照は両tsconfigの再走査で0となり、独自solveWorldArmIkの2参照だけが残る。調査は静的型診断・ソース検索・採用依存の移行資料の照合によるもので、全依存の内部実装やPython/Goの全APIを網羅するものではない。

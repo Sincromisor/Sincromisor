@@ -2,9 +2,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 14 件）
+## タスク一覧（自動生成 / 全 15 件）
 
-### done（完了） — 14 件
+### done（完了） — 15 件
 
 | タスク                                                                                                         | タイトル                                        | 判定    | 依存                                          |
 | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------- | --------------------------------------------- |
@@ -22,5 +22,6 @@
 | [task-260921175038-modernize-runtime-apis](./task-260921175038-modernize-runtime-apis/task.md)                 | 描画とUIの非推奨ライブラリAPIを更新             | ✅ PASS | —                                             |
 | [task-260921175038-modernize-zod-numbers](./task-260921175038-modernize-zod-numbers/task.md)                   | Zodの非推奨な有限数検証を整理                   | ✅ PASS | —                                             |
 | [task-260921175038-modernize-zod-objects](./task-260921175038-modernize-zod-objects/task.md)                   | Zodの非推奨な未知キー保持APIを更新              | ✅ PASS | —                                             |
+| [task-260921175828-modernize-vite-config](./task-260921175828-modernize-vite-config/task.md)                   | Viteの非推奨ビルド設定を更新                    | ✅ PASS | —                                             |
 
 <!-- AUTOGEN:tasks END -->
