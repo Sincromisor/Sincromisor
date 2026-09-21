@@ -1,4 +1,8 @@
 import { describe, expect, it } from "vitest";
+import {
+    serializeGestureRecognizerResult,
+    serializeHandLandmarkerResult,
+} from "../../../features/gaze/trackingRuntime/mediaPipeRawResultSerializer";
 
 import { parseMotionReplayRawResultFrame } from "../motionReplayRawResultSchema";
 
@@ -89,4 +93,20 @@ describe("parseMotionReplayRawResultFrame", () => {
             slot: "pose",
         });
     });
+});
+
+it("非推奨の左右別名を読まずにv1ログの両キーを保存する", () => {
+    const handedness = [[createCategory()]];
+    const result = {
+        landmarks: [[createLandmark()]],
+        worldLandmarks: [[createLandmark()]],
+        handedness,
+        gestures: [[createCategory()]],
+        get handednesses(): never {
+            throw new Error("Deprecated property must not be read");
+        },
+    };
+    for (const serialize of [serializeHandLandmarkerResult, serializeGestureRecognizerResult]) {
+        expect(serialize(result)).toMatchObject({ handedness, handednesses: handedness });
+    }
 });

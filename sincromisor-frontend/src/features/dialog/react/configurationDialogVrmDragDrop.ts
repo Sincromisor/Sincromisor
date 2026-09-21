@@ -1,4 +1,4 @@
-import type { DragEvent, MutableRefObject } from "react";
+import type { DragEvent, RefObject } from "react";
 import { useRef } from "react";
 
 type ConfigurationDialogVrmDragDropOptions = {
@@ -18,6 +18,7 @@ function hasFileDragPayload(dataTransfer: DataTransfer): boolean {
     return Array.from(dataTransfer.types).includes("Files");
 }
 
+/** 入れ子要素をまたぐドラッグの深さを保持し、最初のファイルを選択処理へ渡す。 */
 export function useConfigurationDialogVrmDragDrop({
     isDragOver,
     applySelectedVrmFile,
@@ -42,7 +43,7 @@ export function useConfigurationDialogVrmDragDrop({
 }
 
 function resetDragState(
-    dragDepthRef: MutableRefObject<number>,
+    dragDepthRef: RefObject<number>,
     setVrmDragOver: (isDragOver: boolean) => void,
 ): void {
     dragDepthRef.current = 0;
@@ -51,7 +52,7 @@ function resetDragState(
 
 function handleVrmDragEnter(
     event: DragEvent<HTMLFieldSetElement>,
-    dragDepthRef: MutableRefObject<number>,
+    dragDepthRef: RefObject<number>,
     setVrmDragOver: (isDragOver: boolean) => void,
 ): void {
     if (!hasFileDragPayload(event.dataTransfer)) {
@@ -79,7 +80,7 @@ function handleVrmDragOver(
 
 function handleVrmDragLeave(
     event: DragEvent<HTMLFieldSetElement>,
-    dragDepthRef: MutableRefObject<number>,
+    dragDepthRef: RefObject<number>,
     setVrmDragOver: (isDragOver: boolean) => void,
 ): void {
     if (!hasFileDragPayload(event.dataTransfer)) {
@@ -94,7 +95,7 @@ function handleVrmDragLeave(
 
 function handleVrmDrop(
     event: DragEvent<HTMLFieldSetElement>,
-    dragDepthRef: MutableRefObject<number>,
+    dragDepthRef: RefObject<number>,
     setVrmDragOver: (isDragOver: boolean) => void,
     applySelectedVrmFile: (file: File) => void,
 ): void {
