@@ -1,0 +1,14 @@
+id: task-260921212106-container-lifecycle-logs
+title: Dockerの状態変化とbandogの監視結果をログへ記録する
+category: infrastructure
+status: open
+depends_on:
+  - task-260921212104-vector-host-collection
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-21
+closed_at: null
+legacy_ids: []

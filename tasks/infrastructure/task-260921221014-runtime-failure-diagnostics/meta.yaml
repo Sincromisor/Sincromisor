@@ -1,0 +1,15 @@
+id: task-260921221014-runtime-failure-diagnostics
+title: FFmpegと内部処理の失敗原因を安全に記録する
+category: infrastructure
+status: open
+depends_on:
+  - task-260921212105-python-conversation-logs
+  - task-260921212105-rtc-agent-json-logs
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-21
+closed_at: null
+legacy_ids: []
