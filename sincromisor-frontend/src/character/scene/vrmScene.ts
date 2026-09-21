@@ -69,6 +69,14 @@ export class VRMScene {
             positiveDimensionOrDefault(options.canvasRoot.clientHeight, window.innerHeight),
         );
         this.renderer.setPixelRatio(window.devicePixelRatio);
+        // 復旧処理はThree.jsに任せ、診断はコンテキストの状態だけを記録する。
+        this.renderer.domElement.addEventListener("webglcontextlost", () =>
+            frontendLogger.diagnostic("webgl", "lost"),
+        );
+        this.renderer.domElement.addEventListener("webglcontextrestored", () =>
+            frontendLogger.diagnostic("webgl", "restored"),
+        );
+        frontendLogger.diagnostic("render", "ready");
         options.canvasRoot.appendChild(this.renderer.domElement);
 
         this.setupResizeHandler();

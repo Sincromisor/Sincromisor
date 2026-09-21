@@ -262,3 +262,47 @@ AppControllerの明示的な再開始またはページ再読み込みまで新�
 - `documents/design/backend/services/sincro-rtc.md`
 - `documents/design/frontend/app-shell.md`
 - `documents/design/archive/legacy-flat/networking_rtc.md`
+
+## ブラウザー診断の受付
+
+追加APIは`POST /api/v1/RTCSignalingServer/diagnostics`。既存CaddyのRTC wildcardとConsul探索を使い、追加公開ポートや管理者トークンを必要としない。
+会話開始前も受け付け、既存のOffer/Candidate形式は変えない。
+`Origin`のscheme・hostと受信先を照合し、`Sec-Fetch-Site`があれば`same-origin`だけを許可する。Caddyの`X-Forwarded-Proto`でHTTPS終端を識別する。
+CORSは追加しない。端末の申告は認証・所有権の証明ではなく、相関用の情報として扱う。
+
+`Content-Type: application/json`で次を送る。未知の項目・自由文は拒否する。
+
+```json
+{
+    "client_id": "ab36ef90-fcf8-44b9-9b15-a1e198ca50fd",
+    "dropped": 0,
+    "failures": 0,
+    "events": [
+        {
+            "event": "microphone",
+            "reason": "permission_denied",
+            "client_time": "2026-09-22T00:00:00.000Z",
+            "count": 1
+        }
+    ]
+}
+```
+
+| 項目                  | 制約と意味                                                                                                                                                                                                                                                         |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `client_id`           | タブの起動ごとに発行するUUID。恒久的な端末追跡には使わない                                                                                                                                                                                                         |
+| `dropped`, `failures` | 端末内の累積破棄数と転送失敗数。必須整数、0〜1000000で飽和                                                                                                                                                                                                         |
+| `events`              | 1〜8件。本文全体16KiBまで                                                                                                                                                                                                                                          |
+| `event`               | `microphone`, `camera`, `rtc`, `rtc_telop`, `rtc_text`, `rtc_track`, `signaling`, `model`, `render`, `webgl`, `unhandled_error`, `unhandled_rejection`, `vad_worker`, `tracker_worker`                                                                             |
+| `reason`              | `unknown`, `permission_denied`, `not_found`, `not_readable`, `overconstrained`, `security`, `aborted`, `failed`, `ready`, `ended`, `connected`, `completed`, `disconnected`, `closed`, `lost`, `restored`, `idle`, `loading`, `running`, `fallback`, `unavailable` |
+| `client_time`         | 端末の発生時刻。RFC 3339、35文字以内、2000〜2100年。時刻精度は端末に依存する                                                                                                                                                                                       |
+| `count`               | 同じ診断の連続回数。必須整数、1〜1000000                                                                                                                                                                                                                           |
+| `session_id`          | 検証済みAnswerのULID。任意で、省略・空・nullは会話IDなし。受信側で会話の所有者とは扱わない                                                                                                                                                                         |
+
+成功は空の204。メソッド違い405、別オリジン403、形式違い415、不正項目・件数400、サイズ超過413、頻度超過429を返す。
+受付はRTCプロセス全体で1分60要求まで。429は`Retry-After: 60`を返す。診断だけの制限で、会話APIの受付量とは分離する。
+
+RTCは`source=browser`、`event=browser_diagnostic`と固定メッセージを出し、端末の種別を`diagnostic_event`へ格納する。
+`client_time`と`received_at`を分け、通常の`timestamp`・`host`・`service`等はサーバーと収集側が決める。
+本文、URL、stack、device label、SDP、ICE candidate、認証情報、任意context、音声・映像・推論結果は送信・保存しない。
+診断に本文項目がないため、内容ログの無効化をクライアント値で解除できない。

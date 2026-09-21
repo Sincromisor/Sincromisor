@@ -85,6 +85,8 @@ export class RTCTalkClient {
     stop(): void {
         this.disconnectedGrace.cancel();
         this.diagnostics.stop();
+        frontendLogger.diagnostics.state("rtc", "closed");
+        frontendLogger.diagnostics.setSession();
         this.negotiationState.close();
         this.generationAbortController.abort();
         this.pendingIdentity = undefined;
@@ -173,6 +175,7 @@ export class RTCTalkClient {
                 return;
             }
             this.negotiationState.commitAnswer(identity, answer);
+            frontendLogger.diagnostics.setSession(answer.session_id);
             const candidateFlush = this.flushCandidates(identity.revision);
             this.pendingIdentity = undefined;
             await candidateFlush;
@@ -258,6 +261,7 @@ export class RTCTalkClient {
         if (!this.isCurrentGeneration(generation)) {
             return;
         }
+        frontendLogger.diagnostics.state("rtc", state);
         handleRtcIceConnectionState({
             captureIceFailureDiagnostics: (reason) => void this.diagnostics.captureFailure(reason),
             chatMessageService: this.chatMessageService,

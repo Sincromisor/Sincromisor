@@ -10,6 +10,7 @@ export function bootstrapSincroPageAppShell<TModule>(
     renderControlPanel: (module: TModule) => ReactElement,
     initializePage: (roots: SincroVRMRoots) => void,
 ): void {
+    frontendLogger.diagnostics.start();
     let initializationAttempted = false;
     const reportError = (error: unknown) => {
         frontendLogger.error("Failed to bootstrap VRM page.", { error });

@@ -32,6 +32,7 @@ export function createRtcDataChannels(params: RtcDataChannelParams): RtcDataChan
     };
 }
 
+/** 遅延を避けるテロップ用の非再送チャネル。本文は既存画面へ、状態だけ中央へ渡す。 */
 function createTelopChannel(params: RtcDataChannelParams): RTCDataChannel {
     const parameters: RTCDataChannelInit = { ordered: false, maxRetransmits: 0 };
     const dc = params.peerConnection.createDataChannel("telop_ch", parameters);
@@ -40,6 +41,7 @@ function createTelopChannel(params: RtcDataChannelParams): RTCDataChannel {
         () => {
             params.logger.addTelopChannelLog("- close(telop_ch)\n");
             params.logger.addRtcEventLog("telop_ch closed");
+            frontendLogger.diagnostic("rtc_telop", "closed");
         },
         { signal: params.signal },
     );
@@ -48,6 +50,7 @@ function createTelopChannel(params: RtcDataChannelParams): RTCDataChannel {
         () => {
             params.logger.addTelopChannelLog("- open(telop_ch)\n");
             params.logger.addRtcEventLog("telop_ch opened");
+            frontendLogger.diagnostic("rtc_telop", "ready");
         },
         { signal: params.signal },
     );
@@ -67,6 +70,7 @@ function createTelopChannel(params: RtcDataChannelParams): RTCDataChannel {
     return dc;
 }
 
+/** 発話順を保つ本文チャネル。入力検証の失敗は固定分類で中央へ通知する。 */
 function createTextChannel(params: RtcDataChannelParams): RTCDataChannel {
     const parameters: RTCDataChannelInit = { ordered: true };
     const dc = params.peerConnection.createDataChannel("text_ch", parameters);
@@ -75,6 +79,7 @@ function createTextChannel(params: RtcDataChannelParams): RTCDataChannel {
         () => {
             params.logger.addTextChannelLog("- close(text_ch)\n");
             params.logger.addRtcEventLog("text_ch closed");
+            frontendLogger.diagnostic("rtc_text", "closed");
         },
         { signal: params.signal },
     );
@@ -83,6 +88,7 @@ function createTextChannel(params: RtcDataChannelParams): RTCDataChannel {
         () => {
             params.logger.addTextChannelLog("- open(text_ch)\n");
             params.logger.addRtcEventLog("text_ch opened");
+            frontendLogger.diagnostic("rtc_text", "ready");
         },
         { signal: params.signal },
     );
