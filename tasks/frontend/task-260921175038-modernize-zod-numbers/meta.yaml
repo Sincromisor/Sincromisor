@@ -1,0 +1,13 @@
+id: task-260921175038-modernize-zod-numbers
+title: Zodの非推奨な有限数検証を整理
+category: frontend
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-21
+closed_at: null
+legacy_ids: []
