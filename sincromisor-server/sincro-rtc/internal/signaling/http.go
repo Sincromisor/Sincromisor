@@ -40,20 +40,21 @@ type SessionService interface {
 	Count() int
 }
 
-// Server は 3 signaling endpoint と build 済み Frontend の same-origin static 配信を提供する。
+// Server はsignaling・端末診断とbuild済みFrontendの同一オリジン配信を提供する。
 //
 // API prefix は static file より先に routing し、未知 API を Frontend asset として返さない。
 // Request body は有限長に制限し、JSON / SDP / candidate error を request 単位の 4xx に変換する。
 type Server struct {
-	sessions     SessionService
-	offers       *offer.Registry
-	frontendDir  string
-	iceServers   []iceServerResponse
-	logger       *slog.Logger
-	state        *ProcessState
-	recorder     observability.Recorder
-	metrics      http.Handler
-	mutationHook func()
+	sessions       SessionService
+	offers         *offer.Registry
+	frontendDir    string
+	iceServers     []iceServerResponse
+	logger         *slog.Logger
+	state          *ProcessState
+	recorder       observability.Recorder
+	metrics        http.Handler
+	diagnosticRate diagnosticRate
+	mutationHook   func()
 }
 
 func (s *Server) afterMutation() {
@@ -113,6 +114,7 @@ func New(
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc(configPath, s.handleConfig)
+	mux.HandleFunc(diagnosticsPath, s.handleDiagnostics)
 	mux.HandleFunc(offerPath, s.handleOffer)
 	mux.HandleFunc(candidatePath, s.handleCandidate)
 	mux.HandleFunc(statusesPath, s.handleStatuses)

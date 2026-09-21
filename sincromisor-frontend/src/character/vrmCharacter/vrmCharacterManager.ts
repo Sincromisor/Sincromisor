@@ -124,6 +124,7 @@ export class VRMCharacterManager {
             url,
             (gltf: GLTF) => {
                 this.attachLoadedVrm(gltf);
+                frontendLogger.diagnostic("model", "ready");
             },
             (progress) => {
                 frontendLogger.debug("Loading VRM model.", {

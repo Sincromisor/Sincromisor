@@ -43,7 +43,7 @@ it("世代中断でICE・シグナリング・トラック・DataChannelの購�
     const mediaElement = { srcObject: undefined };
     const querySelector = vi.fn(() => mediaElement);
     vi.stubGlobal("document", { querySelector });
-    const track = { kind: "audio" };
+    const track = Object.assign(new EventTarget(), { kind: "audio" });
     const stream = {};
     const message = new ChatMessageBuilder({
         message: "テスト",

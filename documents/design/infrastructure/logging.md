@@ -253,3 +253,11 @@ bandogは従来の全サービス必須DNS判定と`/services.status`を維持�
 各ホストの収集インスタンスの状態はConsulの実チェック記録で確認する。
 
 Consulの同一状態の出力更新の遅延は[公式実装のCheckUpdateInterval](https://github.com/hashicorp/consul/blob/main/agent/config/runtime.go)と[agentチェックAPI](https://developer.hashicorp.com/consul/api-docs/agent/check)を確認した。
+
+## ブラウザー診断
+
+ブラウザーは同一オリジンのCaddy → Consulで探索するRTCへ診断を送り、RTCのJSONLを通常のVector経路で収集する。
+管理者トークン、中央保存やVectorのURLを端末へ渡さない。追加の保存DB・受信サービス・公開ポートはない。
+`source=browser`とタブ限りの`client_id`、端末の`client_time`、RTCの`received_at`を区別し、収集側の`host`は受信サーバーのホストを表す。
+会話IDがない起動前の失敗も検索できる。任意本文や端末申告のhost/serviceは受け付けない。
+有限キュー・再試行・端末喪失の限界は[共通枠組み](../frontend/app-shell.md#ブラウザーの障害診断)、受付上限は[RTC契約](../contracts/frontend-rtc.md#ブラウザー診断の受付)を参照する。

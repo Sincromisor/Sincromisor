@@ -1,4 +1,5 @@
 import { frontendLogger } from "../../../shared/logging/appLogger";
+import { diagnosticReason } from "../../../shared/logging/browserDiagnostics";
 import { UserMediaAudioProcessor } from "../vad/userMediaAudioProcessor";
 import {
     type AudioBooleanConstraintKey,
@@ -184,6 +185,10 @@ export class UserMediaManager {
                 });
             })
             .catch((err) => {
+                // 同時要求でも要求した機器を区別し、例外の本文は診断へ渡さない。
+                if (this.config.audio)
+                    frontendLogger.diagnostic("microphone", diagnosticReason(err));
+                if (this.config.video) frontendLogger.diagnostic("camera", diagnosticReason(err));
                 frontendLogger.error("Could not acquire media.", { error: err });
                 errCallback(err);
             });

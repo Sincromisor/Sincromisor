@@ -12,6 +12,13 @@ export function setupRtcRemoteTrackHandlers(params: RtcRemoteTrackParams): void 
     params.peerConnection.addEventListener(
         "track",
         (evt: RTCTrackEvent) => {
+            // 受信内容や機器名を送らず、世代に属するトラックの生存だけを記録する。
+            frontendLogger.diagnostic("rtc_track", "ready");
+            evt.track.addEventListener(
+                "ended",
+                () => frontendLogger.diagnostic("rtc_track", "ended"),
+                { signal: params.signal },
+            );
             if (evt.track.kind === "video") {
                 frontendLogger.warn("Unexpected remote video track received.");
                 attachRemoteVideoTrack(evt);
@@ -23,6 +30,7 @@ export function setupRtcRemoteTrackHandlers(params: RtcRemoteTrackParams): void 
     );
 }
 
+/** 想定外の映像も既存の専用要素へ接続する。表示先がなければ呼出元へ失敗を伝える。 */
 function attachRemoteVideoTrack(evt: RTCTrackEvent): void {
     const rtcVideo = document.querySelector<HTMLVideoElement>("video#rtcVideo") ?? undefined;
     if (rtcVideo === undefined) {
@@ -31,6 +39,7 @@ function attachRemoteVideoTrack(evt: RTCTrackEvent): void {
     rtcVideo.srcObject = evt.streams[0];
 }
 
+/** 受信音声を再生要素と既存の診断表示へ接続する。音声内容は診断送信しない。 */
 function attachRemoteAudioTrack(
     evt: RTCTrackEvent,
     logger: Pick<DebugConsoleManager, "addRtcEventLog" | "setRemoteAudioTrack">,

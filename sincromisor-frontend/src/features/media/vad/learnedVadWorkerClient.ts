@@ -1,3 +1,5 @@
+import { frontendLogger } from "../../../shared/logging/appLogger";
+
 export type LearnedVadStatus =
     | "idle"
     | "loading"
@@ -73,9 +75,15 @@ export class LearnedVadWorkerClient {
         }
         this.status = "loading";
         this.publishState();
-        const worker = new Worker(new URL("./sileroVad.worker.ts", import.meta.url), {
-            type: "module",
-        });
+        let worker: Worker;
+        try {
+            worker = new Worker(new URL("./sileroVad.worker.ts", import.meta.url), {
+                type: "module",
+            });
+        } catch (error) {
+            frontendLogger.diagnostics.state("vad_worker", "unavailable");
+            throw error;
+        }
         this.worker = worker;
         worker.onmessage = (event: MessageEvent<LearnedVadWorkerMessage>) => {
             const data = event.data;
@@ -248,6 +256,8 @@ export class LearnedVadWorkerClient {
     // UI層へ現在状態を通知する単一経路。
     // 状態更新経路を一箇所にまとめ、DebugConsole/React 表示の取りこぼしを防ぐ。
     private publishState(message?: string): void {
+        // 状態だけを記録し、毎フレームの確率・音声・例外本文は送らない。
+        frontendLogger.diagnostics.state("vad_worker", this.status);
         this.onStateChanged({
             enabled: this.enabled,
             status: this.status,

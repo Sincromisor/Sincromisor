@@ -2,6 +2,7 @@
  * main thread から Tracker Worker の初期化、detect、stop、dispose を直列化する client lifecycle 境界。
  * Worker failure は caller が main-thread fallback へ落とせるよう status / error message に変換し、DOM や tracker instance は保持しない。
  */
+import { frontendLogger } from "../../../shared/logging/appLogger";
 import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionSnapshot";
 import type { SincroGestureMotionSnapshot } from "../gestureTracking/sincroGestureMotionSnapshot";
 import type { SincroHandMotionSnapshot } from "../handTracking/sincroHandMotionSnapshot";
@@ -39,8 +40,7 @@ const DEFAULT_STATS: SincroTrackerWorkerStats = {
     droppedFrames: 0,
 };
 
-// MediaPipe の同期推論を Worker へ隔離する main-thread 側 adapter。
-// Runtime には snapshot 契約だけを返し、Worker の message protocol を UI/VRM 層へ漏らさない。
+/** Workerの通信・終了を所有し、推論結果をUI/VRMから隔離して呼出元へ返す。 */
 export class SincroTrackerWorkerClient {
     private worker?: Worker;
     private initPromise?: Promise<void>;
@@ -50,7 +50,6 @@ export class SincroTrackerWorkerClient {
     private requestId = 0;
     private stats: SincroTrackerWorkerStats = { ...DEFAULT_STATS };
     private readonly onStatsChanged: (stats: SincroTrackerWorkerStats) => void;
-
     constructor(onStatsChanged: (stats: SincroTrackerWorkerStats) => void = () => {}) {
         this.onStatsChanged = onStatsChanged;
     }
@@ -188,9 +187,15 @@ export class SincroTrackerWorkerClient {
         if (this.worker) {
             return;
         }
-        const worker = new Worker(new URL("./sincroTracker.worker.ts", import.meta.url), {
-            type: "module",
-        });
+        let worker: Worker;
+        try {
+            worker = new Worker(new URL("./sincroTracker.worker.ts", import.meta.url), {
+                type: "module",
+            });
+        } catch (error) {
+            frontendLogger.diagnostics.state("tracker_worker", "unavailable");
+            throw error;
+        }
         this.worker = worker;
         worker.onmessage = (event: MessageEvent<SincroTrackerWorkerOutputMessage>) =>
             this.handleWorkerMessage(event.data);
@@ -287,6 +292,8 @@ export class SincroTrackerWorkerClient {
     }
 
     private publishStats(): void {
+        // 推論結果やfallbackReasonの本文を送らず、状態変化だけを集約する。
+        frontendLogger.diagnostics.state("tracker_worker", this.stats.status);
         this.onStatsChanged(this.getStats());
     }
 }
