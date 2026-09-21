@@ -49,6 +49,8 @@ services:
         volumes:
             - consul-agent-chat-data:/consul/data
             - ../Docker/agent-server/consul-service.json:/consul/config/agent-server.json:ro
+            # モデルロード中の503も検知し、停止後も登録を保持して復旧を追跡する。
+            - ../Docker/agent-server/consul-llama-service.json:/consul/config/llama-server.json:ro
         networks: [sincromisor-net]
         healthcheck:
             test: [CMD, consul, members]

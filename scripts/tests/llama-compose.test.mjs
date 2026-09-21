@@ -1,6 +1,7 @@
 /** chat専用の起動範囲と、初期化完了を待つ内部API構成を確認する。 */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 test("llama-serverはchat専用で固定イメージと読み取り専用モデルを使う", () => {
@@ -34,6 +35,15 @@ test("llama-serverはchat専用で固定イメージと読み取り専用モデ�
 			services["agent-server"].depends_on["consul-agent-chat"].condition,
 			"service_healthy",
 		);
+		const registration = services["consul-agent-chat"].volumes.find(
+			(volume) => volume.target === "/consul/config/llama-server.json",
+		);
+		assert.equal(registration.read_only, true);
+		const { service } = JSON.parse(readFileSync(registration.source, "utf8"));
+		assert.equal(service.name, "LlamaServer");
+		assert.equal(service.address, "llama-server");
+		assert.equal(service.check.http, "http://llama-server:8080/health");
+		assert.equal(service.check.deregister_critical_service_after, undefined);
 		assert.equal(llama.ports, undefined);
 		assert.equal(
 			llama.command[llama.command.indexOf("--n-gpu-layers") + 1],
