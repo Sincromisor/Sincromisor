@@ -53,6 +53,8 @@ cp examples/compose.env .env
 docker compose up
 ```
 
+Linuxホストでは[ホストjournalの保存と読取設定](documents/design/infrastructure/logging.md#ホストのjournal)を行う。原本を読めない場合は収集監視が異常となる。
+
 同梱の設定で会話に必要なサービスが起動します。
 初回はコンテナイメージのビルドと会話・音声認識用モデルのダウンロードを自動で行います。
 保存先とサービス間の接続設定も自動で準備され、次回からは保存済みのモデルを再利用します。

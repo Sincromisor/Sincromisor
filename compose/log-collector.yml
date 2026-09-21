@@ -2,7 +2,8 @@ services:
     vector:
         logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
         profiles: [full, backend, external, rtc, frontend, chat, s3, logs]
-        image: timberio/vector:0.58.0-alpine
+        build: ../Docker/logging/vector
+        image: ${SINCRO_REGISTRY_NAME}/vector:0.58.0
         restart: unless-stopped
         command: [--config, /etc/vector/vector.toml]
         environment:
@@ -17,9 +18,13 @@ services:
             - /var/run/docker.sock:/var/run/docker.sock:ro
             - vector-data:/var/lib/vector
             - ../configs/vector.toml:/etc/vector/vector.toml:ro
+            - ../Docker/logging/check-vector.sh:/check-vector.sh:ro
+            # Linuxホストの原本だけを読む。空・読取拒否は収集の異常として公開する。
+            - ${SINCRO_LOG_JOURNAL_DIR:-/var/log/journal}:/var/log/journal:ro
+            - ${SINCRO_LOG_RUNTIME_JOURNAL_DIR:-/run/log/journal}:/run/log/journal:ro
         networks: [sincromisor-net]
         healthcheck:
-            test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8686/health]
+            test: [CMD, timeout, "4", bash, /check-vector.sh]
             interval: 10s
             timeout: 5s
             retries: 3

@@ -37,6 +37,7 @@ test("収集対象の分離、本文解析、Consul経由の送信と障害復�
 		"consul-agent-logs",
 		"sincro-consul-server",
 		"vector",
+		"log-observer",
 		"log-router",
 		"consul-agent-logging",
 	];

@@ -36,7 +36,10 @@ type health struct {
 type container struct {
 	ID     string
 	Config struct{ Labels map[string]string }
-	State  struct{ Health *health }
+	State  struct {
+		Running bool
+		Health  *health
+	}
 }
 type dockerEvent struct {
 	Action   string
@@ -57,6 +60,7 @@ type observer struct {
 	inputs             map[string][32]byte
 	seen               map[string]bool
 	ready              atomic.Bool
+	collectorReady     atomic.Bool
 }
 
 var httpStatus = regexp.MustCompile(`(?i)(?:HTTP/[0-9.]+\s+|HTTP\s+|status(?: code)?[=: ]+|:\s+)([1-5][0-9]{2})\b`)
@@ -77,6 +81,9 @@ func diagnosis(output string) (string, bool) {
 		{"connection refused", "connection_refused"}, {"connection_refused", "connection_refused"},
 		{"timed out", "timeout"}, {"timeout", "timeout"}, {"no such host", "dns_failed"},
 		{"permission denied", "permission_denied"}, {"no space left", "disk_full"},
+		{"journal_unreadable_or_missing", "journal_unreadable_or_missing"},
+		{"journal_input_unavailable", "journal_input_unavailable"},
+		{"vector_unavailable", "vector_unavailable"},
 		{"connection_failed", "connection_failed"}, {"connection reset", "connection_reset"},
 	} {
 		if strings.Contains(lower, item.needle) && !strings.Contains(strings.Join(parts, " "), item.code) {
@@ -179,7 +186,9 @@ func (o *observer) event(e dockerEvent) {
 }
 
 // dockerHealthは初回異常と同一状態の新しい実行結果を取得し、履歴欠落も明示する。
+// 収集役は稼働中かつ実journal検査が正常な個体だけをreadyとし、停止個体の過去結果を使わない。
 func (o *observer) dockerHealth(ctx context.Context) error {
+	o.collectorReady.Store(false)
 	var list []struct {
 		ID     string
 		Labels map[string]string
@@ -211,6 +220,9 @@ func (o *observer) dockerHealth(ctx context.Context) error {
 			continue
 		}
 		o.health(c)
+		if service == "vector" && c.State.Running && c.State.Health.Status == "healthy" {
+			o.collectorReady.Store(true)
+		}
 	}
 	return inspectErr
 }
@@ -250,7 +262,7 @@ func (o *observer) run(ctx context.Context) {
 		o.failure("docker_health", healthErr)
 		consulErr := o.consulChecks(ctx)
 		o.failure("consul_checks", consulErr)
-		o.ready.Store(err == nil && healthErr == nil && consulErr == nil)
+		o.ready.Store(err == nil && healthErr == nil && consulErr == nil && o.collectorReady.Load())
 		// 削除済みコンテナやチェックの比較値を永久に保持しない。
 		for key := range o.previous {
 			if !o.seen[key] {
@@ -291,8 +303,13 @@ func main() {
 	}}
 	defer transport.CloseIdleConnections()
 	o := observer{docker: &http.Client{Transport: transport, Timeout: 5 * time.Second}, consul: &http.Client{Timeout: 5 * time.Second}, consulURL: "http://consul-agent-logging:8500", project: project, emit: emit, previous: map[string]string{}, inputs: map[string][32]byte{}, seen: map[string]bool{}}
+	// 収集の実読取状態を別経路でConsulへ渡し、Vector自身のHTTP生存だけで正常としない。
 	server := &http.Server{Addr: ":8687", ReadHeaderTimeout: 3 * time.Second, Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !o.ready.Load() {
+		ready := o.ready.Load()
+		if r.URL.Path == "/collector" {
+			ready = o.collectorReady.Load()
+		}
+		if !ready {
 			w.WriteHeader(503)
 		}
 		_, _ = io.WriteString(w, "observer\n")

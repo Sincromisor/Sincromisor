@@ -1,4 +1,4 @@
-# Docker原本とVector内部ログを一度だけ取り込み、中央停止中は専用ディスクへ保持する。
+# Docker・ホスト原本とVector内部ログを取り込み、中央停止中は専用ディスクへ保持する。
 data_dir = "/var/lib/vector"
 
 [api]
@@ -8,6 +8,18 @@ address = "0.0.0.0:8686"
 [sources.docker]
 type = "docker_logs"
 include_labels = ["com.docker.compose.project=${SINCRO_LOG_PROJECT}"]
+
+# 両journalをnativeの既定探索で読む。入力名を維持しvector-data内のcursorを再利用する。
+[sources.host_journal]
+type = "journald"
+# コンテナとは異なるmachine-idのホスト原本も対象にする。
+extra_args = ["--merge"]
+current_boot_only = false
+since_now = false
+[sources.host_journal.include_matches]
+_SYSTEMD_UNIT = ["docker.service", "containerd.service"]
+_TRANSPORT = ["kernel"]
+SYSLOG_IDENTIFIER = ["systemd", "sincromisor-log-test"]
 
 [sources.internal]
 type = "internal_logs"
@@ -55,6 +67,12 @@ if original.label."com.docker.compose.service" == "log-observer" && starts_with(
     .container_id = .target_container_id
     .service = .target_service
 }
+# journal解析失敗の内部診断に原本が含まれても、固定イベント以外を転送しない。
+if original.source_type == "internal_logs" && original.vector.component_type == "journald" {
+    . = {"timestamp": .timestamp, "observed_at": .observed_at, "host": .host,
+         "project": .project, "service": "vector", "level": .level,
+         "event": "journal_input_event", "message": "journal input event"}
+}
 del(.label)
 del(.host_key)
 del(.source_type)
@@ -70,7 +88,7 @@ del(.source_type)
 
 [sinks.central]
 type = "http"
-inputs = ["normalize"]
+inputs = ["normalize", "host_diagnostics"]
 uri = "http://log-router:8080/insert/jsonline?_time_field=timestamp&_msg_field=message&_stream_fields=host,project,service"
 method = "post"
 encoding.codec = "json"
@@ -88,3 +106,47 @@ request.headers.Content-Type = "application/stream+json"
 type = "prometheus_exporter"
 inputs = ["metrics"]
 address = "0.0.0.0:9598"
+
+# ホストの任意本文を捨て、既知の障害分類と発生元だけを新しいイベントへ組み直す。
+[transforms.host_diagnostics]
+type = "remap"
+inputs = ["host_journal"]
+drop_on_abort = true
+source = '''
+raw = string(.message) ?? ""
+message = downcase(slice!(raw, 0, 4096))
+unit = string(._SYSTEMD_UNIT) ?? ""
+identifier = string(.SYSLOG_IDENTIFIER) ?? ""
+transport = string(._TRANSPORT) ?? ""
+origin = ""
+reason = ""
+probe_id = ""
+if transport == "kernel" {
+    origin = "kernel"
+    if match(message, r'out of memory|oom-kill|killed process') { reason = "oom" }
+    else if match(message, r'nvrm.*xid|gpu.*(fault|error|hang)|amdgpu.*(failed|timeout|reset)') { reason = "gpu_failure" }
+    else if match(message, r'i/o error|buffer i/o|ext4-fs error|no space left|nvme.*(timeout|failed)|read-only file system') { reason = "disk_failure" }
+    else if match(message, r'netdev watchdog|link is down|network.*(unreachable|failed)|tx timeout') { reason = "network_failure" }
+    else if match(message, r'device.*(failed|error)|usb.*(error|disconnect)') { reason = "device_failure" }
+} else if unit == "docker.service" || unit == "containerd.service" {
+    origin = if unit == "docker.service" { "docker" } else { "containerd" }
+    if match(message, r'error|failed|fatal|panic|timeout|timed out') { reason = "runtime_failure" }
+    else if match(message, r'start|initializ|shutdown|stopp|terminat') { reason = "runtime_state" }
+} else if identifier == "systemd" {
+    origin = "systemd"
+    if match(message, r'failed|failure|timed out|core.dump|oom') { reason = "service_manager_failure" }
+} else if identifier == "sincromisor-log-test" {
+    probe, err = parse_regex(raw, r'^sincromisor-host-probe (?P<id>[0-9a-f-]{36})$')
+    if err == null { origin = "probe"; reason = "read_path_probe"; probe_id = string!(probe.id) }
+}
+if reason == "" { abort }
+priority = to_int(.PRIORITY) ?? 6
+level = if priority <= 3 { "error" } else if priority == 4 { "warn" } else { "info" }
+boot = string(._BOOT_ID) ?? ""
+. = {"timestamp": .timestamp, "observed_at": now(), "host": get_env_var!("SINCRO_LOG_HOST"),
+     "event": "host_diagnostic", "message": reason, "reason": reason, "origin": origin,
+     "level": level, "priority": priority, "diagnostic_truncated": length(raw) > 4096}
+if match(boot, r'^[0-9a-f]{32}$') { .boot_id = boot }
+if match(unit, r'^[a-zA-Z0-9_.@:-]{1,128}$') { .unit = unit }
+if probe_id != "" { .probe_id = probe_id }
+'''
