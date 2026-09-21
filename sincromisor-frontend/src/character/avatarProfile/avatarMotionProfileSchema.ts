@@ -9,7 +9,7 @@ import {
     type AvatarMotionProfileParseResult,
 } from "./avatarMotionProfileTypes";
 
-const finiteNumberSchema = z.number().finite();
+const finiteNumberSchema = z.number();
 const positiveFiniteNumberSchema = finiteNumberSchema.positive();
 const zeroToOneSchema = finiteNumberSchema.min(0).max(1);
 const boneNameSchema = z.enum(AVATAR_MOTION_PROFILE_BONE_NAMES);

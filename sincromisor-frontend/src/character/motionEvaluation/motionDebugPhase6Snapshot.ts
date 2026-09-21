@@ -107,7 +107,7 @@ export type MotionDebugPhase6RuntimeInput = {
     rightArm: SincroPoseRetargetedArm;
 };
 
-const finiteNumberSchema = z.number().finite();
+const finiteNumberSchema = z.number();
 const vrmHumanBoneNameSchema = z.custom<VRMHumanBoneName>((value) => typeof value === "string", {
     message: "Expected a VRM human bone name.",
 });

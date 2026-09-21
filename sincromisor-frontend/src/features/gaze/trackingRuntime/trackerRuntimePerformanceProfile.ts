@@ -63,8 +63,8 @@ const INVALID_CUSTOM_PROFILE_WARNING = "invalid_custom_profile_defaulted";
 
 const profileIdSchema = z.enum(["high-end-desktop", "standard-laptop", "mobile-safari", "debug"]);
 
-const positiveFiniteNumberSchema = z.number().finite().positive();
-const nonNegativeFiniteNumberSchema = z.number().finite().nonnegative();
+const positiveFiniteNumberSchema = z.number().positive();
+const nonNegativeFiniteNumberSchema = z.number().nonnegative();
 
 const cameraSchema = z
     .object({

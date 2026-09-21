@@ -209,7 +209,7 @@ const COMPOSER_COMPARISON_BONE_PAIRS: BonePair[] = [
 
 const OWNED_BONE_CONFLICT_PREFIX = "owned_bone_conflict:";
 
-const finiteNumberSchema = z.number().finite();
+const finiteNumberSchema = z.number();
 const quaternionSchema: z.ZodType<SincroArmIkQuaternion> = plainObjectSchema({
     x: finiteNumberSchema,
     y: finiteNumberSchema,

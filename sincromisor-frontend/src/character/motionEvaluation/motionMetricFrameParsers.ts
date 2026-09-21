@@ -20,9 +20,9 @@ import {
 // metric group の計算式、threshold 判定、baseline comparison はこの module では扱わない。
 const poseWristSchema = z
     .object({
-        cameraX: z.number().finite(),
-        cameraY: z.number().finite(),
-        confidence: z.number().finite().optional(),
+        cameraX: z.number(),
+        cameraY: z.number(),
+        confidence: z.number().optional(),
     })
     .passthrough();
 
@@ -30,11 +30,11 @@ const poseSnapshotSchema = z
     .object({
         detected: z.boolean(),
         degradedToFaceOnly: z.boolean().optional(),
-        consecutiveFailures: z.number().finite().optional(),
+        consecutiveFailures: z.number().optional(),
         upperBody: z
             .object({
-                shoulderCenterX: z.number().finite(),
-                shoulderCenterY: z.number().finite(),
+                shoulderCenterX: z.number(),
+                shoulderCenterY: z.number(),
             })
             .passthrough(),
         leftArm: z
@@ -62,16 +62,16 @@ const armConstraintSchema = z
     .object({
         reasons: z.array(z.string()).optional(),
         jointLimited: z.boolean().optional(),
-        targetPushDistance: z.number().finite().optional(),
+        targetPushDistance: z.number().optional(),
     })
     .passthrough();
 
 const quaternionSchema = z
     .object({
-        x: z.number().finite(),
-        y: z.number().finite(),
-        z: z.number().finite(),
-        w: z.number().finite(),
+        x: z.number(),
+        y: z.number(),
+        z: z.number(),
+        w: z.number(),
     })
     .strict();
 
@@ -99,15 +99,15 @@ const solverSchema = z
 const appliedSchema = z
     .object({
         angularVelocityDegPerSec: z.union([
-            z.number().finite(),
-            z.record(z.string(), z.number().finite()),
+            z.number(),
+            z.record(z.string(), z.number()),
         ]),
     })
     .passthrough();
 
 const trackerMetricsSchema = z
     .object({
-        workerRoundTripMs: z.number().finite().optional(),
+        workerRoundTripMs: z.number().optional(),
     })
     .passthrough();
 

@@ -146,7 +146,7 @@ export const DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT: CanonicalCalibrationSnapsho
     },
 };
 
-const finiteNumberSchema = z.number().finite();
+const finiteNumberSchema = z.number();
 const nonNegativeFiniteNumberSchema = finiteNumberSchema.nonnegative();
 const confidenceSchema = finiteNumberSchema.min(0).max(1);
 const canonicalSourceSchema = z.enum(CANONICAL_SOURCE_VALUES);

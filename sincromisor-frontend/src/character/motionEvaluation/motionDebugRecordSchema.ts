@@ -21,14 +21,14 @@ const sourceSchema = z
 const environmentSchema = z
     .object({
         userAgent: z.string(),
-        devicePixelRatio: z.number().finite(),
+        devicePixelRatio: z.number(),
         viewport: z
             .object({
-                width: z.number().finite(),
-                height: z.number().finite(),
+                width: z.number(),
+                height: z.number(),
             })
             .strict(),
-        timeOriginMs: z.number().finite().optional(),
+        timeOriginMs: z.number().optional(),
     })
     .strict();
 
@@ -43,9 +43,9 @@ const buildSchema = z
 
 const cameraActualSettingsSchema = z
     .object({
-        width: z.number().finite().optional(),
-        height: z.number().finite().optional(),
-        frameRate: z.number().finite().optional(),
+        width: z.number().optional(),
+        height: z.number().optional(),
+        frameRate: z.number().optional(),
         facingMode: z.string().optional(),
         deviceIdHash: z.string().optional(),
         groupIdHash: z.string().optional(),
@@ -86,9 +86,9 @@ export const motionDebugLogManifestSchema = z
 
 const motionDebugFrameTimestampSchema = z
     .object({
-        mediaTimeMs: z.number().finite(),
-        presentationTimeMs: z.number().finite().optional(),
-        expectedDisplayTimeMs: z.number().finite().optional(),
+        mediaTimeMs: z.number(),
+        presentationTimeMs: z.number().optional(),
+        expectedDisplayTimeMs: z.number().optional(),
         presentedFrames: z.number().int().nonnegative().optional(),
         droppedPresentedFrames: z.number().int().nonnegative().optional(),
         clockSource: z
@@ -99,8 +99,8 @@ const motionDebugFrameTimestampSchema = z
 
 const motionDebugFrameVideoSchema = z
     .object({
-        width: z.number().finite(),
-        height: z.number().finite(),
+        width: z.number(),
+        height: z.number(),
     })
     .strict();
 

@@ -5,7 +5,7 @@
 import { z } from "zod";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 
-const finiteNumberSchema = z.number().finite();
+const finiteNumberSchema = z.number();
 const poseTargetQualitySchema = z.enum(["strong", "weak", "lost"]);
 const poseWorldAnchorSchema = z.enum(["shoulder_center", "hips_center", "none"]);
 

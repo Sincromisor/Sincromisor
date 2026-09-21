@@ -213,7 +213,7 @@ export type ReliabilityMapParseResult =
 
 type PlainRecord = Record<string, unknown>;
 
-const finiteNumberSchema = z.number().finite();
+const finiteNumberSchema = z.number();
 const nonNegativeFiniteNumberSchema = finiteNumberSchema.nonnegative();
 const scoreSchema = finiteNumberSchema.min(0).max(1);
 const reliabilityPartStateSchema = z.enum(RELIABILITY_PART_STATE_VALUES);

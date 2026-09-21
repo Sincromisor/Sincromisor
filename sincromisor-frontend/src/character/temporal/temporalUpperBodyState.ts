@@ -129,7 +129,7 @@ export type TemporalUpperBodyStateParseResult =
 
 type PlainRecord = Record<string, unknown>;
 
-const finiteNumberSchema = z.number().finite();
+const finiteNumberSchema = z.number();
 const nonNegativeFiniteNumberSchema = finiteNumberSchema.nonnegative();
 const confidenceSchema = finiteNumberSchema.min(0).max(1);
 const temporalPartStateSchema = z.enum(TEMPORAL_PART_STATE_VALUES);
