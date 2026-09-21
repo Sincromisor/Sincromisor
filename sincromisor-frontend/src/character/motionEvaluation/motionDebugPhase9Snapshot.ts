@@ -61,7 +61,7 @@ export type MotionDebugPhase9SnapshotInput = {
 
 type PlainRecord = Record<string, unknown>;
 
-const finiteNumberSchema = z.number().finite();
+const finiteNumberSchema = z.number();
 const nonNegativeFiniteNumberSchema = finiteNumberSchema.nonnegative();
 const stringArraySchema = z.array(z.string());
 const boneNameSchema = z.custom<VRMHumanBoneName>((value) => typeof value === "string", {

@@ -42,16 +42,16 @@ const motionMetricUnitSchema = z.enum(["px", "deg", "count", "ratio", "ms"]);
 
 const motionMetricThresholdSchema: z.ZodType<MotionMetricThreshold> = z
     .object({
-        pass: z.number().finite(),
-        warn: z.number().finite(),
-        fail: z.number().finite(),
+        pass: z.number(),
+        warn: z.number(),
+        fail: z.number(),
     })
     .strict();
 
 const motionMetricResultSchema: z.ZodType<MotionMetricResult> = z
     .object({
         key: motionMetricKeySchema,
-        value: z.number().finite().nullable(),
+        value: z.number().nullable(),
         unit: motionMetricUnitSchema,
         status: motionMetricStatusSchema,
         severity: motionMetricSeveritySchema,
@@ -84,7 +84,7 @@ const motionMetricSummarySchema: z.ZodType<MotionMetricSummary> = z
         fixtureId: motionP0FixtureIdSchema.optional(),
         generatedAtIso: z.string(),
         frameCount: z.number().int().nonnegative(),
-        durationMs: z.number().finite().nonnegative(),
+        durationMs: z.number().nonnegative(),
         severity: motionMetricSeveritySchema,
         metrics: z.record(motionMetricKeySchema, motionMetricResultSchema),
     })

@@ -45,7 +45,7 @@ const manifestVersionProbeSchema = z
 
 const frameIndexProbeSchema = z
     .object({
-        frameIndex: z.number().finite().optional(),
+        frameIndex: z.number().optional(),
     })
     .passthrough();
 

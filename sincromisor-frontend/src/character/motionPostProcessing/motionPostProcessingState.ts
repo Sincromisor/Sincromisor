@@ -116,7 +116,7 @@ const MOTION_POST_PROCESSING_WARNING_VALUES = [
     "processor_disabled",
 ] as const;
 
-const finiteNumberSchema = z.number().finite();
+const finiteNumberSchema = z.number();
 const confidenceSchema = finiteNumberSchema.min(0).max(1);
 
 function isPlainRecord(value: unknown): value is PlainRecord {

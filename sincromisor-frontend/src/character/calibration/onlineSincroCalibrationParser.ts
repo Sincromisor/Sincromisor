@@ -13,7 +13,7 @@ import {
 
 type PlainRecord = Record<string, unknown>;
 
-const finiteNumberSchema = z.number().finite();
+const finiteNumberSchema = z.number();
 const nonNegativeFiniteNumberSchema = finiteNumberSchema.nonnegative();
 const freezeReasonSchema = z.enum(ONLINE_CALIBRATION_FREEZE_REASON_VALUES);
 

@@ -7,7 +7,7 @@
  */
 import { z } from "zod";
 
-const finiteNumberSchema = z.number().finite();
+const finiteNumberSchema = z.number();
 
 const landmarkSchema = z
     .object({

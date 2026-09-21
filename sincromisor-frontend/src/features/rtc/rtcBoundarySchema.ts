@@ -28,7 +28,7 @@ const iceCandidateResponseSchema = z.object({
 
 const optionalExpressionCodeSchema = z.preprocess(
     (value) => (value === null ? undefined : value),
-    z.number().finite().optional(),
+    z.number().optional(),
 );
 
 const chatMessagePayloadSchema = z.object({
@@ -36,19 +36,19 @@ const chatMessagePayloadSchema = z.object({
     message_type: z.string(),
     speaker_id: z.string(),
     speaker_name: z.string(),
-    speech_id: z.number().finite(),
+    speech_id: z.number(),
     expression_code: optionalExpressionCodeSchema,
     message: z.string(),
-    created_at: z.number().finite(),
+    created_at: z.number(),
 });
 
 const telopChannelPayloadSchema = z.object({
-    speech_id: z.number().finite(),
-    timestamp: z.number().finite(),
+    speech_id: z.number(),
+    timestamp: z.number(),
     message: z.string(),
     vowel: z.string(),
     text: z.string(),
-    length: z.number().finite(),
+    length: z.number(),
     new_text: z.boolean(),
 });
 
