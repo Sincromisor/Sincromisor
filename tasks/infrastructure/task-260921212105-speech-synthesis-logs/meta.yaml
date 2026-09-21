@@ -1,15 +1,15 @@
 id: task-260921212105-speech-synthesis-logs
 title: 音声生成ログの構造化と記録切替を実装する
 category: infrastructure
-status: open
+status: done
 depends_on:
   - task-260921212104-vector-host-collection
   - task-260921212105-python-conversation-logs
 superseded_by: null
 review: null
 reviewed_sha: null
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 1
 created_at: 2026-09-21
-closed_at: null
+closed_at: 2026-09-22
 legacy_ids: []
