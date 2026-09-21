@@ -59,6 +59,12 @@ Linuxホストでは[ホストjournalの保存と読取設定](documents/design/
 初回はコンテナイメージのビルドと会話・音声認識用モデルのダウンロードを自動で行います。
 保存先とサービス間の接続設定も自動で準備され、次回からは保存済みのモデルを再利用します。
 
+## ログを検索する
+
+通常起動にVictoriaLogsと各ホストの収集が含まれます。検索画面は[ローカルのログ検索](http://127.0.0.1:9428/select/vmui/)です。
+対話本文と音声生成の詳細は既定で記録します。`.env`の`SINCRO_LOG_CONVERSATION_ENABLED`と`SINCRO_LOG_SYNTHESIS_ENABLED`で独立して切り替え、対象サービスの再作成で反映します。
+[保存・検索・記録切替](documents/design/infrastructure/logging.md)、[停止中の回収](documents/design/infrastructure/logging.md#原本バッファ復旧)、[バックアップと復元](documents/design/infrastructure/storage.md#ログ基盤)を参照してください。
+
 ## クライアント側のつかいかた
 
 1. サーバーを起動したPCのブラウザーで [http://localhost:8086/](http://localhost:8086/) を開きます。

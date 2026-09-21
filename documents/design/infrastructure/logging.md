@@ -91,7 +91,7 @@ jq -nc --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   | curl --fail -H 'Content-Type: application/stream+json' --data-binary @- \
     'http://127.0.0.1:9428/insert/jsonline?_time_field=timestamp&_msg_field=message&_stream_fields=host,project,service'
 curl --fail --data-urlencode 'query=_time:1h host:fixture service:fixture' \
-  http://127.0.0.1:9428/select/logsql/query | jq '{時刻:._time,本文:._msg,連番:.sequence_id}'
+  http://127.0.0.1:9428/select/logsql/query | jq '{"時刻":._time,"本文":._msg,"連番":.sequence_id}'
 ```
 
 検索画面は`http://127.0.0.1:9428/select/vmui/`である。
