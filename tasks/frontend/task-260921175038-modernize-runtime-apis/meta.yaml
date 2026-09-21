@@ -1,0 +1,13 @@
+id: task-260921175038-modernize-runtime-apis
+title: 描画とUIの非推奨ライブラリAPIを更新
+category: frontend
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-09-21
+closed_at: null
+legacy_ids: []

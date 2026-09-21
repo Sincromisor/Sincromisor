@@ -1,6 +1,6 @@
 /** キャラクターの定義をまとめる。接続先と保存領域の生成・終了はapplicationが担当する。 */
 import { Agent, type AgentConfig } from "@mastra/core/agent";
-import type { MastraStorage } from "@mastra/core/storage";
+import type { MastraCompositeStore } from "@mastra/core/storage";
 import { Memory } from "@mastra/memory";
 import { stopOnToolFailure } from "../mcp.js";
 import { characterInstructions } from "../prompts/character.js";
@@ -11,7 +11,7 @@ export function createCharacterAgent({
 	storage,
 }: {
 	model: AgentConfig["model"];
-	storage: MastraStorage;
+	storage: MastraCompositeStore;
 }): Agent {
 	return new Agent({
 		id: "sincromisor-character",
