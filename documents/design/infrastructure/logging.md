@@ -111,11 +111,10 @@ curl --fail --data-urlencode 'query=_time:1h host:fixture service:fixture' \
 同じホストの担当プロファイルを複数指定しても各1インスタンスである。`COMPOSE_PROJECT_NAME`をVectorへ渡し、そのComposeプロジェクトのラベルだけを収集する。
 ホストごとの`SINCRO_LOG_HOST`は管理者が一意に設定する。ホスト間で時刻を同期し、発生時刻と収集時刻を区別する。
 
-Vector 0.58.0のDocker入力は新規・再作成後のコンテナも追跡する。
+Vector 0.58.0のnative journald入力はDockerが付けたプロジェクト・サービスラベルを読み、新規・再作成・削除済みコンテナも原本が残る範囲で回収する。
 RTC、フロントCaddy、音声処理、AgentServer、llama-server、VOICEVOX、Redis、SeaweedFS、Consul、bandog、初期化コンテナをサービス名の除外なしで対象にする。
 任意選択のMediaMTX・旧MinIOも同じプロジェクトなら対象である。
-Vector自身はDocker入力の自己除外と`internal_logs`入力を使い、標準出力への再送先を設けない。
-内部ログ入力には10秒の反復制限を設定する。転送CaddyとConsulも通常のDocker入力から収集する。
+Vector自身・転送Caddy・Consulも同じjournal入力で一度だけ回収する。`internal_logs`との二重入力や標準出力への再送先は設けない。Vector自身の任意本文・属性は捨て、`vector_runtime`の固定理由だけを残す。
 
 `configs/vector.toml`が正規化と送信の正本である。
 JSONと構造付きテキストを展開し、認識不能な本文も保持する。複数行例外を別コンテナと連結しない。
@@ -134,28 +133,41 @@ Caddy 2.10.2の`dynamic a`が`consul-agent-logging:8600`へ明示的に問い合
 `/health`はCaddy自身の生存だけを示し、中央到達性を保証しない。
 
 `consul-agent-logging`はTCP/UDP 8320で参加する。中央専用の8321とは別の保存ボリュームとnode名を持つ。
-`SincroLogCollector_<host>`と`SincroLogRouter_<host>`をそれぞれ登録し、8686と8080の`/health`を10秒間隔・5秒時間切れで確認する。
+`SincroLogCollector_<host>`と`SincroLogRouter_<host>`をそれぞれ登録し、observerの8687 `/collector`とrouterの8080 `/health`を10秒間隔・5秒時間切れで確認する。
 全ホストの個別状態はConsulの`/v1/health/service/SincroLogCollector`と`SincroLogRouter`で確認する。
 bandogのDNS確認は少なくとも1台の正常なサービスの存在を示すものであり、全インスタンスの正常を保証しない。
 
 ### 原本・バッファ・復旧
 
-全ComposeサービスはDockerの`local`ドライバーを使い、1ファイル20MiB相当・5世代を上限として回転させる。
-中央へ直接送るDockerログドライバーを使わず、Vector停止中も`docker logs`から原本を読める。
-Vectorの`vector-data`ボリュームは送信待ちの専用領域で、約256MiBを上限として満杯時は入力へ背圧をかける。
-中央が停止してもVectorは起動できる。満杯時やDockerの原本回転後まで無欠落とは保証しない。
-設定変更はコンテナの再作成で反映し、原本の保持設定変更と収集先変更を区別する。
+全ComposeサービスはDockerの`journald`ドライバーを使う。プロジェクト・サービスラベルはDockerがjournal属性へ付ける。`mode=non-blocking`、`max-buffer-size=4m`により本体の標準出力を中央停止やjournalの遅延で待たせない。保持容量と回転はホストjournaldで管理する。
 
-Docker入力は起動前の短時間コンテナや停止中の原本の完全回収を保証しない。
-初期化コンテナも対象ラベルに含むが、標準起動時の自動回収・再開位置・重複と欠落検知は回収タスクで実装する。
-現段階で起動前の全ログを取得済みとは扱わない。
+これは従来の`local`ドライバーからの保存方式の変更である。コンテナの再作成が必要で、旧local原本は新入力へ自動移行しない。必要な旧ログは再作成前に管理者が`docker compose logs`等で非公開領域へ退避する。
 
-送信失敗は`docker compose logs vector log-router`、滞留と破棄は内部の`http://vector:9598/metrics`の`vector_buffer_received_events_total`と`vector_buffer_sent_events_total`の差、`vector_component_errors_total`、`vector_component_discarded_events_total`などで確認する。
-監視APIとメトリクスはCompose内部だけに置く。バッファを削除する`down -v`を復旧手段にしない。
+| 境界                                   | 保持・回収と限界                                                                                                                |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| プロセスからDockerの4MiBメモリバッファ | 満杯時は捨てる。Dockerに破棄数の公開指標がないため`docker_buffer_unmeasured`、`loss_count=null`で未計測とする。0件保証はしない  |
+| ホストjournal原本                      | 永続保存を前提とし、停止済み・削除済みコンテナ、残存世代を再読取する。journaldの容量・レート制限・ホスト故障より前には戻れない  |
+| Vectorの送信待ち                       | `vector-data`内の約256MiBディスクバッファ。満杯時は入力を待たせ、原本に保持する。同期前の強制終了は原本から再読取する           |
+| 中央受理                               | HTTP ACKを受けてnative cursorを確定する。受理応答やcursorの同期前に停止すると重複し得る。中央受理は別ホストへの複製を意味しない |
 
-Dockerソケットの`:ro`はファイルのマウント属性であり、Docker APIを書込み不可にはしない。
-Vectorはホストを管理できる権限を持つため、固定版の設定とイメージを管理者だけが変更する。
-特権コンテナやDocker APIのホスト公開は追加しない。
+短時間コンテナの起動順を特別扱いしない。`host_journal`の入力名と`vector-data`を維持し、起動時は確定cursorから読む。Vectorの終了待機60秒に対しComposeは70秒待つ。`journal_cursor`と`journal_boot_id`、`host`で同じ原本の再送を識別できる。コンテナ再作成によるID変更を本文の連番と混同しない。厳密に一度だけの保存は約束しない。
+
+`log-observer`は中央sinkの送信成功累計、送信エラー、破棄累計、バッファ件数・容量を`http://vector:9598/metrics`から読み、`logging_delivery`として記録する。`last_success_observed_at`は成功累計の増加を観測した時刻であり、中央の厳密な受理時刻ではない。`observer-data`に前回観測と累計を保存し、収集不在・再作成の区間を`logging_loss_unknown` / `logging_recovery`へ残す。中央停止時もobserverのDocker journalに残り、復旧後に届く。再起動前後の未観測分は件数不明とする。
+
+送信再試行中の滞留、観測不能、破棄をConsulの収集・observerチェックへ反映する。破棄の増分は`logging_discarded`に残る。起動前とhealthcheckで確定cursorの原本消失を調べ、`vector-data/journal-gap.json`に最後の原本確認から消失検知までの区間を保存する。件数を推測せず、markerが残る間はcriticalを維持する。読取や状態保存が失敗しても異常とする。
+
+復旧時は原本の容量・権限、中央到達性、`docker compose logs vector log-observer log-router`を確認する。cursor消失では不明区間を記録し、原本を戻せるなら戻した後、管理者が`docker compose exec vector rm /var/lib/vector/journal-gap.json`で確認済みmarkerだけを解除する。中央の診断履歴は消えない。`down -v`やcursor削除を通常の復旧手段にしない。入力名変更・ボリューム消失は全件再読取や欠落につながる。
+
+Vectorはjournalの読取だけを持つ。Dockerソケットを使うobserverはホストの管理権限を持つ。ソケットの`:ro`はAPIを書込み不可にはしないため、管理者が設定・イメージを管理する。監視API・指標・Docker APIはホストへ追加公開しない。
+
+| 経路                   | 回収・検知の責任                                                                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| サーバー・補助コンテナ | 出力元が本文を制御し、Docker/journaldが原本を保持、VectorがACK付きで回収、observerが不在・滞留・破棄・cursor消失を検知                     |
+| ホスト障害             | 同じjournal入力で既知の診断だけを回収。journaldの抑制・保存失敗も固定理由で記録する。物理故障中は当該ホスト自身の記録を保証できない        |
+| ブラウザー未送信       | 端末の有限キューと再試行・破棄数が責任範囲。RTC受理前のタブ終了・端末消失はサーバーから回収できない                                        |
+| 中央保存               | 管理者が整合バックアップと別ホスト保管を行う。バックアップ後の受理済み区間は中央故障で失われ得る。Vectorバッファは中央バックアップではない |
+
+バックアップと隔離復元の手順は[保存領域](storage.md#ログ基盤)を参照する。
 
 ### 収集の確認
 
@@ -163,9 +175,7 @@ Vectorはホストを管理できる権限を持つため、固定版の設定�
 `node --test scripts/tests/log-collector.test.mjs`は人工ログだけの隔離Composeを使う。
 製品の実ログ出力と複数ホスト間の到達・本文切替の最終確認は結合確認タスクで行う。
 
-2026-09-22に[Docker入力](https://vector.dev/docs/reference/configuration/sources/docker_logs/)、
-[HTTP送信](https://vector.dev/docs/reference/configuration/sinks/http/)、
-[内部ログ](https://vector.dev/docs/reference/configuration/sources/internal_logs/)の公式設定を確認した。
+2026-09-22に[Docker journald](https://docs.docker.com/engine/logging/drivers/journald/)、[非同期ログの破棄条件](https://docs.docker.com/engine/logging/configure/)、[Vector HTTP送信](https://vector.dev/docs/reference/configuration/sinks/http/)を確認した。固定版の[journal入力実装](https://github.com/vectordotdev/vector/blob/v0.58.0/src/sources/journald.rs)はinclude条件をORで評価し、中央受理後にcursorを更新する。
 
 ## PythonのJSONL出力
 
@@ -223,7 +233,7 @@ llamaのJSONLの`time`は経過時間なので、中央の発生時刻にはDock
 固定VOICEVOX ENGINE 0.25.2にはアクセスログの本文だけを止める起動設定がない。
 無効時はVectorが`sincro-voicevox`のイベント全体を共通メタデータと固定メッセージへ置換し、認識できるアクセス行からHTTPメソッドと状態だけを残す。
 URLエンコード本文も任意の別属性も中央へ残さない。代わりにエンジン内部の詳細診断も失われる。
-Dockerのローカル原本には要求URLが残り、既定の20MiB・5世代の回転まで管理者が読める。設定は既存原本・中央保存・Redis/S3キャッシュを削除しない。
+Dockerのローカル原本には要求URLが残り、ホストjournalの保持期限・容量による削除まで管理者が読める。設定は既存原本・中央保存・Redis/S3キャッシュを削除しない。
 
 ## コンテナ状態とチェック診断
 
@@ -278,6 +288,6 @@ Linuxの永続journal `/var/log/journal` と実行中journal `/run/log/journal` 
 
 収集イメージはVector 0.58.0の公式バイナリとUbuntu 26.04のjournalctlを使う。公式VectorのDebianイメージに含まれるjournalctl 257では過去bootの追尾をVectorが拒否するため、258以降が必要である。nativeの `journald` 入力で `current_boot_only=false`、`--merge` を指定し、ホストとコンテナのmachine-idの違いを吸収する。読取位置は `host_journal` 入力名で `vector-data` に保持する。入力名やボリュームを変更・削除すると再読取や欠落の原因になる。[Vectorのjournal入力仕様](https://vector.dev/docs/reference/configuration/sources/journald/)を参照する。
 
-Docker/containerdの状態・失敗、systemdの失敗、カーネルのOOM・GPU/デバイス・ディスク・ネットワーク障害だけを `host_diagnostic` へ変換する。先頭4096バイトを既知語で分類し、任意の `MESSAGE`、コマンドライン、環境、プロセス名は複製しない。固定の `reason`、`origin`、重大度、時刻、ホスト、妥当なboot識別子とunitを残し、サービス・会話IDを推測しない。未知・無関係な行は除外する。実障害を起こさず読取経路を確認する場合は、`logger -t sincromisor-log-test -- "sincromisor-host-probe <UUID>"` の固定形式を使い、`probe_id` を検索する。
+journaldの抑制・保存失敗、Docker/containerdの状態・失敗、systemdの失敗、カーネルのOOM・GPU/デバイス・ディスク・ネットワーク障害だけを `host_diagnostic` へ変換する。先頭4096バイトを既知語で分類し、任意の `MESSAGE`、コマンドライン、環境、プロセス名は複製しない。固定の `reason`、`origin`、重大度、時刻、ホスト、妥当なboot識別子とunitを残し、サービス・会話IDを推測しない。未知・無関係な行は除外する。実障害を起こさず読取経路を確認する場合は、`logger -t sincromisor-log-test -- "sincromisor-host-probe <UUID>"` の固定形式を使い、`probe_id` を検索する。
 
 VectorのDocker healthcheckはHTTP生存に加え、実journalのカーソルを読めることとnativeの追尾プロセスを確認する。`log-observer` は稼働中Vectorのこの結果を `/collector` と自身の `/health` へ反映し、Consulの `SincroLogCollector` と `SincroLogObserver` がcriticalになる。原本本文をhealthcheck出力へ流さず、`journal_unreadable_or_missing` / `journal_input_unavailable` 等の固定理由だけを残す。再作成直後は新しい検査が通るまで正常としない。

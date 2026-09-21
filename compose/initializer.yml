@@ -1,7 +1,7 @@
 # 保存領域と認証の準備を終えてから利用サービスを起動する。
 services:
     s3-credential-initializer:
-        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
+        logging: {driver: journald, options: {mode: non-blocking, max-buffer-size: "4m", labels: "com.docker.compose.project,com.docker.compose.service"}}
         profiles: [full, backend, external, s3]
         image: curlimages/curl:8.12.1
         user: "0:0"
@@ -13,7 +13,7 @@ services:
         restart: "no"
 
     service-initializer:
-        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
+        logging: {driver: journald, options: {mode: non-blocking, max-buffer-size: "4m", labels: "com.docker.compose.project,com.docker.compose.service"}}
         profiles: [full, backend, chat]
         image: curlimages/curl:8.12.1
         user: "0:0"
@@ -26,7 +26,7 @@ services:
         restart: "no"
 
     llama-model-initializer:
-        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
+        logging: {driver: journald, options: {mode: non-blocking, max-buffer-size: "4m", labels: "com.docker.compose.project,com.docker.compose.service"}}
         profiles: [chat]
         image: curlimages/curl:8.12.1
         user: "0:0"

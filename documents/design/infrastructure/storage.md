@@ -125,6 +125,32 @@ UID 1000のnodeユーザーが権限700の領域に単一libSQL `mastra.db` を�
 
 中央の保存・公開先・Consul登録は[ログの保存と検索](logging.md)を参照する。
 
+`victoria-logs-data`は中央保存、`vector-data`は送信待ち・確定cursor・原本消失marker、`observer-data`は配送の前回観測を保持する。Dockerログ原本はホストの永続journalであり、Composeのボリュームではない。各ホストの管理者がjournal容量・空き容量・レート制限を管理する。原本とバッファを同時に失う物理故障には別ホスト保管が必要になる。
+
+中央は停止中にファイル一式を保存する。次は既存ファイルを上書きせず、失敗時も実行前に稼働していた中央を再起動する。停止中のサービス出力は各ホストのjournalとVectorバッファが保持する。
+
+```sh
+sh scripts/logging/backup.sh /backup/sincromisor-logs.tar --env-file .env -f compose.yml
+```
+
+バックアップは中央ボリューム外に置き、ホスト故障にも備えるなら別ホストへ転送する。会話を含み得るため管理者だけが読める保存先・転送路を使う。
+
+復元確認は稼働中ボリュームを上書きせず、新しい名前付きボリュームと管理下の同版中央イメージを使う。以下の`logs-restore-check`と`logs-restore-data`は未使用名とし、必要なら別名にする。
+
+```sh
+docker volume create logs-restore-data
+docker run --rm -i --network none -v logs-restore-data:/restore \
+  --entrypoint /busybox ghcr.io/sincromisor/victoria-logs:v1.52.0 \
+  tar -C /restore -xf - < /backup/sincromisor-logs.tar
+docker run -d --name logs-restore-check --network none \
+  -v logs-restore-data:/victoria-logs-data \
+  ghcr.io/sincromisor/victoria-logs:v1.52.0 -storageDataPath=/victoria-logs-data
+docker exec logs-restore-check /busybox wget -qO- \
+  'http://127.0.0.1:9428/select/logsql/query?query=*&limit=10'
+```
+
+利用するレジストリを変更している場合はイメージ名も合わせる。検索を確認してから本番の停止・ボリューム切替を管理者が行う。バックアップ後に中央だけへ受理されたログは復元先にはない。既にACK済みのイベントをVectorが必ず再送するわけではないため、復元時にはバックアップ時刻から障害までの区間を欠落の可能性として記録する。
+
 ## 参照
 
 - `documents/design/infrastructure/compose.md`

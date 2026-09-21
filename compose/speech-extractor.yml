@@ -1,6 +1,6 @@
 services:
     speech-extractor:
-        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
+        logging: {driver: journald, options: {mode: non-blocking, max-buffer-size: "4m", labels: "com.docker.compose.project,com.docker.compose.service"}}
         profiles:
             - full
             - backend
@@ -38,7 +38,7 @@ services:
             retries: 15
 
     consul-agent-extractor:
-        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
+        logging: {driver: journald, options: {mode: non-blocking, max-buffer-size: "4m", labels: "com.docker.compose.project,com.docker.compose.service"}}
         profiles:
             - full
             - backend

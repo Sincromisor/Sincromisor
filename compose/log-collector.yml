@@ -1,24 +1,26 @@
 services:
     vector:
-        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
+        logging: {driver: journald, options: {mode: non-blocking, max-buffer-size: "4m", labels: "com.docker.compose.project,com.docker.compose.service"}}
         profiles: [full, backend, external, rtc, frontend, chat, s3, logs]
         build: ../Docker/logging/vector
         image: ${SINCRO_REGISTRY_NAME}/vector:0.58.0
         restart: unless-stopped
+        # Vector既定の終了待機60秒をDocker側が途中で強制終了しない。
+        stop_grace_period: 70s
+        entrypoint: [bash, /start-vector.sh]
         command: [--config, /etc/vector/vector.toml]
         environment:
             # 固定設定中のプロジェクト名だけを展開する。秘密の環境変数を渡さない。
             VECTOR_DANGEROUSLY_ALLOW_ENV_VAR_INTERPOLATION: "true"
-            VECTOR_INTERNAL_LOGS_SOURCE_RATE_LIMIT: "10"
             SINCRO_LOG_HOST: ${SINCRO_LOG_HOST:-local}
             SINCRO_LOG_PROJECT: ${COMPOSE_PROJECT_NAME}
             SINCRO_LOG_SYNTHESIS_ENABLED: ${SINCRO_LOG_SYNTHESIS_ENABLED-true}
         volumes:
-            # roでもDocker API管理権限を持つ。ホストへAPIを公開しない。
-            - /var/run/docker.sock:/var/run/docker.sock:ro
             - vector-data:/var/lib/vector
             - ../configs/vector.toml:/etc/vector/vector.toml:ro
             - ../Docker/logging/check-vector.sh:/check-vector.sh:ro
+            - ../Docker/logging/check-journal-cursor.sh:/check-journal-cursor.sh:ro
+            - ../Docker/logging/start-vector.sh:/start-vector.sh:ro
             # Linuxホストの原本だけを読む。空・読取拒否は収集の異常として公開する。
             - ${SINCRO_LOG_JOURNAL_DIR:-/var/log/journal}:/var/log/journal:ro
             - ${SINCRO_LOG_RUNTIME_JOURNAL_DIR:-/run/log/journal}:/run/log/journal:ro
@@ -30,7 +32,7 @@ services:
             retries: 3
 
     log-observer:
-        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
+        logging: {driver: journald, options: {mode: non-blocking, max-buffer-size: "4m", labels: "com.docker.compose.project,com.docker.compose.service"}}
         profiles: [full, backend, external, rtc, frontend, chat, s3, logs]
         build: ../Docker/logging/observer
         image: ${SINCRO_REGISTRY_NAME}/log-observer:latest
@@ -38,8 +40,10 @@ services:
         environment:
             SINCRO_LOG_PROJECT: ${COMPOSE_PROJECT_NAME}
         volumes:
-            # Vectorと同じ管理権限。APIをホストへ公開しない。
+            # Docker管理権限を持つソケット。APIをホストへ公開しない。
             - /var/run/docker.sock:/var/run/docker.sock:ro
+            - vector-data:/var/lib/vector:ro
+            - observer-data:/var/lib/log-observer
         networks: [sincromisor-net]
         healthcheck:
             test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8687/health]
@@ -48,7 +52,7 @@ services:
             retries: 3
 
     log-router:
-        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
+        logging: {driver: journald, options: {mode: non-blocking, max-buffer-size: "4m", labels: "com.docker.compose.project,com.docker.compose.service"}}
         profiles: [full, backend, external, rtc, frontend, chat, s3, logs]
         image: caddy:2.10.2-alpine
         restart: unless-stopped
@@ -63,7 +67,7 @@ services:
             retries: 3
 
     consul-agent-logging:
-        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
+        logging: {driver: journald, options: {mode: non-blocking, max-buffer-size: "4m", labels: "com.docker.compose.project,com.docker.compose.service"}}
         profiles: [full, backend, external, rtc, frontend, chat, s3, logs]
         image: hashicorp/consul:latest
         restart: unless-stopped
@@ -87,6 +91,7 @@ services:
             retries: 5
 
 volumes:
+    observer-data:
     vector-data:
     consul-agent-logging-data:
 

@@ -58,7 +58,7 @@ test("Dockerの状態・理由変更とConsulの実チェックを中央へ保�
 		image: "busybox:latest",
 		command: ["sleep", "600"],
 		networks: ["sincromisor-net"],
-		logging: { driver: "local" },
+		logging: cfg.services.vector.logging,
 		healthcheck: {
 			test: [
 				"CMD-SHELL",

@@ -1,6 +1,6 @@
 services:
     agent-server:
-        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
+        logging: {driver: journald, options: {mode: non-blocking, max-buffer-size: "4m", labels: "com.docker.compose.project,com.docker.compose.service"}}
         profiles: [chat]
         build:
             context: ../sincromisor-server/agent-server
@@ -39,7 +39,7 @@ services:
 
     # 登録を設定ファイルで維持し、Consulやアプリの再起動順に依存させない。
     consul-agent-chat:
-        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
+        logging: {driver: journald, options: {mode: non-blocking, max-buffer-size: "4m", labels: "com.docker.compose.project,com.docker.compose.service"}}
         profiles: [chat]
         image: hashicorp/consul:latest
         restart: unless-stopped

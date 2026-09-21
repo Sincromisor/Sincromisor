@@ -1,6 +1,6 @@
 services:
     victoria-logs:
-        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
+        logging: {driver: journald, options: {mode: non-blocking, max-buffer-size: "4m", labels: "com.docker.compose.project,com.docker.compose.service"}}
         profiles: [full, logs]
         build:
             context: ../Docker/logging
@@ -24,7 +24,7 @@ services:
 
     # 中央停止中も登録を保持する。業務サービスはこのエージェントを起動条件にしない。
     consul-agent-logs:
-        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
+        logging: {driver: journald, options: {mode: non-blocking, max-buffer-size: "4m", labels: "com.docker.compose.project,com.docker.compose.service"}}
         profiles: [full, logs]
         image: hashicorp/consul:latest
         restart: unless-stopped

@@ -31,7 +31,7 @@ test("収集対象の分離、本文解析、Consul経由の送信と障害復�
 		),
 	);
 	for (const service of Object.values(cfg.services))
-		assert.equal(service.logging.driver, "local");
+		assert.equal(service.logging.driver, "journald");
 	const names = [
 		"victoria-logs",
 		"consul-agent-logs",
@@ -66,10 +66,7 @@ test("収集対象の分離、本文解析、Consul経由の送信と障害復�
 		image: "busybox:latest",
 		command: ["sh", "-c", "sleep 600"],
 		networks: ["sincromisor-net"],
-		logging: {
-			driver: "local",
-			options: { "max-size": "1m", "max-file": "2" },
-		},
+		logging: services.vector.logging,
 	};
 	services.initializer = {
 		...services.fixture,
@@ -130,6 +127,11 @@ test("収集対象の分離、本文解析、Consul経由の送信と障害復�
 		);
 		await wait(
 			() => api("health/service/SincroLogRouter?passing=true").length === 1,
+		);
+		await wait(() =>
+			http(
+				"http://victoria-logs:9428/select/logsql/query?query=service%3Ainitializer",
+			).includes("短時間コンテナ"),
 		);
 		emit(
 			JSON.stringify({
@@ -249,6 +251,7 @@ test("収集対象の分離、本文解析、Consul経由の送信と障害復�
 			/収集停止中の原本/,
 		);
 		compose("start", "vector");
+		await wait(() => rows().some((r) => r._msg === "収集停止中の原本"));
 		await wait(
 			() => api("health/service/SincroLogCollector?passing=true").length === 1,
 		);

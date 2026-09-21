@@ -12,6 +12,7 @@ exec 3<&- 3>&-
 if ! journalctl --merge --no-pager -n 1 -o json --output-fields=__CURSOR 2>/dev/null | grep -q '"__CURSOR"'; then
     fail journal_unreadable_or_missing
 fi
+bash /check-journal-cursor.sh || exit 1
 # HTTPだけ正常でも、journald子プロセスが起動・再開できなければ異常とする。
 for process in /proc/[0-9]*/comm; do
     if [[ -r "$process" ]] && [[ "$(cat "$process" 2>/dev/null)" == journalctl ]]; then
