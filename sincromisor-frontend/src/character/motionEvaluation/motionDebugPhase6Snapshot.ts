@@ -131,7 +131,7 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
 function plainObjectSchema<Shape extends z.core.$ZodLooseShape>(shape: Shape) {
     return z
         .custom<Record<string, unknown>>(isPlainRecord, { message: "Expected a plain object." })
-        .pipe(z.object(shape).strict());
+        .pipe(z.strictObject(shape));
 }
 
 const stringArraySchema = z.array(z.string());
@@ -261,11 +261,9 @@ const finalPoseSnapshotSchema: z.ZodType<MotionDebugFinalPoseSnapshot> = plainOb
     warnings: stringArraySchema,
 });
 
-const schemaVersionProbeSchema = z
-    .object({
-        schemaVersion: z.string().optional(),
-    })
-    .passthrough();
+const schemaVersionProbeSchema = z.looseObject({
+    schemaVersion: z.string().optional(),
+});
 
 export function createMotionDebugPhase6SolverSnapshot(
     input: MotionDebugPhase6RuntimeInput,

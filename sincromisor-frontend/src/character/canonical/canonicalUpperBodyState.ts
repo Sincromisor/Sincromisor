@@ -159,15 +159,13 @@ const canonicalTuple3Schema: z.ZodType<CanonicalTuple3> = z.tuple([
     finiteNumberSchema,
 ]);
 
-const canonicalOutOfRangeFieldSchema: z.ZodType<CanonicalOutOfRangeField> = z
-    .object({
-        path: z.string(),
-        value: finiteNumberSchema,
-        min: finiteNumberSchema.optional(),
-        max: finiteNumberSchema.optional(),
-        clampedValue: finiteNumberSchema,
-    })
-    .strict();
+const canonicalOutOfRangeFieldSchema: z.ZodType<CanonicalOutOfRangeField> = z.strictObject({
+    path: z.string(),
+    value: finiteNumberSchema,
+    min: finiteNumberSchema.optional(),
+    max: finiteNumberSchema.optional(),
+    clampedValue: finiteNumberSchema,
+});
 
 const canonicalPartMetaShape = {
     confidence: confidenceSchema,
@@ -176,95 +174,75 @@ const canonicalPartMetaShape = {
     outOfRangeFields: z.array(canonicalOutOfRangeFieldSchema),
 };
 
-const canonicalCalibrationHandBaselineSchema = z
-    .object({
-        palmSize: nonNegativeFiniteNumberSchema,
-        openSpread: nonNegativeFiniteNumberSchema,
-    })
-    .strict();
+const canonicalCalibrationHandBaselineSchema = z.strictObject({
+    palmSize: nonNegativeFiniteNumberSchema,
+    openSpread: nonNegativeFiniteNumberSchema,
+});
 
-const canonicalCalibrationSnapshotSchema: z.ZodType<CanonicalCalibrationSnapshot> = z
-    .object({
-        id: z.string(),
-        source: z.enum(["default", "initial", "online", "replay"]),
-        neutralYawRad: finiteNumberSchema,
-        shoulderWidth: nonNegativeFiniteNumberSchema,
-        torsoScale: nonNegativeFiniteNumberSchema,
-        handBaseline: z
-            .object({
-                left: canonicalCalibrationHandBaselineSchema,
-                right: canonicalCalibrationHandBaselineSchema,
-            })
-            .strict(),
-        capturedAtMediaTimeMs: finiteNumberSchema.optional(),
-    })
-    .strict();
+const canonicalCalibrationSnapshotSchema: z.ZodType<CanonicalCalibrationSnapshot> = z.strictObject({
+    id: z.string(),
+    source: z.enum(["default", "initial", "online", "replay"]),
+    neutralYawRad: finiteNumberSchema,
+    shoulderWidth: nonNegativeFiniteNumberSchema,
+    torsoScale: nonNegativeFiniteNumberSchema,
+    handBaseline: z.strictObject({
+        left: canonicalCalibrationHandBaselineSchema,
+        right: canonicalCalibrationHandBaselineSchema,
+    }),
+    capturedAtMediaTimeMs: finiteNumberSchema.optional(),
+});
 
-const canonicalTorsoFrameSchema: z.ZodType<CanonicalTorsoFrame> = z
-    .object({
-        ...canonicalPartMetaShape,
-        coordinateSystem: z.literal("body_local"),
-        shoulderCenter: canonicalTuple3Schema,
-        hipCenter: canonicalTuple3Schema.optional(),
-        bodyRight: canonicalTuple3Schema,
-        bodyUp: canonicalTuple3Schema,
-        bodyFront: canonicalTuple3Schema,
-        shoulderWidth: nonNegativeFiniteNumberSchema,
-        torsoScale: nonNegativeFiniteNumberSchema,
-        yawRad: finiteNumberSchema,
-    })
-    .strict();
+const canonicalTorsoFrameSchema: z.ZodType<CanonicalTorsoFrame> = z.strictObject({
+    ...canonicalPartMetaShape,
+    coordinateSystem: z.literal("body_local"),
+    shoulderCenter: canonicalTuple3Schema,
+    hipCenter: canonicalTuple3Schema.optional(),
+    bodyRight: canonicalTuple3Schema,
+    bodyUp: canonicalTuple3Schema,
+    bodyFront: canonicalTuple3Schema,
+    shoulderWidth: nonNegativeFiniteNumberSchema,
+    torsoScale: nonNegativeFiniteNumberSchema,
+    yawRad: finiteNumberSchema,
+});
 
-const canonicalArmStateSchema: z.ZodType<CanonicalArmState> = z
-    .object({
-        ...canonicalPartMetaShape,
-        reach: finiteNumberSchema.min(0).max(1.15),
-        elevationRad: finiteNumberSchema.min(-Math.PI / 2).max(Math.PI / 2),
-        openness: finiteNumberSchema.min(-1).max(1),
-        forwardness: finiteNumberSchema.min(0).max(1),
-        elbowFlexionRad: finiteNumberSchema.min(0).max(Math.PI),
-        classification: canonicalArmClassificationSchema,
-        bodyLocalWrist: canonicalTuple3Schema.optional(),
-        bodyLocalElbow: canonicalTuple3Schema.optional(),
-    })
-    .strict();
+const canonicalArmStateSchema: z.ZodType<CanonicalArmState> = z.strictObject({
+    ...canonicalPartMetaShape,
+    reach: finiteNumberSchema.min(0).max(1.15),
+    elevationRad: finiteNumberSchema.min(-Math.PI / 2).max(Math.PI / 2),
+    openness: finiteNumberSchema.min(-1).max(1),
+    forwardness: finiteNumberSchema.min(0).max(1),
+    elbowFlexionRad: finiteNumberSchema.min(0).max(Math.PI),
+    classification: canonicalArmClassificationSchema,
+    bodyLocalWrist: canonicalTuple3Schema.optional(),
+    bodyLocalElbow: canonicalTuple3Schema.optional(),
+});
 
-const canonicalHeadStateSchema = z
-    .object({
-        ...canonicalPartMetaShape,
-        yawRad: finiteNumberSchema,
-        pitchRad: finiteNumberSchema,
-        rollRad: finiteNumberSchema,
-    })
-    .strict();
+const canonicalHeadStateSchema = z.strictObject({
+    ...canonicalPartMetaShape,
+    yawRad: finiteNumberSchema,
+    pitchRad: finiteNumberSchema,
+    rollRad: finiteNumberSchema,
+});
 
-export const canonicalUpperBodyStateSchema: z.ZodType<CanonicalUpperBodyState> = z
-    .object({
-        schemaVersion: z.literal(CANONICAL_UPPER_BODY_SCHEMA_VERSION),
-        timestamp: z
-            .object({
-                mediaTimeMs: finiteNumberSchema,
-                poseLastUpdatedAtMs: finiteNumberSchema.optional(),
-            })
-            .strict(),
-        torso: canonicalTorsoFrameSchema,
-        head: canonicalHeadStateSchema.optional(),
-        arms: z
-            .object({
-                left: canonicalArmStateSchema,
-                right: canonicalArmStateSchema,
-            })
-            .strict(),
-        calibration: canonicalCalibrationSnapshotSchema,
-        warnings: z.array(canonicalWarningCodeSchema),
-    })
-    .strict();
+export const canonicalUpperBodyStateSchema: z.ZodType<CanonicalUpperBodyState> = z.strictObject({
+    schemaVersion: z.literal(CANONICAL_UPPER_BODY_SCHEMA_VERSION),
+    timestamp: z.strictObject({
+        mediaTimeMs: finiteNumberSchema,
+        poseLastUpdatedAtMs: finiteNumberSchema.optional(),
+    }),
+    torso: canonicalTorsoFrameSchema,
+    head: canonicalHeadStateSchema.optional(),
+    arms: z.strictObject({
+        left: canonicalArmStateSchema,
+        right: canonicalArmStateSchema,
+    }),
+    calibration: canonicalCalibrationSnapshotSchema,
+    warnings: z.array(canonicalWarningCodeSchema),
+});
 
-const schemaVersionProbeSchema = z
-    .object({
-        schemaVersion: z.string().optional(),
-    })
-    .passthrough();
+const schemaVersionProbeSchema = z.looseObject({
+    schemaVersion: z.string().optional(),
+});
 
 function zodPathToStrings(path: readonly PropertyKey[]): string[] {
     return path.map((segment) => String(segment));

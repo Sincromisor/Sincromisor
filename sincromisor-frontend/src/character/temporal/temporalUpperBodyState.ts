@@ -148,7 +148,7 @@ function isPlainRecord(value: unknown): value is PlainRecord {
 function plainObjectSchema<Shape extends z.core.$ZodLooseShape>(shape: Shape) {
     return z
         .custom<PlainRecord>(isPlainRecord, { message: "Expected a plain object." })
-        .pipe(z.object(shape).strict());
+        .pipe(z.strictObject(shape));
 }
 
 const temporalTuple3Schema: z.ZodType<TemporalTuple3> = z.tuple([
@@ -223,11 +223,9 @@ const temporalUpperBodyStateSchema: z.ZodType<TemporalUpperBodyState> = plainObj
     warnings: z.array(temporalWarningCodeSchema),
 });
 
-const schemaVersionProbeSchema = z
-    .object({
-        schemaVersion: z.string().optional(),
-    })
-    .passthrough();
+const schemaVersionProbeSchema = z.looseObject({
+    schemaVersion: z.string().optional(),
+});
 
 function createDefaultPartMeta(): TemporalPartMeta {
     return {

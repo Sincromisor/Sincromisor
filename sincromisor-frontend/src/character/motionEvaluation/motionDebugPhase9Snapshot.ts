@@ -142,11 +142,9 @@ const phase9EnvelopeSchema = plainObjectSchema({
     warnings: stringArraySchema,
 });
 
-const schemaVersionProbeSchema = z
-    .object({
-        schemaVersion: z.string().optional(),
-    })
-    .passthrough();
+const schemaVersionProbeSchema = z.looseObject({
+    schemaVersion: z.string().optional(),
+});
 
 export function createMotionDebugPhase9SemanticSnapshot(
     input: MotionDebugPhase9SnapshotInput,
@@ -326,5 +324,5 @@ function isPlainRecord(value: unknown): value is PlainRecord {
 function plainObjectSchema<Shape extends z.core.$ZodLooseShape>(shape: Shape) {
     return z
         .custom<PlainRecord>(isPlainRecord, { message: "Expected a plain object." })
-        .pipe(z.object(shape).strict());
+        .pipe(z.strictObject(shape));
 }

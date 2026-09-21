@@ -9,92 +9,72 @@ import { z } from "zod";
 
 const finiteNumberSchema = z.number();
 
-const landmarkSchema = z
-    .object({
-        x: finiteNumberSchema,
-        y: finiteNumberSchema,
-        z: finiteNumberSchema,
-        visibility: finiteNumberSchema,
-        presence: finiteNumberSchema.optional(),
-    })
-    .strict();
+const landmarkSchema = z.strictObject({
+    x: finiteNumberSchema,
+    y: finiteNumberSchema,
+    z: finiteNumberSchema,
+    visibility: finiteNumberSchema,
+    presence: finiteNumberSchema.optional(),
+});
 
-const categorySchema = z
-    .object({
-        score: finiteNumberSchema,
-        index: z.number().int(),
-        categoryName: z.string(),
-        displayName: z.string(),
-    })
-    .strict();
+const categorySchema = z.strictObject({
+    score: finiteNumberSchema,
+    index: z.number().int(),
+    categoryName: z.string(),
+    displayName: z.string(),
+});
 
-const matrixSchema = z
-    .object({
-        rows: z.number().int().positive(),
-        columns: z.number().int().positive(),
-        data: z.array(finiteNumberSchema),
-    })
-    .strict();
+const matrixSchema = z.strictObject({
+    rows: z.number().int().positive(),
+    columns: z.number().int().positive(),
+    data: z.array(finiteNumberSchema),
+});
 
-const poseRawResultSchema = z
-    .object({
-        landmarks: z.array(z.array(landmarkSchema)),
-        worldLandmarks: z.array(z.array(landmarkSchema)),
-    })
-    .strict();
+const poseRawResultSchema = z.strictObject({
+    landmarks: z.array(z.array(landmarkSchema)),
+    worldLandmarks: z.array(z.array(landmarkSchema)),
+});
 
-const handRawResultSchema = z
-    .object({
-        landmarks: z.array(z.array(landmarkSchema)),
-        worldLandmarks: z.array(z.array(landmarkSchema)),
-        handedness: z.array(z.array(categorySchema)),
-        handednesses: z.array(z.array(categorySchema)),
-    })
-    .strict();
+const handRawResultSchema = z.strictObject({
+    landmarks: z.array(z.array(landmarkSchema)),
+    worldLandmarks: z.array(z.array(landmarkSchema)),
+    handedness: z.array(z.array(categorySchema)),
+    handednesses: z.array(z.array(categorySchema)),
+});
 
-const faceRawResultSchema = z
-    .object({
-        faceLandmarks: z.array(z.array(landmarkSchema)),
-        faceBlendshapes: z.array(
-            z
-                .object({
-                    categories: z.array(categorySchema),
-                    headIndex: z.number().int(),
-                    headName: z.string(),
-                })
-                .strict(),
-        ),
-        facialTransformationMatrixes: z.array(matrixSchema),
-    })
-    .strict();
+const faceRawResultSchema = z.strictObject({
+    faceLandmarks: z.array(z.array(landmarkSchema)),
+    faceBlendshapes: z.array(
+        z.strictObject({
+            categories: z.array(categorySchema),
+            headIndex: z.number().int(),
+            headName: z.string(),
+        }),
+    ),
+    facialTransformationMatrixes: z.array(matrixSchema),
+});
 
-const gestureRawResultSchema = z
-    .object({
-        landmarks: z.array(z.array(landmarkSchema)),
-        worldLandmarks: z.array(z.array(landmarkSchema)),
-        handedness: z.array(z.array(categorySchema)),
-        handednesses: z.array(z.array(categorySchema)),
-        gestures: z.array(z.array(categorySchema)),
-    })
-    .strict();
+const gestureRawResultSchema = z.strictObject({
+    landmarks: z.array(z.array(landmarkSchema)),
+    worldLandmarks: z.array(z.array(landmarkSchema)),
+    handedness: z.array(z.array(categorySchema)),
+    handednesses: z.array(z.array(categorySchema)),
+    gestures: z.array(z.array(categorySchema)),
+});
 
-const timingSchema = z
-    .object({
-        mediaTimeMs: finiteNumberSchema,
-        videoWidth: finiteNumberSchema,
-        videoHeight: finiteNumberSchema,
-    })
-    .strict();
+const timingSchema = z.strictObject({
+    mediaTimeMs: finiteNumberSchema,
+    videoWidth: finiteNumberSchema,
+    videoHeight: finiteNumberSchema,
+});
 
-const rawResultFrameSchema = z
-    .object({
-        pose: poseRawResultSchema.optional(),
-        hand: handRawResultSchema.optional(),
-        face: faceRawResultSchema.optional(),
-        gesture: gestureRawResultSchema.optional(),
-        timing: timingSchema,
-    })
-    .strict();
+const rawResultFrameSchema = z.strictObject({
+    pose: poseRawResultSchema.optional(),
+    hand: handRawResultSchema.optional(),
+    face: faceRawResultSchema.optional(),
+    gesture: gestureRawResultSchema.optional(),
+    timing: timingSchema,
+});
 
 export type SincroMotionReplayRawPoseResult = z.infer<typeof poseRawResultSchema>;
 export type SincroMotionReplayRawHandResult = z.infer<typeof handRawResultSchema>;
