@@ -1,0 +1,13 @@
+id: task-260921175828-modernize-vite-config
+title: Viteの非推奨ビルド設定を更新
+category: frontend
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-09-21
+closed_at: 2026-09-21
+legacy_ids: []

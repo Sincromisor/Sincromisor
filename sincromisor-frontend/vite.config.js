@@ -4,9 +4,11 @@ import { dirname, resolve } from "node:path";
 import react from "@vitejs/plugin-react-swc";
 import { defineConfig } from "vite";
 
-const contents_src = resolve(__dirname, "src");
+const contents_src = resolve(import.meta.dirname, "src");
 const require = createRequire(import.meta.url);
-const frontendPackageJson = JSON.parse(readFileSync(resolve(__dirname, "package.json"), "utf8"));
+const frontendPackageJson = JSON.parse(
+    readFileSync(resolve(import.meta.dirname, "package.json"), "utf8"),
+);
 const mediapipeTasksVisionPackageJson = JSON.parse(
     readFileSync(
         resolve(dirname(require.resolve("@mediapipe/tasks-vision")), "package.json"),
@@ -120,51 +122,58 @@ export default defineConfig({
     },
     plugins: [react(), sincroPageRouteAliasPlugin()],
     root: contents_src,
-    publicDir: resolve(__dirname, "public"),
+    publicDir: resolve(import.meta.dirname, "public"),
     build: {
         emptyOutDir: true,
-        outDir: resolve(__dirname, "dist"),
-        rollupOptions: {
+        outDir: resolve(import.meta.dirname, "dist"),
+        rolldownOptions: {
             input: buildInputMap(),
             output: {
-                manualChunks: (id) => {
-                    if (!id.includes("node_modules")) {
-                        return undefined;
-                    }
-                    // Three/VRM 系と React/UI 系を分け、初期ロードの差分更新時に再利用されやすくする。
-                    // three/examples は three 本体と分離し、更新頻度の低い補助モジュール群の再利用性を上げる。
-                    // React runtime は scheduler まで含めて 1 chunk に閉じ、vendor_misc との循環参照を避ける。
-                    if (id.includes("/three/examples/")) {
-                        return "vendor_three_examples";
-                    }
-                    if (id.includes("@pixiv/three-vrm-animation")) {
-                        return "vendor_vrm_animation";
-                    }
-                    if (id.includes("@pixiv/three-vrm")) {
-                        return "vendor_vrm";
-                    }
-                    if (id.includes("/three/")) {
-                        return "vendor_three";
-                    }
-                    if (reactRuntimePackages.some((segment) => id.includes(segment))) {
-                        return "vendor_react";
-                    }
-                    if (id.includes("/@mediapipe/")) {
-                        return "vendor_mediapipe";
-                    }
-                    if (id.includes("/onnxruntime-web/")) {
-                        return "vendor_onnxruntime";
-                    }
-                    if (id.includes("@lookingglass/webxr")) {
-                        return "vendor_looking_glass";
-                    }
-                    if (id.includes("/@microsoft/fetch-event-source/")) {
-                        return "vendor_network";
-                    }
-                    if (id.includes("/hls.js/")) {
-                        return "vendor_hls";
-                    }
-                    return "vendor_misc";
+                codeSplitting: {
+                    groups: [
+                        {
+                            // 既存のvendor分類を一つの名前関数で保ち、依存だけを手動分割する。
+                            name: (id) => {
+                                if (!id.includes("node_modules")) {
+                                    return undefined;
+                                }
+                                // Three/VRM 系と React/UI 系を分け、初期ロードの差分更新時に再利用されやすくする。
+                                // three/examples は three 本体と分離し、更新頻度の低い補助モジュール群の再利用性を上げる。
+                                // React runtime は scheduler まで含めて 1 chunk に閉じ、vendor_misc との循環参照を避ける。
+                                if (id.includes("/three/examples/")) {
+                                    return "vendor_three_examples";
+                                }
+                                if (id.includes("@pixiv/three-vrm-animation")) {
+                                    return "vendor_vrm_animation";
+                                }
+                                if (id.includes("@pixiv/three-vrm")) {
+                                    return "vendor_vrm";
+                                }
+                                if (id.includes("/three/")) {
+                                    return "vendor_three";
+                                }
+                                if (reactRuntimePackages.some((segment) => id.includes(segment))) {
+                                    return "vendor_react";
+                                }
+                                if (id.includes("/@mediapipe/")) {
+                                    return "vendor_mediapipe";
+                                }
+                                if (id.includes("/onnxruntime-web/")) {
+                                    return "vendor_onnxruntime";
+                                }
+                                if (id.includes("@lookingglass/webxr")) {
+                                    return "vendor_looking_glass";
+                                }
+                                if (id.includes("/@microsoft/fetch-event-source/")) {
+                                    return "vendor_network";
+                                }
+                                if (id.includes("/hls.js/")) {
+                                    return "vendor_hls";
+                                }
+                                return "vendor_misc";
+                            },
+                        },
+                    ],
                 },
             },
         },
