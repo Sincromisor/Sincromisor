@@ -1,3 +1,5 @@
+"""共通JSONL設定でHTTP状態確認と音声パイプラインのWebSocket境界を起動する。"""
+
 import logging
 import logging.config
 from logging import Logger
@@ -24,9 +26,10 @@ logging.config.dictConfig(
 
 
 class TextProcessorProcess:
-    """TextProcessorのHTTP入口と、接続ごとの処理担当を組み立てる。"""
+    """HTTP入口と接続ごとの処理担当を組み立て、失敗を本文なしで記録する。"""
 
     def __init__(self, args: TextProcessorProcessArgument) -> None:
+        """検証済み起動設定を保持し、接続数を初期化する。"""
         self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.__logger.info("===== Starting TextProcessorProcess =====")
         self.__args: TextProcessorProcessArgument = args
@@ -52,6 +55,7 @@ class TextProcessorProcess:
 
         @app.get("/api/v1/TextProcessor/statuses")
         async def get_status() -> JSONResponse:
+            """監視へ処理種別と現在の接続数だけを返す。"""
             return JSONResponse(
                 {"worker_type": "TextProcessor", "sessions": self.__sessions}
             )
@@ -111,7 +115,9 @@ class TextProcessorProcess:
                     )
 
         try:
-            uvicorn.run(app, host=self.__args.host, port=self.__args.port)
+            uvicorn.run(
+                app, host=self.__args.host, port=self.__args.port, log_config=None
+            )
         except KeyboardInterrupt:
             pass
         finally:

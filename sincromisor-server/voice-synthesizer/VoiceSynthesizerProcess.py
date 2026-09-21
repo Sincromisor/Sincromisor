@@ -1,6 +1,7 @@
+"""共通JSONL設定でHTTP状態確認と音声パイプラインのWebSocket境界を起動する。"""
+
 import logging
 import logging.config
-import traceback
 from logging import Logger
 from threading import Event
 
@@ -26,13 +27,17 @@ logging.config.dictConfig(
 
 
 class VoiceSynthesizerProcess:
-    def __init__(self, args: VoiceSynthesizerProcessArgument):
+    """サービス発見と接続数を管理し、接続処理の失敗を本文なしで記録する。"""
+
+    def __init__(self, args: VoiceSynthesizerProcessArgument) -> None:
+        """検証済み起動設定を保持し、接続数を初期化する。"""
         self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.__logger.info("===== Starting VoiceSynthesizerProcess =====")
         self.__args: VoiceSynthesizerProcessArgument = args
         self.__sessions: int = 0
 
-    def start(self):
+    def start(self) -> None:
+        """発見登録後にAPIを起動し、Uvicornでも共通ログ設定を維持する。"""
         if not self.__args.consul_agent_host or not self.__args.consul_agent_port:
             raise RuntimeError(
                 "Consul agent is not set. Service discovery will not be available.",
@@ -55,12 +60,14 @@ class VoiceSynthesizerProcess:
 
         @app.get("/api/v1/VoiceSynthesizer/statuses")
         async def get_status() -> JSONResponse:
+            """監視へ処理種別と現在の接続数だけを返す。"""
             return JSONResponse(
                 {"worker_type": "VoiceSynthesizer", "sessions": self.__sessions}
             )
 
         @app.websocket("/api/v1/VoiceSynthesizer/synthesize")
         async def websocket_chat_endpoint(ws: WebSocket) -> None:
+            # 本文を持つ要求の処理はワーカーへ委ね、ここでは接続の生存期間を管理する。
             self.__logger.info("Connected Websocket.")
             self.__sessions += 1
             try:
@@ -94,10 +101,8 @@ class VoiceSynthesizerProcess:
                 await voice_synthesizer.communicate(ws=ws)
             except WebSocketDisconnect:
                 self.__logger.info("Disconnected WebSocket.")
-            except Exception as e:
-                self.__logger.error(
-                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}",
-                )
+            except Exception:
+                self.__logger.exception("WebSocket processing failed.")
             finally:
                 self.__sessions -= 1
                 try:
@@ -108,7 +113,9 @@ class VoiceSynthesizerProcess:
                     )
 
         try:
-            uvicorn.run(app, host=self.__args.host, port=self.__args.port)
+            uvicorn.run(
+                app, host=self.__args.host, port=self.__args.port, log_config=None
+            )
         except KeyboardInterrupt:
             pass
         finally:

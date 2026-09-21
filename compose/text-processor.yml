@@ -17,6 +17,7 @@ services:
         networks:
             - sincromisor-net
         environment:
+            - SINCRO_LOG_CONVERSATION_ENABLED=${SINCRO_LOG_CONVERSATION_ENABLED-true}
             - SINCRO_PROCESSOR_HOST=${SINCRO_PROCESSOR_HOST}
             - SINCRO_PROCESSOR_PORT=${SINCRO_PROCESSOR_PORT}
             - SINCRO_PROCESSOR_PUBLIC_BIND_HOST=${SINCRO_PROCESSOR_PUBLIC_BIND_HOST}

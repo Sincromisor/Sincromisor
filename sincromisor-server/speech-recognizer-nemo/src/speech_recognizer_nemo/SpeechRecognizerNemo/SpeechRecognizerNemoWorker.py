@@ -9,6 +9,7 @@ from time import perf_counter
 from typing import Any
 
 import numpy as np
+from sincro_config import SincromisorLoggerConfig
 from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
 
 from .ProperNounDictionary import ProperNounDictionary
@@ -60,6 +61,7 @@ class SpeechRecognizerNemoWorker:
     ):
         # 認識本体と辞書系機能を初期化し、機能ごとの有効/無効をここで確定する。
         self.logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
+        self.log_conversation = SincromisorLoggerConfig.conversation_enabled()
         self.s2t: SpeechRecognizerNemo = SpeechRecognizerNemo()
         self.voice_log_dir: str | None = voice_log_dir
         (
@@ -106,11 +108,23 @@ class SpeechRecognizerNemoWorker:
             voice=spe_result.voice,
             confirmed=spe_result.confirmed,
         )
+        ids = {
+            "session_id": sr_result.session_id,
+            "speech_id": sr_result.speech_id,
+            "sequence_id": sr_result.sequence_id,
+            "confirmed": sr_result.confirmed,
+        }
+        if self.log_conversation:
+            self.logger.info(
+                {"event": "recognition_result", **ids, "text": sr_result.result_text()}
+            )
         self.logger.info(
             {
+                "event": "recognition_processing",
+                **ids,
+                "outcome": "success",
                 "query_time": perf_counter() - start_t,
-                "voice_size": spe_result.voice.size,
-                "result": sr_result,
+                "voice_size": int(spe_result.voice.size),
             }
         )
         if spe_result.confirmed and self.voice_log_dir:
@@ -221,10 +235,10 @@ class SpeechRecognizerNemoWorker:
             )
         except Exception as exc:
             self.logger.warning(
-                "Proper noun dictionary load failed: path=%s reason=%s: %r",
+                "Proper noun dictionary load failed: path=%s reason=%s",
                 csv_path,
                 self.__classify_dictionary_load_exception(exc),
-                exc,
+                exc_info=True,
             )
             return (
                 ProperNounDictionary.empty(),
@@ -276,11 +290,8 @@ class SpeechRecognizerNemoWorker:
 
         try:
             post_process_result = self.post_processor.apply(sr_result.result)
-        except Exception as exc:
-            self.logger.warning(
-                "Proper noun post process failed: %r",
-                exc,
-            )
+        except Exception:
+            self.logger.warning("Proper noun post process failed.", exc_info=True)
             return None
 
         correction_trace = self.__build_postprocess_trace(post_process_result)
@@ -317,7 +328,7 @@ class SpeechRecognizerNemoWorker:
             else:
                 correction_trace["decision_reason"] = nbest_trace["decision_reason"]
 
-        self.logger.info({"proper_noun_postprocess": correction_trace})
+        # 補正の詳細は機能用保存だけに渡し、運用ログへの本文の重複出力を避ける。
         return correction_trace
 
     def __build_postprocess_trace(self, post_process_result: Any) -> dict[str, Any]:
@@ -419,7 +430,7 @@ class SpeechRecognizerNemoWorker:
                 allow_cuda_graphs=False,
             )
         except Exception as exc:
-            self.logger.warning("Proper noun context biasing failed: %r", exc)
+            self.logger.warning("Proper noun context biasing failed.", exc_info=True)
             return {
                 "enabled": True,
                 "adopted": False,
@@ -513,7 +524,7 @@ class SpeechRecognizerNemoWorker:
                 beam_size=self.nbest_reranking_config.beam_size,
             )
         except Exception as exc:
-            self.logger.warning("Proper noun N-best reranking failed: %r", exc)
+            self.logger.warning("Proper noun N-best reranking failed.", exc_info=True)
             return {
                 "enabled": True,
                 "strategy": self.nbest_reranking_config.strategy,

@@ -7,6 +7,8 @@ from .TextProcessorWorker import TextProcessorWorker
 
 
 class PokeTextProcessorWorker(TextProcessorWorker):
+    """新規入力を変換し、運用ログの本文制御は共通ワーカーへ委ねる。"""
+
     pokeText: PokeText = PokeText()
 
     def process(
@@ -23,7 +25,6 @@ class PokeTextProcessorWorker(TextProcessorWorker):
         for text in PokeTextProcessorWorker.pokeText.convert(
             request.request_message.message,
         ):
-            self.logger.info(["Converted", text])
             if response.append_response_message(text):
                 yield response
         response.finalize()
