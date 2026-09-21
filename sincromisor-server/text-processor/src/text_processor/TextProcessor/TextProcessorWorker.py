@@ -8,6 +8,7 @@ from logging import Logger
 from time import perf_counter
 
 from fastapi import WebSocket
+from sincro_config import SincromisorLoggerConfig
 from sincro_models import TextProcessorRequest, TextProcessorResult
 
 
@@ -21,6 +22,8 @@ class TextProcessorWorker:
     def __init__(self) -> None:
         """接続ごとの話者情報と、処理時間の記録先を初期化する。"""
         self.logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
+
+        self.log_conversation = SincromisorLoggerConfig.conversation_enabled()
 
         self.message_type: str = "system"
         self.speaker_id: str = "system"
@@ -74,21 +77,59 @@ class TextProcessorWorker:
         """応答の送信と終了記録を一つの取消可能な処理として所有する。"""
         start_t = perf_counter()
         response_t = -1.0
-        self.logger.info(["process_request", request])
-        async with aclosing(self.process_async(request=request)) as responses:
-            async for response in responses:
-                self.logger.info(["send_response", response])
-                await ws.send_bytes(response.to_msgpack())
-                if response_t < 0:
-                    response_t = perf_counter()
-        self.logger.info(
-            {
-                "session_id": request.session_id,
-                "speech_id": request.request_message.speech_id,
-                "response_time": response_t - start_t,
-                "query_time": perf_counter() - start_t,
-            }
-        )
+        ids = {
+            "session_id": request.session_id,
+            "speech_id": request.request_message.speech_id,
+            "sequence_id": request.sequence_id,
+        }
+        if self.log_conversation:
+            self.logger.info(
+                {
+                    "event": "conversation_input",
+                    **ids,
+                    "confirmed": True,
+                    "text": request.request_message.message,
+                }
+            )
+        outcome = "incomplete"
+        try:
+            async with aclosing(self.process_async(request=request)) as responses:
+                async for response in responses:
+                    await ws.send_bytes(response.to_msgpack())
+                    if response_t < 0:
+                        response_t = perf_counter()
+                    # 送信に成功した確定だけを完了とする。途中失敗で本文を再出力しない。
+                    if response.end_of_response:
+                        outcome = "success"
+                    if self.log_conversation:
+                        self.logger.info(
+                            {
+                                "event": "conversation_final"
+                                if response.end_of_response
+                                else "conversation_fragment",
+                                **ids,
+                                "confirmed": response.end_of_response,
+                                "text": response.response_message.message
+                                if response.end_of_response
+                                else response.voice_text,
+                            }
+                        )
+        except asyncio.CancelledError:
+            outcome = "cancelled"
+            raise
+        except Exception:
+            outcome = "failed"
+            raise
+        finally:
+            self.logger.info(
+                {
+                    "event": "conversation_processing",
+                    **ids,
+                    "outcome": outcome,
+                    "response_time": response_t - start_t if response_t >= 0 else None,
+                    "query_time": perf_counter() - start_t,
+                }
+            )
 
     async def __cancel_all(self, *tasks: asyncio.Task[object]) -> None:
         """全ての子処理を先に取消し、元の例外を隠さず後始末だけを完了する。"""

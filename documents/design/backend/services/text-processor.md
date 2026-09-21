@@ -53,3 +53,8 @@
 - `documents/design/contracts/audio-pipeline-websocket.md`
 - `documents/design/contracts/frontend-rtc.md`
 - `documents/design/archive/legacy-flat/backend_text_processor.md`
+
+## 運用ログ
+
+Poke・Mastraとも共通ワーカーが新規入力、送信済み応答断片、確定結果をJSONLへ記録する。累積履歴は出力しない。`SINCRO_LOG_CONVERSATION_ENABLED=false`では本文イベントを止め、処理時間と成功・失敗・取消を残す。送信失敗と取消は確定扱いせず、Mastraの機能用履歴は変更しない。
+書式・例外情報・設定反映は[ログ基盤](../../infrastructure/logging.md#pythonのjsonl出力)を参照する。

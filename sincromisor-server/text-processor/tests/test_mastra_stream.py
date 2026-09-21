@@ -10,7 +10,12 @@ import aiohttp
 import pytest
 from fastapi import WebSocketDisconnect
 from pydantic import ValidationError
-from sincro_models import ChatHistory, ChatMessage, TextProcessorRequest
+from sincro_models import (
+    ChatHistory,
+    ChatMessage,
+    TextProcessorRequest,
+    TextProcessorResult,
+)
 from text_processor.mastra_client import MastraClient, MastraResponseError
 from text_processor.mastra_worker import MastraTextProcessorWorker
 from text_processor.TextProcessor import PokeTextProcessorWorker
@@ -325,3 +330,74 @@ def test_websocket_failure_closes_http(failure: str) -> None:
             await asyncio.wait_for(disconnected.wait(), 1)
 
     asyncio.run(run())
+
+
+@pytest.mark.parametrize("enabled", ["true", "false"])
+@pytest.mark.parametrize("outcome", ["success", "failed", "cancelled"])
+@pytest.mark.parametrize("engine", ["poke", "mastra"])
+def test_conversation_logs(monkeypatch, caplog, enabled, outcome, engine):
+    """本文スイッチは出力だけに作用し、送信失敗・取消は確定にならない。"""
+    monkeypatch.setenv("SINCRO_LOG_CONVERSATION_ENABLED", enabled)
+    if engine == "poke":
+        monkeypatch.setattr(
+            PokeTextProcessorWorker.pokeText, "convert", lambda text: iter([text])
+        )
+        worker = PokeTextProcessorWorker()
+    else:
+
+        async def chat(*args):
+            yield "新しい質問"
+
+        monkeypatch.setattr(MastraClient, "chat", chat)
+        worker = MastraTextProcessorWorker("http://unused", "test-token", "agent")
+    caplog.set_level("INFO", logger=worker.logger.name)
+    sent = []
+
+    class Socket:
+        received = False
+        complete = asyncio.Event()
+
+        async def receive_bytes(self):
+            if not self.received:
+                self.received = True
+                return _request().to_msgpack()
+            await self.complete.wait()
+            raise WebSocketDisconnect
+
+        async def send_bytes(self, pack):
+            if outcome == "failed":
+                raise RuntimeError("新しい質問")
+            if outcome == "cancelled":
+                raise asyncio.CancelledError
+            sent.append(pack)
+            if TextProcessorResult.from_msgpack(pack).end_of_response:
+                self.complete.set()
+
+    async def run():
+        try:
+            await worker.communicate(Socket())
+        except RuntimeError, asyncio.CancelledError, WebSocketDisconnect:
+            pass
+
+    asyncio.run(run())
+    events = [
+        record.msg for record in caplog.records if record.name == worker.logger.name
+    ]
+    content = [event for event in events if "text" in event]
+    assert all("表示だけの履歴" not in str(event) for event in events)
+    assert events[-1]["outcome"] == outcome
+    if enabled == "false":
+        assert not content
+        assert "新しい質問" not in str(events)
+    else:
+        assert content[0]["event"] == "conversation_input"
+        if outcome == "success":
+            assert [event["event"] for event in content] == [
+                "conversation_input",
+                "conversation_fragment",
+                "conversation_final",
+            ]
+            assert content[-1]["confirmed"] is True
+        else:
+            assert not any(event["event"] == "conversation_final" for event in content)
+    assert bool(sent) == (outcome == "success")

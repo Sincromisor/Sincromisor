@@ -4,7 +4,7 @@
 
 - 中央保存はVictoriaLogs単一ノードとし、標準の`full`または中央専用の`logs`プロファイルで起動する。
 - `compose/logging.yml`が保存先、保持期間、公開先と死活確認の正本である。
-- 共通項目を持つJSONLで投入・検索する。各ホストのVectorが収集・送信する。内容の記録切替は後続タスクで実装する。
+- 共通項目を持つJSONLで投入・検索する。各ホストのVectorが収集・送信する。Pythonの対話内容は出力元で記録を切り替える。
 
 ## 起動と配置
 
@@ -66,7 +66,7 @@ bandogは`SincroLogs.service.consul`のDNS応答も必須監視する。実際�
 
 ## 内容の記録切替の契約
 
-以下は後続実装の共通契約であり、現段階で未実装の設定を配布用環境変数へ追加しない。
+Python4サービスは対話設定を受け取り、認識・対話ワーカーが出力元で制御する。音声生成設定は後続実装の共通契約である。
 
 | 設定                              | 既定値 | 対象                                                   |
 | --------------------------------- | ------ | ------------------------------------------------------ |
@@ -166,3 +166,22 @@ Vectorはホストを管理できる権限を持つため、固定版の設定�
 2026-09-22に[Docker入力](https://vector.dev/docs/reference/configuration/sources/docker_logs/)、
 [HTTP送信](https://vector.dev/docs/reference/configuration/sinks/http/)、
 [内部ログ](https://vector.dev/docs/reference/configuration/sources/internal_logs/)の公式設定を確認した。
+
+## PythonのJSONL出力
+
+4サービスは標準`logging`の共通設定を使い、Uvicornの既定設定による上書きを止める。
+通常ログも例外も物理的に1行とし、`timestamp`、`level`、`logger`、`event`、`message`を保持する。
+辞書メッセージと`extra`の属性はJSONの項目になる。未対応のオブジェクトは型名だけにし、モデル全体の暗黙の文字列化をしない。
+例外は型とスタックのファイル名・行番号・関数名だけを残し、例外値・ソース行・ローカル変数を出さない。
+第三者ロガー（NeMo、Uvicorn、HTTPクライアントなど）は要求URLや本文の混入を避けるため、本文を固定文へ置き換え、ロガー名・レベル・発生関数・行番号を残す。
+起動時に既存ハンドラーを共通出力へ集約し、Python警告も同じ経路へ送る。
+
+`recognition_result`、`conversation_input`、`conversation_fragment`、`conversation_final`だけが対話本文の`text`を持つ。
+`session_id`、`speech_id`、`sequence_id`と`confirmed`で途中・確定を区別する。入力は新規要求だけを記録し、累積履歴を再出力しない。
+応答はWebSocket送信成功後に記録し、取消・生成／送信失敗は最終結果として扱わない。
+本文が無効でも`recognition_processing`、`conversation_processing`の処理時間・結果は残る。
+PokeとMastraは同じ対話ワーカーを通る。NeMo補正の詳細追跡は機能用保存にのみ渡す。
+
+**破壊的変更**: Pythonの標準出力と`--log-file`は従来のテキストからJSONLへ変わる。
+ファイルは指定時だけ作成し、既存の10 MiB・100世代のローテーションを維持する。
+設定を繰り返してもハンドラーを共有・重複しない。設定変更はコンテナの再作成で反映する。

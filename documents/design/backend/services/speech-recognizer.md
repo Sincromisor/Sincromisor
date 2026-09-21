@@ -125,3 +125,8 @@ $ docker compose logs speech-recognizer
 反映されない場合は、CSV のヘッダ、`.env` の `SINCRO_RECOGNIZER_PROPER_NOUN_DICT_PATH`、
 `volumes/proper-noun-dictionaries` 配下のファイル配置、ディレクトリ/ファイル権限
 （`755/644`）を見直してください。
+
+## 運用ログ
+
+認識の運用ログは`recognition_result`へ本文と会話・発話・シーケンスID、確定状態を記録する。`SINCRO_LOG_CONVERSATION_ENABLED=false`では本文イベントを出さず、処理時間と結果だけを残す。補正追跡の運用ログへの重複出力はしない。認識音声・結果ファイルとS3保存はこの設定の対象外である。
+書式・例外情報・設定反映は[ログ基盤](../../infrastructure/logging.md#pythonのjsonl出力)を参照する。

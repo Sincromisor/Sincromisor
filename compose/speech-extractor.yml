@@ -12,6 +12,7 @@ services:
         networks:
             - sincromisor-net
         environment:
+            - SINCRO_LOG_CONVERSATION_ENABLED=${SINCRO_LOG_CONVERSATION_ENABLED-true}
             - SINCRO_EXTRACTOR_HOST=${SINCRO_EXTRACTOR_HOST}
             - SINCRO_EXTRACTOR_PORT=${SINCRO_EXTRACTOR_PORT}
             - SINCRO_EXTRACTOR_PUBLIC_BIND_HOST=${SINCRO_EXTRACTOR_PUBLIC_BIND_HOST}

@@ -1,6 +1,7 @@
+"""共通JSONL設定でHTTP状態確認と音声パイプラインのWebSocket境界を起動する。"""
+
 import logging
 import logging.config
-import traceback
 from logging import Logger
 from threading import Event
 
@@ -22,13 +23,17 @@ logging.config.dictConfig(
 
 
 class SpeechExtractorProcess:
-    def __init__(self, args: SpeechExtractorProcessArgument):
+    """サービス発見と接続数を管理し、接続処理の失敗を本文なしで記録する。"""
+
+    def __init__(self, args: SpeechExtractorProcessArgument) -> None:
+        """検証済み起動設定を保持し、接続数を初期化する。"""
         self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.__logger.info("===== Starting SpeechExtractorProcess =====")
         self.__args: SpeechExtractorProcessArgument = args
         self.__sessions: int = 0
 
-    def start(self):
+    def start(self) -> None:
+        """発見登録後にAPIを起動し、Uvicornでも共通ログ設定を維持する。"""
         SpeechExtractorWorker.setup_model()
         app: FastAPI = FastAPI()
         event: Event = Event()
@@ -47,6 +52,7 @@ class SpeechExtractorProcess:
 
         @app.get("/api/v1/SpeechExtractor/statuses")
         async def get_status() -> JSONResponse:
+            """監視へ処理種別と現在の接続数だけを返す。"""
             return JSONResponse(
                 {"worker_type": "SpeechExtractor", "sessions": self.__sessions}
             )
@@ -69,10 +75,8 @@ class SpeechExtractorProcess:
                 await speechExtractor.extract(ws=ws, max_silence_ms=max_silence_ms)
             except WebSocketDisconnect:
                 self.__logger.info("Disconnected WebSocket.")
-            except Exception as e:
-                self.__logger.error(
-                    f"UnknownError: {repr(e)}\n{traceback.format_exc()}",
-                )
+            except Exception:
+                self.__logger.exception("WebSocket processing failed.")
             finally:
                 self.__sessions -= 1
                 try:
@@ -83,7 +87,9 @@ class SpeechExtractorProcess:
                     )
 
         try:
-            uvicorn.run(app, host=self.__args.host, port=self.__args.port)
+            uvicorn.run(
+                app, host=self.__args.host, port=self.__args.port, log_config=None
+            )
         except KeyboardInterrupt:
             pass
         finally:

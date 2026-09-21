@@ -1,11 +1,15 @@
 # ruff: noqa: PT009, PT027
+import io
 import json
+import logging
+import os
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 import numpy as np
+from sincro_config.SincromisorLoggerConfig import JsonLogFormatter
 from sincro_models import SpeechExtractorResult
 from speech_recognizer_nemo.SpeechRecognizerNemo import (
     ProperNounDictionary,
@@ -124,6 +128,48 @@ class FakeRerankAwareDeferredPostProcessor(FakePostProcessor):
 
 
 class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
+    def test_conversation_log_switch(self) -> None:
+        """モデルを人工結果へ置換し、本文の記録だけが切り替わることを確認する。"""
+        for enabled in ("true", "false"):
+            with (
+                self.subTest(enabled=enabled),
+                patch.dict(os.environ, {"SINCRO_LOG_CONVERSATION_ENABLED": enabled}),
+                patch(
+                    "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
+                    FakeSpeechRecognizerNemo,
+                ),
+            ):
+                worker = SpeechRecognizerNemoWorker(voice_log_dir=None)
+                output = io.StringIO()
+                handler = logging.StreamHandler(output)
+                handler.setFormatter(JsonLogFormatter())
+                worker.logger.addHandler(handler)
+                old_level = worker.logger.level
+                worker.logger.setLevel(logging.INFO)
+                try:
+                    result = worker.recognize(
+                        SpeechExtractorResult(
+                            session_id="session-a",
+                            speech_id=1,
+                            sequence_id=2,
+                            start_at=0,
+                            confirmed=True,
+                            voice=np.zeros(160, dtype=np.int16),
+                        ),
+                        None,
+                    )
+                finally:
+                    worker.logger.removeHandler(handler)
+                    worker.logger.setLevel(old_level)
+                self.assertEqual(result.result_text(), "しんくろみそーるです")
+                rows = [json.loads(line) for line in output.getvalue().splitlines()]
+                self.assertEqual(rows[-1]["event"], "recognition_processing")
+                self.assertEqual(rows[-1]["session_id"], "session-a")
+                self.assertEqual(
+                    "しんくろみそーる" in output.getvalue(), enabled == "true"
+                )
+                self.assertEqual(len(rows), 2 if enabled == "true" else 1)
+
     def setUp(self) -> None:
         self.fixture_path = Path(__file__).with_name("fixtures") / "proper_nouns.csv"
 
