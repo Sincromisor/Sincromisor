@@ -49,6 +49,12 @@ if .service == "sincro-voicevox" && (get_env_var("SINCRO_LOG_SYNTHESIS_ENABLED")
          "event": "voicevox_diagnostic", "message": "VOICEVOX event"}
     if http_error == null { .http_method = http.method; .http_status = to_int!(http.status) }
 }
+# 管理下の補助収集だけはDocker API由来の対象IDを共通項目へ対応付ける。
+if original.label."com.docker.compose.service" == "log-observer" && starts_with(string!(.event), "docker_") {
+    .collector_container_id = .container_id
+    .container_id = .target_container_id
+    .service = .target_service
+}
 del(.label)
 del(.host_key)
 del(.source_type)

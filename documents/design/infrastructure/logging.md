@@ -224,3 +224,32 @@ llamaのJSONLの`time`は経過時間なので、中央の発生時刻にはDock
 無効時はVectorが`sincro-voicevox`のイベント全体を共通メタデータと固定メッセージへ置換し、認識できるアクセス行からHTTPメソッドと状態だけを残す。
 URLエンコード本文も任意の別属性も中央へ残さない。代わりにエンジン内部の詳細診断も失われる。
 Dockerのローカル原本には要求URLが残り、既定の20MiB・5世代の回転まで管理者が読める。設定は既存原本・中央保存・Redis/S3キャッシュを削除しない。
+
+## コンテナ状態とチェック診断
+
+標準の各プロファイルは`log-observer`も起動する。Go標準ライブラリだけの補助処理が、5秒ごとにDocker Events、対象Composeのコンテナinspect、Consulの各ローカルエージェントの`/v1/agent/checks`と全体の`/v1/health/state/any`を読む。
+Dockerソケット権限はVectorと同じで、ホストへのAPI公開や業務サービスの起動依存は追加しない。
+`start`・`die`・`oom`・`health_status`はDockerの発生時刻、実コンテナID、Composeサービス名で記録する。
+Vectorは管理下の`log-observer`から来る`docker_*`イベントだけを対象の共通項目へ対応付け、収集コンテナIDを`collector_container_id`へ分離する。
+
+Docker healthcheckは直近の開始・終了時刻、終了コード、安全な診断を記録する。
+初回の異常、新しいチェック結果、履歴なし（`history_missing`）、inspect取得失敗（`docker_health_query_failed`）を区別する。
+Consulは実際の`target_node`、`service_id`、`check_id`、状態と診断を残し、同じ状態でも出力が変われば再記録する。
+同じ状態でのOutput変更はクラスタへの同期が遅れるため、各ホストはローカルagentの結果を優先する。
+Consulの全チェックも各収集ホストが観測するため、同じ対象の記録が複数ホストから届くことがある。
+
+チェックの任意出力は保存しない。最大2048バイトを検査してHTTP状態、接続拒否、時間切れ、DNS、権限、空き容量など既知の原因へ分類する。
+未知の本文は`output_redacted`、空は`empty_output`とし、上限超過は`diagnostic_truncated=true`で示す。URL、コマンド、環境、応答本文、原文のハッシュを代替項目へ残さない。
+S3のwgetチェックとAgentServerの認証付きfetchは、出力元でもHTTP状態または`connection_failed`だけを出す。
+
+取得失敗・復旧は`observer_query`に照会種別と安全な理由を記録する。
+全照会が成功した場合だけ8687の死活確認が200となり、`SincroLogObserver_<host>`としてConsulへ登録する。
+Docker Eventsは直近256件まで、health履歴も有限で、補助処理の停止中や大量発生時の全履歴は保証しない。秒単位の取得境界には重複があり得る。
+再起動時の初回観測を出し直す。自動回収・欠落区間の扱いは回収タスクで補う。
+
+bandogは従来の全サービス必須DNS判定と`/services.status`を維持し、ログ基盤に`SincroLogObserver`を加える。
+初回とサービスごとの異常・復旧だけを`bandog_dns`へ出し、同じ状態は再出力しない。
+`target_service`は監視先であり、ログの`host`はbandogの実行ホストである。DNSから監視先の配置ホストを推測しない。
+各ホストの収集インスタンスの状態はConsulの実チェック記録で確認する。
+
+Consulの同一状態の出力更新の遅延は[公式実装のCheckUpdateInterval](https://github.com/hashicorp/consul/blob/main/agent/config/runtime.go)と[agentチェックAPI](https://developer.hashicorp.com/consul/api-docs/agent/check)を確認した。
