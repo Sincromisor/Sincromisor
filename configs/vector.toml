@@ -5,10 +5,6 @@ data_dir = "/var/lib/vector"
 enabled = true
 address = "0.0.0.0:8686"
 
-[sources.docker]
-type = "docker_logs"
-include_labels = ["com.docker.compose.project=${SINCRO_LOG_PROJECT}"]
-
 # 両journalをnativeの既定探索で読む。入力名を維持しvector-data内のcursorを再利用する。
 [sources.host_journal]
 type = "journald"
@@ -16,20 +12,37 @@ type = "journald"
 extra_args = ["--merge"]
 current_boot_only = false
 since_now = false
+emit_cursor = true
+# Dockerのstdout/stderr判定とホスト重大度には数値のPRIORITYを使う。
+remap_priority = false
 [sources.host_journal.include_matches]
+COM_DOCKER_COMPOSE_PROJECT = ["${SINCRO_LOG_PROJECT}"]
 _SYSTEMD_UNIT = ["docker.service", "containerd.service"]
 _TRANSPORT = ["kernel"]
-SYSLOG_IDENTIFIER = ["systemd", "sincromisor-log-test"]
-
-[sources.internal]
-type = "internal_logs"
+SYSLOG_IDENTIFIER = ["systemd", "systemd-journald", "sincromisor-log-test"]
 
 [sources.metrics]
 type = "internal_metrics"
 
+# Dockerが付けたjournal属性を既存の正規化境界へ渡す。本文の偽装値は採用しない。
+[transforms.container_journal]
+type = "remap"
+inputs = ["host_journal"]
+drop_on_abort = true
+source = '''
+if .COM_DOCKER_COMPOSE_PROJECT != get_env_var!("SINCRO_LOG_PROJECT") || !exists(.CONTAINER_ID_FULL) { abort }
+stream = if .PRIORITY == "3" { "stderr" } else { "stdout" }
+. = {"message": .message, "timestamp": .timestamp, "container_id": .CONTAINER_ID_FULL,
+     "label": {"com.docker.compose.project": .COM_DOCKER_COMPOSE_PROJECT,
+               "com.docker.compose.service": .COM_DOCKER_COMPOSE_SERVICE},
+     "stream": stream,
+     "journal_cursor": .__CURSOR, "journal_boot_id": ._BOOT_ID,
+     "partial_message": .CONTAINER_PARTIAL_MESSAGE}
+'''
+
 [transforms.normalize]
 type = "remap"
-inputs = ["docker", "internal"]
+inputs = ["container_journal"]
 source = '''
 # 識別子は収集元を正とし、本文が偽装した値を採用しない。
 original = .
@@ -40,9 +53,11 @@ if err == null && is_object(parsed) { . = merge(., object!(parsed)) }
 .host = get_env_var!("SINCRO_LOG_HOST")
 .project = string(original.label."com.docker.compose.project") ?? get_env_var!("SINCRO_LOG_PROJECT")
 .service = original.label."com.docker.compose.service"
-if original.source_type == "internal_logs" { .service = "vector" }
 .container_id = original.container_id
 .stream = original.stream
+.journal_cursor = original.journal_cursor
+.journal_boot_id = original.journal_boot_id
+.partial_message = original.partial_message
 .observed_at = now()
 .timestamp = parse_timestamp(parsed.timestamp, format: "%+") ?? parse_timestamp(parsed.time, format: "%+") ?? original.timestamp
 .message = string(parsed.message) ?? string(parsed.msg) ?? string(original.message) ?? ""
@@ -67,11 +82,22 @@ if original.label."com.docker.compose.service" == "log-observer" && starts_with(
     .container_id = .target_container_id
     .service = .target_service
 }
-# journal解析失敗の内部診断に原本が含まれても、固定イベント以外を転送しない。
-if original.source_type == "internal_logs" && original.vector.component_type == "journald" {
+# Vector自身も同じ原本から一度だけ回収する。診断が原本を含んでも固定語彙以外を送らない。
+if original.label."com.docker.compose.service" == "vector" {
+    prefix, prefix_error = parse_regex(string!(original.message), r'^\S+\s+(?P<level>TRACE|DEBUG|INFO|WARN|ERROR)\b')
+    if prefix_error == null { .level = downcase(string!(prefix.level)) }
+    detail = downcase(string!(original.message))
+    reason = "vector_event"
+    if contains(detail, "configuration error") { reason = "configuration_failed" }
+    else if contains(detail, "journalctl") { reason = "journal_input_event" }
+    else if match(detail, r'request.*(failed|error)|retry|http.*[45][0-9]{2}') { reason = "delivery_failure" }
+    else if contains(detail, "discard") { reason = "discarded" }
+    else if match(detail, r'shut.*down|stopp') { reason = "stopped" }
+    else if contains(detail, "started") { reason = "started" }
     . = {"timestamp": .timestamp, "observed_at": .observed_at, "host": .host,
-         "project": .project, "service": "vector", "level": .level,
-         "event": "journal_input_event", "message": "journal input event"}
+         "project": .project, "service": "vector", "container_id": .container_id,
+         "journal_cursor": .journal_cursor, "journal_boot_id": .journal_boot_id,
+         "level": .level, "event": "vector_runtime", "reason": reason, "message": reason}
 }
 del(.label)
 del(.host_key)
@@ -96,6 +122,8 @@ framing.method = "newline_delimited"
 compression = "gzip"
 # 中央不在でも収集プロセスを起動し、HTTPの失敗は既存の再試行へ返す。
 healthcheck.enabled = false
+# 中央受理までcursor確定を待ち、同期前の停止では残存原本から再読取する。
+acknowledgements.enabled = true
 batch.timeout_secs = 1
 buffer.type = "disk"
 buffer.max_size = 268435488
@@ -113,6 +141,7 @@ type = "remap"
 inputs = ["host_journal"]
 drop_on_abort = true
 source = '''
+if exists(.CONTAINER_ID_FULL) { abort }
 raw = string(.message) ?? ""
 message = downcase(slice!(raw, 0, 4096))
 unit = string(._SYSTEMD_UNIT) ?? ""
@@ -132,6 +161,10 @@ if transport == "kernel" {
     origin = if unit == "docker.service" { "docker" } else { "containerd" }
     if match(message, r'error|failed|fatal|panic|timeout|timed out') { reason = "runtime_failure" }
     else if match(message, r'start|initializ|shutdown|stopp|terminat') { reason = "runtime_state" }
+} else if identifier == "systemd-journald" {
+    origin = "journald"
+    if match(message, r'suppressed [0-9]+ messages|missed [0-9]+.*messages') { reason = "logging_rate_limited" }
+    else if match(message, r'failed|no space|read-only|corrupt') { reason = "journal_failure" }
 } else if identifier == "systemd" {
     origin = "systemd"
     if match(message, r'failed|failure|timed out|core.dump|oom') { reason = "service_manager_failure" }

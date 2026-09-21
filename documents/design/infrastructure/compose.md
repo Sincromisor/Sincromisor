@@ -202,7 +202,7 @@ TCP 8001は内部待受のみとし、ブラウザのHTTP通信はフロント�
 
 ## ログ基盤
 
-各サービスのプロファイルにVector・転送Caddy・収集用Consulを同梱する。Vectorはホストjournalを読取専用で受け取り、`Docker/logging/vector` の配布イメージを通常起動でビルドする。journalの保存前提・権限・収集異常の監視は[ホストjournal](logging.md#ホストのjournal)を参照する。中央の保存・公開先・Consul登録は[ログの保存と検索](logging.md)を参照する。
+各サービスのプロファイルにVector・転送Caddy・収集用Consulを同梱する。全サービスはjournaldドライバーと4MiBのnon-blockingバッファを使い、中央停止で本体を待たせない。旧local原本からの移行にはコンテナ再作成が必要である。Vectorはホストjournalを読取専用で受け取り、`Docker/logging/vector` の配布イメージを通常起動でビルドする。journalの保存前提・権限・収集異常の監視は[ホストjournal](logging.md#ホストのjournal)を参照する。中央の保存・公開先・Consul登録は[ログの保存と検索](logging.md)を参照する。
 
 ## 参照
 

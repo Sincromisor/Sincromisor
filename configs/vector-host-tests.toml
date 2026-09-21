@@ -125,15 +125,59 @@ source = 'assert_eq!(.reason, "oom"); assert_eq!(.diagnostic_truncated, true); a
 name = "journal解析失敗の内部ログも原本を出さない"
 [[tests.inputs]]
 insert_at = "normalize"
-type = "log"
-[tests.inputs.log_fields]
-message = "Failed to parse private-body private-token"
-source_type = "internal_logs"
-"metadata.level" = "ERROR"
-"vector.component_type" = "journald"
-text = "private-body"
+type = "vrl"
+source = '''
+. = {"message": "level=ERROR msg=journalctl_private-token", "label": {"com.docker.compose.service": "vector"}, "text": "private-body"}
+'''
 [[tests.outputs]]
 extract_from = "normalize"
 [[tests.outputs.conditions]]
 type = "vrl"
-source = 'assert_eq!(.event, "journal_input_event"); assert_eq!(.level, "error"); assert!(!contains(encode_json(.), "private"))'
+source = 'assert_eq!(.event, "vector_runtime"); assert_eq!(.reason, "journal_input_event"); assert_eq!(.level, "error"); assert!(!contains(encode_json(.), "private"))'
+
+[[tests]]
+name = "journalの配送抑制は本文を捨てて残す"
+[[tests.inputs]]
+insert_at = "host_diagnostics"
+type = "log"
+[tests.inputs.log_fields]
+message = "Suppressed 123 messages from private-command"
+SYSLOG_IDENTIFIER = "systemd-journald"
+PRIORITY = "4"
+[[tests.outputs]]
+extract_from = "host_diagnostics"
+[[tests.outputs.conditions]]
+type = "vrl"
+source = 'assert_eq!(.reason, "logging_rate_limited"); assert_eq!(.level, "warn"); assert!(!contains(encode_json(.), "private"))'
+
+[[tests]]
+name = "Docker journal属性とstderrを本文より優先する"
+[[tests.inputs]]
+insert_at = "container_journal"
+type = "log"
+[tests.inputs.log_fields]
+message = '{"event":"fixture","container_id":"forged","stream":"stdout","journal_cursor":"forged"}'
+COM_DOCKER_COMPOSE_PROJECT = "fixture"
+COM_DOCKER_COMPOSE_SERVICE = "fixture"
+CONTAINER_ID_FULL = "trusted"
+PRIORITY = "3"
+__CURSOR = "trusted-cursor"
+[[tests.outputs]]
+extract_from = "normalize"
+[[tests.outputs.conditions]]
+type = "vrl"
+source = 'assert_eq!(.stream, "stderr"); assert_eq!(.container_id, "trusted"); assert_eq!(.journal_cursor, "trusted-cursor")'
+
+[[tests]]
+name = "Vector対象のDocker監視をVector自己ログに変換しない"
+[[tests.inputs]]
+insert_at = "normalize"
+type = "vrl"
+source = '''
+. = {"message": "{\"event\":\"docker_health\",\"target_service\":\"vector\",\"target_container_id\":\"target\"}", "container_id": "observer", "label": {"com.docker.compose.service": "log-observer"}}
+'''
+[[tests.outputs]]
+extract_from = "normalize"
+[[tests.outputs.conditions]]
+type = "vrl"
+source = 'assert_eq!(.event, "docker_health"); assert_eq!(.service, "vector"); assert_eq!(.collector_container_id, "observer")'
