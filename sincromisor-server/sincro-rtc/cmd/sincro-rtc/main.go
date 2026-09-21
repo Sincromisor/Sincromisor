@@ -10,7 +10,8 @@ import (
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
-		fmt.Fprintf(os.Stderr, "sincro-rtc: %v\n", err)
+		// 設定値やURLを含む起動例外を文字列化せず、終了理由と例外の型を残す。
+		newJSONLogger(os.Stderr).Error("sincro-rtc startup failed", "reason", "startup_failed", "error_type", fmt.Sprintf("%T", err))
 		os.Exit(1)
 	}
 }

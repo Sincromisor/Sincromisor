@@ -18,5 +18,6 @@ ENV NODE_ENV=production \
 # DBは管理者の設定と会話を含むため、サービスユーザーだけが読める専用領域に置く。
 RUN install -d -m 700 -o node -g node /data
 COPY --from=build --chown=node:node /app/.mastra/output ./.mastra/output
+COPY --chown=node:node start.mjs ./start.mjs
 USER node
-CMD ["node", ".mastra/output/index.mjs"]
+CMD ["node", "start.mjs"]

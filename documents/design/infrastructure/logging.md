@@ -185,3 +185,29 @@ PokeとMastraは同じ対話ワーカーを通る。NeMo補正の詳細追跡は
 **破壊的変更**: Pythonの標準出力と`--log-file`は従来のテキストからJSONLへ変わる。
 ファイルは指定時だけ作成し、既存の10 MiB・100世代のローテーションを維持する。
 設定を繰り返してもハンドラーを共有・重複しない。設定変更はコンテナの再作成で反映する。
+
+## RTC・AgentServer・LLM
+
+RTCは標準`slog.JSONHandler`を使い、時刻・レベル・本文キーを出力元で共通名へ揃える。
+`session_id`、`stage`、`reason`などの既存属性を維持する。通常ログは標準出力、起動失敗は標準エラーのJSONLへ出す。
+起動前の引数解析も直接のusage出力を止め、設定値を含み得る例外全文は出さず、`startup_failed`と例外型を残す。
+Pionなど第三者の非JSON行はVectorが原本の文字列を取り込む。
+
+AgentServerは導入済みMastraのPinoロガーを直接依存として宣言し、整形表示を無効にする。
+`timestamp`・`level`・`message`への対応付けは出力元で行い、Pinoの数値`time`は補助項目として残る。
+任意の要求・ヘッダー・例外・動的メッセージは出さず、固定メッセージと選別した診断属性を使う。
+対話設定は厳密に検証し、無効時は`text`を出力しない。本文の主記録元はTextProcessorとし、AgentServerに重複した本文イベントは追加しない。
+子ロガーでも同じ属性選別を適用する。配布起動窓口`start.mjs`は設定失敗もJSONLへ変換する。
+
+TextProcessorが送る`memory.thread = sincromisor:<session_id>`を、認証済みAgent API要求の処理開始・引渡しへ対応付ける。
+`agent_request_dispatched`はHTTPのSSE応答を渡した時点であり、生成の正常完了を意味しない。発話ID・シーケンスIDはAgentServerで作らない。
+Studioの任意thread名は会話IDへ推測変換しない。MCPは接続開始・結果とツール開始・結果・所要時間を、設定上のサーバーIDとツール名だけで記録する。
+未設定は`mcp_inactive`、失敗は`outcome=failed`とし、ツール入出力・認証・相手先URLを記録しない。
+
+固定llama-serverの[公式ログ設定](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md)を起動ラッパーへ渡す。
+対話設定が有効なら`--log-jsonl --log-verbosity 3`、無効なら`--log-disable`を使う。
+無効時は推論内部の詳細診断も失われるため、Dockerの状態・healthcheckとAgentServerの要求結果を使う。
+共通ロガーより前のGPU等の短い起動警告は残る。人工本文の実推論で標準出力・標準エラーの非記録を確認する。
+llamaのJSONLの`time`は経過時間なので、中央の発生時刻にはDockerの記録時刻を使う。
+
+**破壊的変更**: RTCとAgentServerの運用ログをテキストからJSONLへ変更する。RTC・Mastra APIや会話履歴の契約は変更しない。

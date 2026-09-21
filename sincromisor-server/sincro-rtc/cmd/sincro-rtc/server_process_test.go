@@ -109,12 +109,12 @@ func TestProcessSIGTERMStopsHTTPAndJoinsActiveSession(t *testing.T) {
 	}
 	output := processOutput.String()
 	for _, expected := range []string{
-		`stage=listener_ready`,
+		`"stage":"listener_ready"`,
 		`shutdown signal received`,
-		`reason=process_shutdown`,
+		`"reason":"process_shutdown"`,
 		`session registry updated`,
-		`stage=shutdown_complete`,
-		`count=0`,
+		`"stage":"shutdown_complete"`,
+		`"count":0`,
 		`sincro-rtc stopped`,
 	} {
 		if !strings.Contains(output, expected) {

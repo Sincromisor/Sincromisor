@@ -49,7 +49,7 @@ func runWithBoundaries(
 	if serveProcess == nil {
 		return errors.New("serve boundary must not be nil")
 	}
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	logger := newJSONLogger(os.Stdout)
 	processCtx, cancelProcess := context.WithCancel(context.Background())
 	defer cancelProcess()
 	synthDecoder, err := newSynthDecoder(processCtx, cfg.FFmpegPath, runner)

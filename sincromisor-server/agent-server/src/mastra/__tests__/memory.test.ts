@@ -102,6 +102,44 @@ test("同じthreadだけに過去の発話を投入し、別会話とStudioに�
 			!requests[3].includes("白い雲923") && !requests[3].includes("緑の島456"),
 		);
 		assert.equal(requests[3].split("赤い森781").length - 1, 1);
+		// 実HTTPのmiddlewareでもPythonのthreadを対応付け、本文・認証をログ引数へ渡さない。
+		const info: unknown[][] = [];
+		const originalInfo = logger.info;
+		logger.info = (...args) => {
+			info.push(args);
+		};
+		try {
+			const response = await app.request(
+				"http://localhost/api/agents/sincromisor-character/stream",
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${process.env.SINCRO_AGENT_ADMIN_TOKEN}`,
+					},
+					body: JSON.stringify({
+						messages: [{ role: "user", content: "ログ非記録の青空761" }],
+						memory: {
+							resource: "sincromisor-local",
+							thread: "sincromisor:session-http",
+						},
+					}),
+				},
+			);
+			assert.equal(response.status, 200, await response.clone().text());
+			await response.text();
+			assert(
+				info.some((args) =>
+					JSON.stringify(args).includes('"session_id":"session-http"'),
+				),
+			);
+			assert(!JSON.stringify(info).includes("青空761"));
+			assert(
+				!JSON.stringify(info).includes(process.env.SINCRO_AGENT_ADMIN_TOKEN),
+			);
+		} finally {
+			logger.info = originalInfo;
+		}
 	} finally {
 		// 保存領域だけを先に閉じず、Mastra所有の処理を止めてから接続を解放する。
 		await mastra.shutdown();

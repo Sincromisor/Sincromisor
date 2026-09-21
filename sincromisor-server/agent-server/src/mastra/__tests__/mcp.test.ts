@@ -7,6 +7,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { setTimeout } from "node:timers/promises";
 import { noopObserve } from "@mastra/core/tools";
+import { createServiceLogger } from "../logging.js";
 import { connectMcp, parseMcpConfig, readMcpConfig } from "../mcp.js";
 import { startMcpFixture } from "./mcp-fixture.js";
 
@@ -79,6 +80,11 @@ test("MCP設定は不在なら空、秘密は管理者専用ファイルに限�
 
 test("実MCPの一覧・認証・呼出し・失敗・上限と取消を扱う", async () => {
 	const fixture = await startMcpFixture();
+	const logger = createServiceLogger(false);
+	const events: Record<string, unknown>[] = [];
+	logger.info = logger.warn = (_message, fields = {}) => {
+		events.push(fields);
+	};
 	const registry = await connectMcp(
 		parseMcpConfig({
 			servers: {
@@ -89,6 +95,7 @@ test("実MCPの一覧・認証・呼出し・失敗・上限と取消を扱う",
 				},
 			},
 		}),
+		logger,
 	);
 	try {
 		const secret = registry.tools.local_get_secret_word;
@@ -118,6 +125,22 @@ test("実MCPの一覧・認証・呼出し・失敗・上限と取消を扱う",
 			"wait",
 			"wait",
 		]);
+		const finished = events.filter(
+			(event) => event.event === "mcp_tool_finished",
+		);
+		assert.equal(finished.length, 4);
+		assert.equal(finished[0].outcome, "success");
+		assert(finished.slice(1).every((event) => event.outcome === "failed"));
+		assert(
+			finished.every(
+				(event) =>
+					event.server === "local" &&
+					typeof event.tool === "string" &&
+					typeof event.duration_ms === "number",
+			),
+		);
+		assert(!JSON.stringify(events).includes("琥珀の月583"));
+		assert(!JSON.stringify(events).includes("fixture-mcp-token"));
 	} finally {
 		await registry.disconnect();
 		await fixture.close();
