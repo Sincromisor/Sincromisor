@@ -10,6 +10,7 @@ from typing import Any
 
 import numpy as np
 from sincro_config import SincromisorLoggerConfig
+from sincro_config.runtime_diagnostics import failure_fields
 from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
 
 from .ProperNounDictionary import ProperNounDictionary
@@ -776,44 +777,75 @@ class SpeechRecognizerNemoWorker:
         """認識結果と補正 trace をローカルログへ保存する。"""
         if self.voice_log_dir is None:
             return None
-        time_text: str = datetime.fromtimestamp(result.start_at).strftime(
-            "%Y%m%d_%H%M%S.%f"
-        )
-        write_dir: Path = Path(self.voice_log_dir, result.session_id)
-        write_dir.mkdir(parents=True, exist_ok=True)
-        write_path: Path = Path(write_dir, f"{result.speech_id:06d}_{time_text}.json")
-        with open(write_path, "w", encoding="utf-8") as text:
-            result_json = result.to_json(dumps_opt={"indent": 4})
-            text.write(result_json)
-        self.logger.info(f"Wrote: {write_path}")
-        if correction_trace is not None:
-            trace_path = write_path.with_suffix(".trace.json")
-            with open(trace_path, "w", encoding="utf-8") as text:
-                text.write(json.dumps(correction_trace, ensure_ascii=False, indent=4))
-            self.logger.info(f"Wrote: {trace_path}")
-        return write_path
+        diagnostic = {
+            "event": "recognition_storage",
+            "peer": "local",
+            "stage": "write",
+            "session_id": result.session_id,
+            "speech_id": result.speech_id,
+            "sequence_id": result.sequence_id,
+        }
+        try:
+            time_text: str = datetime.fromtimestamp(result.start_at).strftime(
+                "%Y%m%d_%H%M%S.%f"
+            )
+            write_dir: Path = Path(self.voice_log_dir, result.session_id)
+            write_dir.mkdir(parents=True, exist_ok=True)
+            write_path: Path = Path(
+                write_dir, f"{result.speech_id:06d}_{time_text}.json"
+            )
+            with open(write_path, "w", encoding="utf-8") as text:
+                result_json = result.to_json(dumps_opt={"indent": 4})
+                text.write(result_json)
+            if correction_trace is not None:
+                trace_path = write_path.with_suffix(".trace.json")
+                with open(trace_path, "w", encoding="utf-8") as text:
+                    text.write(
+                        json.dumps(correction_trace, ensure_ascii=False, indent=4)
+                    )
+            self.logger.info({**diagnostic, "outcome": "success"})
+            return write_path
+        except OSError as error:
+            self.logger.warning(
+                {**diagnostic, **failure_fields(error), "outcome": "failed"}
+            )
+            raise
 
     def __export_voice(self, result: SpeechExtractorResult) -> Path | None:
         """入力音声を opus 優先で保存し、後追い検証できるようにする。"""
         if self.voice_log_dir is None:
             return None
-        time_text: str = datetime.fromtimestamp(result.start_at).strftime(
-            "%Y%m%d_%H%M%S.%f",
-        )
-        write_dir: Path = Path(self.voice_log_dir, result.session_id)
-        write_dir.mkdir(parents=True, exist_ok=True)
-        write_path: Path
-        if shutil.which("opusenc"):
-            write_path = Path(
-                write_dir,
-                f"{result.speech_id:06d}_{time_text}.opus",
+        diagnostic = {
+            "event": "recognition_storage",
+            "peer": "local",
+            "stage": "write",
+            "session_id": result.session_id,
+            "speech_id": result.speech_id,
+            "sequence_id": result.sequence_id,
+        }
+        try:
+            time_text: str = datetime.fromtimestamp(result.start_at).strftime(
+                "%Y%m%d_%H%M%S.%f",
             )
-            result.to_opusfile(path=str(write_path))
-        else:
-            write_path = Path(
-                write_dir,
-                f"{result.speech_id:06d}_{time_text}.wav",
+            write_dir: Path = Path(self.voice_log_dir, result.session_id)
+            write_dir.mkdir(parents=True, exist_ok=True)
+            write_path: Path
+            if shutil.which("opusenc"):
+                write_path = Path(
+                    write_dir,
+                    f"{result.speech_id:06d}_{time_text}.opus",
+                )
+                result.to_opusfile(path=str(write_path))
+            else:
+                write_path = Path(
+                    write_dir,
+                    f"{result.speech_id:06d}_{time_text}.wav",
+                )
+                result.to_wavfile(path=str(write_path))
+            self.logger.info({**diagnostic, "outcome": "success"})
+            return write_path
+        except OSError as error:
+            self.logger.warning(
+                {**diagnostic, **failure_fields(error), "outcome": "failed"}
             )
-            result.to_wavfile(path=str(write_path))
-        self.logger.info(f"Wrote: {write_path}")
-        return write_path
+            raise

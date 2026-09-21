@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"testing"
 )
@@ -94,4 +95,23 @@ func equalAttrs(got, want map[string]any) bool {
 		}
 	}
 	return true
+}
+
+func TestRegistrationLogsExcludeExceptionValues(t *testing.T) {
+	for _, test := range []struct {
+		err    error
+		reason string
+	}{
+		{nil, "completed"},
+		{context.DeadlineExceeded, "timeout"},
+		{context.Canceled, "cancelled"},
+		{errors.New("private-token-url"), "registration_failed"},
+	} {
+		handler := &capturedHandler{}
+		logRegistration(slog.New(handler), "register", "failed", test.err)
+		want := map[string]any{"event": "service_discovery", "peer": "consul", "stage": "register", "outcome": "failed", "reason": test.reason}
+		if len(handler.records) != 1 || !equalAttrs(handler.records[0].attrs, want) {
+			t.Fatalf("registration diagnostic = %#v", handler.records)
+		}
+	}
 }

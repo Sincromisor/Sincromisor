@@ -1,10 +1,15 @@
 """MastraのHTTPストリームを検証し、正常完了までユーザー向け本文だけを取り出す。"""
 
+import asyncio
+import logging
 from collections.abc import AsyncGenerator
+from contextlib import aclosing
+from time import perf_counter
 from urllib.parse import quote
 
 import aiohttp
 from pydantic import BaseModel, ConfigDict, Field
+from sincro_config.runtime_diagnostics import failure_fields
 
 
 class _StepResult(BaseModel):
@@ -32,7 +37,11 @@ class _Event(BaseModel):
 
 
 class MastraResponseError(RuntimeError):
-    """正常な回答として確定できないMastraの配信を示す。"""
+    """正常な回答として確定できない配信を、本文を含まない理由で区別する。"""
+
+    def __init__(self, message: str, reason: str = "invalid_stream") -> None:
+        super().__init__(message)
+        self.reason = reason
 
 
 class MastraClient:
@@ -58,6 +67,35 @@ class MastraClient:
         )
 
     async def chat(self, query: str, session_id: str) -> AsyncGenerator[str]:
+        """HTTP/SSEの正常終端・取消・失敗を区別し、URL・要求・応答は記録しない。"""
+        started = perf_counter()
+        diagnostic: dict[str, object] = {
+            "event": "agent_stream",
+            "peer": "agent_server",
+            "stage": "stream",
+            "session_id": session_id,
+            "outcome": "success",
+        }
+        try:
+            async with aclosing(self._chat(query, session_id)) as stream:
+                async for text in stream:
+                    yield text
+        except asyncio.CancelledError, GeneratorExit:
+            diagnostic.update(outcome="cancelled", reason="cancelled")
+            raise
+        except Exception as error:
+            diagnostic.update(failure_fields(error))
+            diagnostic["outcome"] = "failed"
+            if isinstance(error, aiohttp.ClientResponseError):
+                diagnostic["stage"] = "http"
+            elif isinstance(error, MastraResponseError):
+                diagnostic["reason"] = error.reason
+            raise
+        finally:
+            diagnostic["duration_ms"] = (perf_counter() - started) * 1000
+            logging.getLogger("sincro.MastraClient").info(diagnostic)
+
+    async def _chat(self, query: str, session_id: str) -> AsyncGenerator[str]:
         """新しい発話だけを対応threadへ送り、成功finishと[DONE]を受けて終了する。
 
         呼出元は生成器をaclosingで所有する。HTTP失敗・不正イベント・異常終端・
@@ -99,7 +137,12 @@ class MastraClient:
                     raise MastraResponseError("Mastra sent an event after finish.")
                 event = _Event.model_validate_json(value)
                 if event.type in {"error", "abort"}:
-                    raise MastraResponseError("Mastra interrupted the response.")
+                    raise MastraResponseError(
+                        "Mastra interrupted the response.",
+                        reason="remote_abort"
+                        if event.type == "abort"
+                        else "remote_error",
+                    )
                 if event.type == "text-delta":
                     if event.payload is None or event.payload.text is None:
                         raise MastraResponseError("Mastra text-delta is missing text.")
@@ -112,4 +155,6 @@ class MastraClient:
                         )
                     finished = True
                 # step-finishやツール・推論通知は最終結果でも読み上げ本文でもない。
-            raise MastraResponseError("Mastra stream ended before [DONE].")
+            raise MastraResponseError(
+                "Mastra stream ended before [DONE].", reason="unexpected_eof"
+            )

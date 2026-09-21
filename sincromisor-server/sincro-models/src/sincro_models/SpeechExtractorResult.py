@@ -1,10 +1,11 @@
-import subprocess as sp
 import wave
 from typing import Any
 
 import msgpack
 import numpy as np
 from pydantic import BaseModel, ConfigDict
+
+from .audio_encoder import encode_audio
 
 
 class SpeechExtractorResult(BaseModel):
@@ -76,7 +77,8 @@ class SpeechExtractorResult(BaseModel):
         return pack
 
     def to_opus(self) -> bytes:
-        enc_p = sp.run(
+        """認識音声を一度だけOpus化し、失敗を会話・発話ID付きで診断する。"""
+        return encode_audio(
             [
                 "opusenc",
                 "--raw",
@@ -89,12 +91,13 @@ class SpeechExtractorResult(BaseModel):
                 "-",
                 "-",
             ],
-            input=self.voice.tobytes(),
-            capture_output=True,
-            text=False,
-            check=True,
+            self.voice.tobytes(),
+            {
+                "session_id": self.session_id,
+                "speech_id": self.speech_id,
+                "sequence_id": self.sequence_id,
+            },
         )
-        return enc_p.stdout
 
     # voiceをopus形式でエンコードし、ファイルに書き出す。
     # 実行にはopusencコマンドが必要。

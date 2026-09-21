@@ -4,7 +4,8 @@ import { noopLogger } from "@mastra/core/logger";
 import type { Processor } from "@mastra/core/processors";
 import { MCPClient } from "@mastra/mcp";
 import { z } from "zod";
-import { createServiceLogger } from "./logging.js";
+import { conversationId, createServiceLogger } from "./logging.js";
+import { failureReason } from "./runtimeDiagnostics.js";
 
 /** ファイルと将来の管理画面で共用する設定境界。実行コードや指示は受け付けない。 */
 export const mcpConfigSchema = z.strictObject({
@@ -127,8 +128,15 @@ export async function connectMcp(
 					...tool,
 					execute: async (input, context) => {
 						const started = performance.now();
+						const sessionId = conversationId({
+							memory: {
+								thread: context?.requestContext?.get("mastra__threadId"),
+							},
+						});
+						const ids = sessionId ? { session_id: sessionId } : {};
 						logger.info("MCP tool started", {
 							event: "mcp_tool_started",
+							...ids,
 							server: id,
 							tool: name,
 						});
@@ -141,18 +149,25 @@ export async function connectMcp(
 								result.isError === true;
 							logger.info(failed ? "MCP tool failed" : "MCP tool succeeded", {
 								event: "mcp_tool_finished",
+								...ids,
 								server: id,
 								tool: name,
 								outcome: failed ? "failed" : "success",
+								reason: failed ? "tool_error" : "completed",
 								duration_ms: performance.now() - started,
 							});
 							return result;
-						} catch {
+						} catch (error) {
+							const reason = context?.abortSignal?.aborted
+								? "cancelled"
+								: failureReason(error);
 							logger.warn("MCP tool failed", {
 								event: "mcp_tool_finished",
+								...ids,
 								server: id,
 								tool: name,
-								outcome: "failed",
+								outcome: reason === "cancelled" ? "cancelled" : "failed",
+								reason,
 								duration_ms: performance.now() - started,
 							});
 							// MCP側のエラー全文をモデル・Studio・公開ログへ流さない。
@@ -168,12 +183,13 @@ export async function connectMcp(
 				outcome: "success",
 				duration_ms: performance.now() - start,
 			});
-		} catch {
+		} catch (error) {
 			// 接続不能で通常会話を止めない。資格情報を含み得る下位例外は公開しない。
 			logger.warn("MCP discovery failed", {
 				event: "mcp_discovery_finished",
 				server: id,
 				outcome: "failed",
+				reason: discovery.signal.aborted ? "timeout" : failureReason(error),
 				duration_ms: performance.now() - start,
 			});
 			await client.disconnect();

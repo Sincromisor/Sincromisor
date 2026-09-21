@@ -61,6 +61,7 @@ func serve(
 	}()
 	var deregister func(context.Context) error
 	if cfg.ConsulAgentHost != "" {
+		logRegistration(logger, "register", "started", nil)
 		registration, registrationErr := discovery.NewRegistration(discovery.Registration{
 			AgentHost: cfg.ConsulAgentHost,
 			AgentPort: uint16(cfg.ConsulAgentPort),
@@ -72,11 +73,13 @@ func serve(
 			registrationErr = registration.Register(context.Background())
 		}
 		if registrationErr != nil {
+			logRegistration(logger, "register", "failed", registrationErr)
 			shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownHTTPTimeout)
 			shutdownErr := server.Shutdown(shutdownCtx)
 			cancel()
 			return errors.Join(fmt.Errorf("register Consul service: %w", registrationErr), shutdownErr)
 		}
+		logRegistration(logger, "register", "success", nil)
 		deregister = registration.Deregister
 	}
 	processState.MarkReady()
@@ -102,7 +105,13 @@ func serve(
 			if deregister == nil {
 				return nil
 			}
-			return deregister(ctx)
+			err := deregister(ctx)
+			outcome := "success"
+			if err != nil {
+				outcome = "failed"
+			}
+			logRegistration(logger, "deregister", outcome, err)
+			return err
 		},
 		CancelProcess: cancelProcess,
 		WaitOffers:    offers.Wait,
@@ -133,4 +142,27 @@ func logShutdownRequested(logger *slog.Logger) {
 // logShutdownComplete は終了完了と残るセッション数を記録し、終了時の処理数は公開しない。
 func logShutdownComplete(logger *slog.Logger, activeSessionCount int) {
 	logger.Info("sincro-rtc stopped", "stage", "shutdown_complete", "count", activeSessionCount)
+}
+
+// logRegistration は登録段階と型から判別した原因だけを残し、URLや応答本文を出さない。
+func logRegistration(logger *slog.Logger, stage, outcome string, err error) {
+	reason := "completed"
+	if err != nil {
+		reason = "registration_failed"
+		var networkError net.Error
+		switch {
+		case errors.Is(err, context.Canceled):
+			reason = "cancelled"
+		case errors.As(err, &networkError):
+			reason = "connection_failed"
+			if networkError.Timeout() {
+				reason = "timeout"
+			}
+		}
+	}
+	level := slog.LevelInfo
+	if err != nil {
+		level = slog.LevelWarn
+	}
+	logger.Log(context.Background(), level, "Consul registration", "event", "service_discovery", "peer", "consul", "stage", stage, "outcome", outcome, "reason", reason)
 }

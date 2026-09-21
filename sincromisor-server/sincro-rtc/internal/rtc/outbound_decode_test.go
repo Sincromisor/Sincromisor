@@ -95,8 +95,9 @@ func TestHandleSynthOutputLogsDecodeErrorKindAndClosesSession(t *testing.T) {
 			if err := session.handleSynthOutput(pipeline.Output[protocol.SynthesizerResult]{
 				Generation: 1,
 				Value: protocol.SynthesizerResult{
-					Message: "private response text",
-					Voice:   []byte("private voice payload"),
+					SpeechID: 42,
+					Message:  "private response text",
+					Voice:    []byte("private voice payload"),
 				},
 			}); err != nil {
 				t.Fatalf("handleSynthOutput() error = %v", err)
@@ -107,7 +108,7 @@ func TestHandleSynthOutputLogsDecodeErrorKindAndClosesSession(t *testing.T) {
 			if record.message != "synthesized audio decode failed" {
 				t.Fatalf("log message = %q", record.message)
 			}
-			want := map[string]any{"session_id": "decode-session", "reason": "codec_error", "codec_error_kind": test.kind, "codec_error_reason": test.reason}
+			want := map[string]any{"speech_id": int64(42), "session_id": "decode-session", "reason": "codec_error", "codec_error_kind": test.kind, "codec_error_reason": test.reason}
 			if !equalOutboundAttrs(record.attrs, want) {
 				t.Fatalf("log attrs = %#v, want %#v", record.attrs, want)
 			}

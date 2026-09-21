@@ -73,6 +73,10 @@ func TestDecodeClassifiesTimeoutAndCallerCancellation(t *testing.T) {
 		runner := &fakeRunner{waitForContext: true}
 		_, err := newFakeDecoder(t, runner).Decode(context.Background(), validResult("audio/wav"))
 		assertDecodeKind(t, err, ErrorTimeout)
+		var diagnostic *processFailure
+		if !errors.As(err, &diagnostic) || diagnostic.outcome != "timeout" {
+			t.Fatalf("missing timeout diagnostic: %v", err)
+		}
 	})
 	t.Run("caller cancellation wins", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -114,6 +118,10 @@ func TestDecodeTimeoutHasFiniteUpperBound(t *testing.T) {
 		context.Background(), validResult("audio/wav"),
 	)
 	assertDecodeKind(t, err, ErrorTimeout)
+	var diagnostic *processFailure
+	if !errors.As(err, &diagnostic) || diagnostic.outcome != "timeout" {
+		t.Fatalf("missing timeout diagnostic: %v", err)
+	}
 	if elapsed := time.Since(start); elapsed > decodeTimeout+time.Second {
 		t.Fatalf("Decode() elapsed = %s, want <= %s", elapsed, decodeTimeout+time.Second)
 	}

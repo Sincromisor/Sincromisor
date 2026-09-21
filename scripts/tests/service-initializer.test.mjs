@@ -1,6 +1,6 @@
 /** 初回準備、再利用、取得失敗と破損時の停止を、実行用コンテナで確認する。 */
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
@@ -58,7 +58,14 @@ test("配布設定だけでchatを含む全体を起動し、初期化と同じ�
 	// Composeの正規化出力は作成フラグを省略する版があるため、指定自体も確認する。
 	for (const name of ["llama-server", "speech-recognizer"]) {
 		const config = parse(readFileSync(`compose/${name}.yml`, "utf8"));
-		assert.equal(config.services[name].volumes[0].bind.create_host_path, true);
+		assert.equal(
+			config.services[name].volumes.find(
+				(v) =>
+					v.target ===
+					(name === "llama-server" ? "/models" : "/opt/sincromisor/.cache"),
+			).bind.create_host_path,
+			true,
+		);
 	}
 	for (const name of [
 		"speech-recognizer",
@@ -114,6 +121,11 @@ SINCRO_AGENT_ADMIN_TOKEN=explicit-admin SINCRO_PROCESSOR_MASTRA_TOKEN=explicit-p
 mv /auth/token /auth/saved-token
 if sh /with-token.sh true; then exit 1; fi
 mv /auth/saved-token /auth/token
+cp /auth/token /auth/saved-token
+chmod 644 /auth/token
+: > /auth/token
+if sh /with-token.sh true; then exit 1; fi
+mv /auth/saved-token /auth/token
 # 通信失敗時の途中ファイルは、正常モデルへ昇格しない。
 mkdir /fake-bin
 printf '#!/bin/sh\nprintf incomplete > /models/gemma-4-E2B-it-Q4_0.gguf.part\nexit 22\n' > /fake-bin/curl
@@ -132,7 +144,7 @@ SINCRO_LLAMA_MODEL_FILE=custom.gguf sh /initialize.sh llama
 if SINCRO_LLAMA_MODEL_FILE=missing.gguf sh /initialize.sh llama; then exit 1; fi
 if SINCRO_LLAMA_MODEL_FILE=../custom.gguf sh /initialize.sh llama; then exit 1; fi
 `;
-	execFileSync(
+	const output = execFileSync(
 		"docker",
 		[
 			"run",
@@ -153,4 +165,54 @@ if SINCRO_LLAMA_MODEL_FILE=../custom.gguf sh /initialize.sh llama; then exit 1; 
 		],
 		{ encoding: "utf8", stdio: "pipe" },
 	);
+	const rows = output
+		.split("\n")
+		.filter((line) => line.startsWith("{"))
+		.map((line) => JSON.parse(line));
+	for (const stage of [
+		"secret_read",
+		"secret_validate",
+		"model_download",
+		"model_checksum",
+		"model_exists",
+		"model_name",
+	]) {
+		assert(
+			rows.some((row) => row.stage === stage && row.outcome === "failed"),
+			stage,
+		);
+	}
+	assert(rows.some((row) => row.outcome === "reused"));
+	assert(!output.includes("explicit-admin"));
+});
+
+test("秘密の保存先への書込拒否を固定段階として記録する", () => {
+	const result = spawnSync(
+		"docker",
+		[
+			"run",
+			"--rm",
+			"--network",
+			"none",
+			"--user",
+			"1001:1001",
+			"--entrypoint",
+			"sh",
+			"--mount",
+			"type=tmpfs,destination=/auth,tmpfs-mode=0555",
+			"-v",
+			`${resolve("Docker/service-initializer/initialize.sh")}:/initialize.sh:ro`,
+			"curlimages/curl:8.12.1",
+			"/initialize.sh",
+			"s3",
+		],
+		{ encoding: "utf8" },
+	);
+	assert.equal(result.status, 1);
+	const rows = result.stdout
+		.split("\n")
+		.filter((line) => line.startsWith("{"))
+		.map((line) => JSON.parse(line));
+	assert.equal(rows.at(-1).stage, "secret_permissions");
+	assert.equal(rows.at(-1).outcome, "failed");
 });

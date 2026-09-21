@@ -130,7 +130,9 @@ test("実MCPの一覧・認証・呼出し・失敗・上限と取消を扱う",
 		);
 		assert.equal(finished.length, 4);
 		assert.equal(finished[0].outcome, "success");
-		assert(finished.slice(1).every((event) => event.outcome === "failed"));
+		assert.equal(finished[1].outcome, "failed");
+		assert.equal(finished[2].reason, "timeout");
+		assert.equal(finished[3].outcome, "cancelled");
 		assert(
 			finished.every(
 				(event) =>

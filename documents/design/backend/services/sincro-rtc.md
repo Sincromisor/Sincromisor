@@ -84,3 +84,5 @@
 
 標準slogのJSONLで起動・セッション・終了を記録する。既存のsession_id・stage・reasonは構造付き項目のまま維持する。起動失敗は生の引数や設定値を出さず、共通形式で標準エラーへ残す。
 内容切替と互換性は[ログ基盤](../../infrastructure/logging.md#rtcagentserverllm)を参照する。
+
+FFmpegの起動確認と復号失敗は `audio_command_failure` として、`stage`、`exit_code`、`outcome`、`duration_ms`、`stderr_diagnostic`、`stderr_truncated` を残す。stderrの先頭64 KiBから既知の原因語だけを固定文へ置換し、未知の原文は保持しない。復号の呼出し元は会話・発話IDを付ける。既存の5秒、入力8 MiB、出力120秒、部分結果破棄とRTC公開エラーは変更しない。Consul登録・解除は段階と成功/失敗を記録し、探索の代替理由は既存の有限分類を維持する。
