@@ -1,0 +1,65 @@
+[[tests]]
+name = "JSON本文の偽装を防ぎ、認証属性を除去する"
+[[tests.inputs]]
+insert_at = "normalize"
+type = "log"
+[tests.inputs.log_fields]
+message = '{"message":"日本語 Bearer fixture-secret","host":"forged","service":"forged","level":"INFO","session_id":"session","token":"secret","nested":{"private_key":"secret","count":2}}'
+timestamp = "2026-09-22T00:00:00Z"
+container_id = "container"
+stream = "stdout"
+[tests.inputs.log_fields.label]
+"com.docker.compose.project" = "fixture"
+"com.docker.compose.service" = "fixture"
+[[tests.outputs]]
+extract_from = "normalize"
+[[tests.outputs.conditions]]
+type = "vrl"
+source = '''
+assert_eq!(.host, "fixture")
+assert_eq!(.service, "fixture")
+assert_eq!(.project, "fixture")
+assert_eq!(.message, "日本語 Bearer [REDACTED]")
+assert_eq!(.level, "info")
+assert_eq!(.session_id, "session")
+assert!(!exists(.token))
+assert!(!exists(.nested.private_key))
+assert_eq!(.nested.count, 2)
+'''
+
+[[tests]]
+name = "解析不能な本文とstderrの重大度を保持する"
+[[tests.inputs]]
+insert_at = "normalize"
+type = "log"
+[tests.inputs.log_fields]
+message = "例外の続き\n  人工スタック"
+timestamp = "2026-09-22T00:00:00Z"
+stream = "stderr"
+[[tests.outputs]]
+extract_from = "normalize"
+[[tests.outputs.conditions]]
+type = "vrl"
+source = '''
+assert_eq!(.message, "例外の続き\n  人工スタック")
+assert_eq!(.level, "unknown")
+assert_eq!(.stream, "stderr")
+'''
+
+[[tests]]
+name = "構造付きテキストの本文・重大度・発生時刻を取り出す"
+[[tests.inputs]]
+insert_at = "normalize"
+type = "log"
+[tests.inputs.log_fields]
+message = 'time=2026-09-22T00:00:00Z level=ERROR msg="人工失敗"'
+timestamp = "2026-09-22T00:00:01Z"
+[[tests.outputs]]
+extract_from = "normalize"
+[[tests.outputs.conditions]]
+type = "vrl"
+source = '''
+assert_eq!(.message, "人工失敗")
+assert_eq!(.level, "error")
+assert_eq!(.timestamp, t'2026-09-22T00:00:00Z')
+'''

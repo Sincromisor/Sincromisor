@@ -1,0 +1,75 @@
+# Docker原本とVector内部ログを一度だけ取り込み、中央停止中は専用ディスクへ保持する。
+data_dir = "/var/lib/vector"
+
+[api]
+enabled = true
+address = "0.0.0.0:8686"
+
+[sources.docker]
+type = "docker_logs"
+include_labels = ["com.docker.compose.project=${SINCRO_LOG_PROJECT}"]
+
+[sources.internal]
+type = "internal_logs"
+
+[sources.metrics]
+type = "internal_metrics"
+
+[transforms.normalize]
+type = "remap"
+inputs = ["docker", "internal"]
+source = '''
+# 識別子は収集元を正とし、本文が偽装した値を採用しない。
+original = .
+parsed, json_error = parse_json(string!(.message))
+err = json_error
+if json_error != null { parsed, err = parse_logfmt(string!(.message)) }
+if err == null && is_object(parsed) { . = merge(., object!(parsed)) }
+.host = get_env_var!("SINCRO_LOG_HOST")
+.project = string(original.label."com.docker.compose.project") ?? get_env_var!("SINCRO_LOG_PROJECT")
+.service = original.label."com.docker.compose.service"
+if original.source_type == "internal_logs" { .service = "vector" }
+.container_id = original.container_id
+.stream = original.stream
+.observed_at = now()
+.timestamp = parse_timestamp(parsed.timestamp, format: "%+") ?? parse_timestamp(parsed.time, format: "%+") ?? original.timestamp
+.message = string(parsed.message) ?? string(parsed.msg) ?? string(original.message) ?? ""
+if json_error == null && is_object(parsed) {
+    .message = string(parsed.message) ?? string(parsed.msg) ?? string(parsed.event) ?? "structured event"
+}
+.level = downcase(string(.level) ?? string(original.metadata.level) ?? "unknown")
+if .level == "warning" { .level = "warn" }
+.event = string(.event) ?? "log"
+del(.label)
+del(.host_key)
+del(.source_type)
+# 既知の要求全体・認証属性を中央へ複製しない。本文の出力制御は各サービスが担う。
+. = map_values(., recursive: true) -> |value| {
+    if is_object(value) {
+        filter(object!(value)) -> |key, _value| { !match(key, r'(?i)(^request$|^headers$|authorization|token|password|secret|private_key)') }
+    } else { value }
+}
+. = filter(.) -> |key, _value| { !match(key, r'(?i)(^request$|^headers$|authorization|token|password|secret|private_key)') }
+.message = replace(string!(.message), r'(?i)bearer\s+[A-Za-z0-9._~+/=-]+', "Bearer [REDACTED]")
+'''
+
+[sinks.central]
+type = "http"
+inputs = ["normalize"]
+uri = "http://log-router:8080/insert/jsonline?_time_field=timestamp&_msg_field=message&_stream_fields=host,project,service"
+method = "post"
+encoding.codec = "json"
+framing.method = "newline_delimited"
+compression = "gzip"
+# 中央不在でも収集プロセスを起動し、HTTPの失敗は既存の再試行へ返す。
+healthcheck.enabled = false
+batch.timeout_secs = 1
+buffer.type = "disk"
+buffer.max_size = 268435488
+buffer.when_full = "block"
+request.headers.Content-Type = "application/stream+json"
+
+[sinks.metrics_export]
+type = "prometheus_exporter"
+inputs = ["metrics"]
+address = "0.0.0.0:9598"

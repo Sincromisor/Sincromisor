@@ -47,3 +47,13 @@ Vector設定の検証と少数の固定入力を使う。隔離Docker環境で�
 アプリ内部、Docker状態イベント、[ブラウザー](../task-260921221013-browser-diagnostic-logs/task.md)、[ホスト障害](../task-260921221014-host-system-diagnostic-logs/task.md)、[配送対策](../task-260921221014-logging-delivery-recovery/task.md)は担当タスクで補う。これらを導入全体の対象外としない。
 2026-09-21確認。[Docker入力](https://vector.dev/docs/reference/configuration/sources/docker_logs/)はbest effortで無欠落再開を保証しない。
 [ディスクバッファ](https://vector.dev/docs/architecture/buffering-model/)と[Dockerログ設定](https://docs.docker.com/engine/logging/configure/)の保証範囲を区別する。
+
+## 実装と確認結果
+
+- 2026-09-22: Vector 0.58.0、Caddy 2.10.2、収集専用Consulを全既存プロファイルへ同梱した。プロジェクトラベルで対象を限定し、全ComposeサービスへDockerのlocalドライバー・20m×5世代の原本保持を設定した。
+- C01〜C33はサービス名の除外なしで収集対象となる。標準構成の全サービスにログ保持設定があることを確認した。任意構成のMediaMTX・MinIOは未選択であり、設定確認のみ。製品ごとの起動・正常要求・異常要求の実ログ抽出は最終結合確認で行う。
+- Vectorの3件の固定入力確認で、JSON・構造付きテキスト・日本語・例外、収集側識別子の優先、認証属性の除去、stderrから重大度を推測しないことを確認した。
+- 隔離Composeで日本語と解析不能な行の投入、中央停止中のディスク保持、別IPへの再作成後の再送、Vector停止中のDocker原本保持、業務コンテナ再作成後の収集を確認した。短時間の初期化コンテナも同じラベル・原本保持に含めたが、起動前原本の自動回収は後続の回収タスクの担当として残す。
+- 中央用エージェント8321と収集用8320を分け、個別のCollector・Router登録を確認した。Vectorへ中央IPは渡さず、Caddyの明示Consul DNS経由で投入する。
+- 全体ゲートは変更前からあるMarkdown15件の整形不一致で停止した。変更文書の整形、対象Biome、Composeの標準・分散設定は合格。別途実行したフロントのビルドと単体テスト（640件成功、2件既存スキップ）が合格した。
+- 最終の隔離確認に未登録時の503、Consul停止時の503と復旧後再送、投入以外の404、別Composeプロジェクトの除外を追加した。既定の再試行とConsul再同期を待ち、直接IP指定による代用はしていない。

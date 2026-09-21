@@ -1,0 +1,70 @@
+services:
+    vector:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
+        profiles: [full, backend, external, rtc, frontend, chat, s3, logs]
+        image: timberio/vector:0.58.0-alpine
+        restart: unless-stopped
+        command: [--config, /etc/vector/vector.toml]
+        environment:
+            # 固定設定中のプロジェクト名だけを展開する。秘密の環境変数を渡さない。
+            VECTOR_DANGEROUSLY_ALLOW_ENV_VAR_INTERPOLATION: "true"
+            VECTOR_INTERNAL_LOGS_SOURCE_RATE_LIMIT: "10"
+            SINCRO_LOG_HOST: ${SINCRO_LOG_HOST:-local}
+            SINCRO_LOG_PROJECT: ${COMPOSE_PROJECT_NAME}
+        volumes:
+            # roでもDocker API管理権限を持つ。ホストへAPIを公開しない。
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - vector-data:/var/lib/vector
+            - ../configs/vector.toml:/etc/vector/vector.toml:ro
+        networks: [sincromisor-net]
+        healthcheck:
+            test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8686/health]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+
+    log-router:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
+        profiles: [full, backend, external, rtc, frontend, chat, s3, logs]
+        image: caddy:2.10.2-alpine
+        restart: unless-stopped
+        command: [caddy, run, --config, /etc/caddy/Caddyfile, --adapter, caddyfile]
+        volumes:
+            - ../configs/log-router.Caddyfile:/etc/caddy/Caddyfile:ro
+        networks: [sincromisor-net]
+        healthcheck:
+            test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/health]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+
+    consul-agent-logging:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
+        profiles: [full, backend, external, rtc, frontend, chat, s3, logs]
+        image: hashicorp/consul:latest
+        restart: unless-stopped
+        entrypoint: [sh, /start-consul.sh]
+        command:
+            - -retry-join=${SINCRO_CONSUL_SERVER_HOST}:8301
+            - -advertise=${SINCRO_CONSUL_ADVERTISE_ADDR:-}
+            - -serf-lan-port=8320
+            - -client=0.0.0.0
+            - -node=logging-${SINCRO_LOG_HOST:-local}
+        environment:
+            SINCRO_LOG_HOST: ${SINCRO_LOG_HOST:-local}
+        volumes:
+            - consul-agent-logging-data:/consul/data
+            - ../Docker/logging/start-collector-consul.sh:/start-consul.sh:ro
+        networks: [sincromisor-net]
+        healthcheck:
+            test: [CMD, consul, members]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+volumes:
+    vector-data:
+    consul-agent-logging-data:
+
+networks:
+    sincromisor-net:

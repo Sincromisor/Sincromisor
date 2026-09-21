@@ -65,3 +65,7 @@ services:
         ports:
             - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8321:8321/tcp
             - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8321:8321/udp
+    consul-agent-logging:
+        ports:
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8320:8320/tcp
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8320:8320/udp

@@ -1,5 +1,6 @@
 services:
   sincro-mediamtx:
+    logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
     profiles:
       - full
       - backend

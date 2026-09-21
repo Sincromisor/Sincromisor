@@ -1,5 +1,6 @@
 services:
     sincro-rtc:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
         profiles:
             - full
             - rtc
@@ -59,6 +60,7 @@ services:
             retries: 15
 
     consul-agent-rtc:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
         profiles:
             - full
             - rtc

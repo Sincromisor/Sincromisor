@@ -24,6 +24,8 @@ while true; do
     consul_dns_check AgentServer || SERVICE_FAILURE=$((SERVICE_FAILURE + 1))
     consul_dns_check LlamaServer || SERVICE_FAILURE=$((SERVICE_FAILURE + 1))
 
+    consul_dns_check SincroLogCollector || SERVICE_FAILURE=$((SERVICE_FAILURE + 1))
+    consul_dns_check SincroLogRouter || SERVICE_FAILURE=$((SERVICE_FAILURE + 1))
     consul_dns_check SincroLogs || SERVICE_FAILURE=$((SERVICE_FAILURE + 1))
 
     # Dockerの死活確認は失敗件数0をhealthyとする。10秒ごとに復旧も反映する。

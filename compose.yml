@@ -15,6 +15,7 @@ include:
     - compose/voice-synthesizer.yml
     - compose/consul-server.yml
     - compose/logging.yml
+    - compose/log-collector.yml
     - compose/s3.yml
     - compose/redis.yml
     # vrm360でLive配信を行いたい場合は、以下のコメントアウトを外す
