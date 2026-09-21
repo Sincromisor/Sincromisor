@@ -1,0 +1,14 @@
+{
+	"service": {
+		"id": "llama-server",
+		"name": "LlamaServer",
+		"address": "llama-server",
+		"port": 8080,
+		"tags": ["compose-internal"],
+		"check": {
+			"http": "http://llama-server:8080/health",
+			"interval": "10s",
+			"timeout": "5s"
+		}
+	}
+}

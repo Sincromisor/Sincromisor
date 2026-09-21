@@ -41,6 +41,8 @@ READMEは起動と利用できる機能を案内し、内部のモデル形式�
 NVIDIA GPUを1台予約し、`--n-gpu-layers 99` でモデル全層を配置する。CPU側は6スレッド、4096トークン・1スロットとする。音声認識・音声合成とGPUメモリーを共有するため、同時稼働時の容量を確保する。ツール呼出しにはGGUF内のJinjaテンプレートを使い、
 `--reasoning off` で思考生成を無効にする。`SINCRO_LLAMA_*` はルート `.env` からコマンドとマウントへ渡す。
 イメージ内の `curl --fail` が `/health` を確認し、ロード中の503とロード済みの200を区別する。
+同じHTTP確認を `consul-agent-chat` からも行い、bandogはAgentServerとLLMの両方を必須監視する。
+登録と配置プロファイルに依存しない監視の詳細は[Consul設計](consul.md#bandogによる全体監視)を参照する。
 
 `llama-model-initializer` が保存先を自動作成し、モデルを欠損時だけ取得・検証する。
 llama-serverはその正常終了を待つ。固定リビジョンと保存条件は
