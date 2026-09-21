@@ -35,6 +35,15 @@
 
 ## 複数ホストのエージェント
 
+AgentServerは `chat` 専用の `consul-agent-chat` が設定ファイル
+`Docker/agent-server/consul-service.json` から `AgentServer`（ID: `agent-server`）として登録する。
+登録先は同じComposeネットワーク内の `agent-server:4111` で、コンテナIP変更時も名前で解決する。
+他ホストから生成APIへ接続するための広告ではなく、`compose-internal` タグを持つ内部サービスの稼働監視である。
+TCP確認を10秒間隔・5秒時間切れで行い、管理者トークンをConsulへ渡さない。
+認証付きAPIの準備確認はDocker側の死活確認が担い、LLMの準備完了までは保証しない。
+停止中はcriticalとして登録を維持し、再起動でpassingへ戻す。専用エージェントの再作成時も設定から再登録する。
+TextProcessorの接続先は従来どおり設定URLを使う。
+
 全メンバーは `SINCRO_CONSUL_ADVERTISE_ADDR` に相互到達可能な管理IPv4を指定する。空欄では従来どおりConsulが広告先を自動選択する。
 標準構成はConsulをホストへ公開しない。分散配置では `compose/distributed.yml` を重ね、
 `SINCRO_CONSUL_PUBLISH_HOST` に管理IPv4を指定してサーバーRPCとLAN gossipだけを公開する。
@@ -54,6 +63,7 @@
 | 音声合成     | TCP/UDP 8316 |
 | Redis        | TCP/UDP 8317 |
 | S3           | TCP/UDP 8318 |
+| チャット     | TCP/UDP 8319 |
 
 各エージェントは `SINCRO_CONSUL_SERVER_HOST:8301` へ参加する。DNSの8600と参加先8301は同じサーバーを指す。
 RTCのHTTP 8500はComposeネットワーク内の `sincro-rtc` だけが使い、ホストへ公開しない。

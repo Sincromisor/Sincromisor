@@ -6,6 +6,7 @@ services:
             dockerfile: ../../Docker/agent-server/Dockerfile
         image: ${SINCRO_REGISTRY_NAME}/agent-server:latest
         pull_policy: build
+        restart: unless-stopped
         entrypoint: [sh, /with-token.sh]
         command: [node, .mastra/output/index.mjs]
         environment:
@@ -20,6 +21,8 @@ services:
             - ../Docker/service-initializer/with-token.sh:/with-token.sh:ro
         networks: [sincromisor-net]
         depends_on:
+            consul-agent-chat:
+                condition: service_healthy
             service-initializer:
                 condition: service_completed_successfully
             llama-server:
@@ -32,8 +35,30 @@ services:
             timeout: 5s
             retries: 6
 
+    # 登録を設定ファイルで維持し、Consulやアプリの再起動順に依存させない。
+    consul-agent-chat:
+        profiles: [chat]
+        image: hashicorp/consul:latest
+        restart: unless-stopped
+        command:
+            - agent
+            - -retry-join=${SINCRO_CONSUL_SERVER_HOST}:8301
+            - -advertise=${SINCRO_CONSUL_ADVERTISE_ADDR:-}
+            - -serf-lan-port=8319
+            - -client=0.0.0.0
+        volumes:
+            - consul-agent-chat-data:/consul/data
+            - ../Docker/agent-server/consul-service.json:/consul/config/agent-server.json:ro
+        networks: [sincromisor-net]
+        healthcheck:
+            test: [CMD, consul, members]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
 volumes:
     agent-data:
+    consul-agent-chat-data:
 
 networks:
     sincromisor-net:
