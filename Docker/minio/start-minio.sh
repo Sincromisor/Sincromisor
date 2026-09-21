@@ -9,12 +9,12 @@ TEMPLATE_JSON="/minio-template.json"
 MINIO_PORT=9000
 
 export CONSUL_HTTP_ADDR="http://${SINCRO_CONSUL_AGENT_HOST}:${SINCRO_CONSUL_AGENT_PORT}"
-echo "CONSUL_HTTP_ADDR=${CONSUL_HTTP_ADDR}"
+
 
 SERVICE_ID="$(generate_service_id "$SERVICE_NAME" "$MINIO_PORT")"
 SERVICE_IPV4="$(hostname -i)"
 
-echo "Starting ${SERVICE_NAME} - ${SERVICE_ID} - ${SERVICE_IPV4}"
+registration_log initialize started 0
 
 replace_template_vars "$TEMPLATE_JSON" "$SERVICE_ID" "$SERVICE_IPV4"
 
@@ -28,9 +28,10 @@ echo "Minio started with PID ${MINIO_PID}"
 
 monitor_ip_and_reregister "$SERVICE_NAME" "$MINIO_PORT" "$TEMPLATE_JSON" "$MINIO_PID"
 
+MINIO_EXIT_CODE=0
 wait $MINIO_PID || MINIO_EXIT_CODE=$?
 
-echo "Minio exited with code ${MINIO_EXIT_CODE}"
+printf '{"event":"service_child_exit","exit_code":%s}\n' "${MINIO_EXIT_CODE}"
 unregister_service "$SERVICE_ID"
 
 exit "${MINIO_EXIT_CODE}"

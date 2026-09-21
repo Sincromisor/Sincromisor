@@ -43,13 +43,21 @@ func NewDecoder(ffmpegPath string, runner CommandRunner) (*Decoder, error) {
 //
 // serverはlistenerを開く前に呼ぶ。起動不能、出力超過、version解析不能、対応範囲外をstartup errorにし、
 // fallback executableは探索しない。
-func (d *Decoder) ProbeVersion(ctx context.Context) error {
+func (d *Decoder) ProbeVersion(ctx context.Context) (returnErr error) {
 	if ctx == nil {
 		return errors.New("ffmpeg version probe context must not be nil")
 	}
+	started := time.Now()
 	stdout, stderr, exitCode, err := d.runner.Run(
 		ctx, d.ffmpegPath, nil, versionProbeLimit, versionProbeLimit, "-version",
 	)
+	defer func() {
+		if returnErr != nil {
+			diagnostic := processDiagnostic("probe", ctx, stderr, versionProbeLimit, exitCode, started)
+			diagnostic.cause = returnErr
+			returnErr = diagnostic
+		}
+	}()
 	if err != nil || exitCode != 0 {
 		if err == nil {
 			err = errors.New("ffmpeg exited unsuccessfully")
@@ -79,7 +87,7 @@ func (d *Decoder) ProbeVersion(ctx context.Context) error {
 // 許可MIME、8 MiB入力、finite timingをprocess起動前に検証し、FFmpegには5秒と120秒相当の
 // 出力上限を課す。caller cancelはtimeoutより優先してそのerrorをCauseに保持する。FFmpeg失敗、
 // timing不整合、上限超過を含む全失敗でstdout部分結果を破棄する。
-func (d *Decoder) Decode(ctx context.Context, input protocol.SynthesizerResult) (DecodedSpeech, error) {
+func (d *Decoder) Decode(ctx context.Context, input protocol.SynthesizerResult) (result DecodedSpeech, returnErr error) {
 	if ctx == nil {
 		return DecodedSpeech{}, decodeError(ErrorInvalid, errors.New("decode context must not be nil"))
 	}
@@ -107,9 +115,18 @@ func (d *Decoder) Decode(ctx context.Context, input protocol.SynthesizerResult) 
 		"-map", "0:a:0", "-vn", "-ac", "1", "-ar", strconv.Itoa(outputSampleRate),
 		"-f", "s16le", "pipe:1",
 	}
+	started := time.Now()
 	stdout, stderr, exitCode, runErr := d.runner.Run(
 		decodeCtx, d.ffmpegPath, input.Voice, maxPCMBytes, maxStderrBytes, args...,
 	)
+	// 分類・部分結果破棄の全経路を維持し、実行済みの失敗だけに診断を付加する。
+	defer func() {
+		if returnErr != nil {
+			diagnostic := processDiagnostic("decode", decodeCtx, stderr, maxStderrBytes, exitCode, started)
+			diagnostic.cause = returnErr
+			returnErr = diagnostic
+		}
+	}()
 	if ctxErr := ctx.Err(); ctxErr != nil {
 		return DecodedSpeech{}, decodeError(ErrorProcess, ctxErr)
 	}

@@ -1,7 +1,5 @@
-import subprocess as sp
 import wave
 from io import BytesIO
-from subprocess import CompletedProcess
 
 from sincro_models import (
     VoiceSynthesizerMora,
@@ -11,12 +9,16 @@ from sincro_models import (
     VoiceVoxMora,
     VoiceVoxQuery,
 )
+from sincro_models.audio_encoder import encode_audio
 
 from .VoiceVox import VoiceVox
 
 
 class VoiceSynthesizer(VoiceVox):
-    def __init__(self, host: str = "127.0.0.1", port: int = 50021):
+    """VOICEVOXの生成結果を音声とモーラ時刻へ整え、指定形式へ変換する。"""
+
+    def __init__(self, host: str = "127.0.0.1", port: int = 50021) -> None:
+        """共有HTTP処理へ接続先を渡す。初期化時には通信しない。"""
         super().__init__(host=host, port=port)
         self.host: str = host
         self.port: int = port
@@ -33,7 +35,9 @@ class VoiceSynthesizer(VoiceVox):
         wav: bytes = self.query_synthesis(query, style_id=vs_request.style_id)
         mora_list: list[VoiceSynthesizerMora] = self.__parse_phrases(query)
         sp_time: float = self.__wav_speaking_time(wav)
-        enc_result: dict = self.encode(wav, vs_request.audio_format)
+        enc_result: dict = self.encode(
+            wav, vs_request.audio_format, speech_id=vs_request.speech_id
+        )
         return VoiceSynthesizerResult(
             # 元となったメッセージテキスト
             message=vs_request.message,
@@ -49,30 +53,20 @@ class VoiceSynthesizer(VoiceVox):
             audio_format=enc_result["audio_format"],
         )
 
-    # voiceをaudio_formatで指定された形式でエンコードする。
-    # audio/aac、audio/ogg;codecs=opus、audio/wavのいずれか。
-    # 実行にはfdkaacとopusencコマンドが必要。
-    def encode(self, voice: bytes, audio_format: str | None) -> dict:
-        encoder_p: CompletedProcess
+    def encode(
+        self, voice: bytes, audio_format: str | None, *, speech_id: int | None = None
+    ) -> dict[str, object]:
+        """指定形式のエンコーダーを一度起動する。WAVは変換せず、失敗時は安全な診断を残す。"""
         if audio_format == "audio/aac":
-            encoder_p = sp.run(
-                ["fdkaac", "-S", "-m3", "-f2", "-o-", "-"],
-                input=voice,
-                capture_output=True,
-                text=False,
-                check=True,
-            )
-            return {"voice": encoder_p.stdout, "audio_format": "audio/aac"}
-        if audio_format == "audio/ogg;codecs=opus":
-            encoder_p = sp.run(
-                ["opusenc", "-", "-"],
-                input=voice,
-                capture_output=True,
-                text=False,
-                check=True,
-            )
-            return {"voice": encoder_p.stdout, "audio_format": "audio/ogg;codecs=opus"}
-        return {"voice": voice, "audio_format": "audio/wav"}
+            command = ["fdkaac", "-S", "-m3", "-f2", "-o-", "-"]
+        elif audio_format == "audio/ogg;codecs=opus":
+            command = ["opusenc", "-", "-"]
+        else:
+            return {"voice": voice, "audio_format": "audio/wav"}
+        return {
+            "voice": encode_audio(command, voice, {"speech_id": speech_id}),
+            "audio_format": audio_format,
+        }
 
     # フレーズの間隔を指定した秒数で上書きする。
     def query_filter(self, query: VoiceVoxQuery, sec: float = 0.1) -> VoiceVoxQuery:

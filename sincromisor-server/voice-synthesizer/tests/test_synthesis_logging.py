@@ -159,7 +159,10 @@ def test_generation_cache_and_failure(monkeypatch, conversation, synthesis):
         else:
             assert "人工本文" not in text
             assert "人工カナ" not in text
-            assert all(event["event"] == "synthesis_processing" for event in events)
+            assert all(
+                event["event"] in {"synthesis_processing", "voice_cache_operation"}
+                for event in events
+            )
     finally:
         logger.removeHandler(handler)
         logger.setLevel(previous[0])

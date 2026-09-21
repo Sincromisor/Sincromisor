@@ -105,7 +105,7 @@ func (c *baseClient) establish(
 	}
 	if endpoint.Source == discovery.EndpointSourceFallback {
 		c.logger.Warn("pipeline service discovery fell back",
-			"stage", c.service, "reason", endpoint.FallbackReason)
+			"event", "service_discovery", "peer", "consul", "stage", c.service, "outcome", "fallback", "reason", endpoint.FallbackReason)
 	}
 
 	dialURL := url.URL{

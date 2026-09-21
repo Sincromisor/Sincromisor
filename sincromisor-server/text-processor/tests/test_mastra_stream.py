@@ -232,8 +232,9 @@ def test_recorded_http_events(name: str) -> None:
         [FINISH, _event("text-delta", {"text": "extra"}), DONE],
     ],
 )
-def test_invalid_stream_never_finalizes(ending: list[bytes]) -> None:
+def test_invalid_stream_never_finalizes(ending: list[bytes], caplog) -> None:
     """不正入力・早期EOF・中断は、配信済みの途中本文を成功へ変えない。"""
+    caplog.set_level("INFO", logger="sincro.MastraClient")
 
     async def run() -> None:
         async with _server([_event("text-delta", {"text": "途中。"}), *ending]) as (
@@ -255,10 +256,20 @@ def test_invalid_stream_never_finalizes(ending: list[bytes]) -> None:
             assert "private" not in str(error.value)
 
     asyncio.run(run())
+    events = [
+        record.msg for record in caplog.records if record.name == "sincro.MastraClient"
+    ]
+    assert events[-1]["outcome"] == "failed"
+    assert events[-1]["stage"] == "stream"
+    assert "invalid-secret" not in str(events)
+    assert "private" not in str(events)
+    if not ending:
+        assert events[-1]["reason"] == "unexpected_eof"
 
 
-def test_timeout_http_failure_and_long_tool_wait() -> None:
+def test_timeout_http_failure_and_long_tool_wait(caplog) -> None:
     """無受信・HTTP失敗を伝え、通知が続くツール待ちを総時間では打ち切らない。"""
+    caplog.set_level("INFO", logger="sincro.MastraClient")
 
     async def read(url: str) -> list[str]:
         return [
@@ -284,6 +295,13 @@ def test_timeout_http_failure_and_long_tool_wait() -> None:
             assert await read(url) == ["^"]
 
     asyncio.run(run())
+    events = [
+        record.msg for record in caplog.records if record.name == "sincro.MastraClient"
+    ]
+    assert events[0]["http_status"] == 503
+    assert events[0]["stage"] == "http"
+    assert events[1]["reason"] == "timeout"
+    assert events[2]["outcome"] == "success"
 
 
 @pytest.mark.parametrize("failure", ["disconnect", "send", "cancel"])

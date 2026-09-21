@@ -6,11 +6,17 @@ import { MastraEditor } from "@mastra/editor";
 import { LibSQLStore } from "@mastra/libsql";
 import { createCharacterAgent } from "./agents/character.js";
 import { readConfig } from "./config.js";
-import { conversationId, createServiceLogger } from "./logging.js";
+import {
+	conversationId,
+	createServiceLogger,
+	routeLibraryConsoleLogs,
+} from "./logging.js";
 import { connectMcp, readMcpConfig } from "./mcp.js";
+import { observeMemoryOperations } from "./runtimeDiagnostics.js";
 
 const config = readConfig(process.env);
 const logger = createServiceLogger(config.SINCRO_LOG_CONVERSATION_ENABLED);
+routeLibraryConsoleLogs(logger);
 // StudioとAPI、および未対応feedbackの応答で同じ認証判定を使う。
 const auth = new SimpleAuth({
 	tokens: {
@@ -23,12 +29,15 @@ const auth = new SimpleAuth({
 const mcp = await connectMcp(await readMcpConfig("/data/mcp.json"), logger);
 // libSQL未対応のfeedbackを提供可能と扱わないよう、未使用の監視保存領域を無効化する。
 // Editorと会話履歴は従来と同じDBを使う。
+const defaultStore = new LibSQLStore({
+	id: "sincromisor-libsql",
+	url: config.SINCRO_AGENT_DB_URL,
+});
+if (defaultStore.stores.memory)
+	observeMemoryOperations(defaultStore.stores.memory, logger);
 const storage = new MastraCompositeStore({
 	id: "sincromisor-storage",
-	default: new LibSQLStore({
-		id: "sincromisor-libsql",
-		url: config.SINCRO_AGENT_DB_URL,
-	}),
+	default: defaultStore,
 	domains: { observability: false },
 });
 const character = createCharacterAgent({
@@ -38,6 +47,7 @@ const character = createCharacterAgent({
 		url: config.SINCRO_AGENT_LLM_URL,
 	},
 	storage,
+	logger,
 });
 
 /** Mastra CLIの入口から公開し、HTTPサーバーが保存領域と生成要求の生存期間を管理する。 */

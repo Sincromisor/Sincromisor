@@ -11,7 +11,8 @@ import (
 func main() {
 	if err := run(os.Args[1:]); err != nil {
 		// 設定値やURLを含む起動例外を文字列化せず、終了理由と例外の型を残す。
-		newJSONLogger(os.Stderr).Error("sincro-rtc startup failed", "reason", "startup_failed", "error_type", fmt.Sprintf("%T", err))
+		attrs := []any{"reason", "startup_failed", "error_type", fmt.Sprintf("%T", err)}
+		newJSONLogger(os.Stderr).Error("sincro-rtc startup failed", append(attrs, synthdecode.DiagnosticAttrs(err)...)...)
 		os.Exit(1)
 	}
 }

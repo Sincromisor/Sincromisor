@@ -58,3 +58,7 @@
 
 Poke・Mastraとも共通ワーカーが新規入力、送信済み応答断片、確定結果をJSONLへ記録する。累積履歴は出力しない。`SINCRO_LOG_CONVERSATION_ENABLED=false`では本文イベントを止め、処理時間と成功・失敗・取消を残す。送信失敗と取消は確定扱いせず、Mastraの機能用履歴は変更しない。
 書式・例外情報・設定反映は[ログ基盤](../../infrastructure/logging.md#pythonのjsonl出力)を参照する。
+
+## 内部処理の診断
+
+`agent_stream` はHTTP応答、SSEの正常終端、予期しないEOF、リモートエラー/中断、取消、時間切れを区別し、会話IDと処理時間を残す。WebSocket送信の失敗は処理段階 `send` と相手 `rtc` を付ける。URL、認証値、外部応答や例外の自由文は記録しない。失敗の伝播と会話内容の記録切替は維持する。

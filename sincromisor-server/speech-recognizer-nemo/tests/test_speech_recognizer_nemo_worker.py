@@ -128,6 +128,41 @@ class FakeRerankAwareDeferredPostProcessor(FakePostProcessor):
 
 
 class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
+    def test_storage_permission_diagnostic(self) -> None:
+        """認識JSONと入力音声の保存拒否を、本文や保存パスなしで会話へ対応付ける。"""
+        worker = object.__new__(SpeechRecognizerNemoWorker)
+        worker.voice_log_dir = "/private-test-path"
+        worker.logger = logging.getLogger("sincro.storage_test")
+        result = SpeechExtractorResult(session_id="session-a", speech_id=8, start_at=0)
+        output = io.StringIO()
+        handler = logging.StreamHandler(output)
+        handler.setFormatter(JsonLogFormatter())
+        worker.logger.addHandler(handler)
+        try:
+            for method in (
+                worker._SpeechRecognizerNemoWorker__export_voice,  # noqa: SLF001 - 保存境界の拒否を検証する。
+                worker._SpeechRecognizerNemoWorker__export_result,  # noqa: SLF001 - 保存境界の拒否を検証する。
+            ):
+                with (
+                    patch.object(
+                        Path, "mkdir", side_effect=PermissionError("private-token")
+                    ),
+                    self.assertRaises(PermissionError),
+                ):
+                    method(result)
+            rows = [json.loads(line) for line in output.getvalue().splitlines()]
+            self.assertEqual(len(rows), 2)
+            self.assertTrue(
+                all(
+                    row["reason"] == "permission_denied"
+                    and row["session_id"] == "session-a"
+                    for row in rows
+                )
+            )
+            self.assertNotIn("private-", output.getvalue())
+        finally:
+            worker.logger.removeHandler(handler)
+
     def test_conversation_log_switch(self) -> None:
         """モデルを人工結果へ置換し、本文の記録だけが切り替わることを確認する。"""
         for enabled in ("true", "false"):

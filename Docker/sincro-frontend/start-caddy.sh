@@ -11,13 +11,13 @@ CADDY_PORT=80
 
 # Consulアドレス設定
 export CONSUL_HTTP_ADDR="http://${SINCRO_CONSUL_AGENT_HOST}:${SINCRO_CONSUL_AGENT_PORT}"
-echo "CONSUL_HTTP_ADDR=${CONSUL_HTTP_ADDR}"
+
 
 # フロントエンドID生成
 SINCRO_FRONTEND_IPV4="$(hostname -i)"
 SINCRO_FRONTEND_ID="SincroFrontend_$(hostname)_${SINCRO_FRONTEND_IPV4}:${CADDY_PORT}"
-echo "SINCRO_FRONTEND_IPV4=${SINCRO_FRONTEND_IPV4}"
-echo "SINCRO_FRONTEND_ID=${SINCRO_FRONTEND_ID}"
+
+
 
 # 再起動でIPが変わっても再生成できるよう、原本の置換記号は残す。
 replace_template_vars() {
@@ -29,15 +29,19 @@ replace_template_vars() {
 
 # Consulサービス登録解除
 unregister_service() {
-    echo "Unregistering service ${SINCRO_FRONTEND_ID} from Consul"
-    consul services deregister -id "${SINCRO_FRONTEND_ID}" || true
+    result=0
+    consul services deregister -id "${SINCRO_FRONTEND_ID}" >/dev/null 2>&1 || result=$?
+    printf '{"event":"service_registration","stage":"deregister","exit_code":%s}\n' "$result"
 }
 
 replace_template_vars
 
 trap unregister_service TERM INT EXIT
 
-consul services register "${REGISTER_JSON}"
+result=0
+consul services register "${REGISTER_JSON}" >/dev/null 2>&1 || result=$?
+printf '{"event":"service_registration","stage":"register","exit_code":%s}\n' "$result"
+[ "$result" -eq 0 ] || exit "$result"
 
 caddy run --config "${CADDY_CONFIG}" --adapter "${CADDY_ADAPTER}" &
 CADDY_PID=$!
@@ -47,7 +51,7 @@ echo "Caddy started with PID ${CADDY_PID}"
 CADDY_EXIT_CODE=0
 wait $CADDY_PID || CADDY_EXIT_CODE=$?
 
-echo "Caddy exited with code ${CADDY_EXIT_CODE}"
+printf '{"event":"service_child_exit","exit_code":%s}\n' "$CADDY_EXIT_CODE"
 unregister_service
 
 exit "${CADDY_EXIT_CODE}"

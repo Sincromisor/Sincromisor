@@ -108,9 +108,13 @@ func (s *Session) handleSynthOutput(output pipeline.Output[protocol.SynthesizerR
 	if err != nil {
 		if s.isCurrentGeneration(output.Generation) && s.ctx.Err() == nil {
 			codecErrorKind, codecErrorReason := codecErrorDetails(err)
-			s.logger.Error("synthesized audio decode failed", "session_id", s.id, "reason", "codec_error", "codec_error_kind", codecErrorKind, "codec_error_reason", codecErrorReason)
+			attrs := []any{"session_id", s.id, "speech_id", output.Value.SpeechID, "reason", "codec_error", "codec_error_kind", codecErrorKind, "codec_error_reason", codecErrorReason}
+			s.logger.Error("synthesized audio decode failed", append(attrs, synthdecode.DiagnosticAttrs(err)...)...)
 			s.metrics().CodecError("decode_synth")
 			_ = s.Close("codec_error")
+		} else if attrs := synthdecode.DiagnosticAttrs(err); len(attrs) > 0 {
+			// 終了・世代変更中の失敗は診断だけを残し、新しい世代を終了させない。
+			s.logger.Info("synthesized audio decode interrupted", append(attrs, "session_id", s.id, "speech_id", output.Value.SpeechID)...)
 		}
 		return nil
 	}

@@ -9,6 +9,7 @@ from time import perf_counter
 
 from fastapi import WebSocket
 from sincro_config import SincromisorLoggerConfig
+from sincro_config.runtime_diagnostics import failure_fields
 from sincro_models import TextProcessorRequest, TextProcessorResult
 
 
@@ -92,10 +93,14 @@ class TextProcessorWorker:
                 }
             )
         outcome = "incomplete"
+        failure: dict[str, object] = {}
+        stage = "generate"
         try:
             async with aclosing(self.process_async(request=request)) as responses:
                 async for response in responses:
+                    stage = "send"
                     await ws.send_bytes(response.to_msgpack())
+                    stage = "generate"
                     if response_t < 0:
                         response_t = perf_counter()
                     # 送信に成功した確定だけを完了とする。途中失敗で本文を再出力しない。
@@ -117,13 +122,17 @@ class TextProcessorWorker:
         except asyncio.CancelledError:
             outcome = "cancelled"
             raise
-        except Exception:
+        except Exception as error:
+            failure = failure_fields(error)
             outcome = "failed"
             raise
         finally:
             self.logger.info(
                 {
                     "event": "conversation_processing",
+                    "stage": stage,
+                    "peer": "rtc" if stage == "send" else "processor",
+                    **failure,
                     **ids,
                     "outcome": outcome,
                     "response_time": response_t - start_t if response_t >= 0 else None,

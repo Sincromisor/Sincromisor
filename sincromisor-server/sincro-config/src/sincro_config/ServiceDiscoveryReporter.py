@@ -8,8 +8,12 @@ from typing import Any
 
 from consul import Check, Consul
 
+from .runtime_diagnostics import failure_fields
+
 
 class ServiceDiscoveryReporter(Thread):
+    """Consul登録を30秒ごとに更新し、失敗しても次の周期に再試行する。"""
+
     def __init__(
         self,
         worker_type: str,
@@ -17,7 +21,8 @@ class ServiceDiscoveryReporter(Thread):
         consul_port: int,
         public_bind_host: str,
         public_bind_port: int,
-    ):
+    ) -> None:
+        """登録先と公開側の設定を保持する。資格情報や接続例外の本文はログへ出さない。"""
         super().__init__(daemon=True)
         self.__logger: Logger = logging.getLogger(
             "sincro." + self.__class__.__name__ + f".{worker_type}",
@@ -31,18 +36,34 @@ class ServiceDiscoveryReporter(Thread):
 
     # 30秒程度に1回、consulにサービス情報を登録する。
     # 設定した死活監視が失敗した場合、一定時間で自動的にderegisterされる。
-    def run(self):
+    def run(self) -> None:
         while True:
             try:
                 self.__register()
-            except Exception as e:
-                self.__logger.error(
-                    f"Service registration error - consul: {self.__consul_host}:{self.__consul_port}, "
-                    f"bind: {self.__public_bind_host}({self.__ip_address()}):{self.__public_bind_port}, {repr(e)}"
+            except Exception as error:  # noqa: BLE001 - 常駐登録と終了時解除は未知の障害でも次の周期・終了を妨げない。
+                self.__logger.warning(
+                    {
+                        "event": "service_discovery",
+                        "peer": "consul",
+                        "target_service": self.__worker_type,
+                        "stage": "register",
+                        "outcome": "failed",
+                        **failure_fields(error),
+                    }
                 )
             time.sleep(30)
 
     def __register(self) -> None:
+        """現在IPを登録し、成功した場合だけ終了時の解除を予約する。"""
+        self.__logger.info(
+            {
+                "event": "service_discovery",
+                "peer": "consul",
+                "target_service": self.__worker_type,
+                "stage": "register",
+                "outcome": "started",
+            }
+        )
         new_ip_address: str = self.__ip_address()
         new_service_id: str = self.__service_id()
 
@@ -70,16 +91,42 @@ class ServiceDiscoveryReporter(Thread):
         )
         self.__reserve_deregister(new_service_id)
         self.__logger.info(
-            f"Service {self.__worker_type} registered with ID: {new_service_id}"
+            {
+                "event": "service_discovery",
+                "peer": "consul",
+                "target_service": self.__worker_type,
+                "stage": "register",
+                "outcome": "success",
+            }
         )
 
     # consulからこのサービスの情報を削除する
     # register時にderegisterを指定して自動削除するようにしているので、失敗しても差し支えない
     def __deregister(self, target_service_id: str) -> None:
-        self.__consul.agent.service.deregister(service_id=target_service_id)
-        self.__logger.info(
-            f"Service {self.__worker_type} deregistered with ID: {target_service_id}"
-        )
+        try:
+            self.__consul.agent.service.deregister(service_id=target_service_id)
+        except Exception as error:  # noqa: BLE001 - 常駐登録と終了時解除は未知の障害でも次の周期・終了を妨げない。
+            # Consul側にも解除期限があるため終了を妨げず、失敗の分類を残す。
+            self.__logger.warning(
+                {
+                    "event": "service_discovery",
+                    "peer": "consul",
+                    "target_service": self.__worker_type,
+                    "stage": "deregister",
+                    "outcome": "failed",
+                    **failure_fields(error),
+                }
+            )
+        else:
+            self.__logger.info(
+                {
+                    "event": "service_discovery",
+                    "peer": "consul",
+                    "target_service": self.__worker_type,
+                    "stage": "deregister",
+                    "outcome": "success",
+                }
+            )
 
     # プログラム終了時にconsulからこのサービスの情報を削除するよう予約する
     # register時にderegisterを指定して自動削除するようにしているので、失敗しても差し支えない

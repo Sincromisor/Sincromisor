@@ -1,9 +1,12 @@
+import logging
 import random
 from collections.abc import Generator
 
 from consul import Consul
 from pydantic import BaseModel
 from requests.exceptions import ConnectionError
+
+from .runtime_diagnostics import failure_fields
 
 
 class ServiceDiscoveryReferrerError(Exception):
@@ -31,7 +34,11 @@ class ServiceDescription(BaseModel):
 
 
 class ServiceDiscoveryReferrer:
-    def __init__(self, consul_agent_host: str, consul_agent_port: int):
+    """Consulの登録一覧と正常な候補を別に取得し、発見失敗を対象サービスの故障と混同しない。"""
+
+    def __init__(self, consul_agent_host: str, consul_agent_port: int) -> None:
+        """登録先だけを保持し、ログへ接続先URLや応答本文を渡さない。"""
+        self.logger = logging.getLogger("sincro.ServiceDiscoveryReferrer")
         self.__consul_agent_host: str = consul_agent_host
         self.__consul_agent_port: int = consul_agent_port
         self.consul: Consul = Consul(host=consul_agent_host, port=consul_agent_port)
@@ -57,11 +64,33 @@ class ServiceDiscoveryReferrer:
         workers: list
         try:
             index, workers = self.__healthy_service(worker_type=worker_type)
-        except ConnectionError as e:
-            raise ServiceDiscoveryReferrerError(
-                f"Failed to connect to Consul agent at {self.__consul_agent_host}:{self.__consul_agent_port}"
-            ) from e
+        except Exception as error:
+            self.logger.warning(
+                {
+                    "event": "service_discovery",
+                    "peer": "consul",
+                    "target_service": worker_type,
+                    "stage": "lookup",
+                    "outcome": "failed",
+                    **failure_fields(error),
+                }
+            )
+            if isinstance(error, ConnectionError):
+                raise ServiceDiscoveryReferrerError(
+                    "Failed to connect to Consul agent."
+                ) from error
+            raise
 
+        self.logger.info(
+            {
+                "event": "service_discovery",
+                "peer": "consul",
+                "target_service": worker_type,
+                "stage": "lookup_healthy",
+                "outcome": "success" if workers else "empty",
+                "reason": "found" if workers else "no_passing_instances",
+            }
+        )
         if not workers:
             return None
         worker: dict = random.choice(workers)
@@ -81,10 +110,31 @@ class ServiceDiscoveryReferrer:
         worker: dict
         try:
             index, workers = self.__service(worker_type=worker_type)
-        except ConnectionError as e:
-            raise ServiceDiscoveryReferrerError(
-                f"Failed to connect to Consul agent at {self.__consul_agent_host}:{self.__consul_agent_port}"
-            ) from e
+        except Exception as error:
+            self.logger.warning(
+                {
+                    "event": "service_discovery",
+                    "peer": "consul",
+                    "target_service": worker_type,
+                    "stage": "lookup",
+                    "outcome": "failed",
+                    **failure_fields(error),
+                }
+            )
+            if isinstance(error, ConnectionError):
+                raise ServiceDiscoveryReferrerError(
+                    "Failed to connect to Consul agent."
+                ) from error
+            raise
+        self.logger.info(
+            {
+                "event": "service_discovery",
+                "peer": "consul",
+                "target_service": worker_type,
+                "stage": "lookup_catalog",
+                "outcome": "success" if workers else "empty",
+            }
+        )
         for worker in workers:
             yield ServiceDescription(
                 index=index,

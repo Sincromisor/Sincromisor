@@ -11,6 +11,7 @@ from botocore.response import StreamingBody
 from redis import Redis
 from redis.exceptions import RedisError
 from sincro_config import SincromisorLoggerConfig
+from sincro_config.runtime_diagnostics import failure_fields
 from sincro_models import VoiceSynthesizerRequest, VoiceSynthesizerResult
 
 from .VoiceSynthesizer import VoiceSynthesizer
@@ -66,7 +67,7 @@ class VoiceCacheManager:
 
         会話IDは運用ログだけに使い、キャッシュキー・MessagePackへ追加しない。
         """
-        ids = {
+        ids: dict[str, object] = {
             "session_id": session_id,
             "speech_id": vs_request.speech_id,
             "sequence_id": sequence_id,
@@ -85,20 +86,20 @@ class VoiceCacheManager:
             )
         try:
             source = "redis"
-            result = self.__get_voice_redis(vs_request)
+            result = self.__get_voice_redis(vs_request, ids)
             if result is None:
                 source = "s3"
-                result = self.__get_voice_s3(vs_request)
+                result = self.__get_voice_s3(vs_request, ids)
                 if result is not None:
-                    self.__put_voice_redis(vs_request, result)
+                    self.__put_voice_redis(vs_request, result, ids)
             if result is None:
                 source = "generated"
                 try:
                     result = self.vsynth.generate(vs_request=vs_request)
                 except Exception as error:
                     raise self.VoiceSynthesizerServerException from error
-                self.__put_voice_redis(vs_request, result)
-                self.__put_voice_s3(vs_request, result)
+                self.__put_voice_redis(vs_request, result, ids)
+                self.__put_voice_s3(vs_request, result, ids)
         except Exception as error:
             cause = error.__cause__ or error
             failure = {
@@ -106,6 +107,9 @@ class VoiceCacheManager:
                 **ids,
                 "outcome": "failed",
                 "error_type": type(cause).__name__,
+                "stage": "synthesis",
+                "peer": "voicevox" if source == "generated" else source,
+                **failure_fields(cause),
             }
             if isinstance(cause, self.vsynth.ProtocolError):
                 failure["http_status"] = cause.status_code
@@ -134,52 +138,97 @@ class VoiceCacheManager:
             )
         return result
 
+    def __cache_event(
+        self,
+        peer: str,
+        stage: str,
+        ids: dict[str, object],
+        error: Exception | None = None,
+        outcome: str = "success",
+    ) -> None:
+        """キーや保存内容を使わず、操作・相手・会話と原因を対応付ける。"""
+        fields = failure_fields(error) if error else {}
+        if stage == "read" and fields.get("reason") == "not_found":
+            outcome = "miss"
+        elif error:
+            outcome = "failed"
+        self.logger.log(
+            logging.WARNING if outcome == "failed" else logging.INFO,
+            {
+                "event": "voice_cache_operation",
+                "peer": peer,
+                "stage": stage,
+                **ids,
+                **fields,
+                "outcome": outcome,
+            },
+        )
+
     def __get_voice_redis(
-        self, vs_request: VoiceSynthesizerRequest
+        self, vs_request: VoiceSynthesizerRequest, ids: dict[str, object]
     ) -> VoiceSynthesizerResult | None:
-        """Redisの既存キーから音声を取得し、未命中だけをNoneにする。"""
-        key: str = vs_request.redis_key()
-        if vs_pack := self.redis.get(key):
-            if isinstance(vs_pack, bytes):
-                return VoiceSynthesizerResult.from_msgpack(vs_pack)
+        """Redis未命中と読取・復号失敗を区別する。従来どおり例外は呼出元へ返す。"""
+        stage = "read"
+        try:
+            vs_pack = self.redis.get(vs_request.redis_key())
+            if isinstance(vs_pack, bytes) and vs_pack:
+                stage = "decode"
+                result = VoiceSynthesizerResult.from_msgpack(vs_pack)
+                self.__cache_event("redis", stage, ids)
+                return result
+        except Exception as error:
+            self.__cache_event("redis", stage, ids, error)
+            raise
+        self.__cache_event("redis", stage, ids, outcome="miss")
         return None
 
     def __get_voice_s3(
-        self, vs_request: VoiceSynthesizerRequest
+        self, vs_request: VoiceSynthesizerRequest, ids: dict[str, object]
     ) -> VoiceSynthesizerResult | None:
-        """S3の音声キャッシュを読み、取得失敗は未命中として扱う。内容の復号失敗は呼び出し元へ伝える。"""
+        """不存在とアクセス失敗を区別して生成へ進む。破損データは従来どおり伝播する。"""
+        stage = "read"
         try:
             response = self.s3_client.get_object(
                 Bucket=self.bucket_name, Key=vs_request.s3_key()
             )
             body: StreamingBody = response["Body"]
-            vpack: bytes = body.read()
-            body.close()
-            return VoiceSynthesizerResult.from_msgpack(vpack)
-        except ClientError, BotoCoreError:
+            try:
+                vpack: bytes = body.read()
+            finally:
+                body.close()
+            stage = "decode"
+            result = VoiceSynthesizerResult.from_msgpack(vpack)
+            self.__cache_event("s3", stage, ids)
+            return result
+        except (ClientError, BotoCoreError) as error:
+            self.__cache_event("s3", stage, ids, error)
             return None
+        except Exception as error:
+            self.__cache_event("s3", stage, ids, error)
+            raise
 
     def __put_voice_redis(
-        self, vs_request: VoiceSynthesizerRequest, vs_result: VoiceSynthesizerResult
+        self,
+        vs_request: VoiceSynthesizerRequest,
+        vs_result: VoiceSynthesizerResult,
+        ids: dict[str, object],
     ) -> None:
-        """Redis保存失敗でも生成結果は返し、例外本文なしの失敗記録を残す。"""
+        """保存不能でも生成結果を返す既存動作を維持し、操作とIDを残す。"""
         try:
             self.redis.set(
                 vs_request.redis_key(), vs_result.to_msgpack(), ex=60 * 60 * 24 * 7
             )
-        except RedisError:
-            self.logger.exception(
-                "Failed to upload voice to Redis.",
-                extra={
-                    "event": "voice_cache_write_failed",
-                    "speech_id": vs_request.speech_id,
-                },
-            )
+            self.__cache_event("redis", "write", ids)
+        except RedisError as error:
+            self.__cache_event("redis", "write", ids, error)
 
     def __put_voice_s3(
-        self, vs_request: VoiceSynthesizerRequest, vs_result: VoiceSynthesizerResult
+        self,
+        vs_request: VoiceSynthesizerRequest,
+        vs_result: VoiceSynthesizerResult,
+        ids: dict[str, object],
     ) -> None:
-        """S3保存失敗でも生成結果は返し、要求や認証を運用ログへ含めない。"""
+        """S3保存不能でも生成結果を返す。キー・本文・認証は診断へ出さない。"""
         try:
             payload = vs_result.to_msgpack()
             self.s3_client.put_object(
@@ -188,11 +237,6 @@ class VoiceCacheManager:
                 Body=io.BytesIO(payload),
                 ContentType="application/octet-stream",
             )
-        except ClientError, BotoCoreError:
-            self.logger.exception(
-                "Failed to upload voice to S3.",
-                extra={
-                    "event": "voice_cache_write_failed",
-                    "speech_id": vs_request.speech_id,
-                },
-            )
+            self.__cache_event("s3", "write", ids)
+        except (ClientError, BotoCoreError) as error:
+            self.__cache_event("s3", "write", ids, error)

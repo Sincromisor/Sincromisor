@@ -1,7 +1,10 @@
 /** 製品のPinoをJSONLへ設定し、自由な本文・例外の文字列化を出力境界で防ぐ。 */
+
+import { ConsoleLogger } from "@mastra/core/logger";
 import { PinoLogger } from "@mastra/loggers";
 
 const messages = new Set([
+	"Runtime operation",
 	"Mastra API running",
 	"Studio available",
 	"Shutting down Mastra server",
@@ -28,6 +31,9 @@ const diagnosticKeys = new Set([
 	"duration_ms",
 	"status",
 	"component",
+	"reason",
+	"stage",
+	"peer",
 ]);
 
 /** 本文の主記録元はTextProcessor。第三者の任意属性は診断に必要な項目へ限定する。 */
@@ -92,4 +98,15 @@ export function conversationId(body: unknown): string | undefined {
 		return;
 	if (typeof memory.thread !== "string") return;
 	return /^sincromisor:([A-Za-z0-9_-]{1,128})$/.exec(memory.thread)?.[1];
+}
+
+/** LibSQL内部の非公開DB層が独自生成するConsoleLoggerも、安全な共通出力へ接続する。
+ * 採用版はこの層へloggerを注入できないため公開クラスの出力口だけを置換する。
+ * 製品が内部logger注入に対応したらその設定へ移す。任意の引数は渡さない。
+ */
+export function routeLibraryConsoleLogs(logger: PinoLogger): void {
+	for (const level of ["debug", "info", "warn", "error"] as const) {
+		ConsoleLogger.prototype[level] = () =>
+			logger[level]("Mastra event", { event: "library_log" });
+	}
 }
