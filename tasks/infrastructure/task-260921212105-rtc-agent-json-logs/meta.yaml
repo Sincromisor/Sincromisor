@@ -1,14 +1,14 @@
 id: task-260921212105-rtc-agent-json-logs
 title: RTCとAgentServerのログを共通形式へ揃える
 category: infrastructure
-status: open
+status: done
 depends_on:
   - task-260921212053-victorialogs-foundation
 superseded_by: null
 review: null
 reviewed_sha: null
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 3
 created_at: 2026-09-21
-closed_at: null
+closed_at: 2026-09-22
 legacy_ids: []
