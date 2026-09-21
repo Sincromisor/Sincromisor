@@ -1,5 +1,6 @@
 import type { VRM, VRMHumanBoneName } from "@pixiv/three-vrm";
 import { Object3D } from "three/src/core/Object3D.js";
+import { Timer } from "three/src/core/Timer.js";
 import { Euler } from "three/src/math/Euler.js";
 import { Quaternion } from "three/src/math/Quaternion.js";
 import { Vector3 } from "three/src/math/Vector3.js";
@@ -79,6 +80,25 @@ describe("ArmBoneController direct writer", () => {
 });
 
 describe("VRMCharacterManager full normalized pose application", () => {
+    it("フレーム時刻をTimerへ渡し、VRM更新に秒単位の差分を使う", () => {
+        const { manager } = createUpdateManagerDouble({
+            snapshot: createBehaviorSnapshot(),
+            composerResult: { status: "invalid_input", warnings: [] },
+            armUpdate: vi.fn(),
+            rootStabilization: vi.fn(),
+        });
+        const now = vi.spyOn(performance, "now").mockReturnValue(1000);
+        try {
+            Object.assign(manager, { timer: new Timer() });
+            manager.update(1250);
+            expect(manager.vrm.update).toHaveBeenLastCalledWith(0.25);
+            manager.update(1750);
+            expect(manager.vrm.update).toHaveBeenLastCalledWith(0.5);
+        } finally {
+            now.mockRestore();
+        }
+    });
+
     it("applies the available upper-body finalPose once", () => {
         const { vrm, setNormalizedPose } = createVrmWithSetNormalizedPose();
         const finalPose = { leftUpperArm: eulerQuaternion(0.8, 0.1, 0) };
@@ -334,7 +354,7 @@ function createUpdateManagerDouble(options: {
     const setNormalizedPose = vi.fn();
     const manager = Object.create(VRMCharacterManager.prototype) as UpdateManagerTestDouble;
     Object.assign(manager, {
-        clock: { getDelta: () => 1 / 60 },
+        timer: { update: vi.fn(), getDelta: () => 1 / 60 },
         motionElapsedSeconds: 0,
         behaviorState: { update: () => options.snapshot },
         latestBehaviorSnapshot: undefined,

@@ -1,8 +1,8 @@
 // reason: structure-threshold-exception VRM読込と毎フレーム制御の所有を保ち、今回の診断通知変更ではモデル初期化の分割へ範囲を広げない。
 import { type VRM, VRMLoaderPlugin, VRMMetaLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 import { type GLTF, GLTFLoader, type GLTFParser } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { Clock } from "three/src/core/Clock.js";
 import type { Object3D } from "three/src/core/Object3D.js";
+import { Timer } from "three/src/core/Timer.js";
 import { Vector3 } from "three/src/math/Vector3.js";
 import type { Scene } from "three/src/scenes/Scene.js";
 import { frontendLogger } from "../../shared/logging/appLogger";
@@ -64,7 +64,7 @@ export type VRMCharacterManagerOptions = {
  */
 export class VRMCharacterManager {
     public vrm?: VRM;
-    public clock: Clock;
+    private readonly timer = new Timer();
     private scene: Scene;
     private vrmCamera: VRMCamera;
     public headBoneController?: HeadBoneController;
@@ -100,8 +100,6 @@ export class VRMCharacterManager {
         this.onThumbnailLoaded = options.onThumbnailLoaded;
         this.enableInitialUpperBodyFraming = options.enableInitialUpperBodyFraming ?? false;
         this.behaviorState = CharacterBehaviorState.getManager();
-        this.clock = new Clock();
-        this.clock.start();
         this.load(options.vrmUrl);
     }
 
@@ -221,7 +219,9 @@ export class VRMCharacterManager {
 
     /** 対話状態から姿勢を合成し、頭部・表情、最終姿勢、脚、VRM内部更新、腰の復元の順に反映する。 */
     update(nowMs: number = performance.now()): void {
-        const deltaSeconds = this.clock.getDelta();
+        // Timerは読取りでは進まないため、同じフレーム時刻で一度更新して秒単位の差分を共有する。
+        this.timer.update(nowMs);
+        const deltaSeconds = this.timer.getDelta();
         this.motionElapsedSeconds += deltaSeconds;
         this.latestBehaviorSnapshot = this.behaviorState.update(nowMs);
         const sincroFace = this.sincroFaceRetargeter.retarget(

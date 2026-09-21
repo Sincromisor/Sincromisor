@@ -106,7 +106,8 @@ export function serializeHandLandmarkerResult(
         landmarks: serializeLandmarkGroups(result.landmarks),
         worldLandmarks: serializeLandmarkGroups(result.worldLandmarks),
         handedness: serializeCategoryGroups(result.handedness),
-        handednesses: serializeCategoryGroups(result.handednesses),
+        // v1ログの必須キーを保ち、非推奨の別名はSDKから読み取らない。
+        handednesses: serializeCategoryGroups(result.handedness),
     };
 }
 
@@ -150,7 +151,8 @@ export function serializeGestureRecognizerResult(
         landmarks: serializeLandmarkGroups(result.landmarks),
         worldLandmarks: serializeLandmarkGroups(result.worldLandmarks),
         handedness: serializeCategoryGroups(result.handedness),
-        handednesses: serializeCategoryGroups(result.handednesses),
+        // v1ログの必須キーを保ち、非推奨の別名はSDKから読み取らない。
+        handednesses: serializeCategoryGroups(result.handedness),
         gestures: serializeCategoryGroups(result.gestures),
     };
 }

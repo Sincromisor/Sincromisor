@@ -4,13 +4,7 @@
 
 ## タスク一覧（自動生成 / 全 14 件）
 
-### open（未完） — 1 件
-
-| タスク                                                                                         | タイトル                            | 判定 | 依存 |
-| ---------------------------------------------------------------------------------------------- | ----------------------------------- | ---- | ---- |
-| [task-260921175038-modernize-runtime-apis](./task-260921175038-modernize-runtime-apis/task.md) | 描画とUIの非推奨ライブラリAPIを更新 | —    | —    |
-
-### done（完了） — 13 件
+### done（完了） — 14 件
 
 | タスク                                                                                                         | タイトル                                        | 判定    | 依存                                          |
 | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------- | --------------------------------------------- |
@@ -25,6 +19,7 @@
 | [task-260914232327-reset-webui-settings](./task-260914232327-reset-webui-settings/task.md)                     | WebUIの全設定を初期状態に戻す操作を追加する     | ✅ PASS | `task-260914232323-persist-webui-settings`    |
 | [task-260914232333-persist-audio-tuning](./task-260914232333-persist-audio-tuning/task.md)                     | 音声デバッグ調整を保存して再読込後に復元する    | ✅ PASS | `task-260914232327-reset-webui-settings`      |
 | [task-260914232333-persist-tracking-tuning](./task-260914232333-persist-tracking-tuning/task.md)               | 視線と姿勢のデバッグ調整を保存して復元する      | ✅ PASS | `task-260914232327-reset-webui-settings`      |
+| [task-260921175038-modernize-runtime-apis](./task-260921175038-modernize-runtime-apis/task.md)                 | 描画とUIの非推奨ライブラリAPIを更新             | ✅ PASS | —                                             |
 | [task-260921175038-modernize-zod-numbers](./task-260921175038-modernize-zod-numbers/task.md)                   | Zodの非推奨な有限数検証を整理                   | ✅ PASS | —                                             |
 | [task-260921175038-modernize-zod-objects](./task-260921175038-modernize-zod-objects/task.md)                   | Zodの非推奨な未知キー保持APIを更新              | ✅ PASS | —                                             |
 
