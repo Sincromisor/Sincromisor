@@ -19,10 +19,10 @@ RTCは`slog.NewTextHandler`、AgentServerはMastraのロガーを使う。
 
 ## 完了条件
 
-- [ ] RTCの起動・セッション・エラーとAgentServerの自前ログをJSONLで読め、診断属性が失われない。
-- [ ] RTC・TextProcessor・AgentServerのID対応を説明でき、AgentServerの処理ログを会話IDで抽出できる。
-- [ ] 未指定・有効時の内容記録を維持し、無効時にAgentServer経由で対話本文を運用ログへ出さない。認証情報は常に出さない。
-- [ ] RTC・Mastra API、会話履歴、MCP、LLM接続の挙動を変えない。
+- [x] RTCの起動・セッション・エラーとAgentServerの自前ログをJSONLで読め、診断属性が失われない。
+- [x] RTC・TextProcessor・AgentServerのID対応を説明でき、AgentServerの処理ログを会話IDで抽出できる。
+- [x] 未指定・有効時の内容記録を維持し、無効時にAgentServer経由で対話本文を運用ログへ出さない。認証情報は常に出さない。
+- [x] RTC・Mastra API、会話履歴、MCP、LLM接続の挙動を変えない。
 
 ## 確認方法と文書同期
 
