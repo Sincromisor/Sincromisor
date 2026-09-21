@@ -28,6 +28,14 @@ Dockerビルドでは配布物の取得成功後にキャッシュを確定し�
 - 音声合成バックエンドを呼び出す。
 - `VoiceSynthesizerResult` としてGoパイプライン調停器へ返す。
 
+## 運用ログ
+
+共通JSONLを使い、`SINCRO_LOG_SYNTHESIS_ENABLED`（既定`true`）で本文と生成条件の詳細を切り替える。
+生成・Redis・S3の取得元と要求・結果を区別し、WebSocketで保持する会話・発話・シーケンスIDを記録する。
+無効でも本文なしの成功・失敗を残す。HTTP失敗は状態コードだけを保持し、URLや例外値は記録しない。
+キャッシュ保存・返却音声・MessagePack契約は設定に依存しない。
+VOICEVOXの中央ログの除去とDocker原本の扱いは[ログ設計](../../infrastructure/logging.md#音声生成)を参照する。
+
 ## 変更時の確認
 
 - 音声フレームモデルを変える場合はGoパイプライン調停器とWebSocket 契約を同時更新する。

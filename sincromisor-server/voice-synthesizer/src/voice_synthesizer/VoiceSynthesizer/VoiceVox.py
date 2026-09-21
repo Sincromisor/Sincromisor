@@ -1,15 +1,23 @@
 import requests
 from sincro_models.VoiceVoxQuery import VoiceVoxQuery
 
-# API reference
+# API仕様
 # https://voicevox.github.io/voicevox_engine/api/
 
 
 class VoiceVox:
+    """VOICEVOX HTTP要求を包み、失敗時に本文を含むURLを公開しない。"""
+
     class ProtocolError(Exception):
-        pass
+        """HTTP状態だけを持つ、本文とURLを含まない通信失敗。"""
+
+        def __init__(self, status_code: int) -> None:
+            """運用診断へ安全に渡せる数値の状態を保持する。"""
+            self.status_code = status_code
+            super().__init__(f"VOICEVOX HTTP status {status_code}")
 
     def __init__(self, host: str = "127.0.0.1", port: int = 50021):
+        """接続先を保持する。要求URLは運用ログへ渡さない。"""
         self.host = host
         self.port = port
         self.base_url = f"http://{self.host}:{self.port}"
@@ -164,18 +172,16 @@ class VoiceVox:
         return res.json()
 
     def response_validator(self, res: requests.Response) -> bool:
+        """通常APIの成功を判定し、異常は安全なHTTP状態だけで通知する。"""
         if res.status_code == 200:
             return True
-        raise self.ProtocolError(
-            f"{res.status_code} {res.reason} - {res.request.url}",
-        )
+        raise self.ProtocolError(res.status_code)
 
     def update_response_validator(self, res: requests.Response) -> bool:
+        """更新APIの成功を判定し、理由句や要求URLを例外へ含めない。"""
         if res.status_code == 204:
             return True
-        raise self.ProtocolError(
-            f"{res.status_code} {res.reason} - {res.request.url}",
-        )
+        raise self.ProtocolError(res.status_code)
 
 
 if __name__ == "__main__":
