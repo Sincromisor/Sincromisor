@@ -1,7 +1,7 @@
 id: task-260921212106-distributed-logging-acceptance
 title: 複数ホストのログ集約と内容記録の切替を結合確認する
 category: infrastructure
-status: open
+status: blocked
 depends_on:
   - task-260921212104-vector-host-collection
   - task-260921212105-python-conversation-logs
