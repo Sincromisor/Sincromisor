@@ -28,6 +28,12 @@ test("llama-serverはchat専用で固定イメージと読み取り専用モデ�
 			continue;
 		}
 		assert.match(llama.image, /@sha256:[a-f0-9]{64}$/);
+		for (const name of ["llama-server", "agent-server", "consul-agent-chat"])
+			assert.equal(services[name].restart, "unless-stopped");
+		assert.equal(
+			services["agent-server"].depends_on["consul-agent-chat"].condition,
+			"service_healthy",
+		);
 		assert.equal(llama.ports, undefined);
 		assert.equal(
 			llama.command[llama.command.indexOf("--n-gpu-layers") + 1],

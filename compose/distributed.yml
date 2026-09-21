@@ -52,3 +52,7 @@ services:
         ports:
             - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8318:8318/tcp
             - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8318:8318/udp
+    consul-agent-chat:
+        ports:
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8319:8319/tcp
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8319:8319/udp

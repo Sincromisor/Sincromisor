@@ -2,6 +2,7 @@
 services:
     llama-server:
         profiles: [chat]
+        restart: unless-stopped
         image: ${SINCRO_LLAMA_IMAGE:-ghcr.io/ggml-org/llama.cpp@sha256:92f75345eeeffa2e76e0e47526f310d0aca36b523bfe514a7dfda5bb1185f256}
         command:
             - --host

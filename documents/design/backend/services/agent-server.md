@@ -15,6 +15,8 @@ StudioのAPI接続先は `MASTRA_AUTO_DETECT_URL=true` によりページと同�
 待受アドレス `0.0.0.0` をブラウザー向けURLとして使わない。
 
 `chat` プロファイルで起動し、llama-serverの死活確認成功を待つ。
+AgentServer・llama-server・専用Consulエージェントは `restart: unless-stopped` でホスト再起動後も復帰する。
+手動停止したコンテナは自動復帰しない。Docker再起動時はComposeの依存待機を実行しないため、LLMのロード完了までは生成が失敗し得る。
 内部は `0.0.0.0:4111`、ホスト公開は `127.0.0.1:4111` のみ。
 公開フロントから管理画面へ転送しない。設定サンプルの正本は `examples/compose.env`。
 
@@ -165,8 +167,12 @@ HTTP 200の `text/event-stream` として、空行区切りの `data: <JSON>` �
 
 ## 採用版の制限
 
-libSQLはStudioのフィードバック一覧に未対応で、`/api/observability/feedback` は500を返す。
-指示の編集・試験・公開と会話履歴の保存には影響しない。フィードバック管理はこの構成の対象外である。
+libSQLはStudioのフィードバック一覧に未対応のため、`MastraCompositeStore` の `observability` 保存領域を明示的に無効化する。
+`/api/observability/feedback` などの監視APIは未対応を示す501を返す。
+採用StudioのInbox件数取得は501でも定期取得するため、一覧のGETだけは前段の処理で共通のSimpleAuthによる認証を確認し、例外ログを出さずに501を返す。
+ブラウザーの開発者コンソールには501が残る。監視機能対応時はこの前段処理と保存領域の無効化を同時に撤去する。
+監視履歴・フィードバック管理はこの構成の対象外である。Editorと会話履歴は従来と同じlibSQLへ保存する。
+Pythonの生成API・認証・ストリーム契約は変更しない。
 
 ## 一次資料
 

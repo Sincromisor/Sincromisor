@@ -49,6 +49,8 @@ llama-serverはその正常終了を待つ。固定リビジョンと保存条�
 ## 管理者用Mastra
 
 `agent-server` は `chat` プロファイルでllama-serverを待って起動する。
+AgentServer・llama-server・`consul-agent-chat` は `restart: unless-stopped` で再起動する。
+専用エージェントの登録と死活確認は[Consul設計](consul.md#複数ホストのエージェント)を参照する。
 Mastra APIとStudio Editorを同じ本番コンテナに置き、内部4111をホストの `127.0.0.1:4111` だけへ公開する。
 LLM設定と管理者が指定したトークンは `.env` から渡す。トークン未指定時は
 `service-initializer` が生成・保存したものをAgentServerとTextProcessorで共有する。

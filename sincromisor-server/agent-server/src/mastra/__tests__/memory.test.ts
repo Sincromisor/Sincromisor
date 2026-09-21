@@ -37,6 +37,44 @@ test("同じthreadだけに過去の発話を投入し、別会話とStudioに�
 	process.env.SINCRO_AGENT_DB_URL = `file:${join(directory, "memory.db")}`;
 	const { mastra } = await import("../application.js");
 	try {
+		// Studioへ未対応を返すための設定と、会話・Editorの保存先が共存することを確認する。
+		const storage = mastra.getStorage();
+		assert(storage);
+		assert.equal(await storage.getStore("observability"), undefined);
+		assert(await storage.getStore("agents"));
+		const { createHonoServer } = await import("@mastra/deployer/server");
+		const app = await createHonoServer(mastra, { tools: {} });
+		const path = "http://localhost/api/observability/feedback";
+		assert.equal((await app.request(path)).status, 401);
+		assert.equal(
+			(
+				await app.request(path, {
+					headers: { Authorization: "Bearer invalid" },
+				})
+			).status,
+			401,
+		);
+		const errors: unknown[] = [];
+		const logger = mastra.getLogger();
+		const originalError = logger.error;
+		logger.error = (...args) => {
+			errors.push(args);
+		};
+		try {
+			for (const headers of [
+				new Headers({
+					Authorization: `Bearer ${process.env.SINCRO_AGENT_ADMIN_TOKEN}`,
+				}),
+				new Headers({
+					Cookie: `mastra-token=${process.env.SINCRO_AGENT_ADMIN_TOKEN}`,
+				}),
+			]) {
+				assert.equal((await app.request(path, { headers })).status, 501);
+			}
+			assert.equal(errors.length, 0);
+		} finally {
+			logger.error = originalError;
+		}
 		const agent = mastra.getAgent("sincromisor-character");
 		for (const [thread, content] of [
 			["sincromisor:a", "Aだけの合言葉は赤い森781"],

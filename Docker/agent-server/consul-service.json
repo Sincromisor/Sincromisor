@@ -1,0 +1,14 @@
+{
+	"service": {
+		"id": "agent-server",
+		"name": "AgentServer",
+		"address": "agent-server",
+		"port": 4111,
+		"tags": ["compose-internal"],
+		"check": {
+			"tcp": "agent-server:4111",
+			"interval": "10s",
+			"timeout": "5s"
+		}
+	}
+}
