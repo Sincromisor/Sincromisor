@@ -72,12 +72,12 @@
 
 ## 完了条件と確認方法
 
-- [ ] 配布設定から単一の`docker compose up`で本体と中央保存・必要なConsulエージェントが起動し、登録・死活確認・Consulで取得した接続先への人工ログ投入が成立する。Vectorの標準起動と実ログ投入は収集タスクで確認する。
-- [ ] 隔離Composeで中央を起動し、人工的な日本語JSONLを投入して時刻・ホスト・サービスで検索し、`jq`で抽出できる。
-- [ ] 中央の再作成後も記録が検索でき、永続保存先と保持期限設定を確認できる。既存ログ領域を削除しない。
-- [ ] 中央停止・再作成でConsulの異常・復旧が反映され、照会で変更後の登録先を取得できる。Vectorによる再発見は収集タスクで確認する。中央障害で本体の起動を止めない。
-- [ ] 標準構成と管理IP指定時の構成を`docker compose config`で確認し、不要な公開と業務サービスへの起動依存がない。
-- [ ] 共通仕様、JSONL入出力と内部保存形式の違い、数値の文字列化、単一ノード停止・故障時の限界を文書化する。
+- [x] 配布設定から単一の`docker compose up`で本体と中央保存・必要なConsulエージェントが起動し、登録・死活確認・Consulで取得した接続先への人工ログ投入が成立する。Vectorの標準起動と実ログ投入は収集タスクで確認する。
+- [x] 隔離Composeで中央を起動し、人工的な日本語JSONLを投入して時刻・ホスト・サービスで検索し、`jq`で抽出できる。
+- [x] 中央の再作成後も記録が検索でき、永続保存先と保持期限設定を確認できる。既存ログ領域を削除しない。
+- [x] 中央停止・再作成でConsulの異常・復旧が反映され、照会で変更後の登録先を取得できる。Vectorによる再発見は収集タスクで確認する。中央障害で本体の起動を止めない。
+- [x] 標準構成と管理IP指定時の構成を`docker compose config`で確認し、不要な公開と業務サービスへの起動依存がない。
+- [x] 共通仕様、JSONL入出力と内部保存形式の違い、数値の文字列化、単一ノード停止・故障時の限界を文書化する。
 
 ## 対象外と文書同期
 
@@ -90,3 +90,12 @@
 2026-09-21確認。[Vector接続](https://docs.victoriametrics.com/victorialogs/data-ingestion/vector/)のHTTP JSONL投入と[検索API](https://docs.victoriametrics.com/victorialogs/querying/)を採用する。
 [データモデル](https://docs.victoriametrics.com/victorialogs/keyconcepts/)と[保持期間](https://docs.victoriametrics.com/victorialogs/#retention)を運用手順へ反映する。
 同日確認の[Caddyの動的DNS転送](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy#dynamic-upstreams)と既存のCaddy設定を使い、Consulから接続先を解決する。
+
+## 実装と確認結果
+
+- 2026-09-22: `compose/logging.yml`を標準includeへ追加。VictoriaLogs v1.52.0を固定し、保存ボリューム、7日保持、ループバック公開、分散用管理IP広告、Consul登録とbandog監視を実装した。
+- 配布設定の標準・分散Composeを展開して起動対象、公開先、業務サービスから中央への起動依存がないことを確認した。その実定義から中央とConsulを隔離し、単一の`compose up`で起動した。本体全サービスの再起動は行わず、全体の標準起動・実ログ収集は後続の結合確認で行う。
+- `node --test scripts/tests/logging-foundation.test.mjs`: 日本語JSONLの投入、時刻・ホスト・サービス検索、数値の文字列化、jq抽出、中央停止のcritical、別IPへの再作成後のDNS更新・passing・保存済み検索、エージェント再作成後の登録を確認した。
+- Consul起動スクリプトは公式entrypointの保存領域・設定読込み・権限設定を引き継ぐ。中央エージェントは収集側に予約された8320と分けて8321を使う。
+- 共通項目、内容切替の契約と未実装範囲、保存形式、期限・単一ノードの限界を設計へ反映した。既存の保存領域・稼働サービスは変更していない。
+- `node --test scripts/tests/bandog-consul.test.mjs`: 既存の欠損・停止・復旧確認が合格。中央復旧試験でConsulの状態同期RPCの一時的EOFを確認し、ローカルpassingとクラスタcriticalの差を採取した。試験の待機を既定再同期周期まで含む90秒に合わせた。

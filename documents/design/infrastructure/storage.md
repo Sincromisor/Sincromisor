@@ -121,6 +121,10 @@ UID 1000のnodeユーザーが権限700の領域に単一libSQL `mastra.db` を�
 - 保存オブジェクトのスキーマやパスを変える場合は利用サービスの受信処理 / 書き込み処理を同時更新する。
 - MinIO 前提の記述が残っていないか確認する。
 
+## ログ基盤
+
+中央の保存・公開先・Consul登録は[ログの保存と検索](logging.md)を参照する。
+
 ## 参照
 
 - `documents/design/infrastructure/compose.md`

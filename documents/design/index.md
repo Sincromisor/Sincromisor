@@ -90,6 +90,8 @@
 
 ## インフラ
 
+- [ログの保存と検索](infrastructure/logging.md) — VictoriaLogsと共通ログ項目、保持期間、検索手順。
+
 - [Docker Compose](infrastructure/compose.md)
     - Docker Compose プロファイル、環境変数受け渡し、ローカル起動
 - [コンテナイメージの公開](infrastructure/image-publishing.md)
