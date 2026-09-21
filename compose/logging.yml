@@ -1,0 +1,54 @@
+services:
+    victoria-logs:
+        profiles: [full, logs]
+        build:
+            context: ../Docker/logging
+        image: ${SINCRO_REGISTRY_NAME}/victoria-logs:v1.52.0
+        pull_policy: build
+        restart: unless-stopped
+        command:
+            - -storageDataPath=/victoria-logs-data
+            - -retentionPeriod=${SINCRO_LOG_RETENTION:-7d}
+            - -httpListenAddr=:9428
+            - -loggerFormat=json
+        volumes:
+            - victoria-logs-data:/victoria-logs-data
+        ports: ["127.0.0.1:9428:9428"]
+        networks: [sincromisor-net]
+        healthcheck:
+            test: [CMD, /busybox, wget, -q, -O, /dev/null, http://127.0.0.1:9428/health]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+
+    # 中央停止中も登録を保持する。業務サービスはこのエージェントを起動条件にしない。
+    consul-agent-logs:
+        profiles: [full, logs]
+        image: hashicorp/consul:latest
+        restart: unless-stopped
+        entrypoint: [sh, /start-consul.sh]
+        command:
+            - -retry-join=${SINCRO_CONSUL_SERVER_HOST}:8301
+            - -advertise=${SINCRO_CONSUL_ADVERTISE_ADDR:-}
+            - -serf-lan-port=8321
+            - -client=0.0.0.0
+            - -node=logs-${SINCRO_LOG_HOST:-local}
+        environment:
+            SINCRO_LOG_HOST: ${SINCRO_LOG_HOST:-local}
+            SINCRO_LOG_PUBLIC_HOST: ${SINCRO_LOG_PUBLIC_HOST:-victoria-logs}
+        volumes:
+            - consul-agent-logs-data:/consul/data
+            - ../Docker/logging/start-consul.sh:/start-consul.sh:ro
+        networks: [sincromisor-net]
+        healthcheck:
+            test: [CMD, consul, members]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+volumes:
+    victoria-logs-data:
+    consul-agent-logs-data:
+
+networks:
+    sincromisor-net:

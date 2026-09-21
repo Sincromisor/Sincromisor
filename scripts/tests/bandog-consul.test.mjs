@@ -95,6 +95,7 @@ test("bandogはチャット基盤の未登録・異常を検知し、復旧後�
 			"SpeechRecognizer",
 			"TextProcessor",
 			"VoiceSynthesizer",
+			"SincroLogs",
 		]) {
 			docker(
 				"exec",

@@ -87,6 +87,7 @@ docker compose restart bandog
 | Redis        | TCP/UDP 8317 |
 | S3           | TCP/UDP 8318 |
 | チャット     | TCP/UDP 8319 |
+| 中央ログ     | TCP/UDP 8321 |
 
 各エージェントは `SINCRO_CONSUL_SERVER_HOST:8301` へ参加する。DNSの8600と参加先8301は同じサーバーを指す。
 RTCのHTTP 8500はComposeネットワーク内の `sincro-rtc` だけが使い、ホストへ公開しない。
@@ -120,6 +121,10 @@ docker compose --profile full exec sincro-consul-server consul operator raft lis
 - サービス名を変える場合は登録側、探索側、Docker Compose、環境変数を同時更新する。
 - 公開用の待受ホスト / ポートを変える場合は RTC 設定とリバースプロキシの影響を確認する。
 - 代替処理設定を変える場合は Consul 未起動時の挙動を確認する。
+
+## ログ基盤
+
+中央の保存・公開先・Consul登録は[ログの保存と検索](logging.md)を参照する。
 
 ## 参照
 

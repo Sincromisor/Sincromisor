@@ -56,3 +56,12 @@ services:
         ports:
             - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8319:8319/tcp
             - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8319:8319/udp
+    victoria-logs:
+        ports:
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:9428:9428/tcp
+    consul-agent-logs:
+        environment:
+            SINCRO_LOG_PUBLIC_HOST: ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}
+        ports:
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8321:8321/tcp
+            - ${SINCRO_CONSUL_PUBLISH_HOST:?管理IPv4を指定してください}:8321:8321/udp
