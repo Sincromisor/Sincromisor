@@ -10,134 +10,108 @@ const sourceKindSchema = z.enum(["live-camera", "video-fixture", "synthetic"]);
 
 const unknownRecordSchema = z.record(z.string(), z.unknown());
 
-const sourceSchema = z
-    .object({
-        kind: sourceKindSchema,
-        fixtureId: z.string().optional(),
-        videoHash: z.string().optional(),
-    })
-    .strict();
+const sourceSchema = z.strictObject({
+    kind: sourceKindSchema,
+    fixtureId: z.string().optional(),
+    videoHash: z.string().optional(),
+});
 
-const environmentSchema = z
-    .object({
-        userAgent: z.string(),
-        devicePixelRatio: z.number(),
-        viewport: z
-            .object({
-                width: z.number(),
-                height: z.number(),
-            })
-            .strict(),
-        timeOriginMs: z.number().optional(),
-    })
-    .strict();
-
-const buildSchema = z
-    .object({
-        appVersion: z.string().optional(),
-        gitCommit: z.string().optional(),
-        packageVersions: z.record(z.string(), z.string().optional()),
-        configHash: z.string(),
-    })
-    .strict();
-
-const cameraActualSettingsSchema = z
-    .object({
-        width: z.number().optional(),
-        height: z.number().optional(),
-        frameRate: z.number().optional(),
-        facingMode: z.string().optional(),
-        deviceIdHash: z.string().optional(),
-        groupIdHash: z.string().optional(),
-    })
-    .strict();
-
-const cameraSchema = z
-    .object({
-        requestedConstraints: z.unknown().optional(),
-        actualSettings: cameraActualSettingsSchema.optional(),
-    })
-    .strict();
-
-const avatarSchema = z
-    .object({
-        avatarProfileId: z.string(),
-        vrmMetaHash: z.string().optional(),
-        boneCapabilities: z.record(z.string(), z.boolean()),
-        restMetrics: unknownRecordSchema.optional(),
-        motionProfile: unknownRecordSchema.optional(),
-    })
-    .strict();
-
-/** 記録情報の保存形式。機器の未加工情報を追加キーとして受理しない。 */
-export const motionDebugLogManifestSchema = z
-    .object({
-        schemaVersion: z.literal(SINCRO_MOTION_DEBUG_LOG_SCHEMA_VERSION),
-        createdAtIso: z.string(),
-        source: sourceSchema,
-        environment: environmentSchema,
-        build: buildSchema,
-        camera: cameraSchema,
-        pipeline: unknownRecordSchema,
-        avatar: avatarSchema,
-        metricSummary: z.unknown().optional(),
-    })
-    .strict();
-
-const motionDebugFrameTimestampSchema = z
-    .object({
-        mediaTimeMs: z.number(),
-        presentationTimeMs: z.number().optional(),
-        expectedDisplayTimeMs: z.number().optional(),
-        presentedFrames: z.number().int().nonnegative().optional(),
-        droppedPresentedFrames: z.number().int().nonnegative().optional(),
-        clockSource: z
-            .enum(["request-video-frame-callback", "request-animation-frame", "timer"])
-            .optional(),
-    })
-    .strict();
-
-const motionDebugFrameVideoSchema = z
-    .object({
+const environmentSchema = z.strictObject({
+    userAgent: z.string(),
+    devicePixelRatio: z.number(),
+    viewport: z.strictObject({
         width: z.number(),
         height: z.number(),
-    })
-    .strict();
+    }),
+    timeOriginMs: z.number().optional(),
+});
+
+const buildSchema = z.strictObject({
+    appVersion: z.string().optional(),
+    gitCommit: z.string().optional(),
+    packageVersions: z.record(z.string(), z.string().optional()),
+    configHash: z.string(),
+});
+
+const cameraActualSettingsSchema = z.strictObject({
+    width: z.number().optional(),
+    height: z.number().optional(),
+    frameRate: z.number().optional(),
+    facingMode: z.string().optional(),
+    deviceIdHash: z.string().optional(),
+    groupIdHash: z.string().optional(),
+});
+
+const cameraSchema = z.strictObject({
+    requestedConstraints: z.unknown().optional(),
+    actualSettings: cameraActualSettingsSchema.optional(),
+});
+
+const avatarSchema = z.strictObject({
+    avatarProfileId: z.string(),
+    vrmMetaHash: z.string().optional(),
+    boneCapabilities: z.record(z.string(), z.boolean()),
+    restMetrics: unknownRecordSchema.optional(),
+    motionProfile: unknownRecordSchema.optional(),
+});
+
+/** 記録情報の保存形式。機器の未加工情報を追加キーとして受理しない。 */
+export const motionDebugLogManifestSchema = z.strictObject({
+    schemaVersion: z.literal(SINCRO_MOTION_DEBUG_LOG_SCHEMA_VERSION),
+    createdAtIso: z.string(),
+    source: sourceSchema,
+    environment: environmentSchema,
+    build: buildSchema,
+    camera: cameraSchema,
+    pipeline: unknownRecordSchema,
+    avatar: avatarSchema,
+    metricSummary: z.unknown().optional(),
+});
+
+const motionDebugFrameTimestampSchema = z.strictObject({
+    mediaTimeMs: z.number(),
+    presentationTimeMs: z.number().optional(),
+    expectedDisplayTimeMs: z.number().optional(),
+    presentedFrames: z.number().int().nonnegative().optional(),
+    droppedPresentedFrames: z.number().int().nonnegative().optional(),
+    clockSource: z
+        .enum(["request-video-frame-callback", "request-animation-frame", "timer"])
+        .optional(),
+});
+
+const motionDebugFrameVideoSchema = z.strictObject({
+    width: z.number(),
+    height: z.number(),
+});
 
 /** 再生に必要な時刻と映像寸法を検証し、任意の動作層は未解析で保持する。 */
-export const motionDebugFrameSchema = z
-    .object({
-        frameIndex: z.number().int(),
-        timestamp: motionDebugFrameTimestampSchema,
-        video: motionDebugFrameVideoSchema,
-        mediapipe: z.unknown().optional(),
-        poseSnapshot: z.unknown().optional(),
-        hand: z.unknown().optional(),
-        reliability: z.unknown().optional(),
-        canonical: z.unknown().optional(),
-        temporal: z.unknown().optional(),
-        intent: z.unknown().optional(),
-        postProcessing: z.unknown().optional(),
-        solver: z.unknown().optional(),
-        finalPose: z.unknown().optional(),
-        applied: z.unknown().optional(),
-        metrics: z.unknown().optional(),
-    })
-    .strict();
+export const motionDebugFrameSchema = z.strictObject({
+    frameIndex: z.number().int(),
+    timestamp: motionDebugFrameTimestampSchema,
+    video: motionDebugFrameVideoSchema,
+    mediapipe: z.unknown().optional(),
+    poseSnapshot: z.unknown().optional(),
+    hand: z.unknown().optional(),
+    reliability: z.unknown().optional(),
+    canonical: z.unknown().optional(),
+    temporal: z.unknown().optional(),
+    intent: z.unknown().optional(),
+    postProcessing: z.unknown().optional(),
+    solver: z.unknown().optional(),
+    finalPose: z.unknown().optional(),
+    applied: z.unknown().optional(),
+    metrics: z.unknown().optional(),
+});
 
-const motionDebugManifestLineSchema = z
-    .object({
-        recordType: z.literal("manifest"),
-        manifest: motionDebugLogManifestSchema,
-    })
-    .strict();
+const motionDebugManifestLineSchema = z.strictObject({
+    recordType: z.literal("manifest"),
+    manifest: motionDebugLogManifestSchema,
+});
 
-const motionDebugFrameLineSchema = z
-    .object({
-        recordType: z.literal("frame"),
-        frame: motionDebugFrameSchema,
-    })
-    .strict();
+const motionDebugFrameLineSchema = z.strictObject({
+    recordType: z.literal("frame"),
+    frame: motionDebugFrameSchema,
+});
 
 const motionDebugLogLineSchema = z.union([
     motionDebugManifestLineSchema,

@@ -721,11 +721,11 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
 function plainObjectSchema<Shape extends z.core.$ZodLooseShape>(shape: Shape) {
     return z
         .custom<Record<string, unknown>>(isPlainRecord, { message: "Expected a plain object." })
-        .pipe(z.object(shape).strict());
+        .pipe(z.strictObject(shape));
 }
 
 function loosePlainObjectSchema<Shape extends z.core.$ZodLooseShape>(shape: Shape) {
     return z
         .custom<Record<string, unknown>>(isPlainRecord, { message: "Expected a plain object." })
-        .pipe(z.object(shape).passthrough());
+        .pipe(z.looseObject(shape));
 }

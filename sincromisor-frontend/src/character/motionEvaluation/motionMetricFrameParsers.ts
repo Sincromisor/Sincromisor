@@ -18,104 +18,71 @@ import {
 
 // 保存 contract の外部境界は replay frame 内の unknown slot であり、ここで Zod / parser に閉じる。
 // metric group の計算式、threshold 判定、baseline comparison はこの module では扱わない。
-const poseWristSchema = z
-    .object({
-        cameraX: z.number(),
-        cameraY: z.number(),
-        confidence: z.number().optional(),
-    })
-    .passthrough();
+const poseWristSchema = z.looseObject({
+    cameraX: z.number(),
+    cameraY: z.number(),
+    confidence: z.number().optional(),
+});
 
-const poseSnapshotSchema = z
-    .object({
-        detected: z.boolean(),
-        degradedToFaceOnly: z.boolean().optional(),
-        consecutiveFailures: z.number().optional(),
-        upperBody: z
-            .object({
-                shoulderCenterX: z.number(),
-                shoulderCenterY: z.number(),
-            })
-            .passthrough(),
-        leftArm: z
-            .object({
-                targets: z
-                    .object({
-                        wrist: poseWristSchema,
-                    })
-                    .passthrough(),
-            })
-            .passthrough(),
-        rightArm: z
-            .object({
-                targets: z
-                    .object({
-                        wrist: poseWristSchema,
-                    })
-                    .passthrough(),
-            })
-            .passthrough(),
-    })
-    .passthrough();
+const poseSnapshotSchema = z.looseObject({
+    detected: z.boolean(),
+    degradedToFaceOnly: z.boolean().optional(),
+    consecutiveFailures: z.number().optional(),
+    upperBody: z.looseObject({
+        shoulderCenterX: z.number(),
+        shoulderCenterY: z.number(),
+    }),
+    leftArm: z.looseObject({
+        targets: z.looseObject({
+            wrist: poseWristSchema,
+        }),
+    }),
+    rightArm: z.looseObject({
+        targets: z.looseObject({
+            wrist: poseWristSchema,
+        }),
+    }),
+});
 
-const armConstraintSchema = z
-    .object({
-        reasons: z.array(z.string()).optional(),
-        jointLimited: z.boolean().optional(),
-        targetPushDistance: z.number().optional(),
-    })
-    .passthrough();
+const armConstraintSchema = z.looseObject({
+    reasons: z.array(z.string()).optional(),
+    jointLimited: z.boolean().optional(),
+    targetPushDistance: z.number().optional(),
+});
 
-const quaternionSchema = z
-    .object({
-        x: z.number(),
-        y: z.number(),
-        z: z.number(),
-        w: z.number(),
-    })
-    .strict();
+const quaternionSchema = z.strictObject({
+    x: z.number(),
+    y: z.number(),
+    z: z.number(),
+    w: z.number(),
+});
 
-const retargetArmSchema = z
-    .object({
-        constraint: armConstraintSchema.optional(),
-        upperArmQuaternion: quaternionSchema.optional(),
-        lowerArmQuaternion: quaternionSchema.optional(),
-    })
-    .passthrough();
+const retargetArmSchema = z.looseObject({
+    constraint: armConstraintSchema.optional(),
+    upperArmQuaternion: quaternionSchema.optional(),
+    lowerArmQuaternion: quaternionSchema.optional(),
+});
 
-const poseRetargetSchema = z
-    .object({
-        leftArm: retargetArmSchema,
-        rightArm: retargetArmSchema,
-    })
-    .passthrough();
+const poseRetargetSchema = z.looseObject({
+    leftArm: retargetArmSchema,
+    rightArm: retargetArmSchema,
+});
 
-const solverSchema = z
-    .object({
-        poseRetarget: poseRetargetSchema.optional(),
-    })
-    .passthrough();
+const solverSchema = z.looseObject({
+    poseRetarget: poseRetargetSchema.optional(),
+});
 
-const appliedSchema = z
-    .object({
-        angularVelocityDegPerSec: z.union([
-            z.number(),
-            z.record(z.string(), z.number()),
-        ]),
-    })
-    .passthrough();
+const appliedSchema = z.looseObject({
+    angularVelocityDegPerSec: z.union([z.number(), z.record(z.string(), z.number())]),
+});
 
-const trackerMetricsSchema = z
-    .object({
-        workerRoundTripMs: z.number().optional(),
-    })
-    .passthrough();
+const trackerMetricsSchema = z.looseObject({
+    workerRoundTripMs: z.number().optional(),
+});
 
-const metricsSchema = z
-    .object({
-        tracker: trackerMetricsSchema.optional(),
-    })
-    .passthrough();
+const metricsSchema = z.looseObject({
+    tracker: trackerMetricsSchema.optional(),
+});
 
 export type PoseSnapshotMetricInput = z.infer<typeof poseSnapshotSchema>;
 export type PoseRetargetMetricInput = z.infer<typeof poseRetargetSchema>;

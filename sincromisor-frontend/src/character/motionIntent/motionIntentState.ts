@@ -118,7 +118,7 @@ function isPlainRecord(value: unknown): value is PlainRecord {
 function plainObjectSchema<Shape extends z.core.$ZodLooseShape>(shape: Shape) {
     return z
         .custom<PlainRecord>(isPlainRecord, { message: "Expected a plain object." })
-        .pipe(z.object(shape).strict());
+        .pipe(z.strictObject(shape));
 }
 
 const motionIntentSideStateSchema: z.ZodType<MotionIntentSideState> = plainObjectSchema({
@@ -152,11 +152,9 @@ const motionIntentStateSchema: z.ZodType<MotionIntentState> = plainObjectSchema(
     warnings: z.array(motionIntentWarningCodeSchema),
 });
 
-const schemaVersionProbeSchema = z
-    .object({
-        schemaVersion: z.string().optional(),
-    })
-    .passthrough();
+const schemaVersionProbeSchema = z.looseObject({
+    schemaVersion: z.string().optional(),
+});
 
 function zodPathToStrings(path: readonly PropertyKey[]): string[] {
     return path.map((segment) => String(segment));

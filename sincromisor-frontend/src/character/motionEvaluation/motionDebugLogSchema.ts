@@ -21,43 +21,33 @@ export {
     type SincroMotionDebugLogParseResult,
 } from "./motionDebugRecordSchema";
 
-const recordTypeProbeSchema = z.object({ recordType: z.string() }).passthrough();
+const recordTypeProbeSchema = z.looseObject({ recordType: z.string() });
 
-const manifestEnvelopeSchema = z
-    .object({
-        recordType: z.literal("manifest"),
-        manifest: z.unknown(),
-    })
-    .strict();
+const manifestEnvelopeSchema = z.strictObject({
+    recordType: z.literal("manifest"),
+    manifest: z.unknown(),
+});
 
-const frameEnvelopeSchema = z
-    .object({
-        recordType: z.literal("frame"),
-        frame: z.unknown(),
-    })
-    .strict();
+const frameEnvelopeSchema = z.strictObject({
+    recordType: z.literal("frame"),
+    frame: z.unknown(),
+});
 
-const manifestVersionProbeSchema = z
-    .object({
-        schemaVersion: z.string().optional(),
-    })
-    .passthrough();
+const manifestVersionProbeSchema = z.looseObject({
+    schemaVersion: z.string().optional(),
+});
 
-const frameIndexProbeSchema = z
-    .object({
-        frameIndex: z.number().optional(),
-    })
-    .passthrough();
+const frameIndexProbeSchema = z.looseObject({
+    frameIndex: z.number().optional(),
+});
 
-const frameTimestampProbeSchema = z
-    .object({
-        timestamp: z
-            .object({
-                mediaTimeMs: z.unknown().optional(),
-            })
-            .optional(),
-    })
-    .passthrough();
+const frameTimestampProbeSchema = z.looseObject({
+    timestamp: z
+        .object({
+            mediaTimeMs: z.unknown().optional(),
+        })
+        .optional(),
+});
 
 type JsonLineParseResult =
     | { ok: true; value: unknown }

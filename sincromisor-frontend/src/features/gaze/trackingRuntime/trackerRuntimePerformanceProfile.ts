@@ -66,56 +66,46 @@ const profileIdSchema = z.enum(["high-end-desktop", "standard-laptop", "mobile-s
 const positiveFiniteNumberSchema = z.number().positive();
 const nonNegativeFiniteNumberSchema = z.number().nonnegative();
 
-const cameraSchema = z
-    .object({
-        idealWidth: positiveFiniteNumberSchema,
-        idealHeight: positiveFiniteNumberSchema,
-        idealFrameRate: positiveFiniteNumberSchema,
-        maxFrameRate: positiveFiniteNumberSchema,
-        facingMode: z.literal("user"),
-    })
-    .strict();
+const cameraSchema = z.strictObject({
+    idealWidth: positiveFiniteNumberSchema,
+    idealHeight: positiveFiniteNumberSchema,
+    idealFrameRate: positiveFiniteNumberSchema,
+    maxFrameRate: positiveFiniteNumberSchema,
+    facingMode: z.literal("user"),
+});
 
-const cadenceSchema = z
-    .object({
-        faceFps: positiveFiniteNumberSchema,
-        poseFps: positiveFiniteNumberSchema,
-        handFps: positiveFiniteNumberSchema,
-        faceRoiFps: positiveFiniteNumberSchema,
-        gestureFps: positiveFiniteNumberSchema,
-    })
-    .strict();
+const cadenceSchema = z.strictObject({
+    faceFps: positiveFiniteNumberSchema,
+    poseFps: positiveFiniteNumberSchema,
+    handFps: positiveFiniteNumberSchema,
+    faceRoiFps: positiveFiniteNumberSchema,
+    gestureFps: positiveFiniteNumberSchema,
+});
 
-const debugLogSchema = z
-    .object({
-        numericRingBufferFrames: z.number().int().positive(),
-        captureFullDumpByDefault: z.boolean(),
-        overlayCaptureFps: nonNegativeFiniteNumberSchema.max(1),
-    })
-    .strict();
+const debugLogSchema = z.strictObject({
+    numericRingBufferFrames: z.number().int().positive(),
+    captureFullDumpByDefault: z.boolean(),
+    overlayCaptureFps: nonNegativeFiniteNumberSchema.max(1),
+});
 
-const degradationBudgetSchema = z
-    .object({
-        workerRoundTripWarnRatio: positiveFiniteNumberSchema,
-        workerRoundTripOverBudgetRatio: positiveFiniteNumberSchema,
-        roiBudgetRatio: positiveFiniteNumberSchema,
-        consecutiveOverBudgetFrames: z.number().int().positive(),
-        recoveryFrames: z.number().int().positive(),
-    })
-    .strict();
+const degradationBudgetSchema = z.strictObject({
+    workerRoundTripWarnRatio: positiveFiniteNumberSchema,
+    workerRoundTripOverBudgetRatio: positiveFiniteNumberSchema,
+    roiBudgetRatio: positiveFiniteNumberSchema,
+    consecutiveOverBudgetFrames: z.number().int().positive(),
+    recoveryFrames: z.number().int().positive(),
+});
 
-const performanceProfileSchema = z
-    .object({
-        schemaVersion: z.literal(TRACKER_RUNTIME_PERFORMANCE_PROFILE_SCHEMA_VERSION),
-        id: profileIdSchema,
-        requestedId: z.string().optional(),
-        camera: cameraSchema,
-        cadence: cadenceSchema,
-        debugLog: debugLogSchema,
-        degradationBudget: degradationBudgetSchema,
-        warnings: z.array(z.string()),
-    })
-    .strict();
+const performanceProfileSchema = z.strictObject({
+    schemaVersion: z.literal(TRACKER_RUNTIME_PERFORMANCE_PROFILE_SCHEMA_VERSION),
+    id: profileIdSchema,
+    requestedId: z.string().optional(),
+    camera: cameraSchema,
+    cadence: cadenceSchema,
+    debugLog: debugLogSchema,
+    degradationBudget: degradationBudgetSchema,
+    warnings: z.array(z.string()),
+});
 
 const SHARED_DEGRADATION_BUDGET: TrackerRuntimePerformanceProfile["degradationBudget"] = {
     workerRoundTripWarnRatio: 0.9,

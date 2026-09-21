@@ -40,16 +40,14 @@ const motionMetricStatusSchema = z.enum(["pass", "warn", "fail", "not_available"
 const motionMetricDirectionSchema = z.enum(["lower_is_better", "higher_is_better"]);
 const motionMetricUnitSchema = z.enum(["px", "deg", "count", "ratio", "ms"]);
 
-const motionMetricThresholdSchema: z.ZodType<MotionMetricThreshold> = z
-    .object({
-        pass: z.number(),
-        warn: z.number(),
-        fail: z.number(),
-    })
-    .strict();
+const motionMetricThresholdSchema: z.ZodType<MotionMetricThreshold> = z.strictObject({
+    pass: z.number(),
+    warn: z.number(),
+    fail: z.number(),
+});
 
 const motionMetricResultSchema: z.ZodType<MotionMetricResult> = z
-    .object({
+    .strictObject({
         key: motionMetricKeySchema,
         value: z.number().nullable(),
         unit: motionMetricUnitSchema,
@@ -60,7 +58,6 @@ const motionMetricResultSchema: z.ZodType<MotionMetricResult> = z
         sampleCount: z.number().int().nonnegative(),
         unavailableReason: z.string().optional(),
     })
-    .strict()
     .superRefine((metric, context) => {
         if (metric.status === "not_available" && metric.value !== null) {
             context.addIssue({
@@ -79,7 +76,7 @@ const motionMetricResultSchema: z.ZodType<MotionMetricResult> = z
     });
 
 const motionMetricSummarySchema: z.ZodType<MotionMetricSummary> = z
-    .object({
+    .strictObject({
         schemaVersion: z.literal("sincro.motion-metrics.v1"),
         fixtureId: motionP0FixtureIdSchema.optional(),
         generatedAtIso: z.string(),
@@ -88,7 +85,6 @@ const motionMetricSummarySchema: z.ZodType<MotionMetricSummary> = z
         severity: motionMetricSeveritySchema,
         metrics: z.record(motionMetricKeySchema, motionMetricResultSchema),
     })
-    .strict()
     .superRefine((summary, context) => {
         for (const key of MOTION_METRIC_KEYS) {
             const metric = summary.metrics[key];
@@ -125,14 +121,13 @@ const motionMetricSummarySchema: z.ZodType<MotionMetricSummary> = z
     });
 
 const motionMetricBaselineSchema: z.ZodType<MotionMetricBaseline> = z
-    .object({
+    .strictObject({
         schemaVersion: z.literal("sincro.motion-metric-baseline.v1"),
         fixtureId: motionP0FixtureIdSchema,
         logId: z.string().min(1),
         thresholdVersion: z.literal("initial-v1"),
         metricSummary: motionMetricSummarySchema,
     })
-    .strict()
     .superRefine((baseline, context) => {
         if (baseline.metricSummary.fixtureId !== baseline.fixtureId) {
             context.addIssue({
@@ -143,11 +138,9 @@ const motionMetricBaselineSchema: z.ZodType<MotionMetricBaseline> = z
         }
     });
 
-const baselineFixtureProbeSchema = z
-    .object({
-        fixtureId: z.unknown().optional(),
-    })
-    .passthrough();
+const baselineFixtureProbeSchema = z.looseObject({
+    fixtureId: z.unknown().optional(),
+});
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);

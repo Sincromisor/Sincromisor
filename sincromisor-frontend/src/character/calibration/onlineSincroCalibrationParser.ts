@@ -37,49 +37,41 @@ const calibrationSnapshotShape = {
 
 const calibrationSnapshotSchema: z.ZodType<CanonicalCalibrationSnapshot> = z
     .custom<PlainRecord>(isPlainRecord, { message: "Expected a plain object." })
-    .pipe(z.object(calibrationSnapshotShape).strict());
+    .pipe(z.strictObject(calibrationSnapshotShape));
 
 const candidateSnapshotSchema: z.ZodType<OnlineCalibrationCandidateSnapshot> = z
     .custom<PlainRecord>(isPlainRecord, { message: "Expected a plain object." })
     .pipe(
-        z
-            .object({
-                ...calibrationSnapshotShape,
-                stableDurationMs: nonNegativeFiniteNumberSchema,
-            })
-            .strict(),
+        z.strictObject({
+            ...calibrationSnapshotShape,
+            stableDurationMs: nonNegativeFiniteNumberSchema,
+        }),
     );
 
 const committedSnapshotSchema: z.ZodType<OnlineCalibrationCommittedSnapshot> = z
     .custom<PlainRecord>(isPlainRecord, { message: "Expected a plain object." })
     .pipe(
-        z
-            .object({
-                ...calibrationSnapshotShape,
-                updatedAtMediaTimeMs: nonNegativeFiniteNumberSchema,
-            })
-            .strict(),
+        z.strictObject({
+            ...calibrationSnapshotShape,
+            updatedAtMediaTimeMs: nonNegativeFiniteNumberSchema,
+        }),
     );
 
 const onlineCalibrationStateSchema: z.ZodType<OnlineSincroCalibrationState> = z
     .custom<PlainRecord>(isPlainRecord, { message: "Expected a plain object." })
     .pipe(
-        z
-            .object({
-                schemaVersion: z.literal(SINCRO_ONLINE_CALIBRATION_SCHEMA_VERSION),
-                initial: calibrationSnapshotSchema,
-                candidate: candidateSnapshotSchema.optional(),
-                committed: committedSnapshotSchema.optional(),
-                freezeReasons: z.array(freezeReasonSchema),
-            })
-            .strict(),
+        z.strictObject({
+            schemaVersion: z.literal(SINCRO_ONLINE_CALIBRATION_SCHEMA_VERSION),
+            initial: calibrationSnapshotSchema,
+            candidate: candidateSnapshotSchema.optional(),
+            committed: committedSnapshotSchema.optional(),
+            freezeReasons: z.array(freezeReasonSchema),
+        }),
     );
 
-const schemaVersionProbeSchema = z
-    .object({
-        schemaVersion: z.string().optional(),
-    })
-    .passthrough();
+const schemaVersionProbeSchema = z.looseObject({
+    schemaVersion: z.string().optional(),
+});
 
 export function parseOnlineSincroCalibrationState(
     value: unknown,
@@ -127,7 +119,7 @@ function isPlainRecord(value: unknown): value is PlainRecord {
 function plainObjectSchema<Shape extends z.core.$ZodLooseShape>(shape: Shape) {
     return z
         .custom<PlainRecord>(isPlainRecord, { message: "Expected a plain object." })
-        .pipe(z.object(shape).strict());
+        .pipe(z.strictObject(shape));
 }
 
 function classifyIssue(issue: z.core.$ZodIssue): OnlineSincroCalibrationStateParseError["code"] {

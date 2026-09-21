@@ -22,153 +22,119 @@ const quaternionTupleSchema = z.tuple([
 
 // 配分は各値の範囲と合計1（許容差0.001）を検証し、未知キーを拒否する。
 const distributionSchema = z
-    .object({
+    .strictObject({
         spine: zeroToOneSchema,
         chest: zeroToOneSchema,
         upperChest: zeroToOneSchema,
     })
-    .strict()
     .refine((value) => isCloseToOne(value.spine + value.chest + value.upperChest), {
         message: "Torso distribution must sum to 1.",
     });
 
 const twistShareSchema = z
-    .object({
+    .strictObject({
         lowerArmTwistShare: zeroToOneSchema,
         handTwistShare: zeroToOneSchema,
     })
-    .strict()
     .refine((value) => isCloseToOne(value.lowerArmTwistShare + value.handTwistShare), {
         message: "Wrist twist shares must sum to 1.",
     });
 
 const fingerDistributionSchema = z
-    .object({
+    .strictObject({
         proximal: zeroToOneSchema,
         intermediate: zeroToOneSchema,
         distal: zeroToOneSchema,
     })
-    .strict()
     .refine((value) => isCloseToOne(value.proximal + value.intermediate + value.distal), {
         message: "Finger curl distribution must sum to 1.",
     });
 
-const fingerChainSchema = z
-    .object({
-        proximal: z.boolean(),
-        intermediate: z.boolean(),
-        distal: z.boolean(),
-    })
-    .strict();
+const fingerChainSchema = z.strictObject({
+    proximal: z.boolean(),
+    intermediate: z.boolean(),
+    distal: z.boolean(),
+});
 
-const sideFingerChainsSchema = z
-    .object({
-        thumb: fingerChainSchema,
-        index: fingerChainSchema,
-        middle: fingerChainSchema,
-        ring: fingerChainSchema,
-        little: fingerChainSchema,
-    })
-    .strict();
+const sideFingerChainsSchema = z.strictObject({
+    thumb: fingerChainSchema,
+    index: fingerChainSchema,
+    middle: fingerChainSchema,
+    ring: fingerChainSchema,
+    little: fingerChainSchema,
+});
 
 // 入れ子も厳密に検証する。ボーン辞書は既知名の部分集合だけを受理する。
-const avatarMotionProfileSchema: z.ZodType<AvatarMotionProfile> = z
-    .object({
-        schemaVersion: z.literal(AVATAR_MOTION_PROFILE_SCHEMA_VERSION),
-        model: z
-            .object({
-                vrmVersion: z.enum(["1.0", "unknown"]),
-                modelName: z.string().optional(),
-            })
-            .strict(),
-        capabilities: z
-            .object({
-                bones: z.partialRecord(boneNameSchema, z.boolean()),
-                fingerChains: z
-                    .object({
-                        left: sideFingerChainsSchema,
-                        right: sideFingerChainsSchema,
-                    })
-                    .strict(),
-            })
-            .strict(),
-        restLocalRotation: z.partialRecord(boneNameSchema, quaternionTupleSchema),
-        metrics: z
-            .object({
-                shoulderWidth: positiveFiniteNumberSchema.optional(),
-                torsoLength: positiveFiniteNumberSchema.optional(),
-                headSize: positiveFiniteNumberSchema.optional(),
-                upperArmLength: z
-                    .object({
-                        left: positiveFiniteNumberSchema.optional(),
-                        right: positiveFiniteNumberSchema.optional(),
-                    })
-                    .strict(),
-                lowerArmLength: z
-                    .object({
-                        left: positiveFiniteNumberSchema.optional(),
-                        right: positiveFiniteNumberSchema.optional(),
-                    })
-                    .strict(),
-                handSize: z
-                    .object({
-                        left: positiveFiniteNumberSchema.optional(),
-                        right: positiveFiniteNumberSchema.optional(),
-                    })
-                    .strict(),
-            })
-            .strict(),
-        torso: z
-            .object({
-                distribution: distributionSchema,
-                chestFollow: zeroToOneSchema,
-            })
-            .strict(),
-        arm: z
-            .object({
-                reachScale: finiteNumberSchema.min(0.5).max(1.2),
-                lateralScale: finiteNumberSchema.min(0.5).max(1.2),
-                verticalScale: finiteNumberSchema.min(0.5).max(1.2),
-                depthCompression: finiteNumberSchema.min(0.2).max(0.9),
-                elbowOutwardBias: finiteNumberSchema.min(0).max(0.6),
-                shoulderDamping: zeroToOneSchema,
-            })
-            .strict(),
-        wrist: z
-            .object({
-                wristRollInfluence: zeroToOneSchema,
-                ...twistShareSchema.shape,
-            })
-            .strict()
-            .refine((value) => isCloseToOne(value.lowerArmTwistShare + value.handTwistShare), {
-                message: "Wrist twist shares must sum to 1.",
-            }),
-        fingers: z
-            .object({
-                curlScale: finiteNumberSchema.min(0).max(1.2),
-                curlMode: z.enum(["grouped", "perFinger"]),
-                curlDistribution: fingerDistributionSchema,
-                splayLimitDeg: finiteNumberSchema.min(0).max(30),
-            })
-            .strict(),
-        risk: z
-            .object({
-                smallBodyLargeHead: zeroToOneSchema,
-                missingUpperChest: z.boolean(),
-                missingShoulders: z.boolean(),
-                constraintRisk: zeroToOneSchema,
-            })
-            .strict(),
-        warnings: z.array(z.string()),
-    })
-    .strict();
+const avatarMotionProfileSchema: z.ZodType<AvatarMotionProfile> = z.strictObject({
+    schemaVersion: z.literal(AVATAR_MOTION_PROFILE_SCHEMA_VERSION),
+    model: z.strictObject({
+        vrmVersion: z.enum(["1.0", "unknown"]),
+        modelName: z.string().optional(),
+    }),
+    capabilities: z.strictObject({
+        bones: z.partialRecord(boneNameSchema, z.boolean()),
+        fingerChains: z.strictObject({
+            left: sideFingerChainsSchema,
+            right: sideFingerChainsSchema,
+        }),
+    }),
+    restLocalRotation: z.partialRecord(boneNameSchema, quaternionTupleSchema),
+    metrics: z.strictObject({
+        shoulderWidth: positiveFiniteNumberSchema.optional(),
+        torsoLength: positiveFiniteNumberSchema.optional(),
+        headSize: positiveFiniteNumberSchema.optional(),
+        upperArmLength: z.strictObject({
+            left: positiveFiniteNumberSchema.optional(),
+            right: positiveFiniteNumberSchema.optional(),
+        }),
+        lowerArmLength: z.strictObject({
+            left: positiveFiniteNumberSchema.optional(),
+            right: positiveFiniteNumberSchema.optional(),
+        }),
+        handSize: z.strictObject({
+            left: positiveFiniteNumberSchema.optional(),
+            right: positiveFiniteNumberSchema.optional(),
+        }),
+    }),
+    torso: z.strictObject({
+        distribution: distributionSchema,
+        chestFollow: zeroToOneSchema,
+    }),
+    arm: z.strictObject({
+        reachScale: finiteNumberSchema.min(0.5).max(1.2),
+        lateralScale: finiteNumberSchema.min(0.5).max(1.2),
+        verticalScale: finiteNumberSchema.min(0.5).max(1.2),
+        depthCompression: finiteNumberSchema.min(0.2).max(0.9),
+        elbowOutwardBias: finiteNumberSchema.min(0).max(0.6),
+        shoulderDamping: zeroToOneSchema,
+    }),
+    wrist: z
+        .strictObject({
+            wristRollInfluence: zeroToOneSchema,
+            ...twistShareSchema.shape,
+        })
+        .refine((value) => isCloseToOne(value.lowerArmTwistShare + value.handTwistShare), {
+            message: "Wrist twist shares must sum to 1.",
+        }),
+    fingers: z.strictObject({
+        curlScale: finiteNumberSchema.min(0).max(1.2),
+        curlMode: z.enum(["grouped", "perFinger"]),
+        curlDistribution: fingerDistributionSchema,
+        splayLimitDeg: finiteNumberSchema.min(0).max(30),
+    }),
+    risk: z.strictObject({
+        smallBodyLargeHead: zeroToOneSchema,
+        missingUpperChest: z.boolean(),
+        missingShoulders: z.boolean(),
+        constraintRisk: zeroToOneSchema,
+    }),
+    warnings: z.array(z.string()),
+});
 
 // 版違いは構造エラーより先に分類するため、版だけを先行して読む。
-const schemaVersionProbeSchema = z
-    .object({
-        schemaVersion: z.string().optional(),
-    })
-    .passthrough();
+const schemaVersionProbeSchema = z.looseObject({
+    schemaVersion: z.string().optional(),
+});
 
 /** 保存用プロファイルを検証し、版・構造・数値範囲の失敗を呼び出し元へ返す。入力は変更しない。 */
 export function parseAvatarMotionProfile(value: unknown): AvatarMotionProfileParseResult {
