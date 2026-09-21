@@ -79,3 +79,8 @@
 - [フロントエンドのRTC契約](../../contracts/frontend-rtc.md)
 - [音声パイプラインWebSocket契約](../../contracts/audio-pipeline-websocket.md)
 - [旧Python実装の履歴](../../archive/legacy-flat/backend_sincro_rtc.md)
+
+## 運用ログ
+
+標準slogのJSONLで起動・セッション・終了を記録する。既存のsession_id・stage・reasonは構造付き項目のまま維持する。起動失敗は生の引数や設定値を出さず、共通形式で標準エラーへ残す。
+内容切替と互換性は[ログ基盤](../../infrastructure/logging.md#rtcagentserverllm)を参照する。

@@ -193,3 +193,8 @@ Pythonの生成API・認証・ストリーム契約は変更しない。
 - [Studio認証](https://mastra.ai/docs/studio/auth)
 - [Editor](https://mastra.ai/docs/studio/editor)
 - [会話履歴](https://mastra.ai/docs/memory/message-history)
+
+## 運用ログ
+
+PinoのJSONLを使い、認証済みstream要求のmemory.threadからsession_idを対応付ける。本文はTextProcessorを主記録元とし、任意の要求・例外全文は記録しない。MCPはサーバーID・ツール名・開始・結果・所要時間を残し、未設定も明示する。配布起動はstart.mjsを経由する。
+内容切替と互換性は[ログ基盤](../../infrastructure/logging.md#rtcagentserverllm)を参照する。

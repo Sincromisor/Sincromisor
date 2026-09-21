@@ -1,9 +1,10 @@
 /** 管理者のMCP設定を検証し、接続したツールだけをStudioの選択候補へ登録する。 */
 import { readFile, stat } from "node:fs/promises";
-import { createLogger, noopLogger } from "@mastra/core/logger";
+import { noopLogger } from "@mastra/core/logger";
 import type { Processor } from "@mastra/core/processors";
 import { MCPClient } from "@mastra/mcp";
 import { z } from "zod";
+import { createServiceLogger } from "./logging.js";
 
 /** ファイルと将来の管理画面で共用する設定境界。実行コードや指示は受け付けない。 */
 export const mcpConfigSchema = z.strictObject({
@@ -64,11 +65,20 @@ export async function readMcpConfig(path: string) {
 }
 
 /** サービスが接続を所有する。設定の再読込みは再作成時に行い、稼働中の入替えはしない。 */
-export async function connectMcp(config: z.infer<typeof mcpConfigSchema>) {
-	const logger = createLogger({ name: "sincromisor-mcp" });
+export async function connectMcp(
+	config: z.infer<typeof mcpConfigSchema>,
+	logger = createServiceLogger(false),
+) {
+	if (!Object.keys(config.servers).length)
+		logger.info("MCP inactive", { event: "mcp_inactive" });
 	const clients: MCPClient[] = [];
 	const tools: Awaited<ReturnType<MCPClient["listTools"]>> = {};
 	for (const [id, server] of Object.entries(config.servers)) {
+		const start = performance.now();
+		logger.info("MCP discovery started", {
+			event: "mcp_discovery_started",
+			server: id,
+		});
 		const discovery = new AbortController();
 		let timer: NodeJS.Timeout | undefined;
 		const deadline = new Promise<never>((_, reject) => {
@@ -97,7 +107,10 @@ export async function connectMcp(config: z.infer<typeof mcpConfigSchema>) {
 					enableServerLogs: false,
 					logger: ({ level }) => {
 						if (level === "error" || level === "warning")
-							logger.warn("MCP transport failure", { server: id });
+							logger.warn("MCP transport failure", {
+								event: "mcp_transport_failure",
+								server: id,
+							});
 					},
 				},
 			},
@@ -113,9 +126,35 @@ export async function connectMcp(config: z.infer<typeof mcpConfigSchema>) {
 				tools[name] = {
 					...tool,
 					execute: async (input, context) => {
+						const started = performance.now();
+						logger.info("MCP tool started", {
+							event: "mcp_tool_started",
+							server: id,
+							tool: name,
+						});
 						try {
-							return await execute(input, context);
+							const result = await execute(input, context);
+							const failed =
+								typeof result === "object" &&
+								result !== null &&
+								"isError" in result &&
+								result.isError === true;
+							logger.info(failed ? "MCP tool failed" : "MCP tool succeeded", {
+								event: "mcp_tool_finished",
+								server: id,
+								tool: name,
+								outcome: failed ? "failed" : "success",
+								duration_ms: performance.now() - started,
+							});
+							return result;
 						} catch {
+							logger.warn("MCP tool failed", {
+								event: "mcp_tool_finished",
+								server: id,
+								tool: name,
+								outcome: "failed",
+								duration_ms: performance.now() - started,
+							});
 							// MCP側のエラー全文をモデル・Studio・公開ログへ流さない。
 							throw new Error("MCP tool execution failed.");
 						}
@@ -123,9 +162,20 @@ export async function connectMcp(config: z.infer<typeof mcpConfigSchema>) {
 				};
 			}
 			clients.push(client);
+			logger.info("MCP discovery succeeded", {
+				event: "mcp_discovery_finished",
+				server: id,
+				outcome: "success",
+				duration_ms: performance.now() - start,
+			});
 		} catch {
 			// 接続不能で通常会話を止めない。資格情報を含み得る下位例外は公開しない。
-			logger.warn("MCP discovery failed", { server: id });
+			logger.warn("MCP discovery failed", {
+				event: "mcp_discovery_finished",
+				server: id,
+				outcome: "failed",
+				duration_ms: performance.now() - start,
+			});
 			await client.disconnect();
 		} finally {
 			clearTimeout(timer);

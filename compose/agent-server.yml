@@ -9,8 +9,9 @@ services:
         pull_policy: build
         restart: unless-stopped
         entrypoint: [sh, /with-token.sh]
-        command: [node, .mastra/output/index.mjs]
+        command: [node, start.mjs]
         environment:
+            SINCRO_LOG_CONVERSATION_ENABLED: ${SINCRO_LOG_CONVERSATION_ENABLED-true}
             SINCRO_AGENT_ADMIN_TOKEN: ${SINCRO_AGENT_ADMIN_TOKEN:-}
             SINCRO_AGENT_LLM_URL: ${SINCRO_AGENT_LLM_URL:-http://llama-server:8080/v1}
             SINCRO_AGENT_LLM_MODEL: ${SINCRO_AGENT_LLM_MODEL:-gemma-4-E2B-it}

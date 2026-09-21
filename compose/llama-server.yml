@@ -5,6 +5,9 @@ services:
         profiles: [chat]
         restart: unless-stopped
         image: ${SINCRO_LLAMA_IMAGE:-ghcr.io/ggml-org/llama.cpp@sha256:92f75345eeeffa2e76e0e47526f310d0aca36b523bfe514a7dfda5bb1185f256}
+        entrypoint: [sh, /start-llama.sh]
+        environment:
+            SINCRO_LOG_CONVERSATION_ENABLED: ${SINCRO_LOG_CONVERSATION_ENABLED-true}
         command:
             - --host
             - 0.0.0.0
@@ -26,6 +29,7 @@ services:
             - --reasoning
             - "off"
         volumes:
+            - ../Docker/logging/start-llama.sh:/start-llama.sh:ro
             # 取得処理だけに書込みを許可し、推論時は読み取り専用にする。
             - type: bind
               source: ${SINCRO_LLAMA_MODEL_DIR:-../volumes/llama-models}

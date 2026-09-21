@@ -6,9 +6,11 @@ import { MastraEditor } from "@mastra/editor";
 import { LibSQLStore } from "@mastra/libsql";
 import { createCharacterAgent } from "./agents/character.js";
 import { readConfig } from "./config.js";
+import { conversationId, createServiceLogger } from "./logging.js";
 import { connectMcp, readMcpConfig } from "./mcp.js";
 
 const config = readConfig(process.env);
+const logger = createServiceLogger(config.SINCRO_LOG_CONVERSATION_ENABLED);
 // StudioとAPI、および未対応feedbackの応答で同じ認証判定を使う。
 const auth = new SimpleAuth({
 	tokens: {
@@ -18,7 +20,7 @@ const auth = new SimpleAuth({
 		},
 	},
 });
-const mcp = await connectMcp(await readMcpConfig("/data/mcp.json"));
+const mcp = await connectMcp(await readMcpConfig("/data/mcp.json"), logger);
 // libSQL未対応のfeedbackを提供可能と扱わないよう、未使用の監視保存領域を無効化する。
 // Editorと会話履歴は従来と同じDBを使う。
 const storage = new MastraCompositeStore({
@@ -40,6 +42,7 @@ const character = createCharacterAgent({
 
 /** Mastra CLIの入口から公開し、HTTPサーバーが保存領域と生成要求の生存期間を管理する。 */
 export const mastra = new Mastra({
+	logger,
 	agents: { "sincromisor-character": character },
 	tools: mcp.tools,
 	storage,
@@ -50,6 +53,44 @@ export const mastra = new Mastra({
 		// 採用StudioのInboxは501でも定期取得する。未対応の一覧だけを例外化せず返す。
 		// 前段middlewareなのでSimpleAuthで認証を確認し、不正な要求は標準ルートへ委ねる。
 		middleware: [
+			{
+				path: "/api/agents/:agentId/stream",
+				handler: async (c: ContextWithMastra, next: () => Promise<void>) => {
+					if (!(await auth.getCurrentUser(c.req.raw))) return next();
+					// 生の要求を再読込みする生成ルートのため、複製からIDだけを読む。
+					let sessionId: string | undefined;
+					try {
+						sessionId = conversationId(await c.req.raw.clone().json());
+					} catch {
+						/* 不正JSONの応答は本来のルートへ委ねる。 */
+					}
+					const ids = sessionId
+						? { session_id: sessionId, thread_id: `sincromisor:${sessionId}` }
+						: {};
+					const start = performance.now();
+					logger.info("Agent request started", {
+						event: "agent_request_started",
+						...ids,
+					});
+					try {
+						await next();
+						// SSEの応答を渡した時点であり、生成本文の正常完了を意味しない。
+						logger.info("Agent request dispatched", {
+							event: "agent_request_dispatched",
+							...ids,
+							status: c.res.status,
+							duration_ms: performance.now() - start,
+						});
+					} catch (error) {
+						logger.error("Agent request failed", {
+							event: "agent_request_failed",
+							...ids,
+							duration_ms: performance.now() - start,
+						});
+						throw error;
+					}
+				},
+			},
 			{
 				path: "/api/observability/feedback",
 				handler: async (c: ContextWithMastra, next: () => Promise<void>) => {

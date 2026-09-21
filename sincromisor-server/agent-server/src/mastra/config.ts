@@ -2,6 +2,10 @@
 import { z } from "zod";
 
 const schema = z.object({
+	SINCRO_LOG_CONVERSATION_ENABLED: z
+		.enum(["true", "false"])
+		.default("true")
+		.transform((value) => value === "true"),
 	SINCRO_AGENT_ADMIN_TOKEN: z.string().min(32),
 	SINCRO_AGENT_LLM_URL: z
 		.url()

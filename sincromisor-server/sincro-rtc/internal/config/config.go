@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"os"
@@ -61,6 +62,8 @@ type Config struct {
 // processの終了判断はmainに委ねる。
 func Load(args []string) (Config, error) {
 	flags := flag.NewFlagSet("sincro-rtc", flag.ContinueOnError)
+	// 生の不正引数と複数行のusageをstderrへ出さず、失敗はmainのJSONLへ集約する。
+	flags.SetOutput(io.Discard)
 	var cfg Config
 	flags.StringVar(&cfg.HTTPAddress, "http", "127.0.0.1:8080", "HTTP listen address")
 	flags.StringVar(&cfg.FrontendDir, "frontend-dir", "", "built frontend directory")
