@@ -1,5 +1,6 @@
 services:
     text-processor:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
         profiles:
             - full
             - backend
@@ -46,6 +47,7 @@ services:
             retries: 15
 
     consul-agent-processor:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
         profiles:
             - full
             - backend

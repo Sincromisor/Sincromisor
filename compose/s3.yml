@@ -1,5 +1,6 @@
 services:
     seaweed-master:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
         profiles:
             - full
             - backend
@@ -25,6 +26,7 @@ services:
             retries: 30
 
     seaweed-volume:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
         profiles:
             - full
             - backend
@@ -52,6 +54,7 @@ services:
             retries: 30
 
     seaweed-filer:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
         profiles:
             - full
             - backend
@@ -84,6 +87,7 @@ services:
             retries: 30
 
     sincro-s3:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
         profiles:
             - full
             - backend
@@ -112,6 +116,7 @@ services:
             retries: 30
 
     consul-agent-s3:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
         profiles:
             - full
             - backend
@@ -141,6 +146,7 @@ services:
             retries: 5
 
     consul-s3-registrar:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
         profiles:
             - full
             - backend
@@ -168,6 +174,7 @@ services:
         restart: unless-stopped
 
     s3-bootstrap:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
         profiles:
             - full
             - backend

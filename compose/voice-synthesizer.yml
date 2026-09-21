@@ -1,5 +1,6 @@
 services:
     voice-synthesizer:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
         profiles:
             - full
             - backend
@@ -51,6 +52,7 @@ services:
             retries: 15
 
     sincro-voicevox:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
         profiles:
             - full
             - backend
@@ -80,6 +82,7 @@ services:
             retries: 5
 
     consul-agent-synthesizer:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
         profiles:
             - full
             - backend

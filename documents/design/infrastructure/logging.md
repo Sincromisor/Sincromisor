@@ -4,7 +4,7 @@
 
 - 中央保存はVictoriaLogs単一ノードとし、標準の`full`または中央専用の`logs`プロファイルで起動する。
 - `compose/logging.yml`が保存先、保持期間、公開先と死活確認の正本である。
-- 共通項目を持つJSONLで投入・検索する。各ホストのVector収集と内容の記録切替は後続タスクで実装する。
+- 共通項目を持つJSONLで投入・検索する。各ホストのVectorが収集・送信する。内容の記録切替は後続タスクで実装する。
 
 ## 起動と配置
 
@@ -104,3 +104,65 @@ curl --fail --data-urlencode 'query=_time:1h host:fixture service:fixture' \
 2026-09-22に公式の[起動手順](https://docs.victoriametrics.com/victorialogs/quickstart/)、
 [保持期間と保存](https://docs.victoriametrics.com/victorialogs/#retention)、
 [VectorのJSONL投入](https://docs.victoriametrics.com/victorialogs/data-ingestion/vector/)を確認した。
+
+## 各ホストの収集
+
+`compose/log-collector.yml`を標準includeし、既存の`full` / `backend` / `external` / `rtc` / `frontend` / `chat` / `s3`と中央用`logs`へVector・Caddy・Consulエージェントを同梱する。
+同じホストの担当プロファイルを複数指定しても各1インスタンスである。`COMPOSE_PROJECT_NAME`をVectorへ渡し、そのComposeプロジェクトのラベルだけを収集する。
+ホストごとの`SINCRO_LOG_HOST`は管理者が一意に設定する。ホスト間で時刻を同期し、発生時刻と収集時刻を区別する。
+
+Vector 0.58.0のDocker入力は新規・再作成後のコンテナも追跡する。
+RTC、フロントCaddy、音声処理、AgentServer、llama-server、VOICEVOX、Redis、SeaweedFS、Consul、bandog、初期化コンテナをサービス名の除外なしで対象にする。
+任意選択のMediaMTX・旧MinIOも同じプロジェクトなら対象である。
+Vector自身はDocker入力の自己除外と`internal_logs`入力を使い、標準出力への再送先を設けない。
+内部ログ入力には10秒の反復制限を設定する。転送CaddyとConsulも通常のDocker入力から収集する。
+
+`configs/vector.toml`が正規化と送信の正本である。
+JSONと構造付きテキストを展開し、認識不能な本文も保持する。複数行例外を別コンテナと連結しない。
+本文に含まれるホスト・サービス・コンテナID・streamは収集側の値で上書きする。
+`stderr`だけではerrorと判定せず、重大度不明なら`unknown`とする。
+既知の認証属性、要求全体・ヘッダーを除去し、Bearer値を伏せる。任意の文章中に混入した秘密を完全に識別する仕組みではないため、出力元の認証・本文制御が必要である。
+0.58.0は環境変数展開が既定で無効のため、固定設定のプロジェクト条件を展開するフラグを明示する。
+Vectorへ認証情報や業務サービスの環境変数を渡さない。
+
+### Consul経由の投入
+
+Vectorは内部の`http://log-router:8080/insert/jsonline`へJSONLを送り、時刻・本文・ストリームのクエリ引数を保持する。
+Caddy 2.10.2の`dynamic a`が`consul-agent-logging:8600`へ明示的に問い合わせ、`SincroLogs.service.consul`のIPv4を9428へ転送する。
+再解決は5秒、中央不在・critical・DNS不通・接続失敗は5xxで返す。Caddy独自の再試行は加えず、VectorのHTTP再試行に任せる。
+検索APIなど投入以外のパスは404となり、転送口をホストへ公開しない。
+`/health`はCaddy自身の生存だけを示し、中央到達性を保証しない。
+
+`consul-agent-logging`はTCP/UDP 8320で参加する。中央専用の8321とは別の保存ボリュームとnode名を持つ。
+`SincroLogCollector_<host>`と`SincroLogRouter_<host>`をそれぞれ登録し、8686と8080の`/health`を10秒間隔・5秒時間切れで確認する。
+全ホストの個別状態はConsulの`/v1/health/service/SincroLogCollector`と`SincroLogRouter`で確認する。
+bandogのDNS確認は少なくとも1台の正常なサービスの存在を示すものであり、全インスタンスの正常を保証しない。
+
+### 原本・バッファ・復旧
+
+全ComposeサービスはDockerの`local`ドライバーを使い、1ファイル20MiB相当・5世代を上限として回転させる。
+中央へ直接送るDockerログドライバーを使わず、Vector停止中も`docker logs`から原本を読める。
+Vectorの`vector-data`ボリュームは送信待ちの専用領域で、約256MiBを上限として満杯時は入力へ背圧をかける。
+中央が停止してもVectorは起動できる。満杯時やDockerの原本回転後まで無欠落とは保証しない。
+設定変更はコンテナの再作成で反映し、原本の保持設定変更と収集先変更を区別する。
+
+Docker入力は起動前の短時間コンテナや停止中の原本の完全回収を保証しない。
+初期化コンテナも対象ラベルに含むが、標準起動時の自動回収・再開位置・重複と欠落検知は回収タスクで実装する。
+現段階で起動前の全ログを取得済みとは扱わない。
+
+送信失敗は`docker compose logs vector log-router`、滞留と破棄は内部の`http://vector:9598/metrics`の`vector_buffer_received_events_total`と`vector_buffer_sent_events_total`の差、`vector_component_errors_total`、`vector_component_discarded_events_total`などで確認する。
+監視APIとメトリクスはCompose内部だけに置く。バッファを削除する`down -v`を復旧手段にしない。
+
+Dockerソケットの`:ro`はファイルのマウント属性であり、Docker APIを書込み不可にはしない。
+Vectorはホストを管理できる権限を持つため、固定版の設定とイメージを管理者だけが変更する。
+特権コンテナやDocker APIのホスト公開は追加しない。
+
+### 収集の確認
+
+`vector test`で`configs/vector.toml`と`configs/vector-tests.toml`を読み、正規化・識別子偽装・秘密属性の除去を確認する。
+`node --test scripts/tests/log-collector.test.mjs`は人工ログだけの隔離Composeを使う。
+製品の実ログ出力と複数ホスト間の到達・本文切替の最終確認は結合確認タスクで行う。
+
+2026-09-22に[Docker入力](https://vector.dev/docs/reference/configuration/sources/docker_logs/)、
+[HTTP送信](https://vector.dev/docs/reference/configuration/sinks/http/)、
+[内部ログ](https://vector.dev/docs/reference/configuration/sources/internal_logs/)の公式設定を確認した。

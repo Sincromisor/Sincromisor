@@ -1,0 +1,21 @@
+{
+    admin off
+    auto_https off
+}
+
+:8080 {
+    # 生存確認は中央到達性と分ける。投入以外の検索APIは転送しない。
+    respond /health 200
+    handle /insert/jsonline {
+        reverse_proxy {
+            dynamic a {
+                name SincroLogs.service.consul
+                port 9428
+                resolvers consul-agent-logging:8600
+                versions ipv4
+                refresh 5s
+            }
+        }
+    }
+    respond 404
+}

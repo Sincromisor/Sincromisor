@@ -1,5 +1,6 @@
 services:
     sincro-minio:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
         profiles:
             - full
             - backend
@@ -35,6 +36,7 @@ services:
             retries: 5
 
     consul-agent-minio:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
         profiles:
             - full
             - backend

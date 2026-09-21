@@ -1,5 +1,6 @@
 services:
     agent-server:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
         profiles: [chat]
         build:
             context: ../sincromisor-server/agent-server
@@ -37,6 +38,7 @@ services:
 
     # 登録を設定ファイルで維持し、Consulやアプリの再起動順に依存させない。
     consul-agent-chat:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
         profiles: [chat]
         image: hashicorp/consul:latest
         restart: unless-stopped

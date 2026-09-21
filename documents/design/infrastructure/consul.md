@@ -87,6 +87,7 @@ docker compose restart bandog
 | Redis        | TCP/UDP 8317 |
 | S3           | TCP/UDP 8318 |
 | チャット     | TCP/UDP 8319 |
+| ログ収集     | TCP/UDP 8320 |
 | 中央ログ     | TCP/UDP 8321 |
 
 各エージェントは `SINCRO_CONSUL_SERVER_HOST:8301` へ参加する。DNSの8600と参加先8301は同じサーバーを指す。
