@@ -1,0 +1,139 @@
+# 実障害を起こさず、原本を模した固定入力の分類と本文破棄を確認する。
+[[tests]]
+name = "カーネルOOMの本文と資格情報を複製しない"
+[[tests.inputs]]
+insert_at = "host_diagnostics"
+type = "log"
+[tests.inputs.log_fields]
+message = "Out of memory: Killed process private-body Bearer private-token"
+_TRANSPORT = "kernel"
+_BOOT_ID = "0123456789abcdef0123456789abcdef"
+PRIORITY = "3"
+[[tests.outputs]]
+extract_from = "host_diagnostics"
+[[tests.outputs.conditions]]
+type = "vrl"
+source = 'assert_eq!(.reason, "oom"); assert_eq!(.origin, "kernel"); assert_eq!(.level, "error"); assert!(!exists(.service)); assert!(!contains(encode_json(.), "private"))'
+
+[[tests]]
+name = "GPU障害"
+[[tests.inputs]]
+insert_at = "host_diagnostics"
+type = "log"
+[tests.inputs.log_fields]
+message = "NVRM: Xid (PCI:private-device): 79 private-body"
+_TRANSPORT = "kernel"
+[[tests.outputs]]
+extract_from = "host_diagnostics"
+[[tests.outputs.conditions]]
+type = "vrl"
+source = 'assert_eq!(.reason, "gpu_failure"); assert!(!contains(encode_json(.), "private"))'
+
+[[tests]]
+name = "ディスク障害"
+[[tests.inputs]]
+insert_at = "host_diagnostics"
+type = "log"
+[tests.inputs.log_fields]
+message = "Buffer I/O error on dev private-device"
+_TRANSPORT = "kernel"
+[[tests.outputs]]
+extract_from = "host_diagnostics"
+[[tests.outputs.conditions]]
+type = "vrl"
+source = 'assert_eq!(.reason, "disk_failure"); assert!(!contains(encode_json(.), "private"))'
+
+[[tests]]
+name = "ネットワーク障害"
+[[tests.inputs]]
+insert_at = "host_diagnostics"
+type = "log"
+[tests.inputs.log_fields]
+message = "NETDEV WATCHDOG: private-device transmit queue timed out"
+_TRANSPORT = "kernel"
+[[tests.outputs]]
+extract_from = "host_diagnostics"
+[[tests.outputs.conditions]]
+type = "vrl"
+source = 'assert_eq!(.reason, "network_failure"); assert!(!contains(encode_json(.), "private"))'
+
+[[tests]]
+name = "Dockerの失敗"
+[[tests.inputs]]
+insert_at = "host_diagnostics"
+type = "log"
+[tests.inputs.log_fields]
+message = "failed to start container private-body secret=private-token"
+_SYSTEMD_UNIT = "docker.service"
+[[tests.outputs]]
+extract_from = "host_diagnostics"
+[[tests.outputs.conditions]]
+type = "vrl"
+source = 'assert_eq!(.reason, "runtime_failure"); assert_eq!(.unit, "docker.service"); assert!(!contains(encode_json(.), "private"))'
+
+[[tests]]
+name = "無関係なアプリの本文を採用しない"
+no_outputs_from = ["host_diagnostics"]
+[[tests.inputs]]
+insert_at = "host_diagnostics"
+type = "log"
+[tests.inputs.log_fields]
+message = "private-body out of memory"
+_SYSTEMD_UNIT = "unrelated.service"
+
+[[tests]]
+name = "サービス管理の失敗"
+[[tests.inputs]]
+insert_at = "host_diagnostics"
+type = "log"
+[tests.inputs.log_fields]
+message = "Failed to start private-service with private-token"
+SYSLOG_IDENTIFIER = "systemd"
+_SYSTEMD_UNIT = "init.scope"
+[[tests.outputs]]
+extract_from = "host_diagnostics"
+[[tests.outputs.conditions]]
+type = "vrl"
+source = 'assert_eq!(.reason, "service_manager_failure"); assert_eq!(.origin, "systemd"); assert!(!contains(encode_json(.), "private"))'
+
+[[tests]]
+name = "長い診断は上限と切詰めを維持する"
+[[tests.inputs]]
+insert_at = "host_diagnostics"
+type = "vrl"
+source = '''
+text = "private"
+text = text + text
+text = text + text
+text = text + text
+text = text + text
+text = text + text
+text = text + text
+text = text + text
+text = text + text
+text = text + text
+text = text + text
+. = {"message": "Out of memory " + text, "_TRANSPORT": "kernel"}
+'''
+[[tests.outputs]]
+extract_from = "host_diagnostics"
+[[tests.outputs.conditions]]
+type = "vrl"
+source = 'assert_eq!(.reason, "oom"); assert_eq!(.diagnostic_truncated, true); assert!(length(encode_json(.)) < 1024); assert!(!contains(encode_json(.), "private"))'
+
+[[tests]]
+name = "journal解析失敗の内部ログも原本を出さない"
+[[tests.inputs]]
+insert_at = "normalize"
+type = "log"
+[tests.inputs.log_fields]
+message = "Failed to parse private-body private-token"
+source_type = "internal_logs"
+"metadata.level" = "ERROR"
+"vector.component_type" = "journald"
+text = "private-body"
+[[tests.outputs]]
+extract_from = "normalize"
+[[tests.outputs.conditions]]
+type = "vrl"
+source = 'assert_eq!(.event, "journal_input_event"); assert_eq!(.level, "error"); assert!(!contains(encode_json(.), "private"))'

@@ -151,3 +151,37 @@ func TestLocalConsulOutput(t *testing.T) {
 		t.Fatal(rows)
 	}
 }
+
+// 収集役の実journal検査はDocker health経由で反映し、停止個体の過去結果を正常にしない。
+func TestCollectorReadiness(t *testing.T) {
+	running, status := true, "healthy"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/containers/json" {
+			_ = json.NewEncoder(w).Encode([]map[string]any{{"ID": "vector-id", "Labels": map[string]string{projectLabel: "fixture", serviceLabel: "vector"}}})
+		} else {
+			_ = json.NewEncoder(w).Encode(map[string]any{"ID": "vector-id", "Config": map[string]any{"Labels": map[string]string{serviceLabel: "vector"}}, "State": map[string]any{"Running": running, "Health": map[string]any{"Status": status}}})
+		}
+	}))
+	defer server.Close()
+	target, _ := url.Parse(server.URL)
+	transport := &http.Transport{Proxy: func(*http.Request) (*url.URL, error) { return target, nil }}
+	defer transport.CloseIdleConnections()
+	o := observer{project: "fixture", docker: &http.Client{Transport: transport}, previous: map[string]string{}, seen: map[string]bool{}, emit: func(map[string]any) {}}
+	for _, test := range []struct {
+		running bool
+		status  string
+		want    bool
+	}{{true, "healthy", true}, {true, "unhealthy", false}, {false, "healthy", false}, {true, "starting", false}} {
+		running, status = test.running, test.status
+		if err := o.dockerHealth(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+		if o.collectorReady.Load() != test.want {
+			t.Fatalf("running=%v status=%s", running, status)
+		}
+	}
+	reason, truncated := diagnosis("journal_unreadable_or_missing private-token")
+	if reason != "journal_unreadable_or_missing" || truncated {
+		t.Fatal(reason, truncated)
+	}
+}

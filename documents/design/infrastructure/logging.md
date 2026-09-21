@@ -269,3 +269,15 @@ Consulの同一状態の出力更新の遅延は[公式実装のCheckUpdateInter
 認識のローカル/S3保存は `recognition_storage` で書込成功・拒否・接続失敗を記録する。ファイル名やS3キーを複製せず、従来の保存形式と失敗時の処理を維持する。Pythonのサービス発見は登録開始・成功・失敗、正常候補なしとConsul接続不能を分け、再試行を継続する。
 
 初期化シェルは秘密の読取・検証・保存権限、モデルの存在・取得・検証、S3の署名確認、Consul登録と子プロセス終了の段階・終了コードを固定JSONへ出す。weed shellの出力は引き続き捨て、署名付き要求と不正キー拒否で起動を判定する。秘密ファイルが空の場合も利用サービスを起動しない。短命コンテナの過去ログ回収は配送・復旧の責務とする。
+
+## ホストのjournal
+
+Linuxの永続journal `/var/log/journal` と実行中journal `/run/log/journal` をVectorへ読取専用で渡す。別の保存先は `.env` の `SINCRO_LOG_JOURNAL_DIR` / `SINCRO_LOG_RUNTIME_JOURNAL_DIR` で指定する。Dockerソケット以外のホストルートや特権モードは要求しない。収集コンテナはrootで読み、原本の所有者・モードは変更しない。利用者名前空間等でホスト側の読取権限が不足する場合は、配置先のjournal読取グループまたはACLで必要な読取だけを与える。
+
+初回導入ではホストでjournaldの永続保存を有効にし、容量・空き容量を管理する。例えば `/etc/systemd/journald.conf.d/sincromisor.conf` の `[Journal]` に `Storage=persistent` とホストに適した `SystemMaxUse` / `RuntimeMaxUse` を設定し、`systemctl restart systemd-journald`、`journalctl --flush` を実行する。これらは管理者がホストごとに行う前提であり、Composeから原本を変更しない。原本が空・不存在・読取拒否の場合も本体の依存条件にはせず、収集の異常として扱う。
+
+収集イメージはVector 0.58.0の公式バイナリとUbuntu 26.04のjournalctlを使う。公式VectorのDebianイメージに含まれるjournalctl 257では過去bootの追尾をVectorが拒否するため、258以降が必要である。nativeの `journald` 入力で `current_boot_only=false`、`--merge` を指定し、ホストとコンテナのmachine-idの違いを吸収する。読取位置は `host_journal` 入力名で `vector-data` に保持する。入力名やボリュームを変更・削除すると再読取や欠落の原因になる。[Vectorのjournal入力仕様](https://vector.dev/docs/reference/configuration/sources/journald/)を参照する。
+
+Docker/containerdの状態・失敗、systemdの失敗、カーネルのOOM・GPU/デバイス・ディスク・ネットワーク障害だけを `host_diagnostic` へ変換する。先頭4096バイトを既知語で分類し、任意の `MESSAGE`、コマンドライン、環境、プロセス名は複製しない。固定の `reason`、`origin`、重大度、時刻、ホスト、妥当なboot識別子とunitを残し、サービス・会話IDを推測しない。未知・無関係な行は除外する。実障害を起こさず読取経路を確認する場合は、`logger -t sincromisor-log-test -- "sincromisor-host-probe <UUID>"` の固定形式を使い、`probe_id` を検索する。
+
+VectorのDocker healthcheckはHTTP生存に加え、実journalのカーソルを読めることとnativeの追尾プロセスを確認する。`log-observer` は稼働中Vectorのこの結果を `/collector` と自身の `/health` へ反映し、Consulの `SincroLogCollector` と `SincroLogObserver` がcriticalになる。原本本文をhealthcheck出力へ流さず、`journal_unreadable_or_missing` / `journal_input_unavailable` 等の固定理由だけを残す。再作成直後は新しい検査が通るまで正常としない。
