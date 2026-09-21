@@ -95,10 +95,19 @@ class JsonLogFormatter(logging.Formatter):
 class SincromisorLoggerConfig:
     """各プロセスが共有する出力先と、厳密な対話内容スイッチ。"""
 
+    @classmethod
+    def conversation_enabled(cls) -> bool:
+        """認識・対話本文のスイッチを検証する。音声生成とは独立して扱う。"""
+        return cls._enabled("SINCRO_LOG_CONVERSATION_ENABLED")
+
+    @classmethod
+    def synthesis_enabled(cls) -> bool:
+        """読み上げ本文と生成条件のスイッチを検証する。"""
+        return cls._enabled("SINCRO_LOG_SYNTHESIS_ENABLED")
+
     @staticmethod
-    def conversation_enabled() -> bool:
+    def _enabled(key: str) -> bool:
         """未指定は有効とし、不正値自体をエラーへ含めず起動を失敗させる。"""
-        key = "SINCRO_LOG_CONVERSATION_ENABLED"
         value = os.environ.get(key, "true")
         if value not in ("true", "false"):
             raise ValueError(f"{key}: expected true or false")
@@ -108,6 +117,7 @@ class SincromisorLoggerConfig:
     def generate(cls, log_file: str | None = None, stdout: bool = True) -> dict:
         """呼出しごとに独立した設定を作り、指定された出力先だけを開く。"""
         cls.conversation_enabled()
+        cls.synthesis_enabled()
         logging.captureWarnings(True)
         handlers = {}
         if stdout:

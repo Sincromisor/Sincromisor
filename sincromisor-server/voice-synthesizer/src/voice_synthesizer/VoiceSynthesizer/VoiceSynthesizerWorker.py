@@ -1,18 +1,15 @@
-import logging
-from logging import Logger
-from time import perf_counter
-
 from fastapi import WebSocket
 from sincro_models import (
     TextProcessorResult,
     VoiceSynthesizerRequest,
-    VoiceSynthesizerResult,
 )
 
 from .VoiceCacheManager import VoiceCacheManager
 
 
 class VoiceSynthesizerWorker:
+    """会話応答の増分を生成要求に変換し、接続へ音声を返す。"""
+
     def __init__(
         self,
         voicevox_host: str,
@@ -24,8 +21,8 @@ class VoiceSynthesizerWorker:
         s3_port: int,
         s3_access_key: str,
         s3_secret_key: str,
-    ):
-        self.__logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
+    ) -> None:
+        """接続ごとの音声キャッシュと話者スタイルを準備する。"""
         self.__vvox: VoiceCacheManager = VoiceCacheManager(
             voicevox_host=voicevox_host,
             voicevox_port=voicevox_port,
@@ -39,51 +36,24 @@ class VoiceSynthesizerWorker:
         self.__voicevox_style_id: int = voicevox_style_id
 
     async def communicate(self, ws: WebSocket) -> None:
-        pack: bytes
+        """本文を含む受信全体を出力せず、生成境界へ保持中のIDだけを渡す。"""
         while pack := await ws.receive_bytes():
-            tp_result: TextProcessorResult = TextProcessorResult.from_msgpack(pack=pack)
-            self.__logger.info(f"Receive {repr(tp_result)}")
-            if tp_result.voice_text:
-                self.__logger.info(
-                    {
-                        "type": "VoiceSynthesizerRequest",
-                        "session_id": tp_result.session_id,
-                        "speech_id": tp_result.response_message.speech_id,
-                        "voice_text": tp_result.voice_text,
-                    },
-                )
-                start_t = perf_counter()
-                vs_result: VoiceSynthesizerResult = self.__get_voice(
-                    speech_id=tp_result.response_message.speech_id,
-                    vvox_cm=self.__vvox,
-                    voice_text=tp_result.voice_text,
-                )
-                self.__logger.info(
-                    {
-                        "type": "VoiceSynthesizerResult",
-                        "session_id": tp_result.session_id,
-                        "speech_id": tp_result.response_message.speech_id,
-                        "query_time": perf_counter() - start_t,
-                        "message": vs_result.message,
-                        "speeking_time": vs_result.speaking_time,
-                    },
-                )
-                await ws.send_bytes(vs_result.to_msgpack())
-
-    def __get_voice(
-        self,
-        speech_id: int,
-        voice_text: str,
-        vvox_cm: VoiceCacheManager,
-    ) -> VoiceSynthesizerResult:
-        vs_request: VoiceSynthesizerRequest = VoiceSynthesizerRequest(
-            speech_id=speech_id,
-            message=voice_text,
-            audio_format="audio/ogg;codecs=opus",
-            style_id=self.__voicevox_style_id,
-            pre_phoneme_length=0.1,
-            post_phoneme_length=0.1,
-        )
-        vs_result: VoiceSynthesizerResult = vvox_cm.get_voice(vs_request=vs_request)
-        vs_result.speech_id = speech_id
-        return vs_result
+            result = TextProcessorResult.from_msgpack(pack=pack)
+            if not result.voice_text:
+                continue
+            request = VoiceSynthesizerRequest(
+                speech_id=result.response_message.speech_id,
+                message=result.voice_text,
+                audio_format="audio/ogg;codecs=opus",
+                style_id=self.__voicevox_style_id,
+                pre_phoneme_length=0.1,
+                post_phoneme_length=0.1,
+            )
+            voice = self.__vvox.get_voice(
+                vs_request=request,
+                session_id=result.session_id,
+                sequence_id=result.sequence_id,
+            )
+            # キャッシュの発話IDは保存時のままなので、送信する要求のIDへ戻す。
+            voice.speech_id = request.speech_id
+            await ws.send_bytes(voice.to_msgpack())

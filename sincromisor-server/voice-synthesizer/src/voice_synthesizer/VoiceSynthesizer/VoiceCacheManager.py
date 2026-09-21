@@ -1,6 +1,7 @@
 import io
 import logging
 from logging import Logger
+from time import perf_counter
 
 import boto3
 from botocore.client import BaseClient
@@ -9,14 +10,17 @@ from botocore.exceptions import BotoCoreError, ClientError
 from botocore.response import StreamingBody
 from redis import Redis
 from redis.exceptions import RedisError
+from sincro_config import SincromisorLoggerConfig
 from sincro_models import VoiceSynthesizerRequest, VoiceSynthesizerResult
 
 from .VoiceSynthesizer import VoiceSynthesizer
 
 
 class VoiceCacheManager:
+    """Redis、S3、実生成の順に音声を得て、本文の記録を一つの境界で制御する。"""
+
     class VoiceSynthesizerServerException(Exception):
-        pass
+        """生成失敗を呼出元へ通知する。原因の値はログへ文字列化しない。"""
 
     def __init__(
         self,
@@ -28,7 +32,9 @@ class VoiceCacheManager:
         s3_port: int,
         s3_access_key: str,
         s3_secret_key: str,
-    ):
+    ) -> None:
+        """接続ごとのキャッシュクライアントと独立した生成ログ設定を準備する。"""
+        self.log_synthesis = SincromisorLoggerConfig.synthesis_enabled()
         self.logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.redis: Redis = Redis(
             host=redis_host,
@@ -49,32 +55,89 @@ class VoiceCacheManager:
             port=voicevox_port,
         )
 
-    def get_voice(self, vs_request: VoiceSynthesizerRequest) -> VoiceSynthesizerResult:
-        self.logger.info(f"SynthRequest: {vs_request.message}")
-        vs_result: VoiceSynthesizerResult | None
-        vs_result = self.__get_voice_redis(vs_request)
-        if vs_result:
-            self.logger.info(f"SynthRequest(Redis-HIT): {vs_request.message}")
-            return vs_result
-        vs_result = self.__get_voice_s3(vs_request)
-        if vs_result:
-            self.logger.info(f"SynthRequest(S3-HIT): {vs_request.message}")
-            self.__put_voice_redis(vs_request, vs_result)
-            return vs_result
-        try:
-            vs_result = self.vsynth.generate(
-                vs_request=vs_request,
+    def get_voice(
+        self,
+        vs_request: VoiceSynthesizerRequest,
+        *,
+        session_id: str | None = None,
+        sequence_id: int | None = None,
+    ) -> VoiceSynthesizerResult:
+        """キャッシュ内容・保存順序を変えず、取得元と実際の生成条件を記録する。
+
+        会話IDは運用ログだけに使い、キャッシュキー・MessagePackへ追加しない。
+        """
+        ids = {
+            "session_id": session_id,
+            "speech_id": vs_request.speech_id,
+            "sequence_id": sequence_id,
+        }
+        start = perf_counter()
+        if self.log_synthesis:
+            self.logger.info(
+                {
+                    "event": "synthesis_request",
+                    **ids,
+                    "text": vs_request.message,
+                    "parameters": vs_request.model_dump(
+                        exclude={"message", "speech_id"}
+                    ),
+                }
             )
-            self.logger.info(f"SynthRequest(Cache-Miss): {vs_request.message}")
-        except Exception:
-            raise self.VoiceSynthesizerServerException
-        self.__put_voice_redis(vs_request, vs_result)
-        self.__put_voice_s3(vs_request, vs_result)
-        return vs_result
+        try:
+            source = "redis"
+            result = self.__get_voice_redis(vs_request)
+            if result is None:
+                source = "s3"
+                result = self.__get_voice_s3(vs_request)
+                if result is not None:
+                    self.__put_voice_redis(vs_request, result)
+            if result is None:
+                source = "generated"
+                try:
+                    result = self.vsynth.generate(vs_request=vs_request)
+                except Exception as error:
+                    raise self.VoiceSynthesizerServerException from error
+                self.__put_voice_redis(vs_request, result)
+                self.__put_voice_s3(vs_request, result)
+        except Exception as error:
+            cause = error.__cause__ or error
+            failure = {
+                "event": "synthesis_processing",
+                **ids,
+                "outcome": "failed",
+                "error_type": type(cause).__name__,
+            }
+            if isinstance(cause, self.vsynth.ProtocolError):
+                failure["http_status"] = cause.status_code
+            self.logger.exception(failure)
+            raise
+        if self.log_synthesis:
+            self.logger.info(
+                {
+                    "event": "synthesis_result",
+                    **ids,
+                    "text": result.message,
+                    "style_id": vs_request.style_id,
+                    "audio_format": result.audio_format,
+                    "parameters": result.query.model_dump(
+                        exclude={"accent_phrases", "kana"}
+                    ),
+                    "cache": source,
+                    "outcome": "success",
+                    "query_time": perf_counter() - start,
+                    "speaking_time": result.speaking_time,
+                }
+            )
+        else:
+            self.logger.info(
+                {"event": "synthesis_processing", **ids, "outcome": "success"}
+            )
+        return result
 
     def __get_voice_redis(
         self, vs_request: VoiceSynthesizerRequest
     ) -> VoiceSynthesizerResult | None:
+        """Redisの既存キーから音声を取得し、未命中だけをNoneにする。"""
         key: str = vs_request.redis_key()
         if vs_pack := self.redis.get(key):
             if isinstance(vs_pack, bytes):
@@ -99,16 +162,24 @@ class VoiceCacheManager:
     def __put_voice_redis(
         self, vs_request: VoiceSynthesizerRequest, vs_result: VoiceSynthesizerResult
     ) -> None:
+        """Redis保存失敗でも生成結果は返し、例外本文なしの失敗記録を残す。"""
         try:
             self.redis.set(
                 vs_request.redis_key(), vs_result.to_msgpack(), ex=60 * 60 * 24 * 7
             )
-        except RedisError as e:
-            self.logger.error(f"Failed to upload voice to Redis: {e}")
+        except RedisError:
+            self.logger.exception(
+                "Failed to upload voice to Redis.",
+                extra={
+                    "event": "voice_cache_write_failed",
+                    "speech_id": vs_request.speech_id,
+                },
+            )
 
     def __put_voice_s3(
         self, vs_request: VoiceSynthesizerRequest, vs_result: VoiceSynthesizerResult
     ) -> None:
+        """S3保存失敗でも生成結果は返し、要求や認証を運用ログへ含めない。"""
         try:
             payload = vs_result.to_msgpack()
             self.s3_client.put_object(
@@ -117,5 +188,11 @@ class VoiceCacheManager:
                 Body=io.BytesIO(payload),
                 ContentType="application/octet-stream",
             )
-        except (ClientError, BotoCoreError) as e:
-            self.logger.error(f"Failed to upload voice to S3: {e}")
+        except ClientError, BotoCoreError:
+            self.logger.exception(
+                "Failed to upload voice to S3.",
+                extra={
+                    "event": "voice_cache_write_failed",
+                    "speech_id": vs_request.speech_id,
+                },
+            )

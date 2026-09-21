@@ -63,3 +63,32 @@ assert_eq!(.message, "人工失敗")
 assert_eq!(.level, "error")
 assert_eq!(.timestamp, t'2026-09-22T00:00:00Z')
 '''
+
+[[tests]]
+name = "VOICEVOX本文を無効時に別属性にも残さない"
+[[tests.inputs]]
+insert_at = "normalize"
+type = "log"
+[tests.inputs.log_fields]
+message = 'INFO:     127.0.0.1:52298 - "POST /audio_query?speaker=3&text=%E4%BA%BA%E5%B7%A5%E6%9C%AC%E6%96%87621 HTTP/1.1" 200 OK'
+timestamp = "2026-09-22T00:00:00Z"
+container_id = "voicevox-container"
+stream = "stdout"
+[tests.inputs.log_fields.label]
+"com.docker.compose.project" = "fixture"
+"com.docker.compose.service" = "sincro-voicevox"
+[[tests.outputs]]
+extract_from = "normalize"
+[[tests.outputs.conditions]]
+type = "vrl"
+source = '''
+if (get_env_var("SINCRO_LOG_SYNTHESIS_ENABLED") ?? "true") == "false" {
+    assert_eq!(.message, "VOICEVOX event")
+    assert_eq!(.http_status, 200)
+    assert!(!contains(encode_json(.), "%E4%BA%BA"))
+} else {
+    assert!(contains(string!(.message), "%E4%BA%BA"))
+}
+assert_eq!(.container_id, "voicevox-container")
+assert_eq!(.service, "sincro-voicevox")
+'''

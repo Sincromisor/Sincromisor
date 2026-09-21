@@ -40,6 +40,15 @@ if json_error == null && is_object(parsed) {
 .level = downcase(string(.level) ?? string(original.metadata.level) ?? "unknown")
 if .level == "warning" { .level = "warn" }
 .event = string(.event) ?? "log"
+# VOICEVOXの固定版には本文の抑止設定がない。無効時は別項目にも原本を複製しない。
+# 不正値も安全側へ倒す。設定値自体の厳密な拒否はPythonサービス起動時に行う。
+if .service == "sincro-voicevox" && (get_env_var("SINCRO_LOG_SYNTHESIS_ENABLED") ?? "true") != "true" {
+    http, http_error = parse_regex(string!(original.message), r'"(?P<method>GET|POST|PUT|DELETE) (?P<path>/[a-z_]+)(?:\?[^ ]*)? HTTP/[0-9.]+" (?P<status>[0-9]{3})')
+    . = {"timestamp": .timestamp, "observed_at": .observed_at, "host": .host, "project": .project,
+         "service": .service, "container_id": .container_id, "stream": .stream, "level": .level,
+         "event": "voicevox_diagnostic", "message": "VOICEVOX event"}
+    if http_error == null { .http_method = http.method; .http_status = to_int!(http.status) }
+}
 del(.label)
 del(.host_key)
 del(.source_type)

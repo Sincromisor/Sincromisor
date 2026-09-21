@@ -11,6 +11,7 @@ services:
             VECTOR_INTERNAL_LOGS_SOURCE_RATE_LIMIT: "10"
             SINCRO_LOG_HOST: ${SINCRO_LOG_HOST:-local}
             SINCRO_LOG_PROJECT: ${COMPOSE_PROJECT_NAME}
+            SINCRO_LOG_SYNTHESIS_ENABLED: ${SINCRO_LOG_SYNTHESIS_ENABLED-true}
         volumes:
             # roでもDocker API管理権限を持つ。ホストへAPIを公開しない。
             - /var/run/docker.sock:/var/run/docker.sock:ro
