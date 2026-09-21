@@ -9,6 +9,7 @@ services:
         image: chrislusf/seaweedfs
         command: 'master -ip=seaweed-master -ip.bind=0.0.0.0 -metricsPort=9324'
         volumes:
+            - ../Docker/seaweedfs/healthcheck.sh:/healthcheck.sh:ro
             - sincro-s3-master-data:/data
         networks:
             - s3-internal-net
@@ -20,7 +21,7 @@ services:
             consul-agent-s3:
                 condition: service_healthy
         healthcheck:
-            test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9333/ >/dev/null 2>&1 || exit 1"]
+            test: [CMD, sh, /healthcheck.sh, "http://127.0.0.1:9333/"]
             interval: 5s
             timeout: 3s
             retries: 30
@@ -35,6 +36,7 @@ services:
         image: chrislusf/seaweedfs
         command: 'volume -ip=seaweed-volume -master="seaweed-master:9333" -ip.bind=0.0.0.0 -port=8080 -metricsPort=9325'
         volumes:
+            - ../Docker/seaweedfs/healthcheck.sh:/healthcheck.sh:ro
             - sincro-s3-data:/data
         networks:
             - s3-internal-net
@@ -48,7 +50,7 @@ services:
             consul-agent-s3:
                 condition: service_healthy
         healthcheck:
-            test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/status >/dev/null 2>&1 || exit 1"]
+            test: [CMD, sh, /healthcheck.sh, "http://127.0.0.1:8080/status"]
             interval: 5s
             timeout: 3s
             retries: 30
@@ -64,6 +66,7 @@ services:
         command: 'filer -ip=seaweed-filer -master="seaweed-master:9333" -ip.bind=0.0.0.0 -metricsPort=9326'
         # オブジェクトの場所と認証設定をdown/up後も同じ領域から読み込む。
         volumes:
+            - ../Docker/seaweedfs/healthcheck.sh:/healthcheck.sh:ro
             - sincro-s3-filer-data:/data
         tty: true
         stdin_open: true
@@ -81,7 +84,7 @@ services:
             seaweed-volume:
                 condition: service_healthy
         healthcheck:
-            test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8888/ >/dev/null 2>&1 || exit 1"]
+            test: [CMD, sh, /healthcheck.sh, "http://127.0.0.1:8888/"]
             interval: 5s
             timeout: 3s
             retries: 30
@@ -95,6 +98,8 @@ services:
             - s3
         image: chrislusf/seaweedfs
         command: 's3 -filer="seaweed-filer:8888" -ip.bind=0.0.0.0 -metricsPort=9327'
+        volumes:
+            - ../Docker/seaweedfs/healthcheck.sh:/healthcheck.sh:ro
         networks:
             - s3-internal-net
             - sincromisor-net
@@ -110,7 +115,7 @@ services:
             seaweed-filer:
                 condition: service_healthy
         healthcheck:
-            test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:${SINCRO_S3_PUBLIC_BIND_PORT}/status >/dev/null 2>&1 || exit 1"]
+            test: [CMD, sh, /healthcheck.sh, "http://127.0.0.1:${SINCRO_S3_PUBLIC_BIND_PORT}/status"]
             interval: 5s
             timeout: 3s
             retries: 30

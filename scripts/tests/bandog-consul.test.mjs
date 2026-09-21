@@ -98,6 +98,7 @@ test("bandogはチャット基盤の未登録・異常を検知し、復旧後�
 			"SincroLogs",
 			"SincroLogCollector",
 			"SincroLogRouter",
+			"SincroLogObserver",
 		]) {
 			docker(
 				"exec",
@@ -154,6 +155,20 @@ test("bandogはチャット基盤の未登録・異常を検知し、復旧後�
 		for (const id of ["agent-server", "llama-server"])
 			docker("exec", consul, "consul", "services", "deregister", `-id=${id}`);
 		await status(2);
+		const events = docker("logs", bandog)
+			.split("\n")
+			.filter(Boolean)
+			.map(JSON.parse);
+		const transitions = events.filter(
+			(row) => row.target_service === "LlamaServer",
+		);
+		assert.deepEqual(
+			transitions.map((row) => row.status),
+			["passing", "critical", "passing", "critical", "passing", "critical"],
+		);
+		assert.ok(
+			transitions.every((row) => row.event === "bandog_dns" && !row.host),
+		);
 		docker("restart", consul);
 		await check("LlamaServer", "passing");
 		await check("AgentServer", "passing");

@@ -8,6 +8,7 @@ esac
 cat > /consul/config/collector.json <<CONFIG
 {"services":[
 {"id":"SincroLogCollector_${SINCRO_LOG_HOST}","name":"SincroLogCollector","address":"vector","port":8686,"check":{"http":"http://vector:8686/health","interval":"10s","timeout":"5s"}},
+{"id":"SincroLogObserver_${SINCRO_LOG_HOST}","name":"SincroLogObserver","address":"log-observer","port":8687,"check":{"http":"http://log-observer:8687/health","interval":"10s","timeout":"5s"}},
 {"id":"SincroLogRouter_${SINCRO_LOG_HOST}","name":"SincroLogRouter","address":"log-router","port":8080,"check":{"http":"http://log-router:8080/health","interval":"10s","timeout":"5s"}}
 ]}
 CONFIG

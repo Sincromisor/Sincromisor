@@ -24,6 +24,24 @@ services:
             timeout: 5s
             retries: 3
 
+    log-observer:
+        logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
+        profiles: [full, backend, external, rtc, frontend, chat, s3, logs]
+        build: ../Docker/logging/observer
+        image: ${SINCRO_REGISTRY_NAME}/log-observer:latest
+        restart: unless-stopped
+        environment:
+            SINCRO_LOG_PROJECT: ${COMPOSE_PROJECT_NAME}
+        volumes:
+            # Vectorと同じ管理権限。APIをホストへ公開しない。
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+        networks: [sincromisor-net]
+        healthcheck:
+            test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8687/health]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+
     log-router:
         logging: {driver: local, options: {max-size: "20m", max-file: "5"}}
         profiles: [full, backend, external, rtc, frontend, chat, s3, logs]

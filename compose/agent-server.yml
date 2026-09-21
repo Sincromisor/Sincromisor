@@ -31,7 +31,7 @@ services:
                 condition: service_healthy
         healthcheck:
             # 実行イメージ内のNodeで、認証付きのAPI起動確認を行う。トークンは出力しない。
-            test: [CMD, sh, /with-token.sh, node, -e, "fetch('http://localhost:4111/api/agents',{headers:{Authorization:'Bearer '+process.env.SINCRO_AGENT_ADMIN_TOKEN}}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+            test: [CMD, sh, /with-token.sh, node, -e, "fetch('http://localhost:4111/api/agents',{headers:{Authorization:'Bearer '+process.env.SINCRO_AGENT_ADMIN_TOKEN}}).then(r=>{console.log('HTTP '+r.status);process.exit(r.ok?0:1)}).catch(()=>{console.log('connection_failed');process.exit(1)})"]
             start_period: 30s
             interval: 10s
             timeout: 5s
