@@ -1,0 +1,550 @@
+{
+  "確認日": "2026-09-23 JST",
+  "対象ソース": "e04cd87209c0cb7a359bd58e49a2882186b3dc76",
+  "配置": {
+    "host-a": "full,chat（全機能と中央）",
+    "host-b": "rtc（独立したVPS）"
+  },
+  "通常起動直後の実出力": {
+    "host-a": {
+      "agent-server": 6,
+      "bandog": 34,
+      "consul-agent-chat": 92,
+      "consul-agent-extractor": 83,
+      "consul-agent-frontend": 101,
+      "consul-agent-logging": 114,
+      "consul-agent-logs": 76,
+      "consul-agent-processor": 86,
+      "consul-agent-recognizer": 86,
+      "consul-agent-redis": 159,
+      "consul-agent-rtc": 128,
+      "consul-agent-s3": 84,
+      "consul-agent-synthesizer": 144,
+      "consul-s3-registrar": 18,
+      "llama-model-initializer": 3,
+      "llama-server": 18,
+      "log-observer": 145,
+      "log-router": 31,
+      "s3-bootstrap": 4,
+      "s3-credential-initializer": 3,
+      "seaweed-filer": 31,
+      "seaweed-master": 65,
+      "seaweed-volume": 8,
+      "service-initializer": 3,
+      "sincro-consul-server": 224,
+      "sincro-frontend": 68,
+      "sincro-redis": 20,
+      "sincro-rtc": 3,
+      "sincro-s3": 17,
+      "sincro-voicevox": 78,
+      "speech-extractor": 76,
+      "speech-recognizer": 103,
+      "text-processor": 74,
+      "vector": 29,
+      "victoria-logs": 17,
+      "voice-synthesizer": 67
+    },
+    "host-b": {
+      "consul-agent-logging": 173,
+      "consul-agent-rtc": 136,
+      "log-observer": 153,
+      "log-router": 39,
+      "sincro-rtc": 3,
+      "vector": 35
+    }
+  },
+  "会話": {
+    "conversation-vps-tunnel": {
+      "session": "01M34X2Q9EVK3TQTYCCGH1H4MQ",
+      "state": "connected",
+      "telops": 534,
+      "errors": [],
+      "audio_sent": 1169,
+      "audio_received": 1156,
+      "audio_energy": 0,
+      "rows": 177,
+      "services": {
+        "host-b/sincro-rtc": 44,
+        "host-a/voice-synthesizer": 54,
+        "host-a/text-processor": 17,
+        "host-a/agent-server": 34,
+        "host-a/speech-recognizer": 28
+      },
+      "events": {
+        "log": 44,
+        "synthesis_result": 9,
+        "voice_cache_operation": 36,
+        "synthesis_request": 9,
+        "conversation_processing": 2,
+        "conversation_final": 2,
+        "agent_stream": 2,
+        "memory_operation": 26,
+        "llm_request": 4,
+        "conversation_fragment": 9,
+        "agent_request_dispatched": 2,
+        "agent_request_started": 2,
+        "conversation_input": 2,
+        "recognition_storage": 8,
+        "recognition_processing": 10,
+        "recognition_result": 10
+      },
+      "message_types": ["system", "user"]
+    },
+    "flags-false-true-ready": {
+      "session": "01M34XD540G42GXB622WVMA1PR",
+      "state": "disconnected",
+      "telops": 666,
+      "errors": [],
+      "audio_sent": 1664,
+      "audio_received": 1309,
+      "audio_energy": 0,
+      "rows": 270,
+      "services": {
+        "host-a/voice-synthesizer": 144,
+        "host-b/sincro-rtc": 70,
+        "host-a/text-processor": 4,
+        "host-a/agent-server": 34,
+        "host-a/speech-recognizer": 18
+      },
+      "events": {
+        "synthesis_result": 24,
+        "voice_cache_operation": 96,
+        "synthesis_request": 24,
+        "log": 70,
+        "conversation_processing": 2,
+        "agent_stream": 2,
+        "memory_operation": 26,
+        "llm_request": 4,
+        "agent_request_dispatched": 2,
+        "agent_request_started": 2,
+        "recognition_storage": 8,
+        "recognition_processing": 10
+      },
+      "message_types": ["system", "user"]
+    },
+    "flags-true-false": {
+      "session": "01M34XJCBY7Q7D7ACV96FAVE5T",
+      "state": "connected",
+      "telops": 677,
+      "errors": [],
+      "audio_sent": 6314,
+      "audio_received": 6242,
+      "audio_energy": 0,
+      "rows": 146,
+      "services": {
+        "host-b/sincro-rtc": 38,
+        "host-a/voice-synthesizer": 34,
+        "host-a/text-processor": 16,
+        "host-a/agent-server": 34,
+        "host-a/speech-recognizer": 24
+      },
+      "events": {
+        "log": 38,
+        "synthesis_processing": 8,
+        "voice_cache_operation": 26,
+        "conversation_processing": 2,
+        "conversation_final": 2,
+        "conversation_fragment": 8,
+        "agent_stream": 2,
+        "memory_operation": 26,
+        "llm_request": 4,
+        "agent_request_dispatched": 2,
+        "agent_request_started": 2,
+        "conversation_input": 2,
+        "recognition_storage": 8,
+        "recognition_processing": 8,
+        "recognition_result": 8
+      },
+      "message_types": ["system", "user"]
+    },
+    "flags-true-false-short": {
+      "session": "01M34XPHRERX5C9EXK89KEWDQT",
+      "state": "connected",
+      "telops": 73,
+      "errors": [],
+      "audio_sent": 2029,
+      "audio_received": 2007,
+      "audio_energy": 0,
+      "rows": 56,
+      "services": {
+        "host-b/sincro-rtc": 15,
+        "host-a/voice-synthesizer": 7,
+        "host-a/text-processor": 6,
+        "host-a/agent-server": 18,
+        "host-a/speech-recognizer": 10
+      },
+      "events": {
+        "log": 15,
+        "synthesis_processing": 2,
+        "voice_cache_operation": 5,
+        "conversation_processing": 1,
+        "conversation_final": 1,
+        "conversation_fragment": 2,
+        "agent_stream": 1,
+        "memory_operation": 14,
+        "llm_request": 2,
+        "agent_request_dispatched": 1,
+        "agent_request_started": 1,
+        "conversation_input": 1,
+        "recognition_storage": 4,
+        "recognition_processing": 3,
+        "recognition_result": 3
+      },
+      "message_types": ["system", "user"]
+    },
+    "flags-false-false-original": {
+      "session": "01M34YA6PCCD9CYFVQ809V854C",
+      "state": "failed",
+      "telops": 545,
+      "errors": [],
+      "audio_sent": 4204,
+      "audio_received": 1092,
+      "audio_energy": 0,
+      "rows": 236,
+      "services": {
+        "host-a/voice-synthesizer": 111,
+        "host-b/sincro-rtc": 69,
+        "host-a/text-processor": 4,
+        "host-a/agent-server": 34,
+        "host-a/speech-recognizer": 18
+      },
+      "events": {
+        "synthesis_processing": 24,
+        "voice_cache_operation": 87,
+        "log": 69,
+        "conversation_processing": 2,
+        "agent_stream": 2,
+        "memory_operation": 26,
+        "llm_request": 4,
+        "agent_request_dispatched": 2,
+        "agent_request_started": 2,
+        "recognition_storage": 8,
+        "recognition_processing": 10
+      },
+      "message_types": ["system", "user"]
+    },
+    "central-outage-conversation": {
+      "session": "01M34YD4G4S9VRHE492AAGJ97R",
+      "state": "disconnected",
+      "telops": 1683,
+      "errors": [],
+      "audio_sent": 3844,
+      "audio_received": 3029,
+      "audio_energy": 0,
+      "rows": 272,
+      "services": {
+        "host-b/sincro-rtc": 96,
+        "host-a/voice-synthesizer": 87,
+        "host-a/text-processor": 6,
+        "host-a/agent-server": 50,
+        "host-a/speech-recognizer": 33
+      },
+      "events": {
+        "log": 96,
+        "synthesis_processing": 21,
+        "voice_cache_operation": 66,
+        "conversation_processing": 3,
+        "agent_stream": 3,
+        "memory_operation": 38,
+        "llm_request": 6,
+        "agent_request_dispatched": 3,
+        "agent_request_started": 3,
+        "recognition_storage": 12,
+        "recognition_processing": 21
+      },
+      "message_types": ["system", "user"]
+    }
+  },
+  "内容設定": {
+    "flags-false-true-ready": {
+      "flags": [false, true],
+      "session": "01M34XD540G42GXB622WVMA1PR",
+      "content_event_counts": {
+        "synthesis_result": 24,
+        "voice_cache_operation": 96,
+        "synthesis_request": 24,
+        "log": 70,
+        "conversation_processing": 2,
+        "agent_stream": 2,
+        "memory_operation": 26,
+        "llm_request": 4,
+        "agent_request_dispatched": 2,
+        "agent_request_started": 2,
+        "recognition_storage": 8,
+        "recognition_processing": 10
+      },
+      "window_rows": 697,
+      "local": {
+        "speech-extractor": {
+          "lines": 19,
+          "body_hits": []
+        },
+        "speech-recognizer": {
+          "lines": 77,
+          "body_hits": []
+        },
+        "text-processor": {
+          "lines": 21,
+          "body_hits": []
+        },
+        "voice-synthesizer": {
+          "lines": 167,
+          "body_hits": [
+            0, 1, 2, 3, 10, 11, 12, 14, 15, 18, 19, 20, 23, 27, 28, 29, 30
+          ]
+        },
+        "agent-server": {
+          "lines": 34,
+          "body_hits": []
+        },
+        "llama-server": {
+          "lines": 0,
+          "body_hits": []
+        }
+      },
+      "both_disabled_central_body_hits": null,
+      "memory_success": 2,
+      "cache_read_success": 0
+    },
+    "flags-true-false": {
+      "flags": [true, false],
+      "session": "01M34XJCBY7Q7D7ACV96FAVE5T",
+      "content_event_counts": {
+        "log": 38,
+        "synthesis_processing": 8,
+        "voice_cache_operation": 26,
+        "conversation_processing": 2,
+        "conversation_final": 2,
+        "conversation_fragment": 8,
+        "agent_stream": 2,
+        "memory_operation": 26,
+        "llm_request": 4,
+        "agent_request_dispatched": 2,
+        "agent_request_started": 2,
+        "conversation_input": 2,
+        "recognition_storage": 8,
+        "recognition_processing": 8,
+        "recognition_result": 8
+      },
+      "window_rows": 1199,
+      "local": {
+        "speech-extractor": {
+          "lines": 45,
+          "body_hits": []
+        },
+        "speech-recognizer": {
+          "lines": 97,
+          "body_hits": [0, 1, 2, 3, 7, 8, 11, 12]
+        },
+        "text-processor": {
+          "lines": 59,
+          "body_hits": [1, 4, 5, 6, 9, 10, 12, 13, 14, 15]
+        },
+        "voice-synthesizer": {
+          "lines": 78,
+          "body_hits": []
+        },
+        "agent-server": {
+          "lines": 34,
+          "body_hits": []
+        },
+        "llama-server": {
+          "lines": 14,
+          "body_hits": []
+        }
+      },
+      "both_disabled_central_body_hits": null,
+      "memory_success": 2,
+      "cache_read_success": 0
+    },
+    "flags-false-false-original": {
+      "flags": [false, false],
+      "session": "01M34YA6PCCD9CYFVQ809V854C",
+      "content_event_counts": {
+        "synthesis_processing": 24,
+        "voice_cache_operation": 87,
+        "log": 69,
+        "conversation_processing": 2,
+        "agent_stream": 2,
+        "memory_operation": 26,
+        "llm_request": 4,
+        "agent_request_dispatched": 2,
+        "agent_request_started": 2,
+        "recognition_storage": 8,
+        "recognition_processing": 10
+      },
+      "window_rows": 1040,
+      "local": {
+        "speech-extractor": {
+          "lines": 33,
+          "body_hits": []
+        },
+        "speech-recognizer": {
+          "lines": 92,
+          "body_hits": []
+        },
+        "text-processor": {
+          "lines": 35,
+          "body_hits": []
+        },
+        "voice-synthesizer": {
+          "lines": 148,
+          "body_hits": []
+        },
+        "agent-server": {
+          "lines": 34,
+          "body_hits": []
+        },
+        "llama-server": {
+          "lines": 0,
+          "body_hits": []
+        }
+      },
+      "both_disabled_central_body_hits": [],
+      "memory_success": 2,
+      "cache_read_success": 3
+    }
+  },
+  "機能履歴": [
+    {
+      "session": "01M34X2Q9EVK3TQTYCCGH1H4MQ",
+      "rows": [
+        {
+          "role": "assistant",
+          "count": 2,
+          "content_length": 596
+        },
+        {
+          "role": "user",
+          "count": 2,
+          "content_length": 224
+        }
+      ]
+    },
+    {
+      "session": "01M34YA6PCCD9CYFVQ809V854C",
+      "rows": [
+        {
+          "role": "assistant",
+          "count": 2,
+          "content_length": 1210
+        },
+        {
+          "role": "user",
+          "count": 2,
+          "content_length": 224
+        }
+      ]
+    },
+    {
+      "session": "01M34XD540G42GXB622WVMA1PR",
+      "rows": [
+        {
+          "role": "assistant",
+          "count": 2,
+          "content_length": 1056
+        },
+        {
+          "role": "user",
+          "count": 2,
+          "content_length": 224
+        }
+      ]
+    },
+    {
+      "session": "01M34XJCBY7Q7D7ACV96FAVE5T",
+      "rows": [
+        {
+          "role": "assistant",
+          "count": 2,
+          "content_length": 490
+        },
+        {
+          "role": "user",
+          "count": 2,
+          "content_length": 232
+        }
+      ]
+    },
+    {
+      "session": "01M34XPHRERX5C9EXK89KEWDQT",
+      "rows": [
+        {
+          "role": "assistant",
+          "count": 1,
+          "content_length": 169
+        },
+        {
+          "role": "user",
+          "count": 1,
+          "content_length": 117
+        }
+      ]
+    },
+    {
+      "session": "01M34YD4G4S9VRHE492AAGJ97R",
+      "rows": [
+        {
+          "role": "assistant",
+          "count": 3,
+          "content_length": 1345
+        },
+        {
+          "role": "user",
+          "count": 3,
+          "content_length": 375
+        }
+      ]
+    }
+  ],
+  "人工連番": {
+    "中央停止": {
+      "host-a": {
+        "件数": 5,
+        "連番": [1, 2, 3, 4, 5]
+      },
+      "host-b": {
+        "件数": 5,
+        "連番": [1, 2, 3, 4, 5]
+      }
+    },
+    "広告先変更": {
+      "host-a": {
+        "件数": 5,
+        "連番": [1, 2, 3, 4, 5]
+      },
+      "host-b": {
+        "件数": 5,
+        "連番": [1, 2, 3, 4, 5]
+      }
+    },
+    "VPS収集停止": {
+      "host-a": {
+        "件数": 5,
+        "連番": [1, 2, 3, 4, 5]
+      },
+      "host-b": {
+        "件数": 5,
+        "連番": [1, 2, 3, 4, 5]
+      }
+    }
+  },
+  "ブラウザー診断": {
+    "件数": 8,
+    "host": "host-b",
+    "source": "browser",
+    "分類": ["microphone", "rtc", "webgl", "vad_worker"]
+  },
+  "中央停止": {
+    "stop_requested": "2026-09-22T16:15:16.284131+00:00",
+    "restore_requested": "2026-09-22T16:16:11.319966+00:00",
+    "session": "01M34YD4G4S9VRHE492AAGJ97R",
+    "停止中の応答取得": true
+  },
+  "登録先変更": {
+    "経路": "host-b管理網限定転送口からhost-aの中央へ転送",
+    "既存router設定変更": false,
+    "転送成功": 57,
+    "要求本文のアクセス記録": false
+  }
+}
