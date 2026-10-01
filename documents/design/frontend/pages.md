@@ -2,43 +2,43 @@
 
 ## 要約
 
-- 現行フロントエンドは `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm`、`motion-debug`、`pose-landmarker-spike` の 6 ページを通常ビルド対象にする。
+- 現行フロントエンドは `main`、`simple-vrm`、`vrm360`、`looking-glass-vrm`、`motion-debug`、`pose-landmarker-spike`の6ページを通常ビルド対象にする。
 - Babylon.jsの旧ページ（`simple`、`glass`、`character`、`character-glass`、`area360`、`single`、`double`）と関連実装・依存は削除済み。
-- 生成元の起動処理は `sincromisor-frontend/src/pages/*` に集約し、Vite の経路別名で既存公開 URL を維持する。
-- ページ差分は項目 / 初期化処理 / シーン選択肢 / ページ固有の設定に閉じ込める。
+- 生成元の起動処理は `sincromisor-frontend/src/pages/*`に集約し、Viteの経路別名で既存公開URLを維持する。
+- ページ差分は起動項目、初期化処理、シーンの選択肢、ページ固有の設定に限定する。
 
 ## 対象範囲
 
-- 対象:
-    - Vite MPA のページ分類
+- 対象
+    - Vite MPAのページ分類
     - 現行 / 実験用の扱い
     - ページごとの設計確認入口
-- 非対象:
-    - 個別 UI コンポーネントの実装詳細
+- 非対象
+    - 個別UIコンポーネントの実装詳細
     - 旧形式ページの保守
 
 ## ページ一覧
 
 分類の「実験用」も通常ビルドに含まれる。ビルド入力と公開URLの正本は [Vite設定](../../../sincromisor-frontend/vite.config.js) である。
 
-| ページ                  | 生成元の起動処理                           | 公開 URL                  | 分類   | 役割                      | 主な確認文書                                                     |
-| ----------------------- | ------------------------------------------ | ------------------------- | ------ | ------------------------- | ---------------------------------------------------------------- |
-| `main`                  | `src/pages/main/index.html`                | `/`                       | 現行   | 通常導線の入口            | 本文「正式トップページ」                                         |
-| `simple-vrm`            | `src/pages/simpleVrm/index.html`           | `/simple-vrm/`            | 現行   | 通常会話の正規ルート      | `frontend/app-shell.md`, `frontend/character/overview.md`        |
-| `vrm360`                | `src/pages/vrm360/index.html`              | `/vrm360/`                | 実験用 | 360 表示実験              | `frontend/character/overview.md`                                 |
-| `looking-glass-vrm`     | `src/pages/lookingGlassVrm/index.html`     | `/looking-glass-vrm/`     | 実験用 | Looking Glass + VRM 1.0   | `frontend/character/overview.md`                                 |
-| `motion-debug`          | `src/pages/motionDebug/index.html`         | `/motion-debug/`          | 実験用 | Pose 動作の変換 / IK 調整 | `frontend/character/motion.md`, `frontend/character/tracking.md` |
-| `pose-landmarker-spike` | `src/pages/poseLandmarkerSpike/index.html` | `/pose-landmarker-spike/` | 実験用 | MediaPipe Pose 性能検証   | `frontend/character/tracking.md`                                 |
+| ページ                  | 生成元の起動処理                           | 公開URL                   | 分類   | 役割                    | 主な確認文書                                                     |
+| ----------------------- | ------------------------------------------ | ------------------------- | ------ | ----------------------- | ---------------------------------------------------------------- |
+| `main`                  | `src/pages/main/index.html`                | `/`                       | 現行   | 通常導線の入口          | 本文「正式トップページ」                                         |
+| `simple-vrm`            | `src/pages/simpleVrm/index.html`           | `/simple-vrm/`            | 現行   | 通常会話の正規ルート    | `frontend/app-shell.md`, `frontend/character/overview.md`        |
+| `vrm360`                | `src/pages/vrm360/index.html`              | `/vrm360/`                | 実験用 | 360表示実験             | `frontend/character/overview.md`                                 |
+| `looking-glass-vrm`     | `src/pages/lookingGlassVrm/index.html`     | `/looking-glass-vrm/`     | 実験用 | Looking Glass + VRM 1.0 | `frontend/character/overview.md`                                 |
+| `motion-debug`          | `src/pages/motionDebug/index.html`         | `/motion-debug/`          | 実験用 | Pose動作の変換 / IK調整 | `frontend/character/motion.md`, `frontend/character/tracking.md` |
+| `pose-landmarker-spike` | `src/pages/poseLandmarkerSpike/index.html` | `/pose-landmarker-spike/` | 実験用 | MediaPipe Pose性能検証  | `frontend/character/tracking.md`                                 |
 
 ## 開発時の起動とビルド
 
-リポジトリのルートから次を実行する。開発サーバーの `/` でトップページを確認できる。
+リポジトリのルートから次を実行する。開発サーバーの `/`でトップページを確認できる。
 
 ```sh
 npm --prefix sincromisor-frontend run dev
 ```
 
-通常ビルドは次のコマンドを使う。`tsc -p tsconfig.modern.json && vite build` により型を確認し、ページ一覧の6ページを `sincromisor-frontend/dist/` に出力する。
+通常ビルドは次のコマンドを使う。`tsc -p tsconfig.modern.json && vite build`により型を確認し、ページ一覧の6ページを `sincromisor-frontend/dist/`に出力する。
 
 ```sh
 npm --prefix sincromisor-frontend run build
@@ -46,19 +46,19 @@ npm --prefix sincromisor-frontend run build
 
 ## 正式トップページ
 
-`/` と `/index.html` はキャラクター画像と体験紹介を備えたトップページである。標準ラジオボタンで「キャラクターと話す／キャラクターになる」を選び、ヘッダーと体験選択下の開始ボタンから会話ページへ直接進む。開始前の案内ダイアログや装飾番号は表示しない。画像と会話例には、見た目を説明し直すラベルを付けない。画像の代替テキストと操作に必要な案内は保持する。トップではReactの共通枠組み、RTC、機器取得を起動しない。
+`/`と `/index.html`はキャラクター画像と体験紹介を備えたトップページである。標準ラジオボタンで「キャラクターと話す／キャラクターになる」を選び、ヘッダーと体験選択下の開始ボタンから会話ページへ直接進む。開始前の案内ダイアログや装飾番号は表示しない。画像と会話例には、見た目を説明し直すラベルを付けない。画像の代替テキストと操作に必要な案内は保持する。トップではReactの共通枠組み、RTC、機器取得を起動しない。
 
-標準のGETフォームが選択中のラジオ値を送り、`/simple-vrm/?talkMode=chat` または `/simple-vrm/?talkMode=sincro` へ進む。`simpleVrm/mainVrm.ts` は既知の2値だけを初期設定として `bootstrap` へ渡す。明示的な初期化が機器利用可否を確認して設定を適用し、購読・アイコン復元を接続した後、OBS自動開始を判断する。保存した利用者設定をページ既定値より後、URL設定より前に復元する。未指定・不正値は保存値を使い、利用者は起動前設定で変更できる。保存単位は既知のページ識別子で、URLの末尾表記に依存しない。詳細は[保存と復元](setting-and-debug-ui/settings-design.md#保存と復元)を参照する。
+標準のGETフォームが選択中のラジオ値を送り、`/simple-vrm/?talkMode=chat`または `/simple-vrm/?talkMode=sincro`へ進む。`simpleVrm/mainVrm.ts`は既知の2値だけを初期設定として `bootstrap`へ渡す。明示的な初期化が機器利用可否を確認して設定を適用し、購読・アイコン復元を接続した後、OBS自動開始を判断する。保存した利用者設定をページ既定値より後、URL設定より前に復元する。未指定・不正値は保存値を使い、利用者は起動前設定で変更できる。保存単位は既知のページ識別子で、URLの末尾表記に依存しない。詳細は[保存と復元](setting-and-debug-ui/settings-design.md#保存と復元)を参照する。
 
-360度表示、Looking Glass、GitHubへの導線を持つ。トップページのHTML・CSS・体験選択処理は `src/pages/main/` に置く。FAQ、画面幅への追従、フォーカス表示、動きを減らす設定に対応する。
+360度表示、Looking Glass、GitHubへの導線を持つ。トップページのHTML・CSS・体験選択処理は `src/pages/main/`に置く。FAQ、画面幅への追従、フォーカス表示、動きを減らす設定に対応する。
 
-UIの既定フォントはBIZ UDPGothicとする。未導入端末では共通の `fonts.css` に定義された、同梱のBIZ UDPGothic由来のサブセットを使う。
+UIの既定フォントはBIZ UDPGothicとする。未導入端末では共通の `fonts.css`に定義された、同梱のBIZ UDPGothic由来のサブセットを使う。
 
 キャラクター画像は5〜6頭身を目安とするトゥーン調の全身像とし、大きな目、整理された髪の形、簡潔な服と陰影で親しみやすさを表す。ダークブラウンのボブ、オレンジの三角の髪留め、赤いオーバル型アンダーリムメガネ、細身の脚を特徴とする。メガネは目を縮小せずに掛ける。画像は背景と足元の影を持たない透過PNGとし、背景色はCSSで指定する。服装は白寄りの半袖シャツ、髪留めと同じオレンジの細めのネクタイ、ダークグレーの膝丈のラップ風スカート、足首の上に少し見える白いソックス、靴ひもを残したシンプルな白い薄底スニーカーとし、ヘッドホンは付けない。ヒーロー領域は全身を収め、紹介カードだけ顔を拡大する。
 
 ### 採用画像と更新方法
 
-表示用画像は [character.png](../../../sincromisor-frontend/public/images/main/character.png)（1024×1536、RGBA）である。[home-character-source.png](../../images/home-character-source.png) は背景透過前の編集原本として文書用に保持し、アプリの配信対象には含めない。原本は `image_gen` による編集、透過版はローカル画像処理で作成した。
+表示用画像は [character.png](../../../sincromisor-frontend/public/images/main/character.png)（1024×1536、RGBA）である。[home-character-source.png](../../images/home-character-source.png) は背景透過前の編集原本として文書用に保持し、アプリの配信対象には含めない。原本は `image_gen`による編集、透過版はローカル画像処理で作成した。
 
 #### 採用につながった最終記録のプロンプト（原文）
 
@@ -82,41 +82,41 @@ Use case: precise-object-edit. Edit the supplied full-body dark-brown-haired too
 
 ## 責務
 
-- 起動ファイル:
-    - `src/pages/*` 配下に置き、ページ固有初期化処理を呼ぶ薄い入口に保つ。
-    - 由来ディレクトリは camelCase、公開 URL は既存 kebab-case 経路を維持する。
-    - `simple-vrm` の VRM 項目は `src/pages/simpleVrm/mainVrm.ts`、3ページ共通のReactパネルと購読フックは `src/app/settings/react/*` に置く。
-    - `vrm360` / `looking-glass-vrm` の React パネルは各 `src/pages/<page>/react/*` に置き、通常アプリの共通枠組みの上へページ固有の操作パネルとして渡す。
-- Vite 経路別名:
-    - dev では旧公開 URL を `src/pages/*` の HTML へ内部書き換えする。
-    - ビルド後は `dist/pages/*/index.html` を `dist/<public-route>/index.html` へ移し、プレビュー / 配信 URL を変えない。
-- 起動元:
-    - 3つのVRMページのHTMLは `mainReact.tsx` だけを読み込む。各 `mainVrm*.ts` は配置済みDOM参照からページ固有の初期化を行う関数を公開し、独立したloadイベントは登録しない。
-- 初期化処理:
-    - `app/bootstrap` の基底・派生初期化処理がページ既定値とシーンを選び、共通の開始・設定接続を行う。配置済みDOM参照の契約もアプリ層が持つ。
-- Reactによるアプリの共通枠組み:
-    - 共通 UI を描画し、ページ差分はプロパティ / 制御処理選択肢へ閉じ込める。
-- 開発者向けページ:
-    - `motion-debug` は AppShell / RTC / チャット / 起動前ダイアログを持たず、カメラ / 追跡処理 / VRM 動作の変換の観測に限定する。
-    - `motion-debug` は `?vrm=/characters/<file>.vrm` で公開 `characters/` 配下の VRM を指定できる。指定がない場合や、異なるオリジン / `characters/` 外の URL は `/characters/default.vrm` に戻す。
-    - `motion-debug` は開発者向け表示画面としてライブ / 記録 / 再生 / 指標モードを持ち、記録済み動作ログの層状態、再生状態、`MotionMetricSummary` を同じ画面で確認する。
-    - Playwright から使う `window.__SINCRO_MOTION_DEBUG__` はフロントエンド開発者用ツールの内部 API として扱い、本番エンドポイント / JSON 契約には含めない。
-    - ページ制御処理は `MotionDebugApp` を共通窓口とし、VRM URL 検証、カメラ / 固定データ由来、TrackerRuntime 橋渡し、再生、指標 / QA、ウィンドウ API 接続、VRM シーン / 描画頻度を `src/pages/motionDebug/motionDebug*Runtime.ts` と関連モジュールに分ける。公開ウィンドウ API 名・引数・戻り値は `types.ts` の `MotionDebugApi` を正本にし、内部モジュール境界の都合で増減させない。
+- 起動ファイル
+    - `src/pages/*`配下に置き、ページ固有の初期化処理を呼ぶ薄い入口に保つ。
+    - 生成元のディレクトリはcamelCase、公開URLは既存kebab-case経路を維持する。
+    - `simple-vrm`のVRM項目は `src/pages/simpleVrm/mainVrm.ts`、3ページ共通のReactパネルと購読フックは `src/app/settings/react/*`に置く。
+    - `vrm360` / `looking-glass-vrm`のReactパネルは各 `src/pages/<page>/react/*`に置き、通常アプリの共通枠組みの上へページ固有の操作パネルとして渡す。
+- Vite経路別名
+    - devでは旧公開URLを `src/pages/*`のHTMLへ内部書き換えする。
+    - ビルド後は `dist/pages/*/index.html`を `dist/<public-route>/index.html`へ移し、プレビュー / 配信URLを変えない。
+- 起動元
+    - 3つのVRMページのHTMLは `mainReact.tsx`だけを読み込む。各 `mainVrm*.ts`は配置済みDOM参照からページ固有の初期化を行う関数を公開し、独立したloadイベントは登録しない。
+- 初期化処理
+    - `app/bootstrap`の基底・派生初期化処理がページ既定値とシーンを選び、共通の開始・設定接続を行う。配置済みDOM参照の契約もアプリ層が持つ。
+- Reactによるアプリの共通枠組み
+    - 共通UIを描画し、ページ差分はプロパティ / 制御処理選択肢へ閉じ込める。
+- 開発者向けページ
+    - `motion-debug`はAppShell / RTC / チャット / 起動前ダイアログを持たず、カメラ / 追跡処理 / VRM動作の変換の観測に限定する。
+    - `motion-debug`は `?vrm=/characters/<file>.vrm`で公開 `characters/`配下のVRMを指定できる。指定がない場合や、異なるオリジン / `characters/`外のURLは `/characters/default.vrm`に戻す。
+    - `motion-debug`は開発者向け表示画面としてライブ / 記録 / 再生 / 指標モードを持ち、記録済み動作ログの層状態、再生状態、`MotionMetricSummary`を同じ画面で確認する。
+    - Playwrightから使う `window.__SINCRO_MOTION_DEBUG__`はフロントエンド開発者用ツールの内部APIとして扱い、本番エンドポイント / JSON契約には含めない。
+    - ページ制御処理は `MotionDebugApp`を共通窓口とし、VRM URL検証、カメラ / 固定データ由来、TrackerRuntime橋渡し、再生、指標 / QA、ウィンドウAPI接続、VRMシーン / 描画頻度を `src/pages/motionDebug/motionDebug*Runtime.ts`と関連モジュールに分ける。公開ウィンドウAPI名・引数・戻り値は `types.ts`の `MotionDebugApi`を正本にし、内部モジュール境界の都合で増減させない。
 
 ## 変更時の確認
 
-- 新しい通常ページを追加する場合:
-    - Vite ビルド入力
-    - Vite 経路別名
+- 新しい通常ページを追加する場合
+    - Viteビルド入力
+    - Vite経路別名
     - アプリの共通枠組み取り付け
     - 設定 / デバッグ利用可否
     - `documents/design/index.md`
-- 実験用ページを通常導線へ昇格する場合:
+- 実験用ページを通常導線へ昇格する場合
     - ビルド / 手動確認
     - 既知の制約
     - 設計文書の更新
-- 旧形式を復活させる判断が必要な場合:
-    - ADR を追加して理由を明記する。
+- 旧形式を復活させる判断が必要な場合
+    - ADRを追加して理由を明記する。
 
 ## 参照
 
@@ -126,4 +126,4 @@ Use case: precise-object-edit. Edit the supplied full-body dark-brown-haired too
 
 ## 初期設定への復帰
 
-共通3ページの設定画面から全ページの保存設定とVRMを初期化できる。この操作に限り `talkMode` を解除して同じページを再読込し、その他のクエリーとハッシュは保つ。通常起動のURL優先とOBS自動開始は維持する。削除対象と失敗時の扱いは[全設定の初期化](setting-and-debug-ui/settings-design.md#全設定の初期化)を参照する。
+共通の3ページの設定画面から全ページの保存設定とVRMを初期化できる。この操作に限り `talkMode`を解除して同じページを再読込し、その他のクエリーとハッシュは保つ。通常起動のURL優先とOBS自動開始は維持する。削除対象と失敗時の扱いは[全設定の初期化](setting-and-debug-ui/settings-design.md#全設定の初期化)を参照する。
