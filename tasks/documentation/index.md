@@ -6,11 +6,10 @@
 
 ## タスク一覧（自動生成 / 全 35 件）
 
-### open（未完） — 16 件
+### open（未完） — 15 件
 
 | タスク                                                                                                           | タイトル                                                            | 判定 | 依存                                     |
 | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ---- | ---------------------------------------- |
-| [task-261001222204-yomiyasu-38-tracking](./task-261001222204-yomiyasu-38-tracking/task.md)                       | 文書の日本語表現を整える（フロントエンドのキャラクター追跡・第2部） | —    | `task-261001222204-yomiyasu-37-tracking` |
 | [task-261001222205-yomiyasu-39-tracking](./task-261001222205-yomiyasu-39-tracking/task.md)                       | 文書の日本語表現を整える（フロントエンドのキャラクター追跡・第3部） | —    | `task-261001222204-yomiyasu-38-tracking` |
 | [task-261001222205-yomiyasu-40-pages](./task-261001222205-yomiyasu-40-pages/task.md)                             | 文書の日本語表現を整える（フロントエンドのページ構成）              | —    | —                                        |
 | [task-261001222205-yomiyasu-41-readme](./task-261001222205-yomiyasu-41-readme/task.md)                           | 文書の日本語表現を整える（設定・診断画面の案内ほか）                | —    | —                                        |
@@ -27,28 +26,29 @@
 | [task-261001222215-yomiyasu-90-coding-md](./task-261001222215-yomiyasu-90-coding-md/task.md)                     | 文書の日本語表現を整える（コーディング規約(Markdown)ほか）          | —    | —                                        |
 | [task-261001222215-yomiyasu-91-coding-ts](./task-261001222215-yomiyasu-91-coding-ts/task.md)                     | 文書の日本語表現を整える（コーディング規約(TypeScript)ほか）        | —    | —                                        |
 
-### done（完了） — 19 件
+### done（完了） — 20 件
 
-| タスク                                                                                                                         | タイトル                                                            | 判定    | 依存                                   |
-| ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- | ------- | -------------------------------------- |
-| [task-260905105729-japanese-document-readability](./task-260905105729-japanese-document-readability/task.md)                   | 実装エージェントの参照文書に残る不要な英語表記を日本語へ修正        | ✅ PASS | —                                      |
-| [task-261001221346-readme-japanese](./task-261001221346-readme-japanese/task.md)                                               | READMEの日本語を自然な表現に整える                                  | ✅ PASS | —                                      |
-| [task-261001222158-yomiyasu-02-overview](./task-261001222158-yomiyasu-02-overview/task.md)                                     | 文書の日本語表現を整える（Sincromisor 全体構成ほか）                | ✅ PASS | —                                      |
-| [task-261001222201-yomiyasu-22-agent-server](./task-261001222201-yomiyasu-22-agent-server/task.md)                             | 文書の日本語表現を整える（バックエンド: AgentServerほか）           | ✅ PASS | —                                      |
-| [task-261001222202-yomiyasu-23-text-processor](./task-261001222202-yomiyasu-23-text-processor/task.md)                         | 文書の日本語表現を整える（バックエンドサービス: TextProcessorほか） | ✅ PASS | —                                      |
-| [task-261001222202-yomiyasu-24-audio-pipeline-websocket](./task-261001222202-yomiyasu-24-audio-pipeline-websocket/task.md)     | 文書の日本語表現を整える（音声パイプラインのWebSocket契約）         | ✅ PASS | —                                      |
-| [task-261001222202-yomiyasu-25-frontend-rtc](./task-261001222202-yomiyasu-25-frontend-rtc/task.md)                             | 文書の日本語表現を整える（フロントエンドのRTC契約ほか）             | ✅ PASS | —                                      |
-| [task-261001222202-yomiyasu-26-adr-260222-react-migration](./task-261001222202-yomiyasu-26-adr-260222-react-migration/task.md) | 文書の日本語表現を整える（ADR-260222 React移行ほか）                | ✅ PASS | —                                      |
-| [task-261001222202-yomiyasu-27-adr-260726-pion-codec-poc](./task-261001222202-yomiyasu-27-adr-260726-pion-codec-poc/task.md)   | 文書の日本語表現を整える（ADR-260726 Pion コーデック PoC）          | ✅ PASS | —                                      |
-| [task-261001222203-yomiyasu-28-documentation-guide](./task-261001222203-yomiyasu-28-documentation-guide/task.md)               | 文書の日本語表現を整える（設計ドキュメント運用ガイド）              | ✅ PASS | —                                      |
-| [task-261001222203-yomiyasu-29-app-shell](./task-261001222203-yomiyasu-29-app-shell/task.md)                                   | 文書の日本語表現を整える（フロントエンドの共通枠組み）              | ✅ PASS | —                                      |
-| [task-261001222203-yomiyasu-30-vad](./task-261001222203-yomiyasu-30-vad/task.md)                                               | 文書の日本語表現を整える（フロントエンド VAD）                      | ✅ PASS | —                                      |
-| [task-261001222203-yomiyasu-31-motion](./task-261001222203-yomiyasu-31-motion/task.md)                                         | 文書の日本語表現を整える（フロントエンドのキャラクター動作・第1部） | ✅ PASS | —                                      |
-| [task-261001222203-yomiyasu-32-motion](./task-261001222203-yomiyasu-32-motion/task.md)                                         | 文書の日本語表現を整える（フロントエンドのキャラクター動作・第2部） | ✅ PASS | `task-261001222203-yomiyasu-31-motion` |
-| [task-261001222204-yomiyasu-33-motion](./task-261001222204-yomiyasu-33-motion/task.md)                                         | 文書の日本語表現を整える（フロントエンドのキャラクター動作・第3部） | ✅ PASS | `task-261001222203-yomiyasu-32-motion` |
-| [task-261001222204-yomiyasu-34-motion](./task-261001222204-yomiyasu-34-motion/task.md)                                         | 文書の日本語表現を整える（フロントエンドのキャラクター動作・第4部） | ✅ PASS | `task-261001222204-yomiyasu-33-motion` |
-| [task-261001222204-yomiyasu-36-overview](./task-261001222204-yomiyasu-36-overview/task.md)                                     | 文書の日本語表現を整える（フロントエンドのキャラクター概要）        | ✅ PASS | —                                      |
-| [task-261001222204-yomiyasu-37-tracking](./task-261001222204-yomiyasu-37-tracking/task.md)                                     | 文書の日本語表現を整える（フロントエンドのキャラクター追跡・第1部） | ✅ PASS | —                                      |
-| [task-261001222210-yomiyasu-35-motion](./task-261001222210-yomiyasu-35-motion/task.md)                                         | 文書の日本語表現を整える（フロントエンドのキャラクター動作・第5部） | ✅ PASS | `task-261001222204-yomiyasu-34-motion` |
+| タスク                                                                                                                         | タイトル                                                            | 判定    | 依存                                     |
+| ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- | ------- | ---------------------------------------- |
+| [task-260905105729-japanese-document-readability](./task-260905105729-japanese-document-readability/task.md)                   | 実装エージェントの参照文書に残る不要な英語表記を日本語へ修正        | ✅ PASS | —                                        |
+| [task-261001221346-readme-japanese](./task-261001221346-readme-japanese/task.md)                                               | READMEの日本語を自然な表現に整える                                  | ✅ PASS | —                                        |
+| [task-261001222158-yomiyasu-02-overview](./task-261001222158-yomiyasu-02-overview/task.md)                                     | 文書の日本語表現を整える（Sincromisor 全体構成ほか）                | ✅ PASS | —                                        |
+| [task-261001222201-yomiyasu-22-agent-server](./task-261001222201-yomiyasu-22-agent-server/task.md)                             | 文書の日本語表現を整える（バックエンド: AgentServerほか）           | ✅ PASS | —                                        |
+| [task-261001222202-yomiyasu-23-text-processor](./task-261001222202-yomiyasu-23-text-processor/task.md)                         | 文書の日本語表現を整える（バックエンドサービス: TextProcessorほか） | ✅ PASS | —                                        |
+| [task-261001222202-yomiyasu-24-audio-pipeline-websocket](./task-261001222202-yomiyasu-24-audio-pipeline-websocket/task.md)     | 文書の日本語表現を整える（音声パイプラインのWebSocket契約）         | ✅ PASS | —                                        |
+| [task-261001222202-yomiyasu-25-frontend-rtc](./task-261001222202-yomiyasu-25-frontend-rtc/task.md)                             | 文書の日本語表現を整える（フロントエンドのRTC契約ほか）             | ✅ PASS | —                                        |
+| [task-261001222202-yomiyasu-26-adr-260222-react-migration](./task-261001222202-yomiyasu-26-adr-260222-react-migration/task.md) | 文書の日本語表現を整える（ADR-260222 React移行ほか）                | ✅ PASS | —                                        |
+| [task-261001222202-yomiyasu-27-adr-260726-pion-codec-poc](./task-261001222202-yomiyasu-27-adr-260726-pion-codec-poc/task.md)   | 文書の日本語表現を整える（ADR-260726 Pion コーデック PoC）          | ✅ PASS | —                                        |
+| [task-261001222203-yomiyasu-28-documentation-guide](./task-261001222203-yomiyasu-28-documentation-guide/task.md)               | 文書の日本語表現を整える（設計ドキュメント運用ガイド）              | ✅ PASS | —                                        |
+| [task-261001222203-yomiyasu-29-app-shell](./task-261001222203-yomiyasu-29-app-shell/task.md)                                   | 文書の日本語表現を整える（フロントエンドの共通枠組み）              | ✅ PASS | —                                        |
+| [task-261001222203-yomiyasu-30-vad](./task-261001222203-yomiyasu-30-vad/task.md)                                               | 文書の日本語表現を整える（フロントエンド VAD）                      | ✅ PASS | —                                        |
+| [task-261001222203-yomiyasu-31-motion](./task-261001222203-yomiyasu-31-motion/task.md)                                         | 文書の日本語表現を整える（フロントエンドのキャラクター動作・第1部） | ✅ PASS | —                                        |
+| [task-261001222203-yomiyasu-32-motion](./task-261001222203-yomiyasu-32-motion/task.md)                                         | 文書の日本語表現を整える（フロントエンドのキャラクター動作・第2部） | ✅ PASS | `task-261001222203-yomiyasu-31-motion`   |
+| [task-261001222204-yomiyasu-33-motion](./task-261001222204-yomiyasu-33-motion/task.md)                                         | 文書の日本語表現を整える（フロントエンドのキャラクター動作・第3部） | ✅ PASS | `task-261001222203-yomiyasu-32-motion`   |
+| [task-261001222204-yomiyasu-34-motion](./task-261001222204-yomiyasu-34-motion/task.md)                                         | 文書の日本語表現を整える（フロントエンドのキャラクター動作・第4部） | ✅ PASS | `task-261001222204-yomiyasu-33-motion`   |
+| [task-261001222204-yomiyasu-36-overview](./task-261001222204-yomiyasu-36-overview/task.md)                                     | 文書の日本語表現を整える（フロントエンドのキャラクター概要）        | ✅ PASS | —                                        |
+| [task-261001222204-yomiyasu-37-tracking](./task-261001222204-yomiyasu-37-tracking/task.md)                                     | 文書の日本語表現を整える（フロントエンドのキャラクター追跡・第1部） | ✅ PASS | —                                        |
+| [task-261001222204-yomiyasu-38-tracking](./task-261001222204-yomiyasu-38-tracking/task.md)                                     | 文書の日本語表現を整える（フロントエンドのキャラクター追跡・第2部） | ✅ PASS | `task-261001222204-yomiyasu-37-tracking` |
+| [task-261001222210-yomiyasu-35-motion](./task-261001222210-yomiyasu-35-motion/task.md)                                         | 文書の日本語表現を整える（フロントエンドのキャラクター動作・第5部） | ✅ PASS | `task-261001222204-yomiyasu-34-motion`   |
 
 <!-- AUTOGEN:tasks END -->
