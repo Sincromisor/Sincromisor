@@ -469,111 +469,111 @@
     - `CameraQualityScore.track`も未加工 `deviceId` / `groupId` / `label`を保存せず、`width`、`height`、`frameRate`、`facingMode`、`readyState`だけを持つ。本番制御処理は `MediaStreamTrack`本体を観測専用の処理工程へ渡さず、現在トラックから読んだ設定 / readyStateをスコア生成境界で機密情報を除去する。
     - `MediaStreamTrack.getSettings()`由来のカメラ設定は `MotionDebugApp`で機密情報を除去してから構成情報へ渡し、記録処理の中核は機密情報を除去済みの構成情報を厳格な検査スキーマで検証する。
 - 動作指標
-    - 指標の公開入口は `src/character/motionEvaluation/motionMetrics.ts` 共通窓口を正本とし、既存 import 名を維持する。実体は `motionMetricTypes.ts`、`motionMetricThresholds.ts`、`motionMetricFrameParsers.ts`、`motionMetricBaseCalculators.ts`、`motionMetricTrackerCalculators.ts`、`motionMetricTemporalCalculators.ts`、`motionMetricSolverCalculators.ts`、`motionMetricIntentCalculators.ts`、`motionMetricSummary.ts`、`motionMetricComparison.ts` に分け、各計算処理は `SincroMotionDebugFrame[]` と `MotionMetricConfig` 由来の値だけを読む純粋な関数とする。`motionMetricRecoveryCalculators.ts` は時系列回復急変の補助実装であり、外部公開は時系列モジュール経由に留める。
-    - 要約スキーマは `sincro.motion-metrics.v1` とし、`neutralJitter`、`elbowFlipCount`、`recoveryJumpAngleDeg`、`angularVelocitySpikeCount`、`reachClampOccupancy`、`trackingLossDurationMs`、`sideSwapCount`、`addedLatencyMs`、`temporalPredictedArmFrameCount`、`temporalRecoveringArmFrameCount`、`temporalLostArmDurationMs`、`temporalMaxRecoveryJumpDegEquivalent`、`temporalNeutralWristJitter`、`solverElbowFlipRejectCount`、`solverReachClampOccupancy`、`solverExcessReachRatioP95`、`solverPoleUncertainFrameCount`、`finalPoseAngularVelocityClampCount`、`finalPoseOwnedBoneConflictCount`、`gestureFlickerCount`、`semanticFallbackFrameCount`、`intentCooldownSuppressionCount`、`intentInvalidFrameCount`、`trackerBudgetOverrunFrameCount`、`trackerDroppedFrameCount`、`degradationStageFrameCount`、`degradationRecoveryFrameCount`、`roiPausedFrameCount` を固定キーとする。
-    - 段階 5 時系列指標は `frame.temporal` の有効 `TemporalUpperBodyState` だけを読む。予測済み / 復帰中件数は arm-frame 単位、未検出継続時間は左右腕未検出継続時間合算、回復急変は復帰中中腕スカラーのフレーム差分を deg 相当に換算した最大値、中立手首揺らぎは `neutral-10s` の追跡済み / 疑わしい `bodyLocalWrist` 連続差分 RMS とする。
-    - 段階 6 ソルバー / finalPose 指標は保存済み `frame.solver.phase6` と `frame.finalPose` だけを読む。`solverElbowFlipRejectCount` は `constraintReasonCodes` の `pole_flip_rejected`、`solverReachClampOccupancy` は `ik.targetClamped` arm-frame 比率、`solverPoleUncertainFrameCount` は `poleState === "uncertain"`、`finalPoseAngularVelocityClampCount` は `clampedBones[].reason === "angular_velocity"`、`finalPoseOwnedBoneConflictCount` は `warnings` の `owned_bone_conflict:` 接頭辞だけを数える。
-    - 段階 6 腕の任意 `reach` は橋渡し値の制限前の肩ローカル手首長を橋渡し倍率のアバター腕長さで割った `requestedReachRatio`、ソルバー最終目標長を同じ橋渡し倍率腕長さで割った `appliedReachRatio`、両者の正の差 `excessReachRatio`、単一所有権 `clampedBy` を保存する。プロファイル測定値とソルバー測定値が異なる場合も要求された / 適用済みの分母を混在させない。橋渡しとソルバーの両方が値の制限した場合は `solver` を優先する。旧ログの欠損は解析できるが、`solverExcessReachRatioP95` は全 arm-frame に有限診断が揃わない限り `reach_diagnostics_not_recorded` とする。
-    - 段階 9 意図指標は保存済み `frame.intent` だけを読む。`gestureFlickerCount` は同一左右の意味に基づく動作意図が `stableDurationMs < 150` のまま `tracking` または別意味に基づく動作意図へ戻った回数、`semanticFallbackFrameCount` は左右片腕ごとのサンプルの `lost` / `fallback` 数、`intentCooldownSuppressionCount` は左右警告の `gesture_cooldown` 数、`intentInvalidFrameCount` は `parseMotionIntentState()` が失敗したフレーム数とする。無効意図フレームは他 3 件のサンプルから除外し、有効意図サンプルが 0 の場合は `not_available` / `intent_not_recorded` にする。
-    - 段階 10 機能低下指標は追跡処理統計とフレーム時刻だけを読む。`trackerBudgetOverrunFrameCount` は `frame.metrics.tracker.budget.budgetStatus === "over_budget"` のフレーム数であり、`warn` は数えない。`trackerDroppedFrameCount` は `frame.timestamp.droppedPresentedFrames` と累積値 `frame.metrics.tracker.droppedFrames` のフレーム間差分を同一フレームごとに比較し、大きい値だけを採用する。`degradationStageFrameCount` は `frame.metrics.tracker.degradationPolicy.stage !== "full"`、または旧ログの `frame.metrics.tracker.budget.degradation.state !== "full"` のフレーム数とする。`degradationRecoveryFrameCount` は `frame.metrics.tracker.degradationPolicy.recovering === true`、`roiPausedFrameCount` は `frame.metrics.tracker.roi.pauseState !== "active"` を数える。
-    - 段階 10 機能低下指標はすべて `unit: "count"`、`direction: "lower_is_better"` とする。初期閾値は `trackerBudgetOverrunFrameCount { pass: 0, warn: 30, fail: 90 }`、`trackerDroppedFrameCount { pass: 0, warn: 15, fail: 60 }`、`degradationStageFrameCount { pass: 0, warn: 45, fail: 150 }`、`degradationRecoveryFrameCount { pass: 0, warn: 60, fail: 180 }`、`roiPausedFrameCount { pass: 0, warn: 60, fail: 180 }` に固定する。
-    - 旧ログで `degradationPolicy` が無い場合、`degradationRecoveryFrameCount` は回復を推測せず `not_available` にする。旧ログで `roi` が無い場合、`roiPausedFrameCount` は `not_available` にする。`degradationStageFrameCount` だけは旧 `budget.degradation.state` を代替処理として読む。
-    - 基準解析処理は新しい固定キーが旧基準に無い場合、未知キーではなく欠損キーとして `not_available` 指標を `severity: "warn"` で補完する。しきい値は `MotionMetricThreshold` の有限 `pass` / `warn` / `fail` 境界だけを保存し、表現上の `fail > N` は判定説明として扱う。
-    - 入力格納先が不足する指標は `status: "not_available"`、`severity: "warn"`、`value: null` とし、要約全体を合格扱いにしない。
-    - 初期閾値は `DEFAULT_MOTION_METRIC_THRESHOLDS` に固定し、比較は `compareMotionMetricSummaries()` が指標ごとに `improved` / `unchanged` / `regressed` / `not_comparable` を返す。
-    - P0 固定データ ID は `neutral-10s`、`single-arm-slow-raise`、`both-arms-slow-raise`、`hand-out-and-return`、`arms-cross`、`fast-wave`、`left-arm-occlusion-recovery`、`right-arm-occlusion-recovery` に固定する。回復 2 固定データは 30fps、64 フレームの決定的標準化した状態・信頼性系列から本番時系列推定処理と腕入力提供元を通して生成し、対象腕の追跡済み → 未検出 → 復帰中 → 追跡済み、未検出中の `pose-snapshot-fallback`、復帰中後の `temporal` 復帰を保存する。
-    - 基準 JSON は `src/character/motionEvaluation/motionMetricBaselineSchema.ts` の `parseMotionMetricBaseline()` を正本にし、スキーマバージョンは `sincro.motion-metric-baseline.v1` とする。
-    - `motion-debug` ウィンドウ API は再生読み込み済みログに対して `calculateReplayMetrics(config)` を公開し、API 内では時刻を生成せず `config.generatedAtIso` を要約へ渡す。
+    - 指標の公開入口は `src/character/motionEvaluation/motionMetrics.ts`共通窓口を正本とし、既存import名を維持する。実体は `motionMetricTypes.ts`、`motionMetricThresholds.ts`、`motionMetricFrameParsers.ts`、`motionMetricBaseCalculators.ts`、`motionMetricTrackerCalculators.ts`、`motionMetricTemporalCalculators.ts`、`motionMetricSolverCalculators.ts`、`motionMetricIntentCalculators.ts`、`motionMetricSummary.ts`、`motionMetricComparison.ts`に分け、各計算処理は `SincroMotionDebugFrame[]`と `MotionMetricConfig`由来の値だけを読む純粋な関数とする。`motionMetricRecoveryCalculators.ts`は時系列回復急変の補助実装であり、外部公開は時系列モジュール経由に留める。
+    - 要約スキーマは `sincro.motion-metrics.v1`とし、`neutralJitter`、`elbowFlipCount`、`recoveryJumpAngleDeg`、`angularVelocitySpikeCount`、`reachClampOccupancy`、`trackingLossDurationMs`、`sideSwapCount`、`addedLatencyMs`、`temporalPredictedArmFrameCount`、`temporalRecoveringArmFrameCount`、`temporalLostArmDurationMs`、`temporalMaxRecoveryJumpDegEquivalent`、`temporalNeutralWristJitter`、`solverElbowFlipRejectCount`、`solverReachClampOccupancy`、`solverExcessReachRatioP95`、`solverPoleUncertainFrameCount`、`finalPoseAngularVelocityClampCount`、`finalPoseOwnedBoneConflictCount`、`gestureFlickerCount`、`semanticFallbackFrameCount`、`intentCooldownSuppressionCount`、`intentInvalidFrameCount`、`trackerBudgetOverrunFrameCount`、`trackerDroppedFrameCount`、`degradationStageFrameCount`、`degradationRecoveryFrameCount`、`roiPausedFrameCount`を固定キーとする。
+    - 段階5時系列指標は `frame.temporal`の有効 `TemporalUpperBodyState`だけを読む。予測済み / 復帰中件数はarm-frame単位、未検出継続時間は左右腕未検出継続時間合算、回復急変は復帰中の腕スカラーのフレーム差分をdeg相当に換算した最大値、中立手首揺らぎは `neutral-10s`の追跡済み / 疑わしい `bodyLocalWrist`連続差分RMSとする。
+    - 段階6ソルバー / finalPose指標は保存済み `frame.solver.phase6`と `frame.finalPose`だけを読む。`solverElbowFlipRejectCount`は `constraintReasonCodes`の `pole_flip_rejected`、`solverReachClampOccupancy`は `ik.targetClamped` arm-frame比率、`solverPoleUncertainFrameCount`は `poleState === "uncertain"`、`finalPoseAngularVelocityClampCount`は `clampedBones[].reason === "angular_velocity"`、`finalPoseOwnedBoneConflictCount`は `warnings`の `owned_bone_conflict:`接頭辞だけを数える。
+    - 段階6腕の任意 `reach`は橋渡し値の制限前の肩ローカル手首長を橋渡し倍率のアバター腕長さで割った `requestedReachRatio`、ソルバー最終目標長を同じ橋渡し倍率腕長さで割った `appliedReachRatio`、両者の正の差 `excessReachRatio`、単一所有権 `clampedBy`を保存する。プロファイル測定値とソルバー測定値が異なる場合も要求された / 適用済みの分母を混在させない。橋渡しとソルバーの両方が値を制限した場合は `solver`を優先する。旧ログの欠損は解析できるが、`solverExcessReachRatioP95`は全arm-frameに有限診断が揃わない限り `reach_diagnostics_not_recorded`とする。
+    - 段階9意図指標は保存済み `frame.intent`だけを読む。`gestureFlickerCount`は同一左右の意味に基づく動作意図が `stableDurationMs < 150`のまま `tracking`または別意味に基づく動作意図へ戻った回数、`semanticFallbackFrameCount`は左右片腕ごとのサンプルの `lost` / `fallback`数、`intentCooldownSuppressionCount`は左右警告の `gesture_cooldown`数、`intentInvalidFrameCount`は `parseMotionIntentState()`が失敗したフレーム数とする。無効意図フレームは他3件のサンプルから除外し、有効意図サンプルが0の場合は `not_available` / `intent_not_recorded`にする。
+    - 段階10機能低下指標は追跡処理統計とフレーム時刻だけを読む。`trackerBudgetOverrunFrameCount`は `frame.metrics.tracker.budget.budgetStatus === "over_budget"`のフレーム数であり、`warn`は数えない。`trackerDroppedFrameCount`は `frame.timestamp.droppedPresentedFrames`と累積値 `frame.metrics.tracker.droppedFrames`のフレーム間差分を同一フレームごとに比較し、大きい値だけを採用する。`degradationStageFrameCount`は `frame.metrics.tracker.degradationPolicy.stage !== "full"`、または旧ログの `frame.metrics.tracker.budget.degradation.state !== "full"`のフレーム数とする。`degradationRecoveryFrameCount`は `frame.metrics.tracker.degradationPolicy.recovering === true`、`roiPausedFrameCount`は `frame.metrics.tracker.roi.pauseState !== "active"`を数える。
+    - 段階10機能低下指標はすべて `unit: "count"`、`direction: "lower_is_better"`とする。初期閾値は `trackerBudgetOverrunFrameCount { pass: 0, warn: 30, fail: 90 }`、`trackerDroppedFrameCount { pass: 0, warn: 15, fail: 60 }`、`degradationStageFrameCount { pass: 0, warn: 45, fail: 150 }`、`degradationRecoveryFrameCount { pass: 0, warn: 60, fail: 180 }`、`roiPausedFrameCount { pass: 0, warn: 60, fail: 180 }`に固定する。
+    - 旧ログで `degradationPolicy`が無い場合、`degradationRecoveryFrameCount`は回復を推測せず `not_available`にする。旧ログで `roi`が無い場合、`roiPausedFrameCount`は `not_available`にする。`degradationStageFrameCount`だけは旧 `budget.degradation.state`を代替処理として読む。
+    - 基準解析処理は新しい固定キーが旧基準に無い場合、未知キーではなく欠損キーとして `not_available`指標を `severity: "warn"`で補完する。しきい値は `MotionMetricThreshold`の有限 `pass` / `warn` / `fail`境界だけを保存し、表現上の `fail > N`は判定説明として扱う。
+    - 入力格納先が不足する指標は `status: "not_available"`、`severity: "warn"`、`value: null`とし、要約全体を合格扱いにしない。
+    - 初期閾値は `DEFAULT_MOTION_METRIC_THRESHOLDS`に固定し、比較は `compareMotionMetricSummaries()`が指標ごとに `improved` / `unchanged` / `regressed` / `not_comparable`を返す。
+    - P0固定データIDは `neutral-10s`、`single-arm-slow-raise`、`both-arms-slow-raise`、`hand-out-and-return`、`arms-cross`、`fast-wave`、`left-arm-occlusion-recovery`、`right-arm-occlusion-recovery`に固定する。回復2固定データは30fps、64フレームの決定的な標準化状態・信頼性系列から本番時系列推定処理と腕入力提供元を通して生成し、対象腕の追跡済み → 未検出 → 復帰中 → 追跡済み、未検出中の `pose-snapshot-fallback`、復帰中後の `temporal`復帰を保存する。
+    - 基準JSONは `src/character/motionEvaluation/motionMetricBaselineSchema.ts`の `parseMotionMetricBaseline()`を正本にし、スキーマバージョンは `sincro.motion-metric-baseline.v1`とする。
+    - `motion-debug`ウィンドウAPIは再生読み込み済みログに対して `calculateReplayMetrics(config)`を公開し、API内では時刻を生成せず `config.generatedAtIso`を要約へ渡す。
 
 ## 本番適用の判定条件
 
-本番 `sincro` 動作処理工程は、取り組み計画の段階番号ではなく、観測成果物、指標状態、手動確認、切り戻し条件で段階的に進める。正規化済み姿勢の全面適用は本番既定へ昇格済みであり、腕 / 体幹 / 全面適用の段階別の切り戻しフラグは削除済みである。
+本番 `sincro`動作処理工程は、取り組み計画の段階番号ではなく、観測成果物、指標状態、手動確認、切り戻し条件で段階的に進める。正規化済み姿勢の全面適用は本番既定へ昇格済みであり、腕 / 体幹 / 全面適用の段階別の切り戻しフラグは削除済みである。
 
-| 段階                                     | 開始条件                                                                                                                                     | 完了条件                                                                                                                                                                   | 必須成果物                                                                                                                                                          | 必須指標の状態                                                                                                                                                              | 必須の手動確認                                                                                                                                    | 切り戻し条件                                                                                                                                                                        |
-| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 観測専用の処理工程                       | Face / Pose コールバックから `SincroMotionPipelineState` が例外なく更新され、VRM ボーン / 表情 / ルート位置を変更しないこと。                | ライブ / 記録 / 再生で信頼性、標準化した、時系列、意図の利用可能 / not_computed / invalid_input が説明可能で、欠損入力が本番コールバックの例外にならないこと。             | `frame.reliability`、`frame.canonical`、`frame.temporal`、`frame.intent`、`SincroMotionObserveOnlySummary`、実行時の所有権対応表。                                  | `neutralJitter`、`trackingLossDurationMs`、`sideSwapCount`、段階 5 時系列指標が `not_available` でなく、P0 固定データ基準に対して悪化がないこと。                           | `default.vrm` と `aoi-1.0.7.vrm` で通常会話、顔のみ、Pose 欠損、カメラ停止 / 再接続を確認し、従来直接書き込み表示と差が出ないこと。               | 観測専用状態更新でフレームループが止まる、顔のみのコールバックが時系列 / 意図を進める、または診断 Console が未加工のランドマーク / 切り抜きオブジェクトを保持する場合は無効化する。 |
-| 本番の姿勢合成                           | 観測専用の完了条件を満たし、`AvatarMotionProfile` / `MinimalAvatarMotionProfile` と最新 `SincroPoseRetargetFrame` が揃うこと。               | `SincroVrmPoseComposerService` が `available` / `not_ready` / `invalid_input` / `missing_profile` を正しく返し、`status !== "available"` で `result` を持たないこと。      | `frame.finalPose`、本番合成要約、`sincro.composer-comparison-summary.v1`、任意ボーン代替処理検証。                                                                  | `composerAngleDeltaDeg` は合格または既知理由付き警告、`composerOwnedBoneConflictCount` は合格、`composerMissingPoseFrameCount` は合格、既存動作指標に不合格悪化がないこと。 | 合成サービス自身はVRMを書き込まず、管理側が同一フレームの利用可能な結果を一括適用することを確認する。                                             | 合成結果が古い `available` finalPose を現在の結果へ昇格する、所有ボーン競合が出る、または見た目が変わる場合は原因を修正する。旧直接制御は復活させない。                             |
-| 全面 `setNormalizedPose(finalPose)` 適用 | 本番姿勢合成の試行と意味に基づく動作・指の適用の完了条件を満たし、頭部 / 首 / 脚 / 表情 / ルート位置の非対象境界が明文化されていること。     | `VRMCharacterManager.update()` で上半身 finalPose の書き手が全面 `VrmPoseComposer` 適用だけになり、利用不可フレームでも腕 / 体幹段階別の書き込み処理を自動実行しないこと。 | 全面 finalPose 再生、実行時の所有権対応表、姿勢合成処理比較要約、任意ボーン代替処理検証、複数 VRM 手動確認ログ。                                                    | 全 P0 固定データの動作指標と姿勢合成処理指標が合格、`not_available` 指標は成果物欠損理由付きで検査判定から除外されていること。                                              | `default.vrm`、`aoi-1.0.7.vrm`、欠損ボーン人工的なプロファイル、カメラ機能低下 / 回復、チャット / sincro モード切替で見た目を確認する。           | 頭部 / 首 / 脚 / 表情 / ルート位置が意図せず姿勢合成処理所有になる、既存制御処理と二重書き込みする、または利用不可理由が診断 Console / 指標から消える場合。                         |
-| 意味に基づく動作・指の適用               | `MotionIntentState`、意味に基づく動作のレイヤー、指の曲げ層、完成版 `AvatarMotionProfile` が有効スナップショットとして保存・再生できること。 | 意味に基づく動作のプリセットと指の曲げが姿勢合成処理層としてだけ適用され、追跡層の所有ボーンと衝突する場合は信頼度検査 / 抑制理由で説明できること。                        | `frame.intent`、`frame.solver.phase9`、意味に基づく動作 / 指診断用スナップショット、姿勢合成処理 finalPose スナップショット、プロファイル対応能力スナップショット。 | `gestureFlickerCount`、`semanticFallbackFrameCount`、`intentCooldownSuppressionCount`、`intentInvalidFrameCount` が合格、指欠損ボーン列で姿勢合成処理競合が 0 であること。  | Hand 開く / 半開き / 閉じた、thumbs-up、peace、顔の近く、軽く拍手するような動作、手未検出 / 復帰済みを複数 VRM と低下した指のボーン列で確認する。 | 意味に基づく動作意図が短時間ちらつきする、指のボーン列欠損で例外または過伸展が出る、追跡姿勢を意味に基づく動作が不透明に上書きする場合は意味に基づく動作 / 指フラグを off に戻す。  |
+| 段階                                    | 開始条件                                                                                                                                    | 完了条件                                                                                                                                                               | 必須成果物                                                                                                                                                        | 必須指標の状態                                                                                                                                                           | 必須の手動確認                                                                                                                                         | 切り戻し条件                                                                                                                                                                      |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 観測専用の処理工程                      | Face / Poseコールバックから `SincroMotionPipelineState`が例外なく更新され、VRMボーン / 表情 / ルート位置を変更しないこと。                  | ライブ / 記録 / 再生で信頼性、標準化状態、時系列、意図の利用可能 / not_computed / invalid_inputが説明可能で、欠損入力が本番コールバックの例外にならないこと。          | `frame.reliability`、`frame.canonical`、`frame.temporal`、`frame.intent`、`SincroMotionObserveOnlySummary`、実行時の所有権対応表。                                | `neutralJitter`、`trackingLossDurationMs`、`sideSwapCount`、段階5時系列指標が `not_available`でなく、P0固定データ基準に対して悪化がないこと。                            | `default.vrm`と `aoi-1.0.7.vrm`で通常会話、顔のみ、Pose欠損、カメラ停止 / 再接続を確認し、従来直接書き込み表示と差が出ないこと。                       | 観測専用状態更新でフレームループが止まる、顔のみのコールバックが時系列 / 意図を進める、または診断Consoleが未加工のランドマーク / 切り抜きオブジェクトを保持する場合は無効化する。 |
+| 本番の姿勢合成                          | 観測専用の完了条件を満たし、`AvatarMotionProfile` / `MinimalAvatarMotionProfile`と最新 `SincroPoseRetargetFrame`が揃うこと。                | `SincroVrmPoseComposerService`が `available` / `not_ready` / `invalid_input` / `missing_profile`を正しく返し、`status !== "available"`で `result`を持たないこと。      | `frame.finalPose`、本番合成要約、`sincro.composer-comparison-summary.v1`、任意ボーン代替処理検証。                                                                | `composerAngleDeltaDeg`は合格または既知理由付き警告、`composerOwnedBoneConflictCount`は合格、`composerMissingPoseFrameCount`は合格、既存動作指標に不合格悪化がないこと。 | 合成サービス自身はVRMを書き込まず、管理側が同一フレームの利用可能な結果を一括適用することを確認する。                                                  | 合成結果が古い `available` finalPoseを現在の結果へ昇格する、所有ボーン競合が出る、または見た目が変わる場合は原因を修正する。旧直接制御は復活させない。                            |
+| 全面 `setNormalizedPose(finalPose)`適用 | 本番姿勢合成の試行と意味に基づく動作・指の適用の完了条件を満たし、頭部 / 首 / 脚 / 表情 / ルート位置の非対象境界が明文化されていること。    | `VRMCharacterManager.update()`で上半身finalPoseの書き手が全面 `VrmPoseComposer`適用だけになり、利用不可フレームでも腕 / 体幹段階別の書き込み処理を自動実行しないこと。 | 全面finalPose再生、実行時の所有権対応表、姿勢合成処理比較要約、任意ボーン代替処理検証、複数VRM手動確認ログ。                                                      | 全P0固定データの動作指標と姿勢合成処理指標が合格、`not_available`指標は成果物欠損理由付きで検査判定から除外されていること。                                              | `default.vrm`、`aoi-1.0.7.vrm`、欠損ボーンの人工的なプロファイル、カメラ機能低下 / 回復、チャット / sincroモード切替で見た目を確認する。               | 頭部 / 首 / 脚 / 表情 / ルート位置が意図せず姿勢合成処理の所有対象になる、既存制御処理と二重書き込みする、または利用不可理由が診断Console / 指標から消える場合。                  |
+| 意味に基づく動作・指の適用              | `MotionIntentState`、意味に基づく動作のレイヤー、指の曲げ層、完成版 `AvatarMotionProfile`が有効スナップショットとして保存・再生できること。 | 意味に基づく動作のプリセットと指の曲げが姿勢合成処理層としてだけ適用され、追跡層の所有ボーンと衝突する場合は信頼度検査 / 抑制理由で説明できること。                    | `frame.intent`、`frame.solver.phase9`、意味に基づく動作 / 指診断用スナップショット、姿勢合成処理finalPoseスナップショット、プロファイル対応能力スナップショット。 | `gestureFlickerCount`、`semanticFallbackFrameCount`、`intentCooldownSuppressionCount`、`intentInvalidFrameCount`が合格、指欠損ボーン列で姿勢合成処理競合が0であること。  | Handの開いた / 半開き / 閉じた状態、thumbs-up、peace、顔の近く、軽く拍手するような動作、手未検出 / 復帰済みを複数VRMと低下した指のボーン列で確認する。 | 意味に基づく動作意図が短時間にちらつく、指のボーン列欠損で例外または過伸展が出る、追跡姿勢を意味に基づく動作が不透明に上書きする場合は意味に基づく動作 / 指フラグをoffに戻す。    |
 
 腕 / 体幹 / 全面適用の段階別の切り戻しパスは削除済みである。`composerArmApplicationMode`、
-`composerTorsoShoulderApplicationMode`、`fullNormalizedPoseApplicationMode`、`composer_arm_application_*` 警告、
-`composer_torso_shoulder_application_*` 警告、`full_normalized_pose_application_off` は本番コード /
-診断 Console 操作部品 / スナップショット / テストの正本から外した。`ArmBoneController.update()` は全面適用利用不可フレームの復旧フックとして自動実行しない。
+`composerTorsoShoulderApplicationMode`、`fullNormalizedPoseApplicationMode`、`composer_arm_application_*`警告、
+`composer_torso_shoulder_application_*`警告、`full_normalized_pose_application_off`は本番コード /
+診断Console操作部品 / スナップショット / テストの正本から外した。`ArmBoneController.update()`は全面適用利用不可フレームの復旧フックとして自動実行しない。
 上半身の旧直接書き込み処理は削除済みである。
-`CharacterRootStabilizer.update()` だけはルート位置 / hips 回転の非対象制御処理境界として
+`CharacterRootStabilizer.update()`だけはルート位置 / hips回転の非対象制御処理境界として
 維持する。
 
-腕 IK 目標の本番主入力は `TemporalUpperBodyState` と `MinimalAvatarMotionProfile` から作る
+腕IK目標の本番主入力は `TemporalUpperBodyState`と `MinimalAvatarMotionProfile`から作る
 時系列橋渡し出力である。時系列入力 / アバタープロファイル / 橋渡し / ソルバーが欠損または無効な場合だけ
-`SincroPoseMotionSnapshot.leftArm/rightArm.targets` の姿勢スナップショットによる代替処理を使い、Hand ROI / Hand 手首は
-手のひら / 指信頼性と ROI 観測の材料に限定する。
+`SincroPoseMotionSnapshot.leftArm/rightArm.targets`の姿勢スナップショットによる代替処理を使い、Hand ROI / Hand手首は
+手のひら / 指信頼性とROI観測の材料に限定する。
 
-意味に基づく動作 / 指の適用の本番適用境界は `SincroVrmPoseComposerService.compose()` の
-姿勢合成処理入力生成位置である。`composerSemanticFingerApplicationMode` は `"composer"` / `"off"` の独立
-開発者フラグとし、既定の `"composer"` では保存済み `MotionIntentState`、低次元 Hand スナップショット、
-完成版 `AvatarMotionProfile` が有効なフレームだけ `kind: "semantic"` 層を本番合成入力へ
-追加する。`"off"` では観測専用の意図 / Hand 推定と記録は残し、意味に基づく動作 / 指層だけを
+意味に基づく動作 / 指の適用の本番適用境界は `SincroVrmPoseComposerService.compose()`の
+姿勢合成処理入力生成位置である。`composerSemanticFingerApplicationMode`は `"composer"` / `"off"`の独立
+開発者フラグとし、既定の `"composer"`では保存済み `MotionIntentState`、低次元Handスナップショット、
+完成版 `AvatarMotionProfile`が有効なフレームだけ `kind: "semantic"`層を本番合成入力へ
+追加する。`"off"`では観測専用の意図 / Hand推定と記録は残し、意味に基づく動作 / 指層だけを
 姿勢合成処理入力から外す。削除済みの腕 / 体幹段階別の切り戻しフラグとは独立した責務であり、
 意味に基づく動作 / 指切り戻しが全面適用の所有権を暗黙に変更しない。
 
-意味に基づく動作のレイヤーは `createSemanticMotionPoseLayer()`、指の曲げ層は `createFingerCurlPoseLayers()` を
-正本にし、ジェスチャー Recognizer 未加工の結果、MediaPipe 未加工のランドマーク、VRM Object3D、元のボーンノードは
-本番層生成入力にしない。`MotionIntentState` が解析処理で無効、プロファイルが
-`MinimalAvatarMotionProfile` だけ、または Hand スナップショットが欠損する場合は
-`semantic_finger_application_*` 警告を合成要約へ出し、該当層を追加しない。追跡層が
-所有する腕ボーンと意味に基づく動作のプリセットが競合する場合は、`semantic_conflict` 抑制または
-`owned_bone_conflict:<bone>` 警告で説明する。指の曲げ層は指ボーンだけを所有し、低下した指
+意味に基づく動作のレイヤーは `createSemanticMotionPoseLayer()`、指の曲げ層は `createFingerCurlPoseLayers()`を
+正本にし、ジェスチャーRecognizer未加工の結果、MediaPipe未加工のランドマーク、VRM Object3D、元のボーンノードは
+本番層生成入力にしない。`MotionIntentState`が解析処理で無効、プロファイルが
+`MinimalAvatarMotionProfile`だけ、またはHandスナップショットが欠損する場合は
+`semantic_finger_application_*`警告を合成要約へ出し、該当層を追加しない。追跡層が
+所有する腕ボーンと意味に基づく動作のプリセットが競合する場合は、`semantic_conflict`抑制または
+`owned_bone_conflict:<bone>`警告で説明する。指の曲げ層は指ボーンだけを所有し、低下した指
 ボーン列では存在ボーンへ曲げ重みを再分配するため、欠損ボーン列は姿勢合成処理競合ではなく
-`missing_finger_chain:<side>:<group>` 警告として観測する。
+`missing_finger_chain:<side>:<group>`警告として観測する。
 
-motion-debug の `frame.finalPose` は本番合成結果が `available` の場合、その
-`VrmPoseComposerResult` から作った `sincro.motion-debug-final-pose.v1` スナップショットを保存・表示する。これにより
-`frame.solver.phase9` の意味に基づく動作 / 指診断用スナップショットと同じ本番姿勢合成処理入力が finalPose に反映された
-証跡になる。試行結果が無い旧ライブスナップショット / 旧ログだけ、従来の診断専用追跡 finalPose 橋渡しへ
+motion-debugの `frame.finalPose`は本番合成結果が `available`の場合、その
+`VrmPoseComposerResult`から作った `sincro.motion-debug-final-pose.v1`スナップショットを保存・表示する。これにより
+`frame.solver.phase9`の意味に基づく動作 / 指診断用スナップショットと同じ本番姿勢合成処理入力がfinalPoseに反映された
+記録になる。試行結果が無い旧ライブスナップショット / 旧ログだけ、従来の診断専用追跡finalPose橋渡しへ
 代替処理する。
 
-`full setNormalizedPose(finalPose) application` の本番適用境界は `VRMCharacterManager.update()` の
-制御処理更新順に置く。本番試行が同一フレームで `available` かつ `result.finalPose` を持つ場合だけ
-`vrm.humanoid.setNormalizedPose(finalPose)` を 1 回呼ぶ。試行が `not_ready`、`invalid_input`、
-`missing_profile`、または `available` でも結果欠損の場合は古くなった finalPose を現在の結果に昇格せず、
+`full setNormalizedPose(finalPose) application`の本番適用境界は `VRMCharacterManager.update()`の
+制御処理更新順に置く。本番試行が同一フレームで `available`かつ `result.finalPose`を持つ場合だけ
+`vrm.humanoid.setNormalizedPose(finalPose)`を1回呼ぶ。試行が `not_ready`、`invalid_input`、
+`missing_profile`、または `available`でも結果欠損の場合は古くなったfinalPoseを現在の結果に昇格せず、
 `full_normalized_pose_application_unavailable:<status>`、`full_normalized_pose_application_result_missing`、
-`full_normalized_pose_application_vrm_missing` を診断 Console 要約 / 指標用の利用不可理由として
+`full_normalized_pose_application_vrm_missing`を診断Console要約 / 指標用の利用不可理由として
 残す。これらの理由は旧段階別の書き込み処理を起動する発火条件ではない。
 
-Pose 追跡無効、カメラ停止、Pose 未検出、顔のみなど最新動作の変換フレームの `active` が `false` の場合も、
-本番試行は現在フレームの代替処理層を `available` 結果として返す。代替処理層は体幹 /
-肩を単位回転に戻し、左右の `upperArm` / `lowerArm` / 手には `CHARACTER_ARM_REST_POSE` の腕を下ろした
-待機姿勢を適用する。前回の追跡姿勢や旧 `ArmBoneController` 書き込み処理へ戻さない。
+Pose追跡無効、カメラ停止、Pose未検出、顔のみなど最新動作の変換フレームの `active`が `false`の場合も、
+本番試行は現在フレームの代替処理層を `available`結果として返す。代替処理層は体幹 /
+肩を単位回転に戻し、左右の `upperArm` / `lowerArm` / 手には `CHARACTER_ARM_REST_POSE`の腕を下ろした
+待機姿勢を適用する。前回の追跡姿勢や旧 `ArmBoneController`書き込み処理へ戻さない。
 
-頭部 / 首 / 脚 / 表情 / ルート位置は全面上半身 finalPose の所有対象に追加しない。Face / Eye /
-Mouth / Emotion 制御処理、`LegBoneController`、`vrm.update(deltaSeconds)`、ルート位置処理群、
-`CharacterRootStabilizer.update()` は従来どおり更新する。診断専用の姿勢合成処理比較 /
-合成要約は引き続き残し、公開 WebRTC / バックエンド契約や DataChannel 送受信データは変更しない。
+頭部 / 首 / 脚 / 表情 / ルート位置は全面上半身finalPoseの所有対象に追加しない。Face / Eye /
+Mouth / Emotion制御処理、`LegBoneController`、`vrm.update(deltaSeconds)`、ルート位置処理群、
+`CharacterRootStabilizer.update()`は従来どおり更新する。診断専用の姿勢合成処理比較 /
+合成要約は引き続き残し、公開WebRTC / バックエンド契約やDataChannel送受信データは変更しない。
 
 補助リンク: [runtime-motion-ownership-map](../../../../tasks/character-sincro-motion/task-260629225907-sincro-runtime-motion-ownership-map/artifacts/runtime-motion-ownership-map.md)、[torso-shoulder-composer-migration-plan](../../../../tasks/character-sincro-motion/task-260629225951-torso-shoulder-composer-ownership-migration-plan/artifacts/torso-shoulder-composer-migration-plan.md)、[optional-bone-fallback-vrm-verification](../../../../tasks/character-sincro-motion/task-260629225957-composer-optional-bone-fallback-vrm-verification/artifacts/optional-bone-fallback-vrm-verification.md)。
 
 ## IKソルバーの方針
 
-- 本流:
-    - 自前 3D 2本のボーンによる IK を維持し、`@pixiv/three-vrm` 正規化済みボーンにローカルクォータニオンを適用する。
-    - 理由は ADR-260517 に記録する。
-    - 腕単体の人体的制約と頭部 / chest 侵入禁止領域はソルバー内の軽量安全性として扱い、全身 IK や物理衝突へ拡張しない。
-- 比較対象:
-    - `CCDIKSolver` は `SkinnedMesh.skeleton.bones` の索引を要求するため、正規化済みボーン直適用とは責務が合わない。
-    - 元のスケルトンボーン列では PoC 動作確認可能だが、目標ボーンの追加と正規化済み・未加工姿勢橋渡しが必要になる。
-- 将来候補:
-    - 全身、複数末端、足接地拘束が必要になった場合に `closed-chain-ik-js` 等を再評価する。
-    - 再評価時は処理担当化、配信ファイルの容量、診断 Console での説明可能性、VRM 個体差への強さを同時に見る。
-- 参考のみ:
-    - Kalidokit は廃止予定のため、API / 出力形式の参考に留める。
+- 本流
+    - 自前3D 2本のボーンによるIKを維持し、`@pixiv/three-vrm`正規化済みボーンにローカルクォータニオンを適用する。
+    - 理由はADR-260517に記録する。
+    - 腕単体の人体的制約と頭部 / chest侵入禁止領域はソルバー内の軽量安全性として扱い、全身IKや物理衝突へ拡張しない。
+- 比較対象
+    - `CCDIKSolver`は `SkinnedMesh.skeleton.bones`の索引を要求するため、正規化済みボーンへの直接適用とは責務が合わない。
+    - 元のスケルトンボーン列ではPoC動作確認可能だが、目標ボーンの追加と正規化済み姿勢と未加工姿勢の橋渡しが必要になる。
+- 将来候補
+    - 全身、複数末端、足接地拘束が必要になった場合に `closed-chain-ik-js`等を再評価する。
+    - 再評価時は処理担当化、配信ファイルの容量、診断Consoleでの説明可能性、VRM個体差への強さを同時に見る。
+- 参考のみ
+    - Kalidokitは廃止予定のため、API / 出力形式の参考に留める。
 
 ## 変更時の確認
 
 - 新しい動作を追加する時は、どの会話モードで有効かを先に決める。
 - 複数制御処理が同時に最大値を出さないよう、調停処理で動作方針を調整する。
 - 欠損ボーン / 表情は無効化または近いボーンへの代替処理にする。
-- 診断 Console で切り分けたい値はスナップショット / 動作の変換フレームに載せる。
+- 診断Consoleで切り分けたい値はスナップショット / 動作の変換フレームに載せる。
 
 ## 参照
 
@@ -583,10 +583,10 @@ Mouth / Emotion 制御処理、`LegBoneController`、`vrm.update(deltaSeconds)`�
 
 ### 再生時の共通計算と保存値
 
-`MotionDebugReplayRuntime` はライブとは別の `SincroMotionComputation` を所有する。
+`MotionDebugReplayRuntime`はライブとは別の `SincroMotionComputation`を所有する。
 保存済みcanonical / temporalは再生側で解析して採用し、項目が無い場合だけ共通実装で補完する。
 無効な保存値はinvalid表示を維持し、共通計算で上書きしない。意図の再計算は有効な時系列と
-同一フレームから正規化したGesture観測だけを使い、保存済み `frame.intent` の表示と分ける。
+同一フレームから正規化したGesture観測だけを使い、保存済み `frame.intent`の表示と分ける。
 保存したpostProcessingは表示だけに使い、欠損時に合成しない。
 
 隣接する前進だけ推定履歴を継続し、同じフレームへの移動・飛び越し・後退・停止・読み込み・
