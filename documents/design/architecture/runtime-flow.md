@@ -3,7 +3,7 @@
 ## 要約
 
 - 起動時、フロントエンドは RTC 設定を取得し、WebRTC Offer を送信する。
-- WebRTC 確立後、ユーザー音声は音声トラックでPion実装の `sincro-rtc` に入り、Goパイプライン調停器が下流サービスへ中継する。
+- WebRTC 確立後、ユーザーの音声は音声トラックでPion実装の`sincro-rtc`に届き、Goパイプライン調停器が下流サービスへ中継する。
 - 応答テキストは `text_ch`、テロップ・口形同期情報は `telop_ch`、合成音声は返却音声トラックでフロントへ戻る。
 
 ## 対象範囲
@@ -23,7 +23,7 @@
 4. `RTCTalkClient` が音声トラックと `text_ch` / `telop_ch` を持つ PeerConnection を作る。
 5. フロントエンドが `/offer` へ SDP と `talk_mode` を送信する。
 6. `sincro-rtc` がPion セッションを生成または更新し、Answer と `session_id` を返す。
-7. ICE 候補は `/candidate` へ後送される。
+7. フロントエンドはICE候補を後から`/candidate`へ送信する。
 
 ## 会話処理の流れ
 
@@ -31,7 +31,7 @@
 sequenceDiagram
     participant F as フロントエンド
     participant R as sincro-rtc
-    participant B as Go の処理工程の調停処理
+    participant B as Goパイプライン調停器
     participant E as SpeechExtractor
     participant A as SpeechRecognizer
     participant T as TextProcessor
@@ -58,9 +58,9 @@ sequenceDiagram
 - ICE 失敗:
     - フロントの再接続ログ、候補送信、公開ホスト / ポートを確認する。
 - 下流サービス接続失敗:
-    - パイプライン調停器の処理担当解決、Consul、代替処理ホスト / ポートを確認する。
+    - パイプライン調停器による処理担当の解決、Consul、代替処理ホスト / ポートを確認する。
 - `text_ch` / `telop_ch` 未受信:
-    - DataChannel 名、開く状態、TextProcessor / Synthesizer の出力キューを確認する。
+    - DataChannel名、接続状態、TextProcessor / Synthesizer の出力キューを確認する。
 
 ## 参照
 
