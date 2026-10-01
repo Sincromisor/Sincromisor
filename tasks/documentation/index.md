@@ -6,11 +6,10 @@
 
 ## タスク一覧（自動生成 / 全 35 件）
 
-### open（未完） — 32 件
+### open（未完） — 31 件
 
 | タスク                                                                                                                         | タイトル                                                            | 判定 | 依存                                     |
 | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- | ---- | ---------------------------------------- |
-| [task-261001222201-yomiyasu-22-agent-server](./task-261001222201-yomiyasu-22-agent-server/task.md)                             | 文書の日本語表現を整える（バックエンド: AgentServerほか）           | —    | —                                        |
 | [task-261001222202-yomiyasu-23-text-processor](./task-261001222202-yomiyasu-23-text-processor/task.md)                         | 文書の日本語表現を整える（バックエンドサービス: TextProcessorほか） | —    | —                                        |
 | [task-261001222202-yomiyasu-24-audio-pipeline-websocket](./task-261001222202-yomiyasu-24-audio-pipeline-websocket/task.md)     | 文書の日本語表現を整える（音声パイプラインのWebSocket契約）         | —    | —                                        |
 | [task-261001222202-yomiyasu-25-frontend-rtc](./task-261001222202-yomiyasu-25-frontend-rtc/task.md)                             | 文書の日本語表現を整える（フロントエンドのRTC契約ほか）             | —    | —                                        |
@@ -43,12 +42,13 @@
 | [task-261001222215-yomiyasu-90-coding-md](./task-261001222215-yomiyasu-90-coding-md/task.md)                                   | 文書の日本語表現を整える（コーディング規約(Markdown)ほか）          | —    | —                                        |
 | [task-261001222215-yomiyasu-91-coding-ts](./task-261001222215-yomiyasu-91-coding-ts/task.md)                                   | 文書の日本語表現を整える（コーディング規約(TypeScript)ほか）        | —    | —                                        |
 
-### done（完了） — 3 件
+### done（完了） — 4 件
 
 | タスク                                                                                                       | タイトル                                                     | 判定    | 依存 |
 | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ | ------- | ---- |
 | [task-260905105729-japanese-document-readability](./task-260905105729-japanese-document-readability/task.md) | 実装エージェントの参照文書に残る不要な英語表記を日本語へ修正 | ✅ PASS | —    |
 | [task-261001221346-readme-japanese](./task-261001221346-readme-japanese/task.md)                             | READMEの日本語を自然な表現に整える                           | ✅ PASS | —    |
 | [task-261001222158-yomiyasu-02-overview](./task-261001222158-yomiyasu-02-overview/task.md)                   | 文書の日本語表現を整える（Sincromisor 全体構成ほか）         | ✅ PASS | —    |
+| [task-261001222201-yomiyasu-22-agent-server](./task-261001222201-yomiyasu-22-agent-server/task.md)           | 文書の日本語表現を整える（バックエンド: AgentServerほか）    | ✅ PASS | —    |
 
 <!-- AUTOGEN:tasks END -->
