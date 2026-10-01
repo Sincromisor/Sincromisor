@@ -330,43 +330,43 @@
 
 ## 本番適用の判定に使う入力
 
-`motion.md` の本番適用検査は、追跡処理由来の Hand / Face ROI、機能低下、カメラ品質を入力条件として読む。追跡層は VRM 適用可否を直接決めず、成果物と指標状態で検査を止める材料を出す。
+`motion.md`の本番適用検査は、追跡処理由来のHand / Face ROI、機能低下、カメラ品質を入力条件として読む。追跡層はVRM適用可否を直接決めず、成果物と指標状態で検査を止める材料を出す。
 
-| 入力                       | 判定条件への影響                                                                                                                                                                                                                      | 必須成果物                                                                                                                     | 必須指標の状態                                                                                                                                                                                                                       | 必須の手動確認                                                                                                                         | 切り戻し条件                                                                                                                                                                                      |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Hand ROI                   | 腕フラグ以降の検査では、Hand ROI が `pose_stale_for_roi`、`hand_roi_paused`、`roi_missing`、`roi_inconsistent` を区別して保存されていることを開始条件にする。Hand 手首は手のひら / 指信頼性材料であり、腕 IK 目標の主入力にはしない。 | `frame.hand`、`SincroRoiObservation`、`frame.metrics.tracker.roi`、診断 Console Hand 要約。                                    | `roiPausedFrameCount` が合格または既知理由付き警告、Hand 信頼性が `not_available_in_pose_snapshot` と `roi_missing` を同じ欠損へ重複付与しないこと。                                                                                 | 片手 ROI 未検出、両手 ROI 無効全画面代替処理、手一時停止、回復後の左右の割り当てを確認する。                                           | Hand ROI 欠損で本番コールバックが例外になる、Hand 手首が Pose 手首 IK 目標を上書きする、または古くなった ROI が新鮮として使われる場合は Hand ROI 接続を観測専用に戻す。                           |
-| Face ROI                   | 観測専用 / 試行検査では、Face ROI メタデータが頭部信頼性の説明材料として保存され、Face 動作の変換の既存入力値を置き換えないことを開始条件にする。                                                                                     | `SincroFaceMotionSnapshot.roi`、`source`、`warnings`、`frame.metrics.tracker.roi`、Face ROI 一時停止警告。                     | `trackingLossDurationMs` と頭部信頼性が Face ROI 一時停止 / 代替処理を説明でき、Face 中心整合性を ReliabilityMap 側で再計算していないこと。                                                                                          | Pose 古くなった中、Face ROI 顔未検出、全画面代替処理、顔のみ代替処理中も Face 実行頻度が Pose 実行頻度に引きずられないことを確認する。 | Face ROI 失敗で全画面 Face が止まる、Face 動作の変換が ROI 信頼度だけで無効化される、または切り抜き内の座標系のランドマークがスナップショットに漏れる場合は Face ROI を無効に戻す。               |
-| 順序を固定した機能低下方針 | 試行以降の検査では、`degradationPolicy.stage` と ROI 一時停止状態が保存され、頻度低下 / ROI 一時停止 / 顔のみ / 自然な待機姿勢が指標に反映されていることを開始条件にする。                                                            | `frame.metrics.tracker.budget`、`frame.metrics.tracker.degradationPolicy`、`frame.metrics.tracker.roi`、有効性能プロファイル。 | `trackerBudgetOverrunFrameCount`、`trackerDroppedFrameCount`、`degradationStageFrameCount`、`degradationRecoveryFrameCount`、`roiPausedFrameCount` が合格または原因説明付き警告で、旧ログ欠損は推測せず `not_available` にすること。 | Worker 代替処理、main-thread-low-fps、ROI 許容時間超過、顔のみ、自然な待機姿勢、回復を motion-debug 指標層で確認する。                 | 機能低下段階が `"full"` 以外のまま戻らない、`ignorePerformanceFallback` が頻度低下 / ROI 一時停止統計まで抑制する、または自然な待機姿勢が古い Pose ROI を新鮮扱いする場合は本番適用検査を閉じる。 |
-| カメラ品質                 | 観測専用と初期較正検査では、カメラ品質が信頼性 / 較正の入力説明として保存され、未加工機器識別子を保持しないことを開始条件にする。                                                                                                     | `frame.metrics.cameraQuality`、構成情報カメラ設定、`CameraQualityScore` 案内理由、初期較正段階状態。                           | カメラ情報の項目欠損は該当確認だけ省略済みとし、`CameraQualityScore.overall.status` が再試行 / 失敗の固定データは動作指標合格だけで次段へ進めないこと。                                                                              | 低解像度、手が画面外、動きによるぼけ、画面端にあるリスク、カメラ停止 / 再接続で案内理由と再試行状態を確認する。                        | 未加工 `deviceId` / `groupId` / `label` が保存される、カメラ品質再試行が無視されて較正が合格扱いになる、または由来 `none` でスコアを捏造する場合は検査を閉じる。                                  |
+| 入力                       | 判定条件への影響                                                                                                                                                                                                                 | 必須成果物                                                                                                                     | 必須指標の状態                                                                                                                                                                                                                     | 必須の手動確認                                                                                                                         | 切り戻し条件                                                                                                                                                                                 |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hand ROI                   | 腕フラグ以降の検査では、Hand ROIが `pose_stale_for_roi`、`hand_roi_paused`、`roi_missing`、`roi_inconsistent`を区別して保存されていることを開始条件にする。Hand手首は手のひら / 指信頼性材料であり、腕IK目標の主入力にはしない。 | `frame.hand`、`SincroRoiObservation`、`frame.metrics.tracker.roi`、診断Console Hand要約。                                      | `roiPausedFrameCount`が合格または既知理由付き警告、Hand信頼性が `not_available_in_pose_snapshot`と `roi_missing`を同じ欠損へ重複付与しないこと。                                                                                   | 片手ROI未検出、両手ROIが無効な場合の全画面代替処理、手一時停止、回復後の左右の割り当てを確認する。                                     | Hand ROI欠損で本番コールバックが例外になる、Hand手首がPose手首IK目標を上書きする、または古くなったROIが新鮮として使われる場合はHand ROI接続を観測専用に戻す。                                |
+| Face ROI                   | 観測専用 / 試行検査では、Face ROIメタデータが頭部信頼性の説明材料として保存され、Face動作の変換の既存入力値を置き換えないことを開始条件にする。                                                                                  | `SincroFaceMotionSnapshot.roi`、`source`、`warnings`、`frame.metrics.tracker.roi`、Face ROI一時停止警告。                      | `trackingLossDurationMs`と頭部信頼性がFace ROI一時停止 / 代替処理を説明でき、Face中心整合性をReliabilityMap側で再計算していないこと。                                                                                              | Poseが古くなった時、Face ROI顔未検出、全画面代替処理、顔のみ代替処理中もFace実行頻度がPose実行頻度に合わせて下がらないことを確認する。 | Face ROI失敗で全画面Faceが止まる、Face動作の変換がROI信頼度だけで無効化される、または切り抜き内の座標系のランドマークがスナップショットに漏れる場合はFace ROIを無効に戻す。                  |
+| 順序を固定した機能低下方針 | 試行以降の検査では、`degradationPolicy.stage`とROI一時停止状態が保存され、頻度低下 / ROI一時停止 / 顔のみ / 自然な待機姿勢が指標に反映されていることを開始条件にする。                                                           | `frame.metrics.tracker.budget`、`frame.metrics.tracker.degradationPolicy`、`frame.metrics.tracker.roi`、有効性能プロファイル。 | `trackerBudgetOverrunFrameCount`、`trackerDroppedFrameCount`、`degradationStageFrameCount`、`degradationRecoveryFrameCount`、`roiPausedFrameCount`が合格または原因説明付き警告で、旧ログ欠損は推測せず `not_available`にすること。 | Worker代替処理、main-thread-low-fps、ROI許容時間超過、顔のみ、自然な待機姿勢、回復をmotion-debug指標層で確認する。                     | 機能低下段階が `"full"`以外のまま戻らない、`ignorePerformanceFallback`が頻度低下 / ROI一時停止統計まで抑制する、または自然な待機姿勢が古いPose ROIを新鮮扱いする場合は本番適用検査を閉じる。 |
+| カメラ品質                 | 観測専用と初期較正検査では、カメラ品質が信頼性 / 較正の入力説明として保存され、未加工機器識別子を保持しないことを開始条件にする。                                                                                                | `frame.metrics.cameraQuality`、構成情報カメラ設定、`CameraQualityScore`案内理由、初期較正段階状態。                            | カメラ情報の項目欠損は該当確認だけ省略済みとし、`CameraQualityScore.overall.status`が再試行 / 失敗の固定データは動作指標合格だけで次段へ進めないこと。                                                                             | 低解像度、手が画面外、動きによるぼけ、画面端にあるリスク、カメラ停止 / 再接続で案内理由と再試行状態を確認する。                        | 未加工 `deviceId` / `groupId` / `label`が保存される、カメラ品質再試行が無視されて較正が合格扱いになる、または由来 `none`でスコアを捏造する場合は検査を閉じる。                               |
 
 ## 失敗時の挙動
 
-- MediaPipe モデル / wasm 配置漏れ:
-    - 追跡を無効化し、UI / 診断 Console に理由を表示する。
-- Worker 初期化失敗:
-    - メインスレッド追跡処理へ代替処理し、実効目標を顔 `<= 8fps`、姿勢 `<= 4fps`、Hand ROI `<= 2fps`、Face ROI `<= 3fps` に制限する。
-    - `degradation.state` は `"main-thread-low-fps"`、理由コードは `main_thread_fallback` とし、Worker 利用不可 / 失敗は `reasonCodes` で切り分ける。
-- ROI 許容時間超過:
-    - Hand ROI、Face ROI の順で任意合格を落とし、全画面 Face とカメラループは継続する。
-    - 一時停止中の Hand は `fallbackReason: "hand_roi_paused"` の未検出スナップショットを出し、Face は全画面スナップショットに `face_roi_paused` 警告を残す。
-- HandLandmarker 初期化失敗:
-    - Face / Pose 追跡は継続し、Hand は `model_not_loaded` 警告を持つ未検出スナップショットと診断 Console 要約に落とす。
-    - 本番観測専用の処理工程は Hand 欠損を例外にせず、次の Pose コールバックで姿勢のみの / 顔のみの既存下流更新を続ける。
-- 推論遅延または連続検出失敗:
-    - 姿勢のみ顔のみに降格できる。
-    - 既存 `fallbackReason` は `pose_inference_too_slow` を維持し、予算の `reasonCodes` では `pose_inference_warn` / `pose_inference_over_budget` に写像する。
-    - `pose_inference_too_slow` は起動直後の MediaPipe 初期安定化サンプルを除外し、目標姿勢推論 fps から算出した推論予算で判定する。
-    - `forceSincroPoseTracking` が有効な場合は、低性能端末でのデバッグを優先して `pose_inference_too_slow` による顔のみ降格だけを無効化する。この場合も予算の `degradation.state` と理由コードは残す。
-- Firefox GPU 実行方式相性:
-    - CPU 実行方式を使う。
+- MediaPipeモデル / wasm配置漏れ
+    - 追跡を無効化し、UI / 診断Consoleに理由を表示する。
+- Worker初期化失敗
+    - メインスレッド追跡処理へ代替処理し、実効目標を顔 `<= 8fps`、姿勢 `<= 4fps`、Hand ROI `<= 2fps`、Face ROI `<= 3fps`に制限する。
+    - `degradation.state`は `"main-thread-low-fps"`、理由コードは `main_thread_fallback`とし、Worker利用不可 / 失敗は `reasonCodes`で切り分ける。
+- ROI許容時間超過
+    - Hand ROI、Face ROIの順で任意処理を停止し、全画面Faceとカメラループは継続する。
+    - 一時停止中のHandは `fallbackReason: "hand_roi_paused"`の未検出スナップショットを出し、Faceは全画面スナップショットに `face_roi_paused`警告を残す。
+- HandLandmarker初期化失敗
+    - Face / Pose追跡は継続し、Handは `model_not_loaded`警告を持つ未検出スナップショットと診断Console要約に落とす。
+    - 本番観測専用の処理工程はHand欠損を例外にせず、次のPoseコールバックで姿勢のみの / 顔のみの既存下流更新を続ける。
+- 推論遅延または連続検出失敗
+    - 姿勢追跡だけを停止して顔のみの追跡に切り替えられる。
+    - 既存 `fallbackReason`は `pose_inference_too_slow`を維持し、予算の `reasonCodes`では `pose_inference_warn` / `pose_inference_over_budget`に写像する。
+    - `pose_inference_too_slow`は起動直後のMediaPipe初期安定化サンプルを除外し、目標姿勢推論fpsから算出した推論予算で判定する。
+    - `forceSincroPoseTracking`が有効な場合は、低性能端末でのデバッグを優先して `pose_inference_too_slow`による顔のみ降格だけを無効化する。この場合も予算の `degradation.state`と理由コードは残す。
+- Firefox GPU実行方式相性
+    - CPU実行方式を使う。
 
 ## 変更時の確認
 
 - 追跡処理を変更したらカメラトラックの二重取得とループの二重起動がないか確認する。
-- MediaPipe のカテゴリ名や行列を制御処理へ漏らさない。
-- 診断 Console へ未加工・正規化済み / 動作の変換 / 適用済みのどこを表示するか決める。
-- Gaze カメラ機器切替時にプレビュー / AutoMute / 追跡処理が正しく再初期化されるか確認する。
-- IK 調整を行う場合は `motion-debug` でカメラ重ね表示、VRM、`poseRetargetRuntime` を同時に確認する。
+- MediaPipeのカテゴリ名や行列を制御処理へ漏らさない。
+- 診断Consoleへ未加工・正規化済み / 動作の変換 / 適用済みのどこを表示するか決める。
+- Gazeカメラ機器切替時にプレビュー / AutoMute / 追跡処理が正しく再初期化されるか確認する。
+- IK調整を行う場合は `motion-debug`でカメラ重ね表示、VRM、`poseRetargetRuntime`を同時に確認する。
 
 ## 参照
 
@@ -376,8 +376,8 @@
 
 ## 初期較正の開始と中断
 
-初期較正は `SincroAppController.calibration` がアプリごとに所有する。ダイアログ・共通設定パネル・OBSは同じ `start()` を通り、重複抑止後のsincro開始だけが較正を開始する。パネルは状態購読と段階別再試行を要求し、開始・中断やVRM状態文言の比較を行わない。
+初期較正は `SincroAppController.calibration`がアプリごとに所有する。ダイアログ・共通設定パネル・OBSは同じ `start()`を通り、重複抑止後のsincro開始だけが較正を開始する。パネルは状態購読と段階別再試行を要求し、開始・中断やVRM状態文言の比較を行わない。
 
-接続停止、カメラ変更（既定機器への復帰を含む）、追跡停止、sincro離脱、利用者のVRM選択、アプリ解除で有効較正を中断する。初期キャッシュ復元は選択変更に含めない。同期開始例外と現在の追跡世代の取得・初期化・実行失敗や映像終了も中断する。音声取得・RTCだけの失敗は中断条件に含めず、RTC停止操作の機器リソース範囲も維持する。
+接続停止、カメラ変更（既定機器への復帰を含む）、追跡停止、sincro離脱、利用者のVRM選択、アプリ解除で有効較正を中断する。初期キャッシュ復元は選択変更に含めない。同期的な開始処理の例外と現在の追跡世代の取得・初期化・実行失敗や映像終了も中断する。音声取得・RTCだけの失敗は中断条件に含めず、RTC停止操作の機器リソース範囲も維持する。
 
 追跡通知はアプリと開始世代で検査し、較正操作は既存のsession検査を通す。旧アプリの解除・旧開始の遅延結果は新しい較正を変更しない。Pose評価は同じアプリの評価器へ接続し、継続時間は既存どおりPose観測時刻で計測する。
