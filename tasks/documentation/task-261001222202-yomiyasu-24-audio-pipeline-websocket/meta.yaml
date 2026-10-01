@@ -1,0 +1,13 @@
+id: task-261001222202-yomiyasu-24-audio-pipeline-websocket
+title: 文書の日本語表現を整える（音声パイプラインのWebSocket契約）
+category: documentation
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-10-01
+closed_at: 2026-10-01
+legacy_ids: []
