@@ -4,9 +4,10 @@
 
 - 利用者にプロジェクトやLLMの知識を求めず、既定の設定と `docker compose up` で起動し、同じホストのブラウザーから使えることを基本原則とする。モデル取得・保存先作成・内部認証はサービス側で準備する。
 
-- Sincromisor は、ブラウザ上の 3D キャラクターと音声対話するためのサービス基盤である。
-- ローカル／オンプレミスに閉じた環境でのサービス提供を前提とし、外部サービスのAPIを採用前提にしない。AgentServerと接続先LLMも管理下の環境へ配置する。
-- フロントエンドは Vite MPA + Reactによるアプリの共通枠組み + Three.js / VRM 1.0 で画面とキャラクターを描画する。
+Sincromisorは、ブラウザー上の3Dキャラクターと音声対話するためのサービス基盤である。
+
+- ローカル／オンプレミス環境での提供を前提とし、外部サービスのAPIの採用を前提としない。AgentServerと接続先LLMも管理下の環境へ配置する。
+- フロントエンドはVite MPAとReactでアプリの共通枠組みを構成し、Three.js / VRM 1.0で画面とキャラクターを描画する。
 - サーバーはPion実装の `sincro-rtc` を入口に、Goパイプライン調停器経由でPythonの音声区間抽出、音声認識、テキスト処理、音声合成を疎結合に接続する。
 - 通信契約の正本は `documents/design/contracts/` に置き、サービス設計は契約文書へリンクする。
 
@@ -33,9 +34,9 @@
 
 ```mermaid
 flowchart LR
-    Browser["ブラウザのフロントエンド"] -->|HTTP 接続設定 / offer / candidate| RTC["sincro-rtc"]
+    Browser["ブラウザーのフロントエンド"] -->|HTTP 接続設定 / offer / candidate| RTC["sincro-rtc"]
     Browser -->|WebRTC 音声トラック| RTC
-    RTC --> Broker["Go の処理工程の調停処理"]
+    RTC --> Broker["Goパイプライン調停器"]
     Broker --> Extractor["SpeechExtractor"]
     Extractor --> Recognizer["SpeechRecognizer"]
     Recognizer --> TextProcessor["TextProcessor"]
@@ -50,7 +51,7 @@ flowchart LR
 
 - フロント/サーバー間のエンドポイント、JSON、DataChannel を変える場合は `contracts/frontend-rtc.md` を先に更新する。
 - Goパイプライン調停器と下流サービスの msgpack モデルやパスを変える場合は `contracts/audio-pipeline-websocket.md` を先に更新する。
-- Docker Compose / 環境変数 / サービス発見を変える場合は `infrastructure/compose.md` と `infrastructure/consul.md` を同時確認する。
+- Docker Compose / 環境変数 / サービス発見を変える場合は `infrastructure/compose.md` と `infrastructure/consul.md` を同時に確認する。
 - UI や 3D 表示の変更は `frontend/app-shell.md` と `frontend/character/*` の該当文書を確認する。
 
 ## 参照

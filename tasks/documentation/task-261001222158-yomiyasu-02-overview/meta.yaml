@@ -1,0 +1,13 @@
+id: task-261001222158-yomiyasu-02-overview
+title: 文書の日本語表現を整える（Sincromisor 全体構成ほか）
+category: documentation
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-10-01
+closed_at: 2026-10-01
+legacy_ids: []
