@@ -186,49 +186,49 @@
 ## データ・状態
 
 - `TrackerRuntimePerformanceProfile`
-    - `src/features/gaze/trackingRuntime/trackerRuntimePerformanceProfile.ts` を正本とする実行時プロファイル契約。
-    - スキーマバージョンは `sincro.tracker-performance-profile.v1` に固定し、`id`、任意 `requestedId`、`camera`、`cadence`、`debugLog`、`degradationBudget`、`warnings` だけを持つ JSON 保存可能な通常のオブジェクトとする。
-    - プロファイル ID は `high-end-desktop`、`standard-laptop`、`mobile-safari`、`debug` の 4 種に固定する。未知 ID は throw せず `standard-laptop` に代替処理し、`warnings: ["unknown_profile_id_defaulted"]` と `requestedId` に呼び出し元指定値を残す。
-    - 解決処理入力は `{ performanceProfileId?: string; performanceProfile?: unknown; defaultProfileId?: TrackerRuntimePerformanceProfileId }` とし、通常実行時の既定は `standard-laptop`、motion-debug 呼び出し時だけ呼び出し元が `defaultProfileId: "debug"` を渡す。
-    - `performanceProfile` と `performanceProfileId` が同時指定された場合、実体は `performanceProfile` を優先し、`performanceProfileId` は `requestedId` とデバッグ表示用の要求値としてだけ扱う。
-    - 独自プロファイルは有限数値、固定列挙値、通常のオブジェクトだけを受け付ける。`NaN` / `Infinity`、DOM オブジェクト、実行時クラスのインスタンス、関数は無効独自プロファイルとして `standard-laptop` 代替処理に落とす。
-    - カメラの制約はプロファイルの `camera` から `idealWidth`、`idealHeight`、`idealFrameRate`、`maxFrameRate`、`facingMode: "user"` を読む。ブラウザ `getUserMedia()` へ渡す際は `ideal` / `max` だけを使い、`exact` や強い `min` は使わない。
-    - 実行頻度は Face / Pose / Hand / Face ROI / ジェスチャーの目標 fps 既定である。`TrackerRuntime.startFaceTracking()` は明示 `targetInferenceFps`、`poseOptions.targetInferenceFps`、`poseOptions.hand.targetInferenceFps`、`poseOptions.gesture.targetInferenceFps`、`poseOptions.faceRoi.targetInferenceFps` がある場合は明示値を優先し、未指定フィールドだけプロファイル実行頻度を使う。
-    - プロファイル固定値:
+    - `src/features/gaze/trackingRuntime/trackerRuntimePerformanceProfile.ts`を正本とする実行時プロファイル契約。
+    - スキーマバージョンは `sincro.tracker-performance-profile.v1`に固定し、`id`、任意 `requestedId`、`camera`、`cadence`、`debugLog`、`degradationBudget`、`warnings`だけを持つJSON保存可能な通常のオブジェクトとする。
+    - プロファイルIDは `high-end-desktop`、`standard-laptop`、`mobile-safari`、`debug`の4種に固定する。未知IDはthrowせず `standard-laptop`に代替処理し、`warnings: ["unknown_profile_id_defaulted"]`と `requestedId`に呼び出し元指定値を残す。
+    - 解決処理入力は `{ performanceProfileId?: string; performanceProfile?: unknown; defaultProfileId?: TrackerRuntimePerformanceProfileId }`とし、通常実行時の既定は `standard-laptop`、motion-debug呼び出し時だけ呼び出し元が `defaultProfileId: "debug"`を渡す。
+    - `performanceProfile`と `performanceProfileId`が同時指定された場合、実体は `performanceProfile`を優先し、`performanceProfileId`は `requestedId`とデバッグ表示用の要求値としてだけ扱う。
+    - 独自プロファイルは有限数値、固定列挙値、通常のオブジェクトだけを受け付ける。`NaN` / `Infinity`、DOMオブジェクト、実行時クラスのインスタンス、関数は無効独自プロファイルとして `standard-laptop`代替処理に落とす。
+    - カメラの制約はプロファイルの `camera`から `idealWidth`、`idealHeight`、`idealFrameRate`、`maxFrameRate`、`facingMode: "user"`を読む。ブラウザ `getUserMedia()`へ渡す際は `ideal` / `max`だけを使い、`exact`や強い `min`は使わない。
+    - 実行頻度はFace / Pose / Hand / Face ROI / ジェスチャーの目標fps既定である。`TrackerRuntime.startFaceTracking()`は明示 `targetInferenceFps`、`poseOptions.targetInferenceFps`、`poseOptions.hand.targetInferenceFps`、`poseOptions.gesture.targetInferenceFps`、`poseOptions.faceRoi.targetInferenceFps`がある場合は明示値を優先し、未指定フィールドだけプロファイル実行頻度を使う。
+    - プロファイル固定値
 
-        | ID                 | カメラ           | 実行頻度 Face/Pose/Hand/Face ROI/Gesture | 数値のリングバッファ |
-        | ------------------ | ---------------- | ---------------------------------------- | -------------------- |
-        | `high-end-desktop` | `1280x720 30fps` | `15/12/8/10/6`                           | `600`                |
-        | `standard-laptop`  | `960x540 24fps`  | `12/8/4/6/3`                             | `600`                |
-        | `mobile-safari`    | `640x480 15fps`  | `8/4/2/3/1`                              | `600`                |
-        | `debug`            | `1280x720 30fps` | `15/12/4/6/2`                            | `1800`               |
+        | ID                 | カメラ           | 実行頻度Face/Pose/Hand/Face ROI/Gesture | 数値のリングバッファ |
+        | ------------------ | ---------------- | --------------------------------------- | -------------------- |
+        | `high-end-desktop` | `1280x720 30fps` | `15/12/8/10/6`                          | `600`                |
+        | `standard-laptop`  | `960x540 24fps`  | `12/8/4/6/3`                            | `600`                |
+        | `mobile-safari`    | `640x480 15fps`  | `8/4/2/3/1`                             | `600`                |
+        | `debug`            | `1280x720 30fps` | `15/12/4/6/2`                           | `1800`               |
 
-    - `debugLog.captureFullDumpByDefault` は全プロファイルで `false`、`overlayCaptureFps` は `1` 以下に固定する。常時記録は数値のリングバッファに限定し、PNG / 重ね表示 / 全情報の出力は明示操作または後続デバッグツールの責務とする。
-    - `degradationBudget` は段階 3 / 段階 8 の既定値として `workerRoundTripWarnRatio: 0.9`、`workerRoundTripOverBudgetRatio: 1.25`、`roiBudgetRatio: 0.55`、`consecutiveOverBudgetFrames: 5`、`recoveryFrames: 30` を持つ。段階 10 後続の順序を固定した機能低下方針はこのプロファイルと予算を入力にするが、本プロファイル契約自体は自動プロファイル降格や fps 低下の状態機械を持たない。
+    - `debugLog.captureFullDumpByDefault`は全プロファイルで `false`、`overlayCaptureFps`は `1`以下に固定する。常時記録は数値のリングバッファに限定し、PNG / 重ね表示 / 全情報の出力は明示操作または後続デバッグツールの責務とする。
+    - `degradationBudget`は段階3 / 段階8の既定値として `workerRoundTripWarnRatio: 0.9`、`workerRoundTripOverBudgetRatio: 1.25`、`roiBudgetRatio: 0.55`、`consecutiveOverBudgetFrames: 5`、`recoveryFrames: 30`を持つ。段階10後続の順序を固定した機能低下方針はこのプロファイルと予算を入力にするが、本プロファイル契約自体は自動プロファイル降格やfps低下の状態機械を持たない。
 
 - `SincroFaceMotionSnapshot`
     - 検出済み
     - 信頼度
     - headPose
     - ブレンドシェイプ
-    - roi（任意 `SincroRoiObservation`。ROI 切り抜きや MediaPipe 未加工の結果は含めない）
+    - roi（任意 `SincroRoiObservation`。ROI切り抜きやMediaPipe未加工の結果は含めない）
     - 由来（`"roi"`、`"full-frame"`、`"full-frame-fallback"`、`"lost"`）
     - 警告
     - inferenceTimeMs
     - inferenceFps
     - fallbackReason
-    - FaceLandmarker の全画面既存経路では `source: "full-frame"`、`warnings: []` を返す。ROI 代替処理で全画面が検出した場合は `source: "full-frame-fallback"`、代替処理でも未検出の場合は `source: "lost"`、`fallbackReason: "face_not_detected"` を返す。
-    - Worker / TrackerRuntime は最新 Pose スナップショットが新鮮な場合だけ Pose スナップショットから Face ROI を作る。Pose が古くなった、Face ROI が実行頻度省略 / 一時停止、または姿勢性能検査により顔のみ代替処理中のフレームでは全画面 Face 追跡を継続し、Face 実行頻度を Pose 実行頻度に引きずらない。Face ROI 一時停止中のスナップショットは `face_roi_paused` 警告を持ち、motion-debug / 信頼性が古くなったと一時停止を区別できる。
+    - FaceLandmarkerの全画面既存経路では `source: "full-frame"`、`warnings: []`を返す。ROI代替処理で全画面が検出した場合は `source: "full-frame-fallback"`、代替処理でも未検出の場合は `source: "lost"`、`fallbackReason: "face_not_detected"`を返す。
+    - Worker / TrackerRuntimeは最新Poseスナップショットが新鮮な場合だけPoseスナップショットからFace ROIを作る。Poseが古くなった、Face ROIが実行頻度省略 / 一時停止、または姿勢性能検査により顔のみ代替処理中のフレームでは全画面Face追跡を継続し、Face実行頻度をPose実行頻度に合わせて下げない。Face ROI一時停止中のスナップショットは `face_roi_paused`警告を持ち、motion-debug / 信頼性が古くなった状態と一時停止を区別できる。
 - `SincroPoseMotionSnapshot`
     - trackingEnabled
     - 検出済み
     - 肩 / 体幹 / 腕目標
-    - lowerBodyTargets（腰 / knee / ankle の観測確認用目標）
+    - lowerBodyTargets（腰 / knee / ankleの観測確認用目標）
     - consecutiveFailures
     - degradedToFaceOnly
     - fallbackReason
-    - MediaPipe / カメラ由来の観測スナップショットであり、後段共有の `CanonicalUpperBodyState` ではない。
-    - `leftArm` / `rightArm` の目標は追跡入力映像の観測値を正規化したもので、身体のローカル座標系で表す到達距離 / 仰角 / 開き具合などの意味量は標準化した推定処理の責務とする。
+    - MediaPipe / カメラ由来の観測スナップショットであり、後段共有の `CanonicalUpperBodyState`ではない。
+    - `leftArm` / `rightArm`の目標は追跡入力映像の観測値を正規化したもので、身体のローカル座標系で表す到達距離 / 仰角 / 開き具合などの意味量は標準化した推定処理の責務とする。
 - `SincroHandMotionSnapshot`
     - `trackingEnabled`
     - `detected`
@@ -237,96 +237,96 @@
     - `inferenceFps`
     - `lastUpdatedAtMs`
     - `fallbackReason`
-    - 左右手スナップショットは `detected`、`assignedSide`、`source`、`confidence`、任意 `handednessLabel`、`handednessScore`、任意 `roi`、任意 `fullFrameWrist`、`features`、`warnings` を持つ。
-    - 既定未検出手は `detected: false`、`source: "lost"`、`confidence: 0`、`handednessScore: 0`、`fullFrameWrist: undefined`、`palmNormal: [0, 0, 1]`、`palmDirection: [0, -1, 0]`、スカラー特徴量 `0`、`openness: "unknown"`、`warnings: ["landmarks_missing"]` とする。
-    - `source` は `"roi"`、`"full-frame-fallback"`、`"previous"`、`"lost"` の固定列挙値とする。`previous` は後続時系列 / 信頼性接続用の予約値であり、段階 8 追跡処理は未加工のランドマーク再生を保存しない。
+    - 左右手スナップショットは `detected`、`assignedSide`、`source`、`confidence`、任意 `handednessLabel`、`handednessScore`、任意 `roi`、任意 `fullFrameWrist`、`features`、`warnings`を持つ。
+    - 既定未検出手は `detected: false`、`source: "lost"`、`confidence: 0`、`handednessScore: 0`、`fullFrameWrist: undefined`、`palmNormal: [0, 0, 1]`、`palmDirection: [0, -1, 0]`、スカラー特徴量 `0`、`openness: "unknown"`、`warnings: ["landmarks_missing"]`とする。
+    - `source`は `"roi"`、`"full-frame-fallback"`、`"previous"`、`"lost"`の固定列挙値とする。`previous`は後続時系列 / 信頼性接続用の予約値であり、段階8追跡処理は未加工のランドマーク再生を保存しない。
 - `CanonicalUpperBodyState`
-    - `sincro.canonical-upper-body.v1` のスキーマバージョンを持つ、身体のローカル座標系の上半身の意味量契約。
-    - `SincroPoseMotionSnapshot` を置き換えず、追跡観測、時系列、意図、IK、指標が共有する中間表現として別格納先に保存する。
-    - 保存形式は有限数値、文字列列挙値、3 要素タプル、通常のオブジェクトに限定し、MediaPipe ランドマークオブジェクト、Three.js オブジェクト、VRMボーン名をキーにした姿勢は入れない。
-    - 左右は解剖学的な `left` / `right` に固定し、カメラプレビューの鏡像表示や画面座標の左右反転とは分けて扱う。
-    - `head` は FaceLandmarker の `headPose.matrix` を主入力にしてヨー / ピッチ / ロールラジアンだけを保存する。行列欠損時は既存スナップショットの Euler 値へ低信頼度で代替処理し、行列無効かつ Euler も非有限の場合は `head` を省略する。Pose 鼻 / 耳 / 目代替処理は現行スナップショット契約に存在しないため、この契約ではまだ扱わない。
-    - `parseCanonicalUpperBodyState()` はログ / 再生境界の検証 API であり、未知スキーマバージョン、値域外スカラー、非有限数値、実行時オブジェクト風余分なキーを拒否する。
+    - `sincro.canonical-upper-body.v1`のスキーマバージョンを持つ、身体のローカル座標系の上半身の意味量契約。
+    - `SincroPoseMotionSnapshot`を置き換えず、追跡観測、時系列、意図、IK、指標が共有する中間表現として別格納先に保存する。
+    - 保存形式は有限数値、文字列列挙値、3要素タプル、通常のオブジェクトに限定し、MediaPipeランドマークオブジェクト、Three.jsオブジェクト、VRMボーン名をキーにした姿勢は入れない。
+    - 左右は解剖学的な `left` / `right`に固定し、カメラプレビューの鏡像表示や画面座標の左右反転とは分けて扱う。
+    - `head`はFaceLandmarkerの `headPose.matrix`を主入力にしてヨー / ピッチ / ロールラジアンだけを保存する。行列欠損時は既存スナップショットのEuler値へ低信頼度で代替処理し、行列無効かつEulerも非有限の場合は `head`を省略する。Pose鼻 / 耳 / 目代替処理は現行スナップショット契約に存在しないため、この契約ではまだ扱わない。
+    - `parseCanonicalUpperBodyState()`はログ / 再生境界の検証APIであり、未知スキーマバージョン、値域外スカラー、非有限数値、実行時オブジェクト風余分なキーを拒否する。
 - `ReliabilityMap`
-    - `sincro.reliability-map.v1` のスキーマバージョンを持つ、追跡観測品質の保存契約。
-    - `timestamp`、`camera`、`joints`、`parts`、`gesture`、`warnings` を持ち、`frame.reliability` 任意格納先に保存する。v1 は有限数値、小文字列挙値、通常のオブジェクトに限定し、Three.js オブジェクト、MediaPipe ランドマークオブジェクト、クラスのインスタンスは入れない。
-    - `JointReliability` / `PartReliability` の `finalWeight` と各コンポーネント `score` は `0..1` で、低重み観測も解析成功として保持する。しきい値未満の観測を破棄するかどうかは後続推定処理 / 制御処理が判断する。
-    - `parseReliabilityMap()` は未知 `schemaVersion` を先に `unknown_schema_version` として返し、値域外スカラーは `out_of_range`、構造違反や未知の列挙値 / 余分なキーは `invalid_state` として返す。
+    - `sincro.reliability-map.v1`のスキーマバージョンを持つ、追跡観測品質の保存契約。
+    - `timestamp`、`camera`、`joints`、`parts`、`gesture`、`warnings`を持ち、`frame.reliability`任意格納先に保存する。v1は有限数値、小文字列挙値、通常のオブジェクトに限定し、Three.jsオブジェクト、MediaPipeランドマークオブジェクト、クラスのインスタンスは入れない。
+    - `JointReliability` / `PartReliability`の `finalWeight`と各コンポーネント `score`は `0..1`で、低重み観測も解析成功として保持する。しきい値未満の観測を破棄するかどうかは後続推定処理 / 制御処理が判断する。
+    - `parseReliabilityMap()`は未知 `schemaVersion`を先に `unknown_schema_version`として返し、値域外スカラーは `out_of_range`、構造違反や未知の列挙値 / 余分なキーは `invalid_state`として返す。
 - `TemporalUpperBodyState`
-    - `sincro.temporal-upper-body.v1` のスキーマバージョンを持つ、標準化した上半身の時間方向状態契約。
-    - `TemporalPartState` は `"tracked"`、`"suspect"`、`"predicted"`、`"lost"`、`"recovering"` の小文字列挙値に固定し、`ReliabilityMap` の同名列挙値とは別型として扱う。信頼性は観測品質、時系列は時系列推定状態を表す。
-    - `frame.temporal` 任意格納先に保存する通常のオブジェクトであり、`arms.left` / `arms.right` は標準化した腕スカラーと任意身体のローカル座標系の手首 / 肘タプル、速度、任意復帰中混合を持つ。頭部は任意で、未観測時は省略できる。
-    - `parseTemporalUpperBodyState()` は未知 `schemaVersion` を `unknown_schema_version`、値域外スカラー / 混合継続時間 / 混合進行状況を `out_of_range`、非有限数値 / 未知の列挙値 / 余分なキー / クラスのインスタンスを `invalid_state` として返す。
-    - 時系列は標準化した / 信頼性の後段に位置し、追跡処理実行時、Worker、MediaPipe 正規化スナップショットの責務ではない。VRM 姿勢合成、IK ソルバークォータニオン、最終適用済み姿勢は MotionSolver / VrmPoseComposer と最終姿勢系格納先の責務に残す。
+    - `sincro.temporal-upper-body.v1`のスキーマバージョンを持つ、標準化した上半身の時間方向の状態契約。
+    - `TemporalPartState`は `"tracked"`、`"suspect"`、`"predicted"`、`"lost"`、`"recovering"`の小文字列挙値に固定し、`ReliabilityMap`の同名列挙値とは別型として扱う。信頼性は観測品質、時系列は時系列推定状態を表す。
+    - `frame.temporal`任意格納先に保存する通常のオブジェクトであり、`arms.left` / `arms.right`は標準化した腕スカラーと任意身体のローカル座標系の手首 / 肘タプル、速度、任意復帰中混合を持つ。頭部は任意で、未観測時は省略できる。
+    - `parseTemporalUpperBodyState()`は未知 `schemaVersion`を `unknown_schema_version`、値域外スカラー / 混合継続時間 / 混合進行状況を `out_of_range`、非有限数値 / 未知の列挙値 / 余分なキー / クラスのインスタンスを `invalid_state`として返す。
+    - 時系列は標準化 / 信頼性の後段に位置し、追跡処理実行時、Worker、MediaPipe正規化スナップショットの責務ではない。VRM姿勢合成、IKソルバークォータニオン、最終適用済み姿勢はMotionSolver / VrmPoseComposerと最終姿勢系格納先の責務に残す。
 - `SincroRoiObservation`
-    - `side` は `"left"`、`"right"`、`"face"` に固定する。左右は解剖学的な左右とし、カメラプレビューの鏡像表示とは分ける。
-    - `source` は `"pose-wrist"`、`"pose-face"`、`"full-frame-fallback"`、`"previous"`、`"none"` の固定列挙値とする。Pose 手首 / 顔領域が欠損した場合は例外にせず `source: "none"`、`confidence: 0`、`roi_missing` 警告を持つ観測値を返す。
-    - 矩形は全画面の正規化画像座標の中心形式を正本にする。左上 `x/y/width/height` 形式は採用せず、切り抜き内の座標系の正規化済み点から全画面正規化済み点へ戻す式を左右対称に保つ。
-    - 矩形値の制限は左 / 上端 / 右 / 下端を `0..1` に範囲制限してから中心 / 大きさを再計算する。中心だけを寄せて大きさを維持する方式は使わない。
-    - `validateRoiRect()` は有限確認、端範囲制限、最小大きさ確認、信頼度値の制限の順に処理する。端範囲制限では `roi_clamped`、範囲制限後の幅 / 高さが `0.08` 未満なら `roi_too_small` と `confidence: 0` を残す。
-    - `mapCropPointToFullFrame()` と `mapFullFramePointToCrop()` は ROI 矩形と正規化済みタプルだけを読む純粋な関数とし、往復は `1e-6` 以下に保つ。
-    - ROI 整合性は期待する点と観測済み全画面点の正規化距離から算出し、`<= 0.04` はスコア `1`、`0.04..0.18` は線形低下、`> 0.18` はスコア `0` と `roi_inconsistent` 警告にする。
+    - `side`は `"left"`、`"right"`、`"face"`に固定する。左右は解剖学的な左右とし、カメラプレビューの鏡像表示とは分ける。
+    - `source`は `"pose-wrist"`、`"pose-face"`、`"full-frame-fallback"`、`"previous"`、`"none"`の固定列挙値とする。Pose手首 / 顔領域が欠損した場合は例外にせず `source: "none"`、`confidence: 0`、`roi_missing`警告を持つ観測値を返す。
+    - 矩形は全画面の正規化画像座標の中心形式を正本にする。左上 `x/y/width/height`形式は採用せず、切り抜き内の座標系の正規化済み点から全画面正規化済み点へ戻す式を左右対称に保つ。
+    - 矩形値の制限は左 / 上端 / 右 / 下端を `0..1`に範囲制限してから中心 / 大きさを再計算する。中心だけを寄せて大きさを維持する方式は使わない。
+    - `validateRoiRect()`は有限確認、端範囲制限、最小大きさ確認、信頼度値の制限の順に処理する。端範囲制限では `roi_clamped`、範囲制限後の幅 / 高さが `0.08`未満なら `roi_too_small`と `confidence: 0`を残す。
+    - `mapCropPointToFullFrame()`と `mapFullFramePointToCrop()`はROI矩形と正規化済みタプルだけを読む純粋な関数とし、往復は `1e-6`以下に保つ。
+    - ROI整合性は期待する点と観測済み全画面点の正規化距離から算出し、`<= 0.04`はスコア `1`、`0.04..0.18`は線形低下、`> 0.18`はスコア `0`と `roi_inconsistent`警告にする。
 - `PoseReliabilityEstimator`
-    - `src/character/reliability/poseReliabilityEstimator.ts` の `createPoseReliabilityMap()` は段階 8 時点の純粋な推定処理であり、`pose: SincroPoseMotionSnapshot`、任意 `hand: SincroHandMotionSnapshot`、任意 `face: SincroFaceMotionSnapshot`、任意 `cameraQuality: CameraQualityScore`、任意 `previous: { pose: SincroPoseMotionSnapshot; mediaTimeMs: number; reliability?: ReliabilityMap }`、呼び出し元が渡す `mediaTimeMs`、`video: { width: number; height: number }` だけを入力にする。
-    - 推定処理内で `performance.now()` は呼ばず、時系列コンポーネントは `mediaTimeMs - previous.mediaTimeMs` と手首 / 肘 / 肩の正規化済み画像座標差分だけで計算する。`previous.reliability` は入力構造に含めるが、段階 4a の boneLength / bodyScale / 時系列の主計算は前回姿勢を正本にする。
-    - 関節コンポーネントは `modelPresence`、`modelVisibility`、`tracking`、`border`、`boneLength`、`bodyScale`、`temporal`、`side`、`roi`、`cameraQuality` を常に埋める。`boneLength` は左右腕の上腕 / 前腕のワールド座標での長さ比率と前回の腕全体の長さに対する比率、`bodyScale` は `upperBody.shoulderWidth`、`cameraQuality` は `CameraQualityScore.overall.score` を使う。
-    - `finalWeight` はコンポーネントスコアの幾何平均で、0 スコアは `0.001` として扱う。状態境界は `>= 0.65` が `tracked`、`0.05..0.65` が `suspect`、`< 0.05` が `lost` であり、`predicted` / `recovering` は TemporalStateEstimator の責務として段階 4a では返さない。
-    - `face` が指定された場合、`joints.head` と `parts.head` は Face スナップショットを正本にして `source: "face"` を返す。`face.roi.confidence` を ROI コンポーネントスコアとし、Face 中心整合性は再計算しない。Face スナップショットの `source` は旧スナップショット互換で任意として扱い、`"lost"` の場合だけ追跡未検出とする。
-    - `hand` が指定された場合、`joints.leftHand/rightHand` と `parts.leftHand/rightHand` は Hand スナップショットを正本にして `source: "hand"` を返す。Hand ROI コンポーネントは `calculateRoiConsistency({ expected: hand.roi.referencePoint, observed: hand.fullFrameWrist })` を正本にし、`referencePoint` または `fullFrameWrist` が無い旧スナップショットでは `not_available_in_pose_snapshot` に落とす。
-    - `parts.leftFinger/rightFinger` は Hand `features.openness !== "unknown"` の場合だけ `source: "hand"` とし、指の曲げの有限性と手信頼性を読む。段階 9 の指の曲げ姿勢レイヤーはこの低水準の Hand スナップショットと MotionIntent を読み、VRM 指ボーン回転用の意味に基づく動作のレイヤーを motion-debug / 補助処理側で生成する。
-    - `gesture` 格納先は任意 `GestureIntentObservation` がある場合だけ `source: "gesture"` とし、最上位ラベル信頼度、Hand 左右の割り当て、Hand ROI、カメラ品質、時系列の最小値から `finalWeight` を作る。`stableDurationMs` は同じ正規化済み左右 + 表示名が信頼度 `>= 0.70` で連続した時間だけ加算し、表示名 / 左右変更、信頼度低下、メディア時刻逆行、前回の欠損で `0` に戻す。時系列スコアは `clamp(stableDurationMs / 160, 0, 1)` とし、有効な 0〜159ms は `source: "gesture"` / `unstable_observation`、160ms 以上は理由なしとする。ジェスチャー欠損だけを中立 / `no_observation` にする。
-    - ROI 理由はスナップショット入力自体が無い実行境界では既存仮の値を維持し、スナップショットはあるが `roi` フィールドだけ無い旧スナップショット / 旧再生ログでは `not_available_in_pose_snapshot`、新規 ROI メタデータの失敗警告では `roi_missing` / `roi_inconsistent` に写像する。同じ欠損に `roi_missing` と `not_available_in_pose_snapshot` を同時付与しない。
+    - `src/character/reliability/poseReliabilityEstimator.ts`の `createPoseReliabilityMap()`は段階8時点の純粋な推定処理であり、`pose: SincroPoseMotionSnapshot`、任意 `hand: SincroHandMotionSnapshot`、任意 `face: SincroFaceMotionSnapshot`、任意 `cameraQuality: CameraQualityScore`、任意 `previous: { pose: SincroPoseMotionSnapshot; mediaTimeMs: number; reliability?: ReliabilityMap }`、呼び出し元が渡す `mediaTimeMs`、`video: { width: number; height: number }`だけを入力にする。
+    - 推定処理内で `performance.now()`は呼ばず、時系列コンポーネントは `mediaTimeMs - previous.mediaTimeMs`と手首 / 肘 / 肩の正規化済み画像座標差分だけで計算する。`previous.reliability`は入力構造に含めるが、段階4aのboneLength / bodyScale / 時系列の主計算は前回姿勢を正本にする。
+    - 関節コンポーネントは `modelPresence`、`modelVisibility`、`tracking`、`border`、`boneLength`、`bodyScale`、`temporal`、`side`、`roi`、`cameraQuality`を常に埋める。`boneLength`は左右腕の上腕 / 前腕のワールド座標での長さ比率と前回の腕全体の長さに対する比率、`bodyScale`は `upperBody.shoulderWidth`、`cameraQuality`は `CameraQualityScore.overall.score`を使う。
+    - `finalWeight`はコンポーネントスコアの幾何平均で、0スコアは `0.001`として扱う。状態境界は `>= 0.65`が `tracked`、`0.05..0.65`が `suspect`、`< 0.05`が `lost`であり、`predicted` / `recovering`はTemporalStateEstimatorの責務として段階4aでは返さない。
+    - `face`が指定された場合、`joints.head`と `parts.head`はFaceスナップショットを正本にして `source: "face"`を返す。`face.roi.confidence`をROIコンポーネントスコアとし、Face中心整合性は再計算しない。Faceスナップショットの `source`は旧スナップショット互換で任意として扱い、`"lost"`の場合だけ追跡未検出とする。
+    - `hand`が指定された場合、`joints.leftHand/rightHand`と `parts.leftHand/rightHand`はHandスナップショットを正本にして `source: "hand"`を返す。Hand ROIコンポーネントは `calculateRoiConsistency({ expected: hand.roi.referencePoint, observed: hand.fullFrameWrist })`を正本にし、`referencePoint`または `fullFrameWrist`が無い旧スナップショットでは `not_available_in_pose_snapshot`に落とす。
+    - `parts.leftFinger/rightFinger`はHand `features.openness !== "unknown"`の場合だけ `source: "hand"`とし、指の曲げの有限性と手信頼性を読む。段階9の指の曲げ姿勢レイヤーはこの低水準のHandスナップショットとMotionIntentを読み、VRM指ボーン回転用の意味に基づく動作のレイヤーをmotion-debug / 補助処理側で生成する。
+    - `gesture`格納先は任意 `GestureIntentObservation`がある場合だけ `source: "gesture"`とし、最上位ラベル信頼度、Hand左右の割り当て、Hand ROI、カメラ品質、時系列の最小値から `finalWeight`を作る。`stableDurationMs`は同じ正規化済み左右 + 表示名が信頼度 `>= 0.70`で連続した時間だけ加算し、表示名 / 左右変更、信頼度低下、メディア時刻逆行、前回の欠損で `0`に戻す。時系列スコアは `clamp(stableDurationMs / 160, 0, 1)`とし、有効な0〜159msは `source: "gesture"` / `unstable_observation`、160ms以上は理由なしとする。ジェスチャー欠損だけを中立 / `no_observation`にする。
+    - ROI理由はスナップショット入力自体が無い実行境界では既存仮の値を維持し、スナップショットはあるが `roi`フィールドだけ無い旧スナップショット / 旧再生ログでは `not_available_in_pose_snapshot`、新規ROIメタデータの失敗警告では `roi_missing` / `roi_inconsistent`に写像する。同じ欠損に `roi_missing`と `not_available_in_pose_snapshot`を同時付与しない。
 - 初期較正入力境界
-    - 段階 ID は `precheck`、`neutral`、`a_pose`、`hand_open`、`face_yaw_optional` の固定列挙値とする。標準完了判定は `precheck` / `neutral` / `a_pose` / `hand_open` を使い、`face_yaw_optional` はデバッグ / 改善案内用の任意段階として扱う。
-    - `precheck` は `CameraQualityScore.overall.status` と `components.torsoInFrame`、`neutral` は体幹 / 頭部信頼性と標準化した体幹ヨー、`a_pose` は肘 / 手首信頼性と画面端にあるリスク、`hand_open` は手信頼性と手が小さく写るリスク、`face_yaw_optional` は頭部信頼性と標準化した体幹ヨーだけを読む。該当カメラ情報の項目が無い場合はそのカメラ確認だけ省略済みとし、信頼性 / 標準状態の欠損はしきい値未満の入力として扱う。
-    - 状態は `not_started`、`ready`、`ready_without_hands`、`retry_recommended`、`failed` の固定列挙値とする。手だけが機能低下中 / 再試行 / 失敗 / 省略済みの場合は、腕・頭・体幹を開始できる `ready_without_hands` に落とし、`hand_open` 単独の不調をセッション全体の `failed` にしない。
-    - 再試行理由は `shoulders_out_of_frame`、`face_not_front`、`elbow_or_wrist_hidden`、`hand_not_visible`、`too_dark`、`motion_blur`、`low_reliability`、`camera_unavailable` の固定列挙値とする。通常 UI はこの理由を固定日本語文言へ最大 2 件に変換して表示し、スコア、未加工コンポーネント名、デバッグオブジェクトは出さない。
-    - デバッグ UI / motion-debug は段階状態、再試行理由、スコア、validDurationMs、測定値、診断用フィールドを開発者が確認できる JSON として表示できる。MediaPipe 未加工のランドマーク、カメラ機器 ID / 表示名、ブラウザ権限オブジェクトは初期較正セッションに保存しない。
+    - 段階IDは `precheck`、`neutral`、`a_pose`、`hand_open`、`face_yaw_optional`の固定列挙値とする。標準完了判定は `precheck` / `neutral` / `a_pose` / `hand_open`を使い、`face_yaw_optional`はデバッグ / 改善案内用の任意段階として扱う。
+    - `precheck`は `CameraQualityScore.overall.status`と `components.torsoInFrame`、`neutral`は体幹 / 頭部信頼性と標準化した体幹ヨー、`a_pose`は肘 / 手首信頼性と画面端にあるリスク、`hand_open`は手信頼性と手が小さく写るリスク、`face_yaw_optional`は頭部信頼性と標準化した体幹ヨーだけを読む。該当カメラ情報の項目が無い場合はそのカメラ確認だけ省略済みとし、信頼性 / 標準状態の欠損はしきい値未満の入力として扱う。
+    - 状態は `not_started`、`ready`、`ready_without_hands`、`retry_recommended`、`failed`の固定列挙値とする。手だけが機能低下中 / 再試行 / 失敗 / 省略済みの場合は、腕・頭・体幹を開始できる `ready_without_hands`に落とし、`hand_open`単独の不調をセッション全体の `failed`にしない。
+    - 再試行理由は `shoulders_out_of_frame`、`face_not_front`、`elbow_or_wrist_hidden`、`hand_not_visible`、`too_dark`、`motion_blur`、`low_reliability`、`camera_unavailable`の固定列挙値とする。通常UIはこの理由を固定日本語文言へ最大2件に変換して表示し、スコア、未加工コンポーネント名、デバッグオブジェクトは出さない。
+    - デバッグUI / motion-debugは段階状態、再試行理由、スコア、validDurationMs、測定値、診断用フィールドを開発者が確認できるJSONとして表示できる。MediaPipe未加工のランドマーク、カメラ機器ID / 表示名、ブラウザ権限オブジェクトは初期較正セッションに保存しない。
 - `SincroPoseTargetPointSnapshot`
     - `tracked`: 通常目標として十分な信頼度と有限座標を持つ状態。
-    - `quality`: `strong` / `weak` / `lost`。`weak` は座標を IK に使えるが、強度を落とすべき状態。
-    - `usableForIk`: IK ソルバーが目標として使える状態。手首 / 肘は低信頼度でも有限座標かつ画面近傍なら弱い目標になり得る。
-    - `ikWeight`: 弱い目標を使う時に IK 強度へ掛ける 0.0-1.0 の重み。
-    - `world`: MediaPipe ワールド座標座標由来の 3D 目標。`hasWorldCoordinates` / `worldQuality` / `worldIkWeight` / `worldStaleReason` を 2D 目標とは別に持つ。
-    - `world.normalizedX/Y/Z`: 肩幅または腰幅由来の人物スケールで割ったローカル 3D 目標。VRM ボーン長や左右反転の適用は動作の変換処理 / ソルバー側の責務とする。
-    - `world.worldUsableForIk`: `world_3d_ik` ソルバーの検査。肩 / 肘 / 手首のいずれかが false の腕は、動作の変換処理側で部位代替処理し、特徴量動作の変換へ戻す。
-    - `world.worldIkWeight`: 弱い目標を許容する腕末端ほど低信頼度でも 0 より大きくなり得る。ソルバーは最小重みを腕全体の IK 混合に使う。
+    - `quality`: `strong` / `weak` / `lost`。`weak`は座標をIKに使えるが、強度を落とすべき状態。
+    - `usableForIk`: IKソルバーが目標として使える状態。手首 / 肘は低信頼度でも有限座標かつ画面近傍なら弱い目標になり得る。
+    - `ikWeight`: 弱い目標を使う時にIK強度へ掛ける0.0-1.0の重み。
+    - `world`: MediaPipeワールド座標由来の3D目標。`hasWorldCoordinates` / `worldQuality` / `worldIkWeight` / `worldStaleReason`を2D目標とは別に持つ。
+    - `world.normalizedX/Y/Z`: 肩幅または腰幅由来の人物スケールで割ったローカル3D目標。VRMボーン長や左右反転の適用は動作の変換処理 / ソルバー側の責務とする。
+    - `world.worldUsableForIk`: `world_3d_ik`ソルバーの検査。肩 / 肘 / 手首のいずれかがfalseの腕は、動作の変換処理側で部位代替処理し、特徴量動作の変換へ戻す。
+    - `world.worldIkWeight`: 弱い目標を許容する腕末端ほど低信頼度でも0より大きくなり得る。ソルバーは最小重みを腕全体のIK混合に使う。
 - 動作評価ログフレーム
-    - `sincro.motion-debug-log.v1` の保存単位は NDJSON のフレーム記録であり、追跡処理が出力する正規化姿勢スナップショットは `frame.poseSnapshot` に保存する。
-    - `frame.canonical` は motion-debug ページ側で `SincroPoseMotionSnapshot` と最新顔スナップショットから生成した `CanonicalUpperBodyState` を保存する任意格納先である。Face 行列欠損 / 無効の警告は標準化した `head.warnings` と最上位 `warnings` に保存される。`parseMotionDebugLogLines()` は未知任意格納先として保持し、再生 / 閲覧画面境界で `parseCanonicalUpperBodyState()` により有効 / 無効を判定する。
-    - `frame.reliability` は motion-debug ページ側で生成する `ReliabilityMap` の任意格納先である。`parseMotionDebugLogLines()` は未知任意格納先として保持し、再生 / 閲覧画面境界で `parseReliabilityMap()` により有効 / 無効を判定する。
-    - `frame.hand` は motion-debug ページ側で保存する任意 Hand スナップショット格納先である。保存対象は `SincroHandMotionSnapshot` の JSON 可能な低次元フィールドに限定し、未加工のランドマーク、切り抜きオブジェクト、MediaPipe 結果は入れない。
-    - `frame.temporal` は motion-debug ページ側で `CanonicalUpperBodyState` と `ReliabilityMap` から生成した `TemporalUpperBodyState` を保存する任意格納先である。`arms.left` / `arms.right` の `state`、`confidence`、`source`、`stateAgeMs`、`observedAgeMs`、`warnings`、`recoveringBlend`、`velocity`、`bodyLocalWrist` は再生閲覧画面の JSON 値で確認できる。
-    - `frame.intent` は motion-debug ページ側で `TemporalUpperBodyState`、`ReliabilityMap`、任意 Hand スナップショットから生成した `MotionIntentState` を保存する任意格納先である。再生 / 指標は保存済み値を正本にし、旧ログ欠損をライブ再計算で補完しない。
-    - `frame.solver.phase6` は motion-debug ページ側で保存する段階 6 ソルバースナップショットであり、`profile.schemaVersion`、有限数値だけの測定値、左右腕の `source`、IK 状態 / 制約理由コードを確認するための開発者が確認できる格納先である。`source.primarySource` は `"temporal"` または `"pose-snapshot-fallback"`、代替処理理由は `temporal_input_missing`、`avatar_profile_missing`、`temporal_arm_lost`、`invalid_temporal_arm`、`ik_solver_missing` のいずれかに固定する。MediaPipe 未加工の結果や追跡処理処理担当統計はこの格納先に入れない。
-    - `frame.solver.phase7` は motion-debug ページ側で保存する段階 7 プロファイル / 較正スナップショットであり、`schemaVersion = "sincro.phase7-profile-calibration.v1"`、任意 `profile`、任意 `initialCalibration`、任意 `onlineCalibration`、任意 `activeCanonicalCalibration`、`warnings` を持つ。通常 UI の案内文言や実行時オブジェクトは保存しない。
-    - `frame.solver.phase9` は motion-debug ページ側で保存する段階 9 意味に基づく動作 / 指診断用スナップショットであり、`schemaVersion = "sincro.phase9-semantic-motion.v1"`、`timestamp`、`intent`、`semantic`、任意 `finger.left/right`、`layers`、`warnings` だけを持つ通常のオブジェクトとする。段階 6 / 段階 7 / finalPose のスキーマへ意味に基づく動作 / 指フィールドは混ぜない。
-    - `frame.finalPose` は motion-debug ページ側で保存する `VrmPoseComposerResult` スナップショットであり、`ownedBones`、`suppressedLayers`、`clampedBones`、`warnings` を確認するための開発者が確認できる格納先である。実際の VRM ボーン書き込み順序や追跡処理推論ループは変更しない。
-    - 旧ログで `frame.reliability` が欠損している場合、再生閲覧画面は `frame.poseSnapshot`、`frame.timestamp.mediaTimeMs`、`frame.video.width` / `height` から `createPoseReliabilityMap()` を再計算する。この代替処理は旧ログ互換の姿勢のみの仮の値であり、保存されていない Hand / Face / ジェスチャー観測を再生時に捏造しない。保存済み信頼性がある場合、信頼性層は `gesture.source`、`finalWeight`、`confidence`、`stableDurationMs`、警告を含む `ReliabilityMap.gesture` を表示できる。ジェスチャー未加工のカテゴリ一覧や左右判定の未加工オブジェクトは `frame.mediapipe.gesture` の未加工再生格納先にだけ留め、信頼性層へ重複保存しない。再計算にも使える `poseSnapshot` が無い場合だけ信頼性層は `not_recorded` になる。旧ログで `frame.intent` / `frame.solver.phase7` / `frame.solver.phase9` が欠損している場合は該当内訳の層だけ `not_recorded` にし、ログ読み込み自体は失敗させない。
-    - MediaPipe 未加工の結果は必要な場合も `frame.mediapipe` に分け、`frame.poseSnapshot` には `SincroPoseMotionSnapshot` 相当の正規化済みデータを置く。
-    - 再生 API の `loadRecording()` は非圧縮のNDJSON `string` または `File` だけを受け付ける。`startReplay({ mode })`、`stepReplay(frameIndex)`、`stopReplay()`、`getReplayState()` は開発者専用のウィンドウ API として公開する。
-    - `frame.timestamp.mediaTimeMs` は追跡処理コールバックの `TrackerVideoFrameTiming.mediaTimeMs` を正本にする。代替処理時だけ `video.currentTime * 1000` を使う。
-    - コールバック受信時の `performance.now()` は `frame.metrics.receivedAtPerformanceMs` として保存する。追跡処理統計は `frame.metrics.tracker` に入れ、`timestamp.receivedAtPerformanceMs` や最上位 `tracker` は使わない。
-    - `frame.metrics.tracker` は任意 `gestureInferenceTimeMs` と合計時間用の既存フィールド（Worker は `workerTimeMs`、メインスレッドは `mainThreadDetectTimeMs`）を保存する。`sincro.motion-debug-log.v1` は維持し、旧ログの欠損は有効とする。不正な負値・非有限値は継続時間解析処理がフィールド単位で除外して警告を返し、同じフレームの他フィールドやログ全体は捨てない。
-    - 追跡処理処理時間の予算は `frame.metrics.tracker.budget` に保存する。`reasonCodes` は欠落したフレーム、Worker 待機中 detect、Worker 失敗 / 利用不可、姿勢繰り返し失敗、姿勢推論が遅すぎる、メインスレッド代替処理、ROI 省略 / 一時停止 / 代替処理 / 許容時間超過を列挙値として保持し、既存 `fallbackReason` の文字列は互換のため変更しない。ROI の累積統計は `frame.metrics.tracker.roi` で確認する。
-    - 順序を固定した機能低下方針スナップショットは `frame.metrics.tracker.degradationPolicy` に保存する。motion-debug 閲覧画面の指標層は `degradationPolicy.stage`、`recovering`、`reasonCodes`、`effectiveCadence` と有効実行時性能プロファイルを開発者が確認できる JSON として表示する。カメラ解像度再交渉はこの方針スナップショットの予約情報に留め、ジェスチャー任意合格は本番実行時の `effectiveGestureFps` として実適用する。
-    - 機能低下指標の保存側境界は `frame.metrics.tracker.budget.budgetStatus`、`frame.metrics.tracker.droppedFrames`、`frame.metrics.tracker.degradationPolicy.stage` / `recovering`、`frame.metrics.tracker.roi.pauseState`、`frame.timestamp.droppedPresentedFrames` に限定する。`budget.observed.droppedFrames` は予算報告の観測値として残すが、動作指標の正本入力にはしない。
-    - 同一 `presentedFrames` と同一 `SincroPoseMotionSnapshot.lastUpdatedAtMs` の連続入力は重複フレームとして記録処理が捨てる。`presentedFrames` が無い代替処理 / 旧形式入力では、同一 `mediaTimeMs` と同一 `lastUpdatedAtMs` を重複とする。
-    - カメラ実設定を構成情報に残す場合、未加工 `deviceId` / `groupId` は保存しない。ハッシュを保存する場合も公開単位だけで比較可能にし、公開をまたいで安定する識別子を残さない。
-    - フレームごとのカメラ品質は `frame.metrics.cameraQuality` に保存する。最上位 `cameraQuality` はスキーマ外とし、構成情報のカメラ設定と同じく未加工機器識別子は持たない。
-    - 公開された NDJSON は `parseMotionDebugLogLines()` が構成情報とフレーム記録を検証できるスキーマに固定する。
+    - `sincro.motion-debug-log.v1`の保存単位はNDJSONのフレーム記録であり、追跡処理が出力する正規化姿勢スナップショットは `frame.poseSnapshot`に保存する。
+    - `frame.canonical`はmotion-debugページ側で `SincroPoseMotionSnapshot`と最新顔スナップショットから生成した `CanonicalUpperBodyState`を保存する任意格納先である。Face行列欠損 / 無効の警告は標準化した `head.warnings`と最上位 `warnings`に保存される。`parseMotionDebugLogLines()`は未知任意格納先として保持し、再生 / 閲覧画面境界で `parseCanonicalUpperBodyState()`により有効 / 無効を判定する。
+    - `frame.reliability`はmotion-debugページ側で生成する `ReliabilityMap`の任意格納先である。`parseMotionDebugLogLines()`は未知任意格納先として保持し、再生 / 閲覧画面境界で `parseReliabilityMap()`により有効 / 無効を判定する。
+    - `frame.hand`はmotion-debugページ側で保存する任意Handスナップショット格納先である。保存対象は `SincroHandMotionSnapshot`のJSON可能な低次元フィールドに限定し、未加工のランドマーク、切り抜きオブジェクト、MediaPipe結果は入れない。
+    - `frame.temporal`はmotion-debugページ側で `CanonicalUpperBodyState`と `ReliabilityMap`から生成した `TemporalUpperBodyState`を保存する任意格納先である。`arms.left` / `arms.right`の `state`、`confidence`、`source`、`stateAgeMs`、`observedAgeMs`、`warnings`、`recoveringBlend`、`velocity`、`bodyLocalWrist`は再生閲覧画面のJSON値で確認できる。
+    - `frame.intent`はmotion-debugページ側で `TemporalUpperBodyState`、`ReliabilityMap`、任意Handスナップショットから生成した `MotionIntentState`を保存する任意格納先である。再生 / 指標は保存済み値を正本にし、旧ログ欠損をライブ再計算で補完しない。
+    - `frame.solver.phase6`はmotion-debugページ側で保存する段階6ソルバースナップショットであり、`profile.schemaVersion`、有限数値だけの測定値、左右腕の `source`、IK状態 / 制約理由コードを確認するための開発者が確認できる格納先である。`source.primarySource`は `"temporal"`または `"pose-snapshot-fallback"`、代替処理理由は `temporal_input_missing`、`avatar_profile_missing`、`temporal_arm_lost`、`invalid_temporal_arm`、`ik_solver_missing`のいずれかに固定する。MediaPipe未加工の結果や追跡処理担当統計はこの格納先に入れない。
+    - `frame.solver.phase7`はmotion-debugページ側で保存する段階7プロファイル / 較正スナップショットであり、`schemaVersion = "sincro.phase7-profile-calibration.v1"`、任意 `profile`、任意 `initialCalibration`、任意 `onlineCalibration`、任意 `activeCanonicalCalibration`、`warnings`を持つ。通常UIの案内文言や実行時オブジェクトは保存しない。
+    - `frame.solver.phase9`はmotion-debugページ側で保存する段階9意味に基づく動作 / 指診断用スナップショットであり、`schemaVersion = "sincro.phase9-semantic-motion.v1"`、`timestamp`、`intent`、`semantic`、任意 `finger.left/right`、`layers`、`warnings`だけを持つ通常のオブジェクトとする。段階6 / 段階7 / finalPoseのスキーマへ意味に基づく動作 / 指フィールドは混ぜない。
+    - `frame.finalPose`はmotion-debugページ側で保存する `VrmPoseComposerResult`スナップショットであり、`ownedBones`、`suppressedLayers`、`clampedBones`、`warnings`を確認するための開発者が確認できる格納先である。実際のVRMボーン書き込み順序や追跡処理推論ループは変更しない。
+    - 旧ログで `frame.reliability`が欠損している場合、再生閲覧画面は `frame.poseSnapshot`、`frame.timestamp.mediaTimeMs`、`frame.video.width` / `height`から `createPoseReliabilityMap()`を再計算する。この代替処理は旧ログ互換の姿勢のみの仮の値であり、保存されていないHand / Face / ジェスチャー観測を再生時に捏造しない。保存済み信頼性がある場合、信頼性層は `gesture.source`、`finalWeight`、`confidence`、`stableDurationMs`、警告を含む `ReliabilityMap.gesture`を表示できる。ジェスチャー未加工のカテゴリ一覧や左右判定の未加工オブジェクトは `frame.mediapipe.gesture`の未加工再生格納先にだけ留め、信頼性層へ重複保存しない。再計算にも使える `poseSnapshot`が無い場合だけ信頼性層は `not_recorded`になる。旧ログで `frame.intent` / `frame.solver.phase7` / `frame.solver.phase9`が欠損している場合は該当内訳の層だけ `not_recorded`にし、ログ読み込み自体は失敗させない。
+    - MediaPipe未加工の結果は必要な場合も `frame.mediapipe`に分け、`frame.poseSnapshot`には `SincroPoseMotionSnapshot`相当の正規化済みデータを置く。
+    - 再生APIの `loadRecording()`は非圧縮のNDJSON `string`または `File`だけを受け付ける。`startReplay({ mode })`、`stepReplay(frameIndex)`、`stopReplay()`、`getReplayState()`は開発者専用のウィンドウAPIとして公開する。
+    - `frame.timestamp.mediaTimeMs`は追跡処理コールバックの `TrackerVideoFrameTiming.mediaTimeMs`を正本にする。代替処理時だけ `video.currentTime * 1000`を使う。
+    - コールバック受信時の `performance.now()`は `frame.metrics.receivedAtPerformanceMs`として保存する。追跡処理統計は `frame.metrics.tracker`に入れ、`timestamp.receivedAtPerformanceMs`や最上位 `tracker`は使わない。
+    - `frame.metrics.tracker`は任意 `gestureInferenceTimeMs`と合計時間用の既存フィールド（Workerは `workerTimeMs`、メインスレッドは `mainThreadDetectTimeMs`）を保存する。`sincro.motion-debug-log.v1`は維持し、旧ログの欠損は有効とする。不正な負値・非有限値は継続時間解析処理がフィールド単位で除外して警告を返し、同じフレームの他フィールドやログ全体は捨てない。
+    - 追跡処理の処理時間の予算は `frame.metrics.tracker.budget`に保存する。`reasonCodes`は欠落したフレーム、Worker待機中detect、Worker失敗 / 利用不可、姿勢繰り返し失敗、姿勢推論が遅すぎる、メインスレッド代替処理、ROI省略 / 一時停止 / 代替処理 / 許容時間超過を列挙値として保持し、既存 `fallbackReason`の文字列は互換のため変更しない。ROIの累積統計は `frame.metrics.tracker.roi`で確認する。
+    - 順序を固定した機能低下方針スナップショットは `frame.metrics.tracker.degradationPolicy`に保存する。motion-debug閲覧画面の指標層は `degradationPolicy.stage`、`recovering`、`reasonCodes`、`effectiveCadence`と有効な実行時性能プロファイルを開発者が確認できるJSONとして表示する。カメラ解像度再交渉はこの方針スナップショットの予約情報に留め、ジェスチャーの任意処理は本番実行時の `effectiveGestureFps`として実適用する。
+    - 機能低下指標の保存側境界は `frame.metrics.tracker.budget.budgetStatus`、`frame.metrics.tracker.droppedFrames`、`frame.metrics.tracker.degradationPolicy.stage` / `recovering`、`frame.metrics.tracker.roi.pauseState`、`frame.timestamp.droppedPresentedFrames`に限定する。`budget.observed.droppedFrames`は予算報告の観測値として残すが、動作指標の正本入力にはしない。
+    - 同一 `presentedFrames`と同一 `SincroPoseMotionSnapshot.lastUpdatedAtMs`の連続入力は重複フレームとして記録処理が捨てる。`presentedFrames`が無い代替処理 / 旧形式入力では、同一 `mediaTimeMs`と同一 `lastUpdatedAtMs`を重複とする。
+    - カメラ実設定を構成情報に残す場合、未加工 `deviceId` / `groupId`は保存しない。ハッシュを保存する場合も公開単位だけで比較可能にし、公開をまたいで安定する識別子を残さない。
+    - フレームごとのカメラ品質は `frame.metrics.cameraQuality`に保存する。最上位 `cameraQuality`はスキーマ外とし、構成情報のカメラ設定と同じく未加工機器識別子は持たない。
+    - 公開されたNDJSONは `parseMotionDebugLogLines()`が構成情報とフレーム記録を検証できるスキーマに固定する。
 - 動作指標入力境界
-    - `trackingLossDurationMs` は `frame.poseSnapshot.detected`、`degradedToFaceOnly`、`frame.timestamp.mediaTimeMs` を入力境界とし、未検出 / 機能低下中の連続区間を時刻差分で合計する。
-    - `sideSwapCount` は `frame.poseSnapshot.leftArm.targets.wrist.cameraX` / `rightArm.targets.wrist.cameraX` と両手首の `confidence > 0.5` を入力境界とし、低信頼度のフレームでは左右反転を数えない。
-    - `addedLatencyMs` は `frame.metrics.tracker.workerRoundTripMs` の p95 を入力境界とする。`frame.timestamp.mediaTimeMs` と `frame.metrics.receivedAtPerformanceMs` は時刻原点が異なるため、遅延指標では差分を取らない。
-    - `recoveryJumpAngleDeg` は未検出 / 機能低下中から復帰済みへ戻ったフレームの `mediaTimeMs` を起点に、500ms ウィンドウの `frame.applied.angularVelocityDegPerSec` を優先し、欠落時だけ `frame.solver.poseRetarget` の腕クォータニオン連続差分へ代替処理する。
-    - `left-arm-occlusion-recovery` / `right-arm-occlusion-recovery` は対象腕だけに追跡済み 10 フレーム以上、未検出 5 フレーム以上、復帰中 2 フレーム以上、再追跡済み 10 フレーム以上を発生させ、非対象腕を全フレーム追跡済みに保つ決定的 QA 通信規約とする。両固定データは回復急変 18deg 以下（8deg 超は既知 WARN）、ソルバー肘反転拒否 2 以下、最終姿勢角速度制限 3 以下、所有するボーン競合 0 を検査とする。
-    - 段階 5 時系列指標は `temporalPredictedArmFrameCount`、`temporalRecoveringArmFrameCount`、`temporalLostArmDurationMs`、`temporalMaxRecoveryJumpDegEquivalent`、`temporalNeutralWristJitter` の 5 キーを持つ。段階 6 指標は `solverElbowFlipRejectCount`、`solverReachClampOccupancy`、`solverExcessReachRatioP95`、`solverPoleUncertainFrameCount`、`finalPoseAngularVelocityClampCount`、`finalPoseOwnedBoneConflictCount` を追加する。到達距離 p95 は橋渡し値の制限前の要求とソルバー最終目標の差を左右それぞれの全フレームから最近順位法で求め、旧ログまたは部分記録は利用しない。時系列の主入力への本番切替時は P0 再生固定データで中立揺らぎ、肘反転件数、回復急変、到達距離制限発生率を姿勢スナップショットによる代替処理基準と比較し、回帰が無いことをタスク成果物 / `impl.md` に保存する。段階 9 指標は `gestureFlickerCount`、`semanticFallbackFrameCount`、`intentCooldownSuppressionCount`、`intentInvalidFrameCount` を追加する。段階 10 指標は `trackerBudgetOverrunFrameCount`、`trackerDroppedFrameCount`、`degradationStageFrameCount`、`degradationRecoveryFrameCount`、`roiPausedFrameCount` を追加し、すべて `unit: "count"`、`direction: "lower_is_better"` とする。すべて `MotionMetricResult.value: number | null` の単一数値指標とし、無効 / 欠損入力は `not_available` にする。
-    - `trackerDroppedFrameCount` は `frame.metrics.tracker.droppedFrames` を累積値としてフレーム間差分へ正規化し、`frame.timestamp.droppedPresentedFrames` と同一フレームで大きい値だけを採用する。`degradationStageFrameCount` は新 `degradationPolicy.stage` を優先しつつ旧 `budget.degradation.state` も代替処理として読む。`degradationRecoveryFrameCount` と `roiPausedFrameCount` は旧ログから推測せず、それぞれ `degradationPolicy` / `roi` 欠損時に `not_available` とする。
+    - `trackingLossDurationMs`は `frame.poseSnapshot.detected`、`degradedToFaceOnly`、`frame.timestamp.mediaTimeMs`を入力境界とし、未検出 / 機能低下中の連続区間を時刻差分で合計する。
+    - `sideSwapCount`は `frame.poseSnapshot.leftArm.targets.wrist.cameraX` / `rightArm.targets.wrist.cameraX`と両手首の `confidence > 0.5`を入力境界とし、低信頼度のフレームでは左右反転を数えない。
+    - `addedLatencyMs`は `frame.metrics.tracker.workerRoundTripMs`のp95を入力境界とする。`frame.timestamp.mediaTimeMs`と `frame.metrics.receivedAtPerformanceMs`は時刻原点が異なるため、遅延指標では差分を取らない。
+    - `recoveryJumpAngleDeg`は未検出 / 機能低下中から復帰済みへ戻ったフレームの `mediaTimeMs`を起点に、500msウィンドウの `frame.applied.angularVelocityDegPerSec`を優先し、欠落時だけ `frame.solver.poseRetarget`の腕クォータニオン連続差分へ代替処理する。
+    - `left-arm-occlusion-recovery` / `right-arm-occlusion-recovery`は対象腕だけに追跡済み10フレーム以上、未検出5フレーム以上、復帰中2フレーム以上、再追跡済み10フレーム以上を発生させ、非対象腕を全フレーム追跡済みに保つ決定的QA通信規約とする。両固定データは回復急変18deg以下（8deg超は既知WARN）、ソルバー肘反転拒否2以下、最終姿勢角速度制限3以下、所有するボーン競合0を検査とする。
+    - 段階5時系列指標は `temporalPredictedArmFrameCount`、`temporalRecoveringArmFrameCount`、`temporalLostArmDurationMs`、`temporalMaxRecoveryJumpDegEquivalent`、`temporalNeutralWristJitter`の5キーを持つ。段階6指標は `solverElbowFlipRejectCount`、`solverReachClampOccupancy`、`solverExcessReachRatioP95`、`solverPoleUncertainFrameCount`、`finalPoseAngularVelocityClampCount`、`finalPoseOwnedBoneConflictCount`を追加する。到達距離p95は橋渡し値の制限前の要求とソルバー最終目標の差を左右それぞれの全フレームから最近順位法で求め、旧ログまたは部分記録は利用しない。時系列の主入力への本番切替時はP0再生固定データで中立揺らぎ、肘反転件数、回復急変、到達距離制限発生率を姿勢スナップショットによる代替処理基準と比較し、回帰が無いことをタスク成果物 / `impl.md`に保存する。段階9指標は `gestureFlickerCount`、`semanticFallbackFrameCount`、`intentCooldownSuppressionCount`、`intentInvalidFrameCount`を追加する。段階10指標は `trackerBudgetOverrunFrameCount`、`trackerDroppedFrameCount`、`degradationStageFrameCount`、`degradationRecoveryFrameCount`、`roiPausedFrameCount`を追加し、すべて `unit: "count"`、`direction: "lower_is_better"`とする。すべて `MotionMetricResult.value: number | null`の単一数値指標とし、無効 / 欠損入力は `not_available`にする。
+    - `trackerDroppedFrameCount`は `frame.metrics.tracker.droppedFrames`を累積値としてフレーム間差分へ正規化し、`frame.timestamp.droppedPresentedFrames`と同一フレームで大きい値だけを採用する。`degradationStageFrameCount`は新 `degradationPolicy.stage`を優先しつつ旧 `budget.degradation.state`も代替処理として読む。`degradationRecoveryFrameCount`と `roiPausedFrameCount`は旧ログから推測せず、それぞれ `degradationPolicy` / `roi`欠損時に `not_available`とする。
 - `SincroPoseRetargetedArm.constraint`
     - `reasons`: ソルバー側の安全性の発火理由。入力欠損とは分けて、関節制限 / 曲がる方向安定化 / 衝突回避を表示する。
-    - `weightScale`: 制約 / 衝突による IK 重み減衰率。最終 IK 重みは目標信頼度由来重みとこの値を掛けたものになる。
-    - `targetPushDistance`: 頭部球 / chest 楕円体から手目標を押し戻した距離。前腕区間の侵入禁止領域検出だけでは 0 のままになり得る。
+    - `weightScale`: 制約 / 衝突によるIK重み減衰率。最終IK重みは目標信頼度由来重みとこの値を掛けたものになる。
+    - `targetPushDistance`: 頭部球 / chest楕円体から手目標を押し戻した距離。前腕区間の侵入禁止領域検出だけでは0のままになり得る。
 
 ## 本番適用の判定に使う入力
 
