@@ -6,11 +6,10 @@
 
 ## タスク一覧（自動生成 / 全 35 件）
 
-### open（未完） — 29 件
+### open（未完） — 28 件
 
 | タスク                                                                                                                         | タイトル                                                            | 判定 | 依存                                     |
 | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- | ---- | ---------------------------------------- |
-| [task-261001222202-yomiyasu-25-frontend-rtc](./task-261001222202-yomiyasu-25-frontend-rtc/task.md)                             | 文書の日本語表現を整える（フロントエンドのRTC契約ほか）             | —    | —                                        |
 | [task-261001222202-yomiyasu-26-adr-260222-react-migration](./task-261001222202-yomiyasu-26-adr-260222-react-migration/task.md) | 文書の日本語表現を整える（ADR-260222 React移行ほか）                | —    | —                                        |
 | [task-261001222202-yomiyasu-27-adr-260726-pion-codec-poc](./task-261001222202-yomiyasu-27-adr-260726-pion-codec-poc/task.md)   | 文書の日本語表現を整える（ADR-260726 Pion コーデック PoC）          | —    | —                                        |
 | [task-261001222203-yomiyasu-28-documentation-guide](./task-261001222203-yomiyasu-28-documentation-guide/task.md)               | 文書の日本語表現を整える（設計ドキュメント運用ガイド）              | —    | —                                        |
@@ -40,7 +39,7 @@
 | [task-261001222215-yomiyasu-90-coding-md](./task-261001222215-yomiyasu-90-coding-md/task.md)                                   | 文書の日本語表現を整える（コーディング規約(Markdown)ほか）          | —    | —                                        |
 | [task-261001222215-yomiyasu-91-coding-ts](./task-261001222215-yomiyasu-91-coding-ts/task.md)                                   | 文書の日本語表現を整える（コーディング規約(TypeScript)ほか）        | —    | —                                        |
 
-### done（完了） — 6 件
+### done（完了） — 7 件
 
 | タスク                                                                                                                     | タイトル                                                            | 判定    | 依存 |
 | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------- | ---- |
@@ -50,5 +49,6 @@
 | [task-261001222201-yomiyasu-22-agent-server](./task-261001222201-yomiyasu-22-agent-server/task.md)                         | 文書の日本語表現を整える（バックエンド: AgentServerほか）           | ✅ PASS | —    |
 | [task-261001222202-yomiyasu-23-text-processor](./task-261001222202-yomiyasu-23-text-processor/task.md)                     | 文書の日本語表現を整える（バックエンドサービス: TextProcessorほか） | ✅ PASS | —    |
 | [task-261001222202-yomiyasu-24-audio-pipeline-websocket](./task-261001222202-yomiyasu-24-audio-pipeline-websocket/task.md) | 文書の日本語表現を整える（音声パイプラインのWebSocket契約）         | ✅ PASS | —    |
+| [task-261001222202-yomiyasu-25-frontend-rtc](./task-261001222202-yomiyasu-25-frontend-rtc/task.md)                         | 文書の日本語表現を整える（フロントエンドのRTC契約ほか）             | ✅ PASS | —    |
 
 <!-- AUTOGEN:tasks END -->
