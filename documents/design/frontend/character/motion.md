@@ -240,141 +240,141 @@
 ## データ・状態
 
 - `CharacterBehaviorSnapshot`
-    - VAD 包む形式
+    - VADの包絡線
     - 視線
-    - AI 発話状態
+    - AI発話状態
     - 感情コード
     - 会話モード
     - faceMotion / poseMotion
     - 動作方針
 - `SincroMotionPipelineState`
     - 本番の追跡・状態推定・姿勢合成結果をまとめる低次元状態として
-      `src/character/runtime/sincroMotionPipelineState.ts` に置く。
+      `src/character/runtime/sincroMotionPipelineState.ts`に置く。
     - `face`、`pose`、任意 `hand`、任意 `reliability`、任意 `canonical`、任意
-      `temporal`、任意 `intent`、任意 `composerDryRun`、`updatedAtMs` を持つ通常のオブジェクトに固定する。
-    - `CharacterBehaviorSnapshot` は既存どおり顔 / 姿勢 / VAD / AI 発話の集約点として維持し、
-      標準化した / 時系列 / 意図を直接追加しない。`CharacterBehaviorState` への接続も後続
+      `temporal`、任意 `intent`、任意 `composerDryRun`、`updatedAtMs`を持つ通常のオブジェクトに固定する。
+    - `CharacterBehaviorSnapshot`は既存どおり顔 / 姿勢 / VAD / AI発話の集約点として維持し、
+      標準化 / 時系列 / 意図を直接追加しない。`CharacterBehaviorState`への接続も後続
       観測専用タスクの責務に残す。
-    - 実行時内部の現在値契約であり、保存境界ではないため `schemaVersion` と解析処理は持たない。
-      再生 / 記録へ出す場合は既存 motion-debug ログの `frame.reliability`、`frame.canonical`、
-      `frame.temporal`、`frame.intent`、`frame.finalPose` 格納先と各解析処理を使う。
-    - 状態複製は Face / Pose / Hand / MotionIntent の既存複製補助処理を優先し、補助処理が無い
+    - 実行時内部の現在値契約であり、保存境界ではないため `schemaVersion`と解析処理は持たない。
+      再生 / 記録へ出す場合は既存motion-debugログの `frame.reliability`、`frame.canonical`、
+      `frame.temporal`、`frame.intent`、`frame.finalPose`格納先と各解析処理を使う。
+    - 状態複製はFace / Pose / Hand / MotionIntentの既存複製補助処理を優先し、補助処理が無い
       下流格納先は防御的な複製で警告配列やタプルを後続変更から分離する。
-    - THREE インスタンス、MediaPipe 未加工の結果、DOM、MediaStream、VideoFrame は状態に含めない。
+    - THREEインスタンス、MediaPipe未加工の結果、DOM、MediaStream、VideoFrameは状態に含めない。
 - `SincroMotionObserveOnlySummary`
-    - 診断 Console の `Sincro Motion` パネルに常時表示する小さい状態要約とする。
-    - `reliability`、`canonical`、`temporal`、`intent` ごとに `available` / `not_computed` /
-      `invalid_input`、短い理由、警告数を表示する。`SincroMotionPipelineState` 本体や巨大 JSON 出力は
-      常時描画せず、詳細詳細確認は後続デバッグツール / motion-debug の責務に残す。
+    - 診断Consoleの `Sincro Motion`パネルに常時表示する小さい状態要約とする。
+    - `reliability`、`canonical`、`temporal`、`intent`ごとに `available` / `not_computed` /
+      `invalid_input`、短い理由、警告数を表示する。`SincroMotionPipelineState`本体や巨大JSON出力は
+      常時描画せず、詳細確認は後続デバッグツール / motion-debugの責務に残す。
 - `CharacterMotionConfig`
     - 動作倍率
     - 緩急付け
-    - idle/listening/AI 発話振幅
+    - idle/listening/AI発話振幅
 - `SincroFaceRetargetSnapshot`
-    - 頭部 / 目 / まばたき / 口の VRM 向け値
+    - 頭部 / 目 / まばたき / 口のVRM向け値
 - `SincroPoseRetargetFrame`
     - 上半身 / 腕の加算回転と代替処理理由
-    - 腕 IK は `SincroPoseTargetPointSnapshot.quality` と `ikWeight` を読み、弱い手首 / 肘では IK 強度を落として特徴量動作の変換と合成する。
-    - `feature_only` は従来の低振幅 Euler 加算値のみを使う。
-    - `screen_space_ik` は 2D 目標から Euler 加算値を作る軽量代替処理として残す。
-    - `world_3d_ik` は `SincroPoseTargetPointSnapshot.world` の正規化済み目標を入力候補にし、VRM リグ倍率 / ボーン長 / 左右判定へ変換したうえでクォータニオンを出力する。
-    - MediaPipe ワールド座標目標は入力映像と同じ左右を維持し、上下・奥行きを VRM 表示側へ反転する。Z は追跡処理揺れを考慮して弱めに使う。
-    - `SincroPoseRetargetedArm.ikWeight` は診断 Console で全面 IK と弱い IK を切り分けるための実行時値。
-    - `SincroPoseRetargetedArm.ikSolverMode` は `feature_only` / `screen_space_ik` / `world_3d_ik` の切り分けを診断 Console に表示する。
-    - `SincroPoseRetargetedArm.constraint` は `joint_limited`、`elbow_pole_stabilized`、`head_collision_avoided`、`chest_no_go_zone`、`forearm_twist_limited` など、ソルバー側の安全性が効いた理由と重み倍率を表示する。
-    - `solverProbe.ccdik` は外部ソルバー採用判断用の診断値であり、実際の腕姿勢には適用しない。
+    - 腕IKは `SincroPoseTargetPointSnapshot.quality`と `ikWeight`を読み、弱い手首 / 肘ではIK強度を落として特徴量動作の変換と合成する。
+    - `feature_only`は従来の低振幅Euler加算値のみを使う。
+    - `screen_space_ik`は2D目標からEuler加算値を作る軽量代替処理として残す。
+    - `world_3d_ik`は `SincroPoseTargetPointSnapshot.world`の正規化済み目標を入力候補にし、VRMリグ倍率 / ボーン長 / 左右判定へ変換したうえでクォータニオンを出力する。
+    - MediaPipeワールド座標目標は入力映像と同じ左右を維持し、上下・奥行きをVRM表示側へ反転する。Zは追跡処理揺れを考慮して弱めに使う。
+    - `SincroPoseRetargetedArm.ikWeight`は診断Consoleで全面IKと弱いIKを切り分けるための実行時値。
+    - `SincroPoseRetargetedArm.ikSolverMode`は `feature_only` / `screen_space_ik` / `world_3d_ik`の切り分けを診断Consoleに表示する。
+    - `SincroPoseRetargetedArm.constraint`は `joint_limited`、`elbow_pole_stabilized`、`head_collision_avoided`、`chest_no_go_zone`、`forearm_twist_limited`など、ソルバー側の安全性が効いた理由と重み倍率を表示する。
+    - `solverProbe.ccdik`は外部ソルバー採用判断用の診断値であり、実際の腕姿勢には適用しない。
 - `SincroRoiObservation`
-    - Hand / Face Landmarker の前段で使う ROI 保存契約であり、`side`、`source`、`rect`、`confidence`、任意 `referencePoint`、`warnings` を持つ。
-    - `rect` は全画面の正規化画像座標の中心形式に固定し、`centerX`、`centerY`、`width`、`height`、`clamped` を保存する。切り抜き内の座標系の点は `0..1`、全画面点も `0..1` の `[number, number]` タプルとする。
-    - v1 は軸に平行な正方形 / 長方形のみを扱い、回転した切り抜き、`rotationRad`、手のひら基底、手首ロールは ROI 矩形に混ぜない。Hand / Face 結果後段の特徴量として別契約に渡す。
-    - Pose 手首が有限で `quality !== "lost"` の場合だけ Hand ROI は `source: "pose-wrist"` になる。欠損時は throw せず `source: "none"`、`confidence: 0`、`roi_missing` 警告の観測値を返し、Poseのみ / 代替処理継続を妨げない。
-    - Face ROI は左右肩中心と肩幅を主入力にする。Pose 未検出または shoulderWidth が有限の正数でない場合は `source: "none"`、`confidence: 0` の失敗観測値として扱う。
-    - Hand 追跡処理は左 / 右の ROI が両方無効の場合だけ全画面代替処理を同一フレームで 1 回実行する。片側 ROI だけ無効な場合はその左右を未検出にし、反対側の有効 ROI 推論を継続する。
-    - Hand 全画面代替処理の左右割り当ては復元後手首と Pose 手首の距離を主条件にし、同じ手結果の二重割当は拒否する。
-    - ROI 矩形値の制限は左 / 上端 / 右 / 下端を範囲制限して中心 / 大きさを再計算する。`validateRoiRect()` の順序は有限確認、端範囲制限、最小大きさ確認、信頼度値の制限に固定する。
-    - ROI 整合性は Pose 手首 / 顔期待する点と ROI 由来全画面点の距離からスコア `0..1` を返す。`roi_inconsistent` は ROI 契約の警告であり、ReliabilityMap へは後続タスクで明示的に写像する。
-- `SincroFaceMotionSnapshot` の ROI メタデータ
-    - Face ROI は頭部向き / 顔信頼性の入力品質を観測するためのメタデータとして、既存 `SincroFaceMotionSnapshot` に任意 `roi`、`source`、`warnings` を追加して扱う。別の Face ROI スナップショットは作らない。
-    - `source` は `"roi"`、`"full-frame"`、`"full-frame-fallback"`、`"lost"` に固定する。既存動作の変換は `detected`、`confidence`、`headPose`、`blendshapes` を従来どおり読む。
-    - ROI 切り抜きの FaceLandmarker 結果は切り抜き内の座標系の結果として扱い、`headPose.matrix` は従来どおり FaceLandmarker の変換行列数値配列だけを保存する。切り抜き内の座標系の顔ランドマーク全点、canvas、ImageBitmap、MediaPipe 未加工の結果は保存しない。
-    - ROI が顔未検出の場合、または Pose 顔 ROI 中心と Face 結果中心の整合性スコアが `0` の場合は同一フレームで全画面代替処理を 1 回だけ使う。代替処理でも未検出なら `source: "lost"`、`fallbackReason: "face_not_detected"` とし、`roi_missing` または `roi_inconsistent` 警告を残す。
-    - Worker / TrackerRuntime は Pose が実行されたフレームだけ Face ROI を試す。Pose 未実行フレームと顔のみ代替処理中は全画面 Face 追跡を続け、Face 動作の変換や頭部時系列の実行頻度を Pose 実行頻度に合わせない。
-    - Face / ROI 専用信頼性は段階 8 で `ReliabilityMap.joints.head` / `parts.head` に接続済みである。Face 動作の変換の入力値は従来どおり `detected`、`confidence`、`headPose`、`blendshapes` を読み、ROI メタデータは信頼性 / デバッグ / 再生の説明材料に留める。
+    - Hand / Face Landmarkerの前段で使うROI保存契約であり、`side`、`source`、`rect`、`confidence`、任意 `referencePoint`、`warnings`を持つ。
+    - `rect`は全画面の正規化画像座標の中心形式に固定し、`centerX`、`centerY`、`width`、`height`、`clamped`を保存する。切り抜き内の座標系の点は `0..1`、全画面点も `0..1`の `[number, number]`タプルとする。
+    - v1は軸に平行な正方形 / 長方形のみを扱い、回転した切り抜き、`rotationRad`、手のひら基底、手首ロールはROI矩形に混ぜない。Hand / Face結果後段の特徴量として別契約に渡す。
+    - Pose手首が有限で `quality !== "lost"`の場合だけHand ROIは `source: "pose-wrist"`になる。欠損時はthrowせず `source: "none"`、`confidence: 0`、`roi_missing`警告の観測値を返し、Poseのみ / 代替処理継続を妨げない。
+    - Face ROIは左右肩中心と肩幅を主入力にする。Pose未検出またはshoulderWidthが有限の正数でない場合は `source: "none"`、`confidence: 0`の失敗観測値として扱う。
+    - Hand追跡処理は左 / 右のROIが両方無効の場合だけ全画面代替処理を同一フレームで1回実行する。片側ROIだけ無効な場合はその左右を未検出にし、反対側の有効ROI推論を継続する。
+    - Hand全画面代替処理の左右割り当ては復元後手首とPose手首の距離を主条件にし、同じ手結果の二重割当は拒否する。
+    - ROI矩形値の制限は左 / 上端 / 右 / 下端を範囲制限して中心 / 大きさを再計算する。`validateRoiRect()`の順序は有限確認、端範囲制限、最小大きさ確認、信頼度値の制限に固定する。
+    - ROI整合性はPose手首 / 顔の期待点とROI由来全画面点の距離からスコア `0..1`を返す。`roi_inconsistent`はROI契約の警告であり、ReliabilityMapへは後続タスクで明示的に写像する。
+- `SincroFaceMotionSnapshot`のROIメタデータ
+    - Face ROIは頭部向き / 顔信頼性の入力品質を観測するためのメタデータとして、既存 `SincroFaceMotionSnapshot`に任意 `roi`、`source`、`warnings`を追加して扱う。別のFace ROIスナップショットは作らない。
+    - `source`は `"roi"`、`"full-frame"`、`"full-frame-fallback"`、`"lost"`に固定する。既存動作の変換は `detected`、`confidence`、`headPose`、`blendshapes`を従来どおり読む。
+    - ROI切り抜きのFaceLandmarker結果は切り抜き内の座標系の結果として扱い、`headPose.matrix`は従来どおりFaceLandmarkerの変換行列数値配列だけを保存する。切り抜き内の座標系の顔ランドマーク全点、canvas、ImageBitmap、MediaPipe未加工の結果は保存しない。
+    - ROIが顔未検出の場合、またはPose顔ROI中心とFace結果中心の整合性スコアが `0`の場合は同一フレームで全画面代替処理を1回だけ使う。代替処理でも未検出なら `source: "lost"`、`fallbackReason: "face_not_detected"`とし、`roi_missing`または `roi_inconsistent`警告を残す。
+    - Worker / TrackerRuntimeはPoseが実行されたフレームだけFace ROIを試す。Pose未実行フレームと顔のみ代替処理中は全画面Face追跡を続け、Face動作の変換や頭部時系列の実行頻度をPose実行頻度に合わせない。
+    - Face / ROI専用信頼性は段階8で `ReliabilityMap.joints.head` / `parts.head`に接続済みである。Face動作の変換の入力値は従来どおり `detected`、`confidence`、`headPose`、`blendshapes`を読み、ROIメタデータは信頼性 / デバッグ / 再生の説明材料に留める。
 - `CanonicalUpperBodyState`
-    - `sincro.canonical-upper-body.v1` をスキーマバージョンとする、JSON 保存可能な上半身契約。
-    - motion-debug の `frame.canonical` 格納先にそのまま保存できる通常のオブジェクトとして扱い、再生 / 指標 / 時系列 / 意図 / IK が同じ名前・単位で読む。
-    - 左右は `left` / `right` の解剖学的左右に固定し、カメラプレビューや画面鏡像の左右は表さない。
-    - `torso.coordinateSystem` は `body_local` に固定し、`shoulderCenter`、`bodyRight`、`bodyUp`、`bodyFront`、`shoulderWidth`、`torsoScale`、`yawRad` を有限数値 / 3 要素タプルで保存する。
-    - 体幹フレーム推定は `SincroPoseMotionSnapshot` の左右肩ワールド座標目標を最優先する。両肩の `world.hasWorldCoordinates` が true で、`normalizedX/Y/Z` が有限の場合だけ `shoulderCenter`、解剖学的右方向の `bodyRight`、`shoulderWidth` を姿勢由来として採用する。
-    - 左右腰ワールド座標目標が同じ条件で有効な場合だけ `hipCenter` と `bodyUp = normalize(shoulderCenter - hipCenter)` を姿勢由来で作る。腰ワールド座標目標欠損時は `previous.torso.hipCenter` がある場合だけ引き継ぎ、ない場合は `hipCenter` を省略する。`calibration.torsoScale` は `torsoScale` 代替処理にだけ使い、人工的な腰中心は作らない。
-    - `bodyFront` は `normalize(cross(bodyRight, bodyUp))` を候補にする。前フレームの `bodyFront` と内積プロダクトが負の場合は前フレームを維持し、`front_flip_rejected` 警告を付ける。前フレームがない場合は有効な Face ヨーから `normalize([sin(yawRad), 0, cos(yawRad)])` を手掛かりにし、手掛かりと逆向きの候補を反転して同じ警告を残す。
-    - Face ヨーは `SincroFaceMotionSnapshot.headPose.yawDeg` をラジアン化して `yawRad` に保存する。Face 未検出、信頼度 `< 0.08`、または Face スナップショット欠損時はヨー手掛かりを使わず、`previous.torso.yawRad`、`calibration.neutralYawRad` の順に代替処理する。
-    - 較正未指定時は `DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT` を使う。肩幅が姿勢由来で有効に取れたフレームでは、戻り値の `calibration.shoulderWidth` を同じ値へ更新し、再生 / 指標が同じスケールを参照できるようにする。
-    - `arms.left` / `arms.right` は `reach`、`elevationRad`、`openness`、`forwardness`、`elbowFlexionRad`、`classification` と部位付随情報を保存する。値域外の入力は解析時に拒否し、計算側が値の制限した場合だけ `outOfRangeFields` に元値と値の制限後の値を残す。
-    - 標準化した腕特徴量は `SincroPoseMotionSnapshot` の肩 / 肘 / 手首目標と体幹フレームだけから抽出する。`reach` は身体のローカル座標系での肩と手首の距離を肩-肘 + 肘-手首の腕長で割った無次元値、`elevationRad` は身体のローカル座標系の方向 Y 成分のラジアン、`openness` は解剖学的左右方向を正にした `-1..1`、`forwardness` は身体の前方方向・MediaPipe ワールド座標 Z・2D 投影短縮を重み付き再正規化した `0..1`、`elbowFlexionRad` は伸び切り `0` から屈曲 `Math.PI` へ近づくラジアンとする。
-    - `classification` は決定的規則で、`confidence < 0.15` を `unknown`、`openness < -0.25` を `crossed` 優先、`forwardness >= 0.62 && abs(openness) < 0.35` を `front`、`abs(openness) >= 0.45 && forwardness < 0.45` を `side`、`forwardness >= 0.35 && abs(openness) >= 0.25` を `diagonal`、それ以外を `unknown` とする。
-    - 段階 4 時点では任意 `ReliabilityMap` を受け取った場合だけ、腕信頼度を `poseConfidence * sqrt(partWeight * minJointWeight)` で重みの低減する。`partWeight` は該当腕の `PartReliability.finalWeight`、`minJointWeight` は肩 / 肘 / 手首関節 `finalWeight` の最小値とする。
-    - 腕信頼性が `lost` の場合は標準化した腕由来を `neutral`、信頼度を `0` にする。`suspect` は由来 `pose` の低信頼度観測として保持し、TemporalStateEstimator / MotionSolver が後続段階 5 / 6 で扱う。
-    - 標準化した警告変換は `ReliabilityWarningCode` ではなく、該当腕の部位 / 関節 `components.side.reasonCodes`、`components.boneLength.reasonCodes`、`components.bodyScale.reasonCodes` を読む。`side_inconsistent` は `left_right_swap_suspect`、`bone_length_inconsistent` / `body_scale_jump` は `out_of_range` へ写す。
-    - `head` は FaceLandmarker の `headPose.matrix` を主入力にし、16 要素の有限数値配列だけを通常観測としてヨー / ピッチ / ロールラジアンへ変換する。行列欠損時は `face_matrix_missing`、行列無効時は `face_matrix_invalid` を `head.warnings` と最上位 `warnings` に保存し、既存スナップショットの Euler 値へ低信頼度で代替処理する。
-    - Face が未検出、`source: "lost"`、信頼度 `0`、または頭部信頼性の `parts.head` / `joints.head` が未検出か finalWeight `< 0.05` の場合、標準化した `head` は省略する。中立頭部や前回の頭部は標準化した層では捏造せず、一時欠損 / 予測済み / 復帰中は TemporalStateEstimator の責務に残す。
-    - 任意 `ReliabilityMap` がある場合、頭部信頼度は `matrixOrEulerConfidence * sqrt(parts.head.finalWeight * joints.head.finalWeight)` で重みの低減する。Pose 鼻 / 耳 / 目代替処理は現行 Face / Pose スナップショットに頭部向き入力として保存されていないため、本契約では扱わない。
-    - `calibration` は既定 / 初回 / 実行中 / 再生のスナップショットとし、未実装時も `DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT` を保存して再生の決定性を保つ。
-    - `SincroPoseRetargetFrame` の VRM 加算回転、IK ソルバーのクォータニオン、AnimationMixer 出力は標準化した腕特徴量の入力にも標準化した状態にも入れず、動作の変換 / 最終姿勢の別格納先に分ける。
+    - `sincro.canonical-upper-body.v1`をスキーマバージョンとする、JSON保存可能な上半身契約。
+    - motion-debugの `frame.canonical`格納先にそのまま保存できる通常のオブジェクトとして扱い、再生 / 指標 / 時系列 / 意図 / IKが同じ名前・単位で読む。
+    - 左右は `left` / `right`の解剖学的左右に固定し、カメラプレビューや画面鏡像の左右は表さない。
+    - `torso.coordinateSystem`は `body_local`に固定し、`shoulderCenter`、`bodyRight`、`bodyUp`、`bodyFront`、`shoulderWidth`、`torsoScale`、`yawRad`を有限数値 / 3要素タプルで保存する。
+    - 体幹フレーム推定は `SincroPoseMotionSnapshot`の左右肩ワールド座標目標を最優先する。両肩の `world.hasWorldCoordinates`がtrueで、`normalizedX/Y/Z`が有限の場合だけ `shoulderCenter`、解剖学的右方向の `bodyRight`、`shoulderWidth`を姿勢由来として採用する。
+    - 左右腰ワールド座標目標が同じ条件で有効な場合だけ `hipCenter`と `bodyUp = normalize(shoulderCenter - hipCenter)`を姿勢由来で作る。腰ワールド座標目標欠損時は `previous.torso.hipCenter`がある場合だけ引き継ぎ、ない場合は `hipCenter`を省略する。`calibration.torsoScale`は `torsoScale`代替処理にだけ使い、人工的な腰中心は作らない。
+    - `bodyFront`は `normalize(cross(bodyRight, bodyUp))`を候補にする。前フレームの `bodyFront`と内積が負の場合は前フレームを維持し、`front_flip_rejected`警告を付ける。前フレームがない場合は有効なFaceヨーから `normalize([sin(yawRad), 0, cos(yawRad)])`を手掛かりにし、手掛かりと逆向きの候補を反転して同じ警告を残す。
+    - Faceヨーは `SincroFaceMotionSnapshot.headPose.yawDeg`をラジアン化して `yawRad`に保存する。Face未検出、信頼度 `< 0.08`、またはFaceスナップショット欠損時はヨー手掛かりを使わず、`previous.torso.yawRad`、`calibration.neutralYawRad`の順に代替処理する。
+    - 較正未指定時は `DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT`を使う。肩幅が姿勢由来で有効に取れたフレームでは、戻り値の `calibration.shoulderWidth`を同じ値へ更新し、再生 / 指標が同じスケールを参照できるようにする。
+    - `arms.left` / `arms.right`は `reach`、`elevationRad`、`openness`、`forwardness`、`elbowFlexionRad`、`classification`と部位付随情報を保存する。値域外の入力は解析時に拒否し、計算側が値を制限した場合だけ `outOfRangeFields`に元値と値の制限後の値を残す。
+    - 標準化した腕特徴量は `SincroPoseMotionSnapshot`の肩 / 肘 / 手首目標と体幹フレームだけから抽出する。`reach`は身体のローカル座標系での肩と手首の距離を肩-肘 + 肘-手首の腕長で割った無次元値、`elevationRad`は身体のローカル座標系の方向Y成分のラジアン、`openness`は解剖学的左右方向を正にした `-1..1`、`forwardness`は身体の前方方向・MediaPipeワールド座標Z・2D投影短縮を重み付き再正規化した `0..1`、`elbowFlexionRad`は伸び切り `0`から屈曲 `Math.PI`へ近づくラジアンとする。
+    - `classification`は決定的規則で、`confidence < 0.15`を `unknown`、`openness < -0.25`を `crossed`優先、`forwardness >= 0.62 && abs(openness) < 0.35`を `front`、`abs(openness) >= 0.45 && forwardness < 0.45`を `side`、`forwardness >= 0.35 && abs(openness) >= 0.25`を `diagonal`、それ以外を `unknown`とする。
+    - 段階4時点では任意 `ReliabilityMap`を受け取った場合だけ、腕信頼度を `poseConfidence * sqrt(partWeight * minJointWeight)`で重みを低減する。`partWeight`は該当腕の `PartReliability.finalWeight`、`minJointWeight`は肩 / 肘 / 手首関節 `finalWeight`の最小値とする。
+    - 腕信頼性が `lost`の場合は標準化した腕由来を `neutral`、信頼度を `0`にする。`suspect`は由来 `pose`の低信頼度観測として保持し、TemporalStateEstimator / MotionSolverが後続段階5 / 6で扱う。
+    - 標準化した警告変換は `ReliabilityWarningCode`ではなく、該当腕の部位 / 関節 `components.side.reasonCodes`、`components.boneLength.reasonCodes`、`components.bodyScale.reasonCodes`を読む。`side_inconsistent`は `left_right_swap_suspect`、`bone_length_inconsistent` / `body_scale_jump`は `out_of_range`へ写す。
+    - `head`はFaceLandmarkerの `headPose.matrix`を主入力にし、16要素の有限数値配列だけを通常観測としてヨー / ピッチ / ロールラジアンへ変換する。行列欠損時は `face_matrix_missing`、行列無効時は `face_matrix_invalid`を `head.warnings`と最上位 `warnings`に保存し、既存スナップショットのEuler値へ低信頼度で代替処理する。
+    - Faceが未検出、`source: "lost"`、信頼度 `0`、または頭部信頼性の `parts.head` / `joints.head`が未検出かfinalWeight `< 0.05`の場合、標準化した `head`は省略する。中立頭部や前回の頭部は標準化した層では捏造せず、一時欠損 / 予測済み / 復帰中はTemporalStateEstimatorの責務に残す。
+    - 任意 `ReliabilityMap`がある場合、頭部信頼度は `matrixOrEulerConfidence * sqrt(parts.head.finalWeight * joints.head.finalWeight)`で重みを低減する。Pose鼻 / 耳 / 目代替処理は現行Face / Poseスナップショットに頭部向き入力として保存されていないため、本契約では扱わない。
+    - `calibration`は既定 / 初回 / 実行中 / 再生のスナップショットとし、未実装時も `DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT`を保存して再生の決定性を保つ。
+    - `SincroPoseRetargetFrame`のVRM加算回転、IKソルバーのクォータニオン、AnimationMixer出力は標準化した腕特徴量の入力にも標準化した状態にも入れず、動作の変換 / 最終姿勢の別格納先に分ける。
 - `TemporalUpperBodyState`
-    - `sincro.temporal-upper-body.v1` をスキーマバージョンとする、標準化した / 信頼性の後段で使う JSON 保存可能な時系列状態契約。
-    - motion-debug の `frame.temporal` 任意格納先に保存する通常のオブジェクトとして扱い、再生 / 閲覧画面 / 指標 / 意図 / IK が同じ状態列挙値とスカラーを読めるようにする。
-    - `TemporalPartState` は `"tracked"`、`"suspect"`、`"predicted"`、`"lost"`、`"recovering"` の小文字列挙値に固定する。取り組み計画上の大文字表記は文書上の呼称であり、保存値とログ境界では使わない。
-    - `arms.left` / `arms.right` は `reach`、`elevationRad`、`openness`、`forwardness`、`elbowFlexionRad`、`classification`、任意 `bodyLocalWrist` / `bodyLocalElbow`、速度、任意 `recoveringBlend` を保存する。
-    - `head` は任意で、未観測フレームでは省略できる。保存する場合はヨー / ピッチ / ロールと角速度、部位付随情報、任意 `recoveringBlend` だけを持つ。
-    - 値域は解析処理で固定し、`confidence` と `recoveringBlend.progress` は `0..1`、`stateAgeMs` / `observedAgeMs` は `>= 0`、腕スカラーと復帰中継続時間は契約の範囲外を `out_of_range` として拒否する。
-    - `parseTemporalUpperBodyState()` は再生 / 閲覧画面境界の検証 API であり、未知 `schemaVersion` は `unknown_schema_version`、非有限数値 / 未知の列挙値 / 余分なキー / クラスのインスタンスは `invalid_state` として返す。
-    - `TemporalUpperBodyState` は CanonicalUpperBodyState の時間方向の状態推定契約であり、VRM 正規化済み姿勢、IK 目標クォータニオン、AnimationMixer 出力は段階 6 以降の MotionSolver / VrmPoseComposer と `finalPose` 系格納先の責務に残す。
-    - 段階 5 の `TemporalStateEstimator` v1 は `CanonicalUpperBodyState`、任意 `ReliabilityMap`、呼び出し元指定の `mediaTimeMs` から観測済みフレームの `TemporalUpperBodyState` を作る状態を保持する推定処理とする。推定処理内で `performance.now()` は呼ばず、`reset()` は前回の時系列状態、One Euro Filter、分類保持を破棄する。
-    - v1 の腕状態遷移は観測済みフレームのみを扱う。標準化した腕信頼度 `>= 0.65` かつ信頼性腕部位と肩 / 肘 / 手首関節がすべて `tracked` の場合は `tracked`、信頼度 `0.05..0.65` または信頼性の最悪状態が `suspect` / `predicted` / `recovering` の場合は `suspect`、信頼度 `< 0.05` または信頼性最悪状態が `lost` の場合は `lost` とする。ReliabilityMap が欠損する旧ログ / 暫定フレームでは標準化した信頼度だけで判定する。
-    - 信頼性集約は腕部位と肩 / 肘 / 手首関節の最悪状態を使い、優先順位は `lost > predicted > recovering > suspect > tracked` とする。ただし段階 5 観測済み推定処理は `predicted` / `recovering` を出力状態として生成せず、入力信頼性の両状態は `suspect` に変換する。
-    - v1 のフィルターは腕スカラー (`reach`、`elevationRad`、`openness`、`forwardness`、`elbowFlexionRad`) と `bodyLocalWrist` に One Euro Filter を適用する。既定値は `minCutoff: 1.8`、`beta: 0.45`、`dCutoff: 1.0` で、`TemporalStateEstimatorConfig` から上書きできる。速度はフィルター後の値差分から計算する。
-    - `TemporalPartMeta` の `confidence` はフィルター入力候補の標準化した腕信頼度、`source` は `tracked` / `suspect` で `canonical`、`lost` で `neutral` とする。`stateAgeMs` は同じ状態の継続時だけ `mediaTimeMs` 差分で加算し、`observedAgeMs` は `tracked` / `suspect` で `0`、`lost` で前回値へ差分を加算する。警告は低信頼度で `low_confidence`、未検出で `dropout`、分類保持で `classification_held`、無効 dt で `out_of_range` を重複なしで保存する。
-    - 分類は候補が信頼度 `>= 0.35` で 160ms 以上連続した場合だけ更新する。保持中または信頼度 `< 0.35` では前回分類を維持し、初回 / 再初期化後は既定時系列腕の `side` を基点にする。
-    - `dtMs <= 0`、`dtMs > 250`、非有限 dt のフレームはフィルター内部状態を更新せず、前回フィルター処理済み値を維持して速度を `0` にする。未検出フレームは標準状態の低信頼値をフィルターに投入せず、前回フィルター処理済み値、速度、状態・メタデータから一時欠損方針を適用する。
-    - 腕が `lost` になってから `observedAgeMs <= 700` の間は、前回フィルター後スカラー / 身体のローカル座標系の手首と速度から等速度予測を行い、`state: "predicted"`、`source: "predicted"`、警告 `prediction_active` / `velocity_damped` を保存する。予測速度は `predictionVelocityDampingPerSec: 0.55` をフレーム `dt` に応じて毎秒減衰する。
-    - `observedAgeMs > 700` で予測ウィンドウが終わった腕は、`state: "lost"`、`source: "comfortable"` として自然な姿勢姿勢へ退避する。自然な姿勢スカラーは `reach: 0.35`、`elevationRad: -0.25`、`openness: 0.15`、`forwardness: 0.15`、`elbowFlexionRad: 1.15`、`classification: "side"` に固定し、前回予測済み / フィルター処理済み値から `recoveringBlendMs` 既定 `260ms` で近づける。`openness` は左右反転しない正規化スカラーとし、身体のローカル座標系の手首 / 肘タプルを補う場合だけ x 方向を腕左右に合わせる。
-    - Tracker 実行時の `comfortable-idle` 段階は自然な姿勢姿勢を直接生成しない。追跡処理はカメラ / Face 追跡を継続したまま Pose 代替処理と Hand 未検出スナップショット、`degradationPolicy` 理由を出すだけにし、自然な姿勢スカラーへの混合は TemporalStateEstimator、MotionSolver、VrmPoseComposer の責務に残す。
-    - 未検出 / 予測済み / 自然な姿勢 / 復帰中後に腕信頼度が `>= 0.65` へ戻り、信頼性が追跡済みになった腕は `state: "recovering"`、`source: "mixed"` としてフィルター処理済み観測値へ復帰する。`recoveringBlend` は `from`、`progress`、`durationMs` を保存し、警告 `recovery_blend` を付ける。`recoveringBlendMs` は設定で上書きできるが `180..400` に制限する。
-    - 復帰中中の 1 フレームあたりスカラー急変は `maxRecoveringAngleJumpRad: 15deg` 相当に制限する。`elevationRad` / `elbowFlexionRad` はラジアン値の制限、`reach` / `openness` / `forwardness` は各値域に同じ比率を掛けた値の制限を使う。予測 / 自然な姿勢代替処理 / 復帰中は左右腕ごとに独立して処理する。
-    - 標準化した `head` が存在するフレームだけ、ヨー / ピッチ / ロールに腕と同じ `tracked` / `predicted` / `lost` / `recovering` 方針を任意に適用する。Face 行列と頭部信頼性の反映は標準化した層で済ませ、TemporalStateEstimator は標準化した頭部の有無、信頼度、ReliabilityMap の頭部状態から時系列一時欠損を扱う。
-    - VRM クォータニオン、IK 曲がる方向、最終姿勢平滑化は TemporalStateEstimator では扱わず、段階 6 以降の MotionSolver / IK / VrmPoseComposer の責務に残す。
+    - `sincro.temporal-upper-body.v1`をスキーマバージョンとする、標準化 / 信頼性の後段で使うJSON保存可能な時系列状態契約。
+    - motion-debugの `frame.temporal`任意格納先に保存する通常のオブジェクトとして扱い、再生 / 閲覧画面 / 指標 / 意図 / IKが同じ状態列挙値とスカラーを読めるようにする。
+    - `TemporalPartState`は `"tracked"`、`"suspect"`、`"predicted"`、`"lost"`、`"recovering"`の小文字列挙値に固定する。取り組み計画上の大文字表記は文書上の呼称であり、保存値とログ境界では使わない。
+    - `arms.left` / `arms.right`は `reach`、`elevationRad`、`openness`、`forwardness`、`elbowFlexionRad`、`classification`、任意 `bodyLocalWrist` / `bodyLocalElbow`、速度、任意 `recoveringBlend`を保存する。
+    - `head`は任意で、未観測フレームでは省略できる。保存する場合はヨー / ピッチ / ロールと角速度、部位付随情報、任意 `recoveringBlend`だけを持つ。
+    - 値域は解析処理で固定し、`confidence`と `recoveringBlend.progress`は `0..1`、`stateAgeMs` / `observedAgeMs`は `>= 0`、腕スカラーと復帰中継続時間は契約の範囲外を `out_of_range`として拒否する。
+    - `parseTemporalUpperBodyState()`は再生 / 閲覧画面境界の検証APIであり、未知 `schemaVersion`は `unknown_schema_version`、非有限数値 / 未知の列挙値 / 余分なキー / クラスのインスタンスは `invalid_state`として返す。
+    - `TemporalUpperBodyState`はCanonicalUpperBodyStateの時間方向の状態推定契約であり、VRM正規化済み姿勢、IK目標クォータニオン、AnimationMixer出力は段階6以降のMotionSolver / VrmPoseComposerと `finalPose`系格納先の責務に残す。
+    - 段階5の `TemporalStateEstimator` v1は `CanonicalUpperBodyState`、任意 `ReliabilityMap`、呼び出し元指定の `mediaTimeMs`から観測済みフレームの `TemporalUpperBodyState`を作る状態を保持する推定処理とする。推定処理内で `performance.now()`は呼ばず、`reset()`は前回の時系列状態、One Euro Filter、分類保持を破棄する。
+    - v1の腕状態遷移は観測済みフレームのみを扱う。標準化した腕信頼度 `>= 0.65`かつ信頼性腕部位と肩 / 肘 / 手首関節がすべて `tracked`の場合は `tracked`、信頼度 `0.05..0.65`または信頼性の最悪状態が `suspect` / `predicted` / `recovering`の場合は `suspect`、信頼度 `< 0.05`または信頼性最悪状態が `lost`の場合は `lost`とする。ReliabilityMapが欠損する旧ログ / 暫定フレームでは標準化した信頼度だけで判定する。
+    - 信頼性集約は腕部位と肩 / 肘 / 手首関節の最悪状態を使い、優先順位は `lost > predicted > recovering > suspect > tracked`とする。ただし段階5観測済み推定処理は `predicted` / `recovering`を出力状態として生成せず、入力信頼性の両状態は `suspect`に変換する。
+    - v1のフィルターは腕スカラー (`reach`、`elevationRad`、`openness`、`forwardness`、`elbowFlexionRad`) と `bodyLocalWrist`にOne Euro Filterを適用する。既定値は `minCutoff: 1.8`、`beta: 0.45`、`dCutoff: 1.0`で、`TemporalStateEstimatorConfig`から上書きできる。速度はフィルター後の値差分から計算する。
+    - `TemporalPartMeta`の `confidence`はフィルター入力候補の標準化した腕信頼度、`source`は `tracked` / `suspect`で `canonical`、`lost`で `neutral`とする。`stateAgeMs`は同じ状態の継続時だけ `mediaTimeMs`差分で加算し、`observedAgeMs`は `tracked` / `suspect`で `0`、`lost`で前回値へ差分を加算する。警告は低信頼度で `low_confidence`、未検出で `dropout`、分類保持で `classification_held`、無効dtで `out_of_range`を重複なしで保存する。
+    - 分類は候補が信頼度 `>= 0.35`で160ms以上連続した場合だけ更新する。保持中または信頼度 `< 0.35`では前回分類を維持し、初回 / 再初期化後は既定時系列腕の `side`を基点にする。
+    - `dtMs <= 0`、`dtMs > 250`、非有限dtのフレームはフィルター内部状態を更新せず、前回フィルター処理済み値を維持して速度を `0`にする。未検出フレームは標準状態の低信頼値をフィルターに投入せず、前回フィルター処理済み値、速度、状態・メタデータから一時欠損方針を適用する。
+    - 腕が `lost`になってから `observedAgeMs <= 700`の間は、前回フィルター後スカラー / 身体のローカル座標系の手首と速度から等速度予測を行い、`state: "predicted"`、`source: "predicted"`、警告 `prediction_active` / `velocity_damped`を保存する。予測速度は `predictionVelocityDampingPerSec: 0.55`をフレーム `dt`に応じて毎秒減衰する。
+    - `observedAgeMs > 700`で予測ウィンドウが終わった腕は、`state: "lost"`、`source: "comfortable"`として自然な姿勢へ退避する。自然な姿勢スカラーは `reach: 0.35`、`elevationRad: -0.25`、`openness: 0.15`、`forwardness: 0.15`、`elbowFlexionRad: 1.15`、`classification: "side"`に固定し、前回予測済み / フィルター処理済み値から `recoveringBlendMs`既定 `260ms`で近づける。`openness`は左右反転しない正規化スカラーとし、身体のローカル座標系の手首 / 肘タプルを補う場合だけx方向を腕左右に合わせる。
+    - Tracker実行時の `comfortable-idle`段階は自然な姿勢を直接生成しない。追跡処理はカメラ / Face追跡を継続したままPose代替処理とHand未検出スナップショット、`degradationPolicy`理由を出すだけにし、自然な姿勢スカラーへの混合はTemporalStateEstimator、MotionSolver、VrmPoseComposerの責務に残す。
+    - 未検出 / 予測済み / 自然な姿勢 / 復帰中後に腕信頼度が `>= 0.65`へ戻り、信頼性が追跡済みになった腕は `state: "recovering"`、`source: "mixed"`としてフィルター処理済み観測値へ復帰する。`recoveringBlend`は `from`、`progress`、`durationMs`を保存し、警告 `recovery_blend`を付ける。`recoveringBlendMs`は設定で上書きできるが `180..400`に制限する。
+    - 復帰中の1フレームあたりスカラー急変は `maxRecoveringAngleJumpRad: 15deg`相当に制限する。`elevationRad` / `elbowFlexionRad`はラジアン値の制限、`reach` / `openness` / `forwardness`は各値域に同じ比率を掛けた値の制限を使う。予測 / 自然な姿勢代替処理 / 復帰中は左右腕ごとに独立して処理する。
+    - 標準化した `head`が存在するフレームだけ、ヨー / ピッチ / ロールに腕と同じ `tracked` / `predicted` / `lost` / `recovering`方針を任意に適用する。Face行列と頭部信頼性の反映は標準化した層で済ませ、TemporalStateEstimatorは標準化した頭部の有無、信頼度、ReliabilityMapの頭部状態から時系列一時欠損を扱う。
+    - VRMクォータニオン、IK曲がる方向、最終姿勢平滑化はTemporalStateEstimatorでは扱わず、段階6以降のMotionSolver / IK / VrmPoseComposerの責務に残す。
 - `MotionIntentState`
-    - `sincro.motion-intent.v1` をスキーマバージョンとする、標準化した / 時系列 / 信頼性の後段、意味に基づく動作の姿勢 / IK / 指ボーン適用の前段で使う JSON 保存可能な動作意図契約。
-    - motion-debug の `frame.intent` 任意格納先に保存する通常のオブジェクトとして扱う。motion-debug ログスキーマでは `z.unknown().optional()` のまま保持し、ログ読み込み全体の互換性は壊さない。
-    - `arms.left` / `arms.right` の `intent` は `"tracking"`、`"wave"`、`"pointing"`、`"thumbsUp"`、`"peace"`、`"nearFace"`、`"explain"`、`"clapLike"`、`"guarded"`、`"lost"`、`"fallback"` に固定する。保存値はローワーキャメルケースとし、`"thumbs_up"`、`"openPalm"`、ジェスチャー Recognizer の元のラベルは腕意図として保存しない。
-    - `torso.intent` は `"neutral"`、`"leaning"`、`"turning"`、`"settling"` に固定する。v1 では腕と同じ意味に基づく動作ジェスチャー名を体幹に入れない。
-    - `sourceGestureLabel` はジェスチャー Recognizer の元のラベルを説明用に保存する任意フィールドであり、`intent` の代替値にはしない。
-    - `confidence`、`reliability`、`expressiveness` は `0..1`、`ageMs`、`stableDurationMs`、`cooldownRemainingMs`、`timestamp.mediaTimeMs` は有限かつ `>= 0` に固定する。
-    - 警告コードは `"low_hand_reliability"`、`"low_pose_reliability"`、`"gesture_unstable"`、`"gesture_cooldown"`、`"wave_motion_missing"`、`"near_face_hold"`、`"left_right_swap_suspect"`、`"fallback_active"`、`"invalid_dt"` に固定する。
-    - `parseMotionIntentState()` は再生 / 閲覧画面境界の検証 API であり、未知 `schemaVersion` は `unknown_schema_version`、範囲外数値は `out_of_range`、非有限数値 / 未知の列挙値 / 余分なキー / クラスのインスタンス / 関数 / Three.js 実行時オブジェクト風フィールドは `invalid_state` として返す。
-    - 既定状態は呼び出し元指定の `mediaTimeMs` を保存し、左右腕を `intent: "tracking"`、`confidence: 0`、`reliability: 0`、`expressiveness: 0`、`source: "fallback"` にする。`performance.now()` は呼ばず、最上位警告には `fallback_active` を含める。
-    - `MotionIntentEstimator` は `TemporalUpperBodyState`、任意 `ReliabilityMap`、任意 `SincroHandMotionSnapshot`、任意ジェスチャー観測値、呼び出し元指定 `mediaTimeMs` だけを入力にする。推定処理内で `performance.now()`、DOM、MediaPipe 未加工のランドマーク、VRM 姿勢、`AnimationMixer` は読まない。
-    - 本番観測専用の処理工程は `SincroGestureMotionSnapshot` を直接 MotionIntent へ渡さず、`{ left?: { label; confidence }; right?: ... }` の `GestureIntentObservation` へ正規化してから `ReliabilityMap.gesture` と `MotionIntentEstimator.update({ gesture })` に渡す。`ReliabilityMap.gesture` は有効観測値がある場合 `source: "gesture"` とし、未知元のラベルでも意味に基づく動作意図への昇格とは分けて保存する。ジェスチャー任意合格が省略 / 未検出の場合だけ `source: "neutral"` 仮の値を返す。
-    - ジェスチャー Recognizer は主制御器ではなく補助入力として扱う。v1 の元のラベル対応付けは `"Open_Palm" -> "explain"`、`"Pointing_Up" -> "pointing"`、`"Thumb_Up" -> "thumbsUp"`、`"Victory" -> "peace"`、`"Closed_Fist" -> "guarded"` に固定し、`"None"`、`"Thumb_Down"`、`"ILoveYou"`、未知表示名は意味に基づく動作意図にしない。
-    - 信頼度検査は ReliabilityMap がある場合 `ReliabilityMap.gesture.finalWeight >= 0.70`、該当手部位 `>= 0.60`、指部位 `>= 0.45` を既定値とする。ReliabilityMap 欠損時は旧形式 / テスト入力としてジェスチャー信頼度と手左右信頼度を代替処理に使う。`MotionIntentEstimatorConfig.thresholds` 指定時だけ既定値を上書きする。
-    - 最小継続時間 / 待機期間は左右ごとに持つ。既定値は `wave 400ms / 650ms`、`pointing 200ms / 500ms`、`thumbsUp 200ms / 500ms`、`peace 200ms / 500ms`、`nearFace 250ms / 300ms`、`explain 300ms / 400ms`、`clapLike 150ms / 800ms`、`guarded 250ms / 500ms`、`fallback 300ms / 0ms` とする。`timing` 設定は `wave` を含まず、手振りの継続時間 / 待機期間は `config.wave` だけで上書きする。
-    - `wave` は `"Open_Palm"` 表示名だけでは発火しない。時系列手首の身体のローカル座標系の x 速度を最優先し、欠損時だけ前回 `hand.<side>Hand.fullFrameWrist[0]` との差分から画像速度を補う。`elevationRad >= 0.05`、1200ms 窓内の x 速度符号反転 2 回以上、身体のローカル座標系の x `abs >= 0.05` または画像 x `abs >= 0.12`、最小継続時間、待機期間終了をすべて満たす場合だけ `wave` にする。`opennessPerSec` は手振り判定に使わない。
-    - `nearFace` は Face 外接矩形を再解釈せず、時系列腕の `classification === "front"`、`elevationRad >= 0.20`、`forwardness >= 0.45`、手信頼度 `>= 0.45` の近似条件で判定する。`clapLike` は左右手検出済み、両手首の 2D 距離 `<= 0.16`、左右手首 x 速度が対向している場合だけ候補にする。
-    - `guarded` は腕分類 `crossed`、左右手首 2D 距離 `<= 0.18` かつ左右どちらかの `forwardness >= 0.35`、または信頼性 / Hand 警告の `side_inconsistent` で候補にする。`side_inconsistent` 後は既定 500ms の間、前回意味に基づく動作意図を同じ左右に保持し、`left_right_swap_suspect` を付ける。
-    - 手 / 姿勢未検出時は時系列腕状態が `predicted` / `recovering` なら前回意味に基づく動作意図を既定 500ms まで保持し、その間 `fallback_active` は付けない。`observedAgeMs > 700` または `state === "lost" && confidence < 0.15` の左右は `lost` にする。代替処理判定の体幹信頼度は `reliability.parts.torso.finalWeight` を優先し、欠損時は左右時系列腕信頼度平均を使う。左右両腕が未検出または信頼度 `< 0.15` で体幹信頼度も `< 0.15` の場合だけ arms を `fallback` にする。
-    - `MotionIntentEstimator.reset()` はカメラ停止、映像固定データ読み込み、記録読み込み、再生停止、由来再初期化で呼び、過去フレームのヒステリシス / 待機期間 / 手振り窓を破棄する。`dtMs <= 0`、`dtMs > 250`、非有限 dt のフレームはカウンターを更新せず、`invalid_dt` 警告を返す。`createMotionIntentState(input, config?)` は単発補助処理であり、過去フレームが必要な意味に基づく動作意図は初回フレームでは発火しない。
-    - `createSemanticMotionPoseLayer()` は `MotionIntentState`、完成版 `AvatarMotionProfile`、任意前回の意味に基づく動作診断用スナップショット、任意 `deltaSeconds` だけを入力にし、時系列 / Hand / 未加工ジェスチャー / MediaPipe 未加工のランドマークは読まない。`tracking` と `guarded` は無処理、片側だけの `clapLike` も無処理とし、左右両方が `clapLike` の場合だけ `side: "both"` の `soft_clap_like` を 1 層返す。
-    - `createFingerCurlPoseLayer()` は Hand スナップショットの `fingerCurl` を主値とし、`pointing` / `thumbsUp` / `peace` / `wave` / `explain` の MotionIntent 上書きをグループ曲げへ適用する。未加工のランドマークから指ごとの 3D 回転は作らず、曲げ / 指の開き / 親指の対向動作の低次元値だけをクォータニオンへ写す。
-    - ジェスチャー Recognizer は本番任意合格として初期化済みであり、信頼性実観測接続は `ReliabilityMap.gesture` に閉じる。制作済み意味に基づく動作範囲制限資材と `VRMCharacterManager.update()` の適用順序変更は後続タスクに残す。AnimationMixer を使う場合も意味に基づく動作範囲制限再生は準備段階に留め、最終的には姿勢差分を `VrmPoseComposer` の意味に基づく動作のレイヤーとして渡す。
-- `TemporalUpperBodyState` → 腕 IK 橋渡し
-    - 段階 6 本番腕入力は `src/character/retargeting/sincroPoseTemporalArmInput.ts` の `createSincroPoseTemporalArmInput()` を正本とし、`TemporalUpperBodyState`、`MinimalAvatarMotionProfile`、`SincroArmIkSolver` 測定値から `createTemporalArmIkInput()` 経由で肩ローカル目標を作る。`solveWorldArmIk()` の Pose スナップショット入力経路は廃止予定代替処理 / A/B 比較用に残すが、時系列の主入力が有効なフレームでは本番主入力にしない。
-    - 入力は `TemporalUpperBodyState`、腕左右、`MinimalAvatarMotionProfile`、`SincroArmIkSolver` と同等の `shoulderWidth` / `upperArmLength` / `lowerArmLength` 測定値である。倍率スナップショットはプロファイル測定値を優先し、欠損時だけソルバー測定値に代替処理する。`maxReachRatio` は `0.985` に固定する。
-    - `bodyLocalWrist` がある場合は主入力とし、身体のローカル座標系の絶対タプルから `sideSign = left ? -1 : 1`、`shoulderLocal = [sideSign * shoulderWidth * 0.5, 0, 0]` を再構成し、`relative = bodyLocalWrist - shoulderLocal` を作る。身体のローカル座標系のタプルは追跡処理の体幹を基準に正規化した座標でアバターメートルではないため、`relative` に左右方向 / 上下方向 / 奥行き倍率を適用した方向を正規化し、長さは `reach * avatarArmLength * defaultReachScale` から与える。`bodyLocalElbow` がある場合の `elbowPole` は従来どおり肩相対方向へ変換する。
-    - `bodyLocalWrist` がない場合はスカラー代替処理を使う。`rawReach = reach * (upperArmLength + lowerArmLength)`、`x = openness * sideSign * rawReach * lateralScale * defaultReachScale`、`y = sin(elevationRad) * rawReach * verticalScale * defaultReachScale`、`z = forwardness * rawReach * depthCompression * defaultReachScale` とし、ソルバー前目標長を腕長さ `* 0.985` 以下へ値の制限する。
-    - `weight` は時系列腕 `confidence` と `state` だけから決める。`tracked` は `confidence`、`suspect` は `confidence * 0.55`、`recovering` は `confidence * recoveringBlend.progress`、`predicted` は `confidence * 0.35`、`lost` は `0` とする。`lost` または非有限入力では `target` を返さず、`reasonCodes` とゼロ重みデバッグを返す。
-    - 段階 6 橋渡しは Pose 手首 / Hand 手首の未加工のワールド座標のZ値を再読解しない。奥行きは時系列 `forwardness` と `profile.solverDefaults.depthCompression`、または保存済み `bodyLocalWrist` の身体のローカル座標系の z から決定し、Hand 手首は手のひら / 指 / ジェスチャー補助の入力に留めて腕 IK 目標の主入力にしない。
-    - 本番代替処理は `temporal_input_missing`、`avatar_profile_missing`、`temporal_arm_lost`、`invalid_temporal_arm`、`ik_solver_missing` のいずれかを `frame.solver.phase6.arms.<side>.source.fallbackReason` と `bridgeReasonCodes` に保存して、既存 `SincroPoseMotionSnapshot.leftArm/rightArm.targets` 経路へ戻す。`source` 欠損の旧 `sincro.phase6-solver.v1` ログは再生閲覧画面で `primarySource: "pose-snapshot-fallback"` 相当として扱う。
+    - `sincro.motion-intent.v1`をスキーマバージョンとする、標準化 / 時系列 / 信頼性の後段、意味に基づく動作の姿勢 / IK / 指ボーン適用の前段で使うJSON保存可能な動作意図契約。
+    - motion-debugの `frame.intent`任意格納先に保存する通常のオブジェクトとして扱う。motion-debugログスキーマでは `z.unknown().optional()`のまま保持し、ログ読み込み全体の互換性は壊さない。
+    - `arms.left` / `arms.right`の `intent`は `"tracking"`、`"wave"`、`"pointing"`、`"thumbsUp"`、`"peace"`、`"nearFace"`、`"explain"`、`"clapLike"`、`"guarded"`、`"lost"`、`"fallback"`に固定する。保存値はローワーキャメルケースとし、`"thumbs_up"`、`"openPalm"`、ジェスチャーRecognizerの元のラベルは腕意図として保存しない。
+    - `torso.intent`は `"neutral"`、`"leaning"`、`"turning"`、`"settling"`に固定する。v1では腕と同じ意味に基づく動作ジェスチャー名を体幹に入れない。
+    - `sourceGestureLabel`はジェスチャーRecognizerの元のラベルを説明用に保存する任意フィールドであり、`intent`の代替値にはしない。
+    - `confidence`、`reliability`、`expressiveness`は `0..1`、`ageMs`、`stableDurationMs`、`cooldownRemainingMs`、`timestamp.mediaTimeMs`は有限かつ `>= 0`に固定する。
+    - 警告コードは `"low_hand_reliability"`、`"low_pose_reliability"`、`"gesture_unstable"`、`"gesture_cooldown"`、`"wave_motion_missing"`、`"near_face_hold"`、`"left_right_swap_suspect"`、`"fallback_active"`、`"invalid_dt"`に固定する。
+    - `parseMotionIntentState()`は再生 / 閲覧画面境界の検証APIであり、未知 `schemaVersion`は `unknown_schema_version`、範囲外数値は `out_of_range`、非有限数値 / 未知の列挙値 / 余分なキー / クラスのインスタンス / 関数 / Three.js実行時オブジェクト風フィールドは `invalid_state`として返す。
+    - 既定状態は呼び出し元指定の `mediaTimeMs`を保存し、左右腕を `intent: "tracking"`、`confidence: 0`、`reliability: 0`、`expressiveness: 0`、`source: "fallback"`にする。`performance.now()`は呼ばず、最上位警告には `fallback_active`を含める。
+    - `MotionIntentEstimator`は `TemporalUpperBodyState`、任意 `ReliabilityMap`、任意 `SincroHandMotionSnapshot`、任意ジェスチャー観測値、呼び出し元指定 `mediaTimeMs`だけを入力にする。推定処理内で `performance.now()`、DOM、MediaPipe未加工のランドマーク、VRM姿勢、`AnimationMixer`は読まない。
+    - 本番観測専用の処理工程は `SincroGestureMotionSnapshot`を直接MotionIntentへ渡さず、`{ left?: { label; confidence }; right?: ... }`の `GestureIntentObservation`へ正規化してから `ReliabilityMap.gesture`と `MotionIntentEstimator.update({ gesture })`に渡す。`ReliabilityMap.gesture`は有効観測値がある場合 `source: "gesture"`とし、未知の元ラベルでも意味に基づく動作意図への昇格とは分けて保存する。ジェスチャーの任意処理が省略 / 未検出の場合だけ `source: "neutral"`仮の値を返す。
+    - ジェスチャーRecognizerは主制御器ではなく補助入力として扱う。v1の元のラベル対応付けは `"Open_Palm" -> "explain"`、`"Pointing_Up" -> "pointing"`、`"Thumb_Up" -> "thumbsUp"`、`"Victory" -> "peace"`、`"Closed_Fist" -> "guarded"`に固定し、`"None"`、`"Thumb_Down"`、`"ILoveYou"`、未知表示名は意味に基づく動作意図にしない。
+    - 信頼度検査はReliabilityMapがある場合 `ReliabilityMap.gesture.finalWeight >= 0.70`、該当手部位 `>= 0.60`、指部位 `>= 0.45`を既定値とする。ReliabilityMap欠損時は旧形式 / テスト入力としてジェスチャー信頼度と手左右信頼度を代替処理に使う。`MotionIntentEstimatorConfig.thresholds`指定時だけ既定値を上書きする。
+    - 最小継続時間 / 待機期間は左右ごとに持つ。既定値は `wave 400ms / 650ms`、`pointing 200ms / 500ms`、`thumbsUp 200ms / 500ms`、`peace 200ms / 500ms`、`nearFace 250ms / 300ms`、`explain 300ms / 400ms`、`clapLike 150ms / 800ms`、`guarded 250ms / 500ms`、`fallback 300ms / 0ms`とする。`timing`設定は `wave`を含まず、手振りの継続時間 / 待機期間は `config.wave`だけで上書きする。
+    - `wave`は `"Open_Palm"`表示名だけでは発火しない。時系列手首の身体のローカル座標系のx速度を最優先し、欠損時だけ前回 `hand.<side>Hand.fullFrameWrist[0]`との差分から画像速度を補う。`elevationRad >= 0.05`、1200ms窓内のx速度符号反転2回以上、身体のローカル座標系のx `abs >= 0.05`または画像x `abs >= 0.12`、最小継続時間、待機期間終了をすべて満たす場合だけ `wave`にする。`opennessPerSec`は手振り判定に使わない。
+    - `nearFace`はFace外接矩形を再解釈せず、時系列腕の `classification === "front"`、`elevationRad >= 0.20`、`forwardness >= 0.45`、手信頼度 `>= 0.45`の近似条件で判定する。`clapLike`は左右手検出済み、両手首の2D距離 `<= 0.16`、左右手首x速度が対向している場合だけ候補にする。
+    - `guarded`は腕分類 `crossed`、左右手首2D距離 `<= 0.18`かつ左右どちらかの `forwardness >= 0.35`、または信頼性 / Hand警告の `side_inconsistent`で候補にする。`side_inconsistent`後は既定500msの間、前回意味に基づく動作意図を同じ左右に保持し、`left_right_swap_suspect`を付ける。
+    - 手 / 姿勢未検出時は時系列腕状態が `predicted` / `recovering`なら前回意味に基づく動作意図を既定500msまで保持し、その間 `fallback_active`は付けない。`observedAgeMs > 700`または `state === "lost" && confidence < 0.15`の左右は `lost`にする。代替処理判定の体幹信頼度は `reliability.parts.torso.finalWeight`を優先し、欠損時は左右時系列腕信頼度平均を使う。左右両腕が未検出または信頼度 `< 0.15`で体幹信頼度も `< 0.15`の場合だけarmsを `fallback`にする。
+    - `MotionIntentEstimator.reset()`はカメラ停止、映像固定データ読み込み、記録読み込み、再生停止、由来再初期化で呼び、過去フレームのヒステリシス / 待機期間 / 手振り窓を破棄する。`dtMs <= 0`、`dtMs > 250`、非有限dtのフレームはカウンターを更新せず、`invalid_dt`警告を返す。`createMotionIntentState(input, config?)`は単発補助処理であり、過去フレームが必要な意味に基づく動作意図は初回フレームでは発火しない。
+    - `createSemanticMotionPoseLayer()`は `MotionIntentState`、完成版 `AvatarMotionProfile`、任意前回の意味に基づく動作診断用スナップショット、任意 `deltaSeconds`だけを入力にし、時系列 / Hand / 未加工ジェスチャー / MediaPipe未加工のランドマークは読まない。`tracking`と `guarded`は無処理、片側だけの `clapLike`も無処理とし、左右両方が `clapLike`の場合だけ `side: "both"`の `soft_clap_like`を1層返す。
+    - `createFingerCurlPoseLayer()`はHandスナップショットの `fingerCurl`を主値とし、`pointing` / `thumbsUp` / `peace` / `wave` / `explain`のMotionIntent上書きをグループ曲げへ適用する。未加工のランドマークから指ごとの3D回転は作らず、曲げ / 指の開き / 親指の対向動作の低次元値だけをクォータニオンへ写す。
+    - ジェスチャーRecognizerは本番の任意処理として初期化済みであり、信頼性実観測接続は `ReliabilityMap.gesture`に閉じる。制作済み意味に基づく動作範囲制限資材と `VRMCharacterManager.update()`の適用順序変更は後続タスクに残す。AnimationMixerを使う場合も意味に基づく動作範囲制限再生は準備段階に留め、最終的には姿勢差分を `VrmPoseComposer`の意味に基づく動作のレイヤーとして渡す。
+- `TemporalUpperBodyState` → 腕IK橋渡し
+    - 段階6本番腕入力は `src/character/retargeting/sincroPoseTemporalArmInput.ts`の `createSincroPoseTemporalArmInput()`を正本とし、`TemporalUpperBodyState`、`MinimalAvatarMotionProfile`、`SincroArmIkSolver`測定値から `createTemporalArmIkInput()`経由で肩ローカル目標を作る。`solveWorldArmIk()`のPoseスナップショット入力経路は廃止予定代替処理 / A/B比較用に残すが、時系列の主入力が有効なフレームでは本番主入力にしない。
+    - 入力は `TemporalUpperBodyState`、腕左右、`MinimalAvatarMotionProfile`、`SincroArmIkSolver`と同等の `shoulderWidth` / `upperArmLength` / `lowerArmLength`測定値である。倍率スナップショットはプロファイル測定値を優先し、欠損時だけソルバー測定値に代替処理する。`maxReachRatio`は `0.985`に固定する。
+    - `bodyLocalWrist`がある場合は主入力とし、身体のローカル座標系の絶対タプルから `sideSign = left ? -1 : 1`、`shoulderLocal = [sideSign * shoulderWidth * 0.5, 0, 0]`を再構成し、`relative = bodyLocalWrist - shoulderLocal`を作る。身体のローカル座標系のタプルは追跡処理の体幹を基準に正規化した座標でアバターメートルではないため、`relative`に左右方向 / 上下方向 / 奥行き倍率を適用した方向を正規化し、長さは `reach * avatarArmLength * defaultReachScale`から与える。`bodyLocalElbow`がある場合の `elbowPole`は従来どおり肩相対方向へ変換する。
+    - `bodyLocalWrist`がない場合はスカラー代替処理を使う。`rawReach = reach * (upperArmLength + lowerArmLength)`、`x = openness * sideSign * rawReach * lateralScale * defaultReachScale`、`y = sin(elevationRad) * rawReach * verticalScale * defaultReachScale`、`z = forwardness * rawReach * depthCompression * defaultReachScale`とし、ソルバー前目標長を腕長さ `* 0.985`以下に制限する。
+    - `weight`は時系列腕 `confidence`と `state`だけから決める。`tracked`は `confidence`、`suspect`は `confidence * 0.55`、`recovering`は `confidence * recoveringBlend.progress`、`predicted`は `confidence * 0.35`、`lost`は `0`とする。`lost`または非有限入力では `target`を返さず、`reasonCodes`とゼロ重みデバッグを返す。
+    - 段階6橋渡しはPose手首 / Hand手首の未加工のワールド座標のZ値を再読解しない。奥行きは時系列 `forwardness`と `profile.solverDefaults.depthCompression`、または保存済み `bodyLocalWrist`の身体のローカル座標系のzから決定し、Hand手首は手のひら / 指 / ジェスチャー補助の入力に留めて腕IK目標の主入力にしない。
+    - 本番代替処理は `temporal_input_missing`、`avatar_profile_missing`、`temporal_arm_lost`、`invalid_temporal_arm`、`ik_solver_missing`のいずれかを `frame.solver.phase6.arms.<side>.source.fallbackReason`と `bridgeReasonCodes`に保存して、既存 `SincroPoseMotionSnapshot.leftArm/rightArm.targets`経路へ戻す。`source`欠損の旧 `sincro.phase6-solver.v1`ログは再生閲覧画面で `primarySource: "pose-snapshot-fallback"`相当として扱う。
 - `MinimalAvatarMotionProfile`
     - `src/character/avatarProfile/minimalAvatarMotionProfile.ts` を正本とする、VRM 読み込み時に測れる最小アバター固有のプロファイル契約。
     - スキーマバージョンは `sincro.minimal-avatar-motion-profile.v1` に固定し、`optionalBones`、`measurements`、`solverDefaults`、`warnings` だけを持つ通常のオブジェクトとして保存する。`THREE.Vector3`、`THREE.Quaternion`、`Object3D`、`VRM` インスタンスはプロファイルに保持しない。
