@@ -48,7 +48,7 @@ bandogは`SincroLogs.service.consul`のDNS応答も必須監視する。実際�
 
 ## 共通ログ項目
 
-自前サービスは標準出力・標準エラーへ1イベント1行のJSONを出力し、収集側が第三者のテキストも同じ項目へ揃える。
+自前サービスは標準出力・標準エラーへ1イベント1行のJSONを出力し、収集側が第三者のテキストも同じ項目に揃える。
 
 | 項目                                                   | 意味                                                 |
 | ------------------------------------------------------ | ---------------------------------------------------- |
@@ -74,7 +74,7 @@ Python4サービスは対話設定を受け取り、認識・対話ワーカー�
 | `SINCRO_LOG_SYNTHESIS_ENABLED`    | `true` | 読み上げ本文、話者・生成条件、キャッシュ結果、処理時間 |
 
 未指定は有効、指定値は`true` / `false`のみとし、空文字・不正値はキーを示して起動時に拒否する。
-設定は独立し、本文を両経路で止めるには両方を無効にする。対象コンテナ再作成で反映する。
+設定は独立し、本文を両経路で止めるには両方を無効にする。対象コンテナの再作成で反映する。
 自前サービスは出力元で止め、一般の稼働・失敗・状態変化ログは残す。
 例外、要求全体、URLなどを経由して本文を迂回出力しない。認証トークン・秘密鍵は常に記録しない。
 第三者は公式設定を優先し、止められないものはVectorで除去する。その場合Docker原本に残る範囲を明記する。
@@ -135,7 +135,7 @@ Caddy 2.10.2の`dynamic a`が`consul-agent-logging:8600`へ明示的に問い合
 `consul-agent-logging`はTCP/UDP 8320で参加する。中央専用の8321とは別の保存ボリュームとnode名を持つ。
 `SincroLogCollector_<host>`と`SincroLogRouter_<host>`をそれぞれ登録し、observerの8687 `/collector`とrouterの8080 `/health`を10秒間隔・5秒時間切れで確認する。
 全ホストの個別状態はConsulの`/v1/health/service/SincroLogCollector`と`SincroLogRouter`で確認する。
-bandogのDNS確認は少なくとも1台の正常なサービスの存在を示すものであり、全インスタンスの正常を保証しない。
+bandogのDNS確認は少なくとも1台の正常なサービスの存在を示すものであり、全インスタンスが正常であることは保証しない。
 
 ### 原本・バッファ・復旧
 
@@ -194,7 +194,7 @@ PokeとMastraは同じ対話ワーカーを通る。NeMo補正の詳細追跡は
 
 **破壊的変更**: Pythonの標準出力と`--log-file`は従来のテキストからJSONLへ変わる。
 ファイルは指定時だけ作成し、既存の10 MiB・100世代のローテーションを維持する。
-設定を繰り返してもハンドラーを共有・重複しない。設定変更はコンテナの再作成で反映する。
+設定を繰り返してもハンドラーを共有したり重複させたりしない。設定変更はコンテナの再作成で反映する。
 
 ## RTC・AgentServer・LLM
 
@@ -207,7 +207,7 @@ AgentServerは導入済みMastraのPinoロガーを直接依存として宣言�
 `timestamp`・`level`・`message`への対応付けは出力元で行い、Pinoの数値`time`は補助項目として残る。
 任意の要求・ヘッダー・例外・動的メッセージは出さず、固定メッセージと選別した診断属性を使う。
 対話設定は厳密に検証し、無効時は`text`を出力しない。本文の主記録元はTextProcessorとし、AgentServerに重複した本文イベントは追加しない。
-子ロガーでも同じ属性選別を適用する。配布起動窓口`start.mjs`は設定失敗もJSONLへ変換する。
+子ロガーでも同じ属性選別を適用する。配布用の起動スクリプト`start.mjs`は設定失敗もJSONLへ変換する。
 
 TextProcessorが送る`memory.thread = sincromisor:<session_id>`を、認証済みAgent API要求の処理開始・引渡しへ対応付ける。
 `agent_request_dispatched`はHTTPのSSE応答を渡した時点であり、生成の正常完了を意味しない。発話ID・シーケンスIDはAgentServerで作らない。
@@ -260,7 +260,7 @@ Docker Eventsは直近256件まで、health履歴も有限で、補助処理の�
 bandogは従来の全サービス必須DNS判定と`/services.status`を維持し、ログ基盤に`SincroLogObserver`を加える。
 初回とサービスごとの異常・復旧だけを`bandog_dns`へ出し、同じ状態は再出力しない。
 `target_service`は監視先であり、ログの`host`はbandogの実行ホストである。DNSから監視先の配置ホストを推測しない。
-各ホストの収集インスタンスの状態はConsulの実チェック記録で確認する。
+各ホストの収集インスタンスの状態はConsulの実際のチェック記録で確認する。
 
 Consulの同一状態の出力更新の遅延は[公式実装のCheckUpdateInterval](https://github.com/hashicorp/consul/blob/main/agent/config/runtime.go)と[agentチェックAPI](https://developer.hashicorp.com/consul/api-docs/agent/check)を確認した。
 
@@ -274,20 +274,20 @@ Consulの同一状態の出力更新の遅延は[公式実装のCheckUpdateInter
 
 ## 内部処理の失敗診断
 
-内容記録の有効・無効にかかわらず、コマンド・HTTP/SSE・保存・LLM/MCP・Consul登録の境界で操作、相手、結果と取得可能なIDを記録する。例外の値ではなく型・既知コードを有限の `reason` へ変換する。音声変換のstderrは先頭64 KiBから既知原因語だけを採用し、原文や音声は中央へ送らない。未知原因は `failed` / `output_redacted` とし、推測で本文を採用しない。
+内容記録の有効・無効にかかわらず、コマンド・HTTP/SSE・保存・LLM/MCP・Consul登録の境界で操作、相手、結果と取得できるIDを記録する。例外の値ではなく型・既知コードを有限の `reason`へ変換する。音声変換のstderrは先頭64 KiBから既知原因語だけを採用し、原文や音声は中央へ送らない。未知原因は `failed` / `output_redacted`とし、推測で本文を採用しない。
 
-認識のローカル/S3保存は `recognition_storage` で書込成功・拒否・接続失敗を記録する。ファイル名やS3キーを複製せず、従来の保存形式と失敗時の処理を維持する。Pythonのサービス発見は登録開始・成功・失敗、正常候補なしとConsul接続不能を分け、再試行を継続する。
+認識のローカル/S3保存は `recognition_storage`で書込成功・拒否・接続失敗を記録する。ファイル名やS3キーを複製せず、従来の保存形式と失敗時の処理を維持する。Pythonのサービス発見は登録開始・成功・失敗、正常候補なしとConsul接続不能を分け、再試行を継続する。
 
 初期化シェルは秘密の読取・検証・保存権限、モデルの存在・取得・検証、S3の署名確認、Consul登録と子プロセス終了の段階・終了コードを固定JSONへ出す。weed shellの出力は引き続き捨て、署名付き要求と不正キー拒否で起動を判定する。秘密ファイルが空の場合も利用サービスを起動しない。短命コンテナの過去ログ回収は配送・復旧の責務とする。
 
 ## ホストのjournal
 
-Linuxの永続journal `/var/log/journal` と実行中journal `/run/log/journal` をVectorへ読取専用で渡す。別の保存先は `.env` の `SINCRO_LOG_JOURNAL_DIR` / `SINCRO_LOG_RUNTIME_JOURNAL_DIR` で指定する。Dockerソケット以外のホストルートや特権モードは要求しない。収集コンテナはrootで読み、原本の所有者・モードは変更しない。利用者名前空間等でホスト側の読取権限が不足する場合は、配置先のjournal読取グループまたはACLで必要な読取だけを与える。
+Linuxの永続journal `/var/log/journal`と実行中journal `/run/log/journal`をVectorへ読取専用で渡す。別の保存先は `.env`の `SINCRO_LOG_JOURNAL_DIR` / `SINCRO_LOG_RUNTIME_JOURNAL_DIR`で指定する。Dockerソケット以外のホストルートや特権モードは要求しない。収集コンテナはrootで読み、原本の所有者・モードは変更しない。利用者名前空間等でホスト側の読取権限が不足する場合は、配置先のjournal読取グループまたはACLで必要な読取だけを与える。
 
-初回導入ではホストでjournaldの永続保存を有効にし、容量・空き容量を管理する。例えば `/etc/systemd/journald.conf.d/sincromisor.conf` の `[Journal]` に `Storage=persistent` とホストに適した `SystemMaxUse` / `RuntimeMaxUse` を設定し、`systemctl restart systemd-journald`、`journalctl --flush` を実行する。これらは管理者がホストごとに行う前提であり、Composeから原本を変更しない。原本が空・不存在・読取拒否の場合も本体の依存条件にはせず、収集の異常として扱う。
+初回導入ではホストでjournaldの永続保存を有効にし、容量・空き容量を管理する。例えば `/etc/systemd/journald.conf.d/sincromisor.conf`の `[Journal]`に `Storage=persistent`とホストに適した `SystemMaxUse` / `RuntimeMaxUse`を設定し、`systemctl restart systemd-journald`、`journalctl --flush`を実行する。これらは管理者がホストごとに行う前提であり、Composeから原本を変更しない。原本が空・不存在・読取拒否の場合も本体の依存条件にはせず、収集の異常として扱う。
 
-収集イメージはVector 0.58.0の公式バイナリとUbuntu 26.04のjournalctlを使う。公式VectorのDebianイメージに含まれるjournalctl 257では過去bootの追尾をVectorが拒否するため、258以降が必要である。nativeの `journald` 入力で `current_boot_only=false`、`--merge` を指定し、ホストとコンテナのmachine-idの違いを吸収する。読取位置は `host_journal` 入力名で `vector-data` に保持する。入力名やボリュームを変更・削除すると再読取や欠落の原因になる。[Vectorのjournal入力仕様](https://vector.dev/docs/reference/configuration/sources/journald/)を参照する。
+収集イメージはVector 0.58.0の公式バイナリとUbuntu 26.04のjournalctlを使う。公式VectorのDebianイメージに含まれるjournalctl 257では過去bootの追尾をVectorが拒否するため、258以降が必要である。nativeの `journald`入力で `current_boot_only=false`、`--merge`を指定し、ホストとコンテナのmachine-idの違いを吸収する。読取位置は `host_journal`入力名で `vector-data`に保持する。入力名やボリュームを変更・削除すると再読取や欠落の原因になる。[Vectorのjournal入力仕様](https://vector.dev/docs/reference/configuration/sources/journald/)を参照する。
 
-journaldの抑制・保存失敗、Docker/containerdの状態・失敗、systemdの失敗、カーネルのOOM・GPU/デバイス・ディスク・ネットワーク障害だけを `host_diagnostic` へ変換する。先頭4096バイトを既知語で分類し、任意の `MESSAGE`、コマンドライン、環境、プロセス名は複製しない。固定の `reason`、`origin`、重大度、時刻、ホスト、妥当なboot識別子とunitを残し、サービス・会話IDを推測しない。未知・無関係な行は除外する。実障害を起こさず読取経路を確認する場合は、`logger -t sincromisor-log-test -- "sincromisor-host-probe <UUID>"` の固定形式を使い、`probe_id` を検索する。
+journaldの抑制・保存失敗、Docker/containerdの状態・失敗、systemdの失敗、カーネルのOOM・GPU/デバイス・ディスク・ネットワーク障害だけを `host_diagnostic`へ変換する。先頭4096バイトを既知語で分類し、任意の `MESSAGE`、コマンドライン、環境、プロセス名は複製しない。固定の `reason`、`origin`、重大度、時刻、ホスト、妥当なboot識別子とunitを残し、サービス・会話IDを推測しない。未知・無関係な行は除外する。実際の障害を起こさず読取経路を確認する場合は、`logger -t sincromisor-log-test -- "sincromisor-host-probe <UUID>"`の固定形式を使い、`probe_id`を検索する。
 
-VectorのDocker healthcheckはHTTP生存に加え、実journalのカーソルを読めることとnativeの追尾プロセスを確認する。`log-observer` は稼働中Vectorのこの結果を `/collector` と自身の `/health` へ反映し、Consulの `SincroLogCollector` と `SincroLogObserver` がcriticalになる。原本本文をhealthcheck出力へ流さず、`journal_unreadable_or_missing` / `journal_input_unavailable` 等の固定理由だけを残す。再作成直後は新しい検査が通るまで正常としない。
+VectorのDocker healthcheckはHTTP生存に加え、実journalのカーソルを読めることとnativeの追尾プロセスを確認する。`log-observer`は稼働中Vectorのこの結果を `/collector`と自身の `/health`へ反映し、Consulの `SincroLogCollector`と `SincroLogObserver`がcriticalになる。原本本文をhealthcheck出力へ流さず、`journal_unreadable_or_missing` / `journal_input_unavailable`等の固定理由だけを残す。再作成直後は新しい検査が通るまで正常としない。

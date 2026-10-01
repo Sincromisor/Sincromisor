@@ -6,11 +6,10 @@
 
 ## タスク一覧（自動生成 / 全 35 件）
 
-### open（未完） — 7 件
+### open（未完） — 6 件
 
 | タスク                                                                                                           | タイトル                                                     | 判定 | 依存 |
 | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ---- | ---- |
-| [task-261001222206-yomiyasu-47-logging](./task-261001222206-yomiyasu-47-logging/task.md)                         | 文書の日本語表現を整える（インフラ: ログの保存と検索）       | —    | —    |
 | [task-261001222207-yomiyasu-48-storage](./task-261001222207-yomiyasu-48-storage/task.md)                         | 文書の日本語表現を整える（インフラ: 保存領域）               | —    | —    |
 | [task-261001222207-yomiyasu-49-proper-noun-biasing](./task-261001222207-yomiyasu-49-proper-noun-biasing/task.md) | 文書の日本語表現を整える（固有名詞認識の補強計画ほか）       | —    | —    |
 | [task-261001222207-yomiyasu-51-contract-spec](./task-261001222207-yomiyasu-51-contract-spec/task.md)             | 文書の日本語表現を整える（<契約名>ほか）                     | —    | —    |
@@ -18,7 +17,7 @@
 | [task-261001222215-yomiyasu-90-coding-md](./task-261001222215-yomiyasu-90-coding-md/task.md)                     | 文書の日本語表現を整える（コーディング規約(Markdown)ほか）   | —    | —    |
 | [task-261001222215-yomiyasu-91-coding-ts](./task-261001222215-yomiyasu-91-coding-ts/task.md)                     | 文書の日本語表現を整える（コーディング規約(TypeScript)ほか） | —    | —    |
 
-### done（完了） — 28 件
+### done（完了） — 29 件
 
 | タスク                                                                                                                         | タイトル                                                            | 判定    | 依存                                     |
 | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- | ------- | ---------------------------------------- |
@@ -49,6 +48,7 @@
 | [task-261001222206-yomiyasu-44-settings-items](./task-261001222206-yomiyasu-44-settings-items/task.md)                         | 文書の日本語表現を整える（設定UIの項目一覧）                        | ✅ PASS | —                                        |
 | [task-261001222206-yomiyasu-45-index](./task-261001222206-yomiyasu-45-index/task.md)                                           | 文書の日本語表現を整える（設計ドキュメント）                        | ✅ PASS | —                                        |
 | [task-261001222206-yomiyasu-46-compose](./task-261001222206-yomiyasu-46-compose/task.md)                                       | 文書の日本語表現を整える（インフラ: Docker Composeほか）            | ✅ PASS | —                                        |
+| [task-261001222206-yomiyasu-47-logging](./task-261001222206-yomiyasu-47-logging/task.md)                                       | 文書の日本語表現を整える（インフラ: ログの保存と検索）              | ✅ PASS | —                                        |
 | [task-261001222210-yomiyasu-35-motion](./task-261001222210-yomiyasu-35-motion/task.md)                                         | 文書の日本語表現を整える（フロントエンドのキャラクター動作・第5部） | ✅ PASS | `task-261001222204-yomiyasu-34-motion`   |
 
 <!-- AUTOGEN:tasks END -->
