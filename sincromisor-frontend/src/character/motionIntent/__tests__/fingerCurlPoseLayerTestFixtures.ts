@@ -6,6 +6,7 @@ import {
     type SincroHandMotionSnapshot,
 } from "../../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { AvatarMotionProfile } from "../../avatarProfile/avatarMotionProfileTypes";
+import type { FingerCurlObservation } from "../fingerCurlObservation";
 import type { FingerCurlPoseDebugSnapshot } from "../fingerCurlPoseLayer";
 import {
     type ArmMotionIntent,
@@ -89,10 +90,12 @@ export function createHand(
     curl: Partial<SincroHandFeatureSnapshot["fingerCurl"]> = {},
 ): SincroHandMotionSnapshot {
     const hand = cloneSincroHandMotionSnapshot(DEFAULT_SINCRO_HAND_MOTION_SNAPSHOT);
+    hand.lastUpdatedAtMs = 1000;
     hand.trackingEnabled = true;
     hand.detected = true;
     hand.leftHand.detected = true;
     hand.leftHand.source = "roi";
+    hand.leftHand.warnings = [];
     hand.leftHand.confidence = 1;
     hand.leftHand.features.fingerCurl = { ...hand.leftHand.features.fingerCurl, ...curl };
     hand.leftHand.features.fingerSplay = { indexMiddle: 0, middleRing: 0, ringLittle: 0 };
@@ -118,28 +121,12 @@ export function createIntent(intent: ArmMotionIntent = "tracking"): MotionIntent
 
 export function previousDebug(
     side: "left" | "right",
-    mediaTimeMs: number,
+    observedAtMs: number,
     curl: number,
-): FingerCurlPoseDebugSnapshot {
-    const groups: FingerCurlPoseDebugSnapshot["groups"][number]["group"][] = [
-        "thumb",
-        "index",
-        "middle",
-        "ringLittle",
-    ];
-    return {
-        schemaVersion: "sincro.phase9-finger-curl-pose.v1",
-        side,
-        timestamp: { mediaTimeMs },
-        groups: groups.map((group) => ({
-            group,
-            curl,
-            source: "hand",
-            warnings: [],
-        })),
-        ownedBones: [],
-        warnings: [],
-    };
+): FingerCurlObservation {
+    const features = createHand().leftHand.features;
+    setAllCurls(features, curl);
+    return { side, observedAtMs, features };
 }
 
 export function groupCurl(

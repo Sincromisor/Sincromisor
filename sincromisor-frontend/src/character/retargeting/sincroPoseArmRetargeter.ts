@@ -28,8 +28,11 @@ type RetargetPoseArmOptions = {
     side: ArmSide;
     config: SincroPoseRetargetConfig;
     armIkSolvers?: ArmIkSolvers;
+    /** 新しい観測と確認できない描画ではIKの極履歴を更新しない。 */
+    commitPole?: boolean;
 };
 
+/** 旧Pose入力から腕を解く。時系列入力が使える本番経路では特徴値の補完にも使う。 */
 export function retargetPoseArm(options: RetargetPoseArmOptions): SincroPoseRetargetedArm {
     const { arm, side, config, armIkSolvers } = options;
     if (!arm.tracked || arm.confidence < config.minConfidence) {
@@ -74,7 +77,14 @@ export function retargetPoseArm(options: RetargetPoseArmOptions): SincroPoseReta
     }
 
     if (config.armIkMode === "world_3d_ik") {
-        return retargetWorldArmIk({ targets: arm.targets, side, featureArm, config, armIkSolvers });
+        return retargetWorldArmIk({
+            targets: arm.targets,
+            side,
+            featureArm,
+            config,
+            armIkSolvers,
+            commitPole: options.commitPole,
+        });
     }
 
     return retargetScreenSpaceArmIk({
@@ -92,9 +102,17 @@ function retargetWorldArmIk(options: {
     featureArm: SincroPoseRetargetedArm;
     config: SincroPoseRetargetConfig;
     armIkSolvers?: ArmIkSolvers;
+    /** 新しい観測と確認できない描画ではIKの極履歴を更新しない。 */
+    commitPole?: boolean;
 }): SincroPoseRetargetedArm {
     const { targets, side, featureArm, config, armIkSolvers } = options;
-    const ikResult = solveWorldArmIk({ targets, side, config, armIkSolvers });
+    const ikResult = solveWorldArmIk({
+        targets,
+        side,
+        config,
+        armIkSolvers,
+        commitPole: options.commitPole,
+    });
     if (!ikResult.result) {
         return {
             ...featureArm,

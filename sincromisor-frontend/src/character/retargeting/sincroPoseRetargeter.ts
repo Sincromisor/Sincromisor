@@ -1,4 +1,4 @@
-// reason: structure-threshold-exception IK・前回フレーム・表示予測の破棄を一つの既存所有者で調停する。予測計算自体は専用モジュールへ分離済み。
+// reason: structure-threshold-exception IK・観測単位の極履歴・表示予測の破棄を一つの既存所有者で調停する。予測と体幹の計算は専用モジュールへ分離する。
 import type { VRM } from "@pixiv/three-vrm";
 import { MathUtils } from "three/src/math/MathUtils.js";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
@@ -70,6 +70,11 @@ export class SincroPoseRetargeter {
     private config: SincroPoseRetargetConfig;
     private readonly displayState = new SincroPoseArmDisplayState();
     private lastUpdateAtMs?: number;
+    /** 新観測と表示予測を区別し、描画頻度でIK履歴を進めないための基点。 */
+    private lastPoleObservationTimeMs?: number;
+    private fallbackObservations: Partial<
+        Record<SincroArmSide, { time: number; arm: SincroPoseRetargetedArm }>
+    > = {};
     private smoothedFrame: SincroPoseRetargetFrame = cloneFrame(NEUTRAL_POSE_FRAME);
     private armIkSolvers?: Record<"left" | "right", SincroArmIkSolver>;
     private armIkPrimarySources: Partial<
@@ -140,7 +145,8 @@ export class SincroPoseRetargeter {
         if (this.lastUpdateAtMs === nowMs) return cloneFrame(this.smoothedFrame);
         if (this.lastUpdateAtMs !== undefined && nowMs < this.lastUpdateAtMs) this.reset();
         if (!snapshot.trackingEnabled || snapshot.degradedToFaceOnly) this.displayState.reset();
-        else if (runtime?.temporal)
+        else if (runtime?.temporal) {
+            this.observeArmPoles(snapshot, runtime);
             runtime = {
                 ...runtime,
                 temporal: this.displayState.evaluate(
@@ -148,6 +154,7 @@ export class SincroPoseRetargeter {
                     runtime.mediaTimeMs ?? runtime.temporal.timestamp.mediaTimeMs,
                 ),
             };
+        }
         const deltaMs =
             this.lastUpdateAtMs === undefined
                 ? 1000 / 60
@@ -185,6 +192,7 @@ export class SincroPoseRetargeter {
                 config: this.config,
                 anchor,
                 upperBodyWeight,
+                profile: this.avatarMotionProfile,
             }),
             leftArm,
             rightArm,
@@ -195,10 +203,51 @@ export class SincroPoseRetargeter {
     reset(): void {
         this.displayState.reset();
         this.lastUpdateAtMs = undefined;
+        this.lastPoleObservationTimeMs = undefined;
+        this.fallbackObservations = {};
         this.smoothedFrame = cloneFrame(NEUTRAL_POSE_FRAME);
         this.armIkPrimarySources = {};
         this.armIkSolvers?.left.resetPoleHistory();
         this.armIkSolvers?.right.resetPoleHistory();
+    }
+
+    /** 新しいPoseの実観測だけでIKの極を更新し、表示予測の反復回数から切り離す。 */
+    private observeArmPoles(
+        snapshot: SincroPoseMotionSnapshot,
+        runtime: SincroPoseRetargetRuntimeInput,
+    ): void {
+        const temporal = runtime.temporal;
+        if (!temporal || temporal.timestamp.mediaTimeMs === this.lastPoleObservationTimeMs) return;
+        if (
+            this.lastPoleObservationTimeMs !== undefined &&
+            temporal.timestamp.mediaTimeMs < this.lastPoleObservationTimeMs
+        ) {
+            this.armIkSolvers?.left.resetPoleHistory();
+            this.armIkSolvers?.right.resetPoleHistory();
+        }
+        this.lastPoleObservationTimeMs = temporal.timestamp.mediaTimeMs;
+        for (const side of ["left", "right"] as const) {
+            const solver = this.armIkSolvers?.[side];
+            const arm = temporal.arms[side];
+            if (
+                !solver ||
+                arm.observedAgeMs !== 0 ||
+                arm.state === "lost" ||
+                arm.state === "predicted"
+            )
+                continue;
+            const input = createSincroPoseTemporalArmInput({
+                snapshot,
+                temporal,
+                profile: runtime.profile,
+                solver,
+                side,
+            });
+            if (input.target) {
+                this.prepareArmIkPrimarySource(side, "temporal", solver);
+                solver.solve(input.target);
+            }
+        }
     }
 
     private snapshotFallbackReason(snapshot: SincroPoseMotionSnapshot): string | undefined {
@@ -233,7 +282,6 @@ export class SincroPoseRetargeter {
         runtime?: SincroPoseRetargetRuntimeInput;
     }): SincroPoseRetargetedArm {
         const { snapshot, side, runtime } = options;
-        const arm = side === "left" ? snapshot.leftArm : snapshot.rightArm;
         const temporalInput = createSincroPoseTemporalArmInput({
             snapshot,
             temporal: runtime?.temporal,
@@ -254,7 +302,7 @@ export class SincroPoseRetargeter {
             this.config.armIkStrength > 0
         ) {
             this.prepareArmIkPrimarySource(side, "temporal", solver);
-            const solved = solver.solve(temporalInput.target);
+            const solved = solver.solve(temporalInput.target, false);
             if (solved !== undefined) {
                 return {
                     ...this.createWorldIkArm({
@@ -271,12 +319,7 @@ export class SincroPoseRetargeter {
             }
             this.prepareArmIkPrimarySource(side, "pose-snapshot-fallback", solver);
             return {
-                ...retargetPoseArm({
-                    arm,
-                    side,
-                    config: this.config,
-                    armIkSolvers: this.armIkSolvers,
-                }),
+                ...this.retargetFallbackObservation(snapshot, side),
                 solverSource: {
                     primarySource: "pose-snapshot-fallback",
                     fallbackReason: "invalid_temporal_arm",
@@ -291,17 +334,33 @@ export class SincroPoseRetargeter {
             this.prepareArmIkPrimarySource(side, "pose-snapshot-fallback", solver);
         }
         return {
-            ...retargetPoseArm({
-                arm,
-                side,
-                config: this.config,
-                armIkSolvers: this.armIkSolvers,
-            }),
+            ...this.retargetFallbackObservation(snapshot, side),
             solverSource: temporalInput.source,
             temporalBridge: temporalInput.bridge,
         };
     }
 
+    /** 共通時系列がない旧入力も観測時刻単位で解き、同じPoseの再描画で極を確定し直さない。 */
+    private retargetFallbackObservation(
+        snapshot: SincroPoseMotionSnapshot,
+        side: SincroArmSide,
+    ): SincroPoseRetargetedArm {
+        const time = snapshot.lastUpdatedAtMs;
+        const previous = this.fallbackObservations[side];
+        if (time !== undefined && previous?.time === time) return structuredClone(previous.arm);
+        const arm = retargetPoseArm({
+            arm: side === "left" ? snapshot.leftArm : snapshot.rightArm,
+            side,
+            config: this.config,
+            armIkSolvers: this.armIkSolvers,
+            commitPole: time !== undefined && Number.isFinite(time),
+        });
+        if (time !== undefined)
+            this.fallbackObservations[side] = { time, arm: structuredClone(arm) };
+        return arm;
+    }
+
+    /** 座標の供給元が変わるときは、極と旧入力の計算済み姿勢を一緒に破棄する。 */
     private prepareArmIkPrimarySource(
         side: SincroArmSide,
         source: "temporal" | "pose-snapshot-fallback",
@@ -310,6 +369,7 @@ export class SincroPoseRetargeter {
         const previous = this.armIkPrimarySources[side];
         if (previous !== undefined && previous !== source) {
             solver.resetPoleHistory();
+            delete this.fallbackObservations[side];
         }
         this.armIkPrimarySources[side] = source;
     }

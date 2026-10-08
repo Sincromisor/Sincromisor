@@ -23,6 +23,8 @@ export type VrmPoseLayer = {
     pose: VrmNormalizedLocalPose;
     ownedBones: VRMHumanBoneName[];
     metadata?: {
+        /** 観測品質。意図の確信度やIK制約の適用重みとは別に扱う。 */
+        tracking?: { confidence: number; observedAgeMs: number };
         semantic?: {
             side?: "left" | "right" | "both";
             intent: ArmMotionIntent;

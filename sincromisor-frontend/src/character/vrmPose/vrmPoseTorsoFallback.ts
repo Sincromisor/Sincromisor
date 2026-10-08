@@ -34,10 +34,11 @@ const TORSO_BONES = ["spine", "chest", "upperChest"] as const;
 
 type TorsoBoneName = (typeof TORSO_BONES)[number];
 
+/** 同じ回転軸の分数回転を親から子へ配分する比率。存在するボーンの合計は1にする。 */
 export function resolveTorsoDistribution(profile: AvatarMotionProfile): TorsoDistributionResult {
     if (isValidTorsoDistribution(profile.torso.distribution)) {
         return {
-            distribution: { ...profile.torso.distribution },
+            distribution: redistributeAvailable(profile, profile.torso.distribution),
             source: "profile",
             warnings: [],
         };
@@ -49,6 +50,7 @@ export function resolveTorsoDistribution(profile: AvatarMotionProfile): TorsoDis
     };
 }
 
+/** 中立との差を各ボーンのローカル回転へ分ける。呼び出し元が追跡層にも再利用する。 */
 export function createTorsoFallbackLayer(input: TorsoFallbackLayerInput): VrmPoseLayer {
     const resolved = resolveTorsoDistribution(input.profile);
     const pose: VrmNormalizedLocalPose = {};
@@ -74,6 +76,19 @@ export function createTorsoFallbackLayer(input: TorsoFallbackLayerInput): VrmPos
         pose,
         ownedBones,
     };
+}
+
+/** 任意ボーンが無い分は残るボーンの比率へ正規化し、合計回転を保つ。全欠損なら所有しない。 */
+function redistributeAvailable(
+    profile: AvatarMotionProfile,
+    distribution: TorsoDistribution,
+): TorsoDistribution {
+    const available = TORSO_BONES.filter((bone) => isAvailableTorsoBone(profile, bone));
+    const sum = available.reduce((total, bone) => total + distribution[bone], 0);
+    const result = { spine: 0, chest: 0, upperChest: 0 };
+    for (const bone of available)
+        result[bone] = sum > 0 ? distribution[bone] / sum : 1 / available.length;
+    return result;
 }
 
 function isValidTorsoDistribution(distribution: TorsoDistribution): boolean {

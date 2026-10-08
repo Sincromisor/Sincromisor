@@ -3,9 +3,17 @@
  * MediaPipe raw landmark や Gesture Recognizer raw result は読まず、低次元 finger feature と profile distribution だけを入力境界にする。
  */
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
-import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
+import {
+    DEFAULT_SINCRO_HAND_FEATURE_SNAPSHOT,
+    type SincroHandMotionSnapshot,
+} from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfileTypes";
 import type { VrmNormalizedLocalPose, VrmPoseLayer } from "../vrmPose/vrmPoseTypes";
+import {
+    type FingerCurlObservation,
+    isFingerObservationFresh,
+    observeFingerCurl,
+} from "./fingerCurlObservation";
 import {
     addGroupPose,
     FINGER_CURL_GROUPS,
@@ -16,28 +24,30 @@ import {
 import type { ArmMotionIntent, MotionIntentState } from "./motionIntentState";
 
 const FINGER_CURL_DEBUG_SCHEMA_VERSION = "sincro.phase9-finger-curl-pose.v1" as const;
-const PREVIOUS_HOLD_MS = 250;
 
 /**
  * 片手分の finger curl layer 生成入力。
  *
  * Hand snapshot は低次元 features のみを読み、raw landmark は参照しない。`previous` は同じ side の
- * debug snapshot だけを short hold に使い、timestamp が逆行または `PREVIOUS_HOLD_MS` 超過の場合は破棄する。
+ * 未加工の有効観測だけを保持に使い、逆行または観測から250ms超過の場合は中立に戻す。
  */
 export type FingerCurlPoseLayerInput = {
     side: FingerCurlSide;
-    hand: SincroHandMotionSnapshot;
+    hand?: SincroHandMotionSnapshot;
     intent: MotionIntentState;
+    /** Pose時計で評価済みの意図の新鮮さ。観測曲げがない群だけを補う。 */
+    intentWeight?: number;
     profile: AvatarMotionProfile;
     mediaTimeMs: number;
-    previous?: FingerCurlPoseDebugSnapshot;
+    previous?: FingerCurlObservation;
+    observedAtMs?: number;
 };
 
 /**
  * finger group ごとの curl 推定結果。
  *
- * `source` は保守上重要な fallback chain で、hand curl feature、openness、intent override、
- * previous hold、default の順に解決される。warning は mapping / profile capability 由来の診断だけを入れる。
+ * `source` は現在または保持中の曲げ・開閉の観測を優先し、欠ける群だけ意図、最後に中立で補う。
+ * `warnings` にはボーンへの変換とプロファイルの対応範囲による診断を残す。
  */
 export type FingerCurlGroupState = {
     group: FingerCurlGroup;
@@ -47,7 +57,7 @@ export type FingerCurlGroupState = {
 };
 
 /**
- * Phase 9 finger curl の replay 用 debug snapshot。
+ * Phase 9 finger curl の replay 用 診断スナップショット。
  *
  * `ownedBones` は profile capability と distribution で実際に layer が所有した bone だけを含む。
  * reduced finger chain では missing-chain warning を残し、存在しない intermediate / distal bone を所有しない。
@@ -62,9 +72,9 @@ export type FingerCurlPoseDebugSnapshot = {
 };
 
 /**
- * 片手分の optional finger curl layer と debug snapshot。
+ * 片手分の optional finger curl layer と 診断スナップショット。
  *
- * capability / distribution の結果 owned bone が 0 の場合は `layer` を返さず、debug snapshot だけを返す。
+ * capability / distribution の結果 owned bone が 0 の場合は `layer` を返さず、診断スナップショット だけを返す。
  * caller は missing chain warning と owned bone list から、composer conflict が起きていないことを確認できる。
  */
 export type FingerCurlPoseLayerResult = {
@@ -76,7 +86,7 @@ export type FingerCurlPoseLayerResult = {
  * 片手分の finger curl を VrmPoseComposer layer に変換する。
  *
  * curl source は hand feature を優先し、欠損時だけ openness / previous hold / default に落とす。
- * pointing、thumbs-up、peace などの intent override は curl 値の上限 / 下限だけを調整し、VRM runtime へ
+ * 観測された曲げは意図で変えず、未観測の群だけ新鮮な意図で補う。VRM runtime へ
  * 直接書き込む副作用はない。
  */
 export function createFingerCurlPoseLayer(
@@ -84,12 +94,26 @@ export function createFingerCurlPoseLayer(
 ): FingerCurlPoseLayerResult {
     const warnings = new Set<string>();
     const distribution = normalizedProfileDistribution(input.profile, warnings);
-    const groups = createGroupStates(input);
+    const previous = input.previous?.side === input.side ? input.previous : undefined;
+    const observation = observeFingerCurl(
+        input.hand,
+        input.side,
+        input.observedAtMs ?? input.hand?.lastUpdatedAtMs,
+        input.mediaTimeMs,
+        previous,
+    );
+    const fresh = isFingerObservationFresh(observation, input.mediaTimeMs);
+    const groups = createGroupStates(input, fresh ? observation : undefined);
+    const mappingInput = {
+        side: input.side,
+        profile: input.profile,
+        features: fresh ? observation.features : DEFAULT_SINCRO_HAND_FEATURE_SNAPSHOT,
+    };
     const pose: VrmNormalizedLocalPose = {};
     const ownedBones: VRMHumanBoneName[] = [];
 
     for (const groupState of groups) {
-        addGroupPose(input, groupState, distribution, pose, ownedBones, warnings);
+        addGroupPose(mappingInput, groupState, distribution, pose, ownedBones, warnings);
     }
 
     const debug = {
@@ -119,12 +143,12 @@ export function createFingerCurlPoseLayer(
 /**
  * 左右の finger curl layer をまとめて生成する。
  *
- * `previous` は side ごとに分離して渡し、片手欠損や reduced chain の warning は各 debug snapshot に残す。
+ * `previous` は side ごとに分離して渡し、片手欠損や reduced chain の warning は各 診断スナップショット に残す。
  * 返す `layers` は実際に owned bone を持つ side だけで、空配列でも debug は左右分を必ず返す。
  */
 export function createFingerCurlPoseLayers(
     input: Omit<FingerCurlPoseLayerInput, "side" | "previous"> & {
-        previous?: Partial<Record<FingerCurlSide, FingerCurlPoseDebugSnapshot>>;
+        previous?: Partial<Record<FingerCurlSide, FingerCurlObservation>>;
     },
 ): { layers: VrmPoseLayer[]; debug: FingerCurlPoseDebugSnapshot[] } {
     const left = createFingerCurlPoseLayer({
@@ -150,47 +174,48 @@ export function createFingerCurlPoseLayers(
     };
 }
 
-function createGroupStates(input: FingerCurlPoseLayerInput): FingerCurlGroupState[] {
-    const sideHand = input.side === "left" ? input.hand.leftHand : input.hand.rightHand;
-    const previous = input.previous?.side === input.side ? input.previous : undefined;
-    return FINGER_CURL_GROUPS.map((group) =>
-        scaleGroupState(
-            applyIntentOverride(
-                resolveBaseGroupState(group, sideHand.features, previous, input),
-                input.intent.arms[input.side].intent,
-            ),
+function createGroupStates(
+    input: FingerCurlPoseLayerInput,
+    observation?: FingerCurlObservation,
+): FingerCurlGroupState[] {
+    return FINGER_CURL_GROUPS.map((group) => {
+        const state = observation
+            ? resolveBaseGroupState(
+                  group,
+                  observation.features,
+                  observation === input.previous ? "previous" : "hand",
+              )
+            : { group, curl: 0, source: "default" as const, warnings: [] };
+        return scaleGroupState(
+            state.source === "default" && (input.intentWeight ?? 0) > 0
+                ? applyIntentOverride(
+                      state,
+                      input.intent.arms[input.side].intent,
+                      (input.intentWeight ?? 0) * clamp01(input.intent.arms[input.side].confidence),
+                  )
+                : state,
             input.profile.fingers.curlScale,
-        ),
-    );
+        );
+    });
 }
 
+// 保持値も未加工の特徴から求め、出力尺度を再び観測へ戻さない。
 function resolveBaseGroupState(
     group: FingerCurlGroup,
     features: SincroHandMotionSnapshot["leftHand"]["features"],
-    previous: FingerCurlPoseDebugSnapshot | undefined,
-    input: FingerCurlPoseLayerInput,
+    source: "hand" | "previous",
 ): FingerCurlGroupState {
-    const handCurl = handCurlForGroup(group, features);
-    if (handCurl !== undefined) {
-        return { group, curl: clamp01(handCurl), source: "hand", warnings: [] };
-    }
-    if (features.openness === "open") {
-        return { group, curl: 0, source: "openness", warnings: [] };
-    }
-    if (features.openness === "half") {
-        return { group, curl: 0.55, source: "openness", warnings: [] };
-    }
-    if (features.openness === "closed") {
-        return { group, curl: 1, source: "openness", warnings: [] };
-    }
-    return (
-        previousGroupState(group, previous, input.mediaTimeMs) ?? {
+    const curl = handCurlForGroup(group, features);
+    if (curl !== undefined) return { group, curl: clamp01(curl), source, warnings: [] };
+    const openness = features.openness;
+    if (openness !== "unknown")
+        return {
             group,
-            curl: 0,
-            source: "default",
+            curl: openness === "open" ? 0 : openness === "half" ? 0.55 : 1,
+            source: source === "previous" ? source : "openness",
             warnings: [],
-        }
-    );
+        };
+    return { group, curl: 0, source: "default", warnings: [] };
 }
 
 function handCurlForGroup(
@@ -204,31 +229,16 @@ function handCurlForGroup(
     return Number.isFinite(curl) ? curl : undefined;
 }
 
-function previousGroupState(
-    group: FingerCurlGroup,
-    previous: FingerCurlPoseDebugSnapshot | undefined,
-    mediaTimeMs: number,
-): FingerCurlGroupState | undefined {
-    const previousGroup = previous?.groups.find((state) => state.group === group);
-    if (!previous || !previousGroup) {
-        return undefined;
-    }
-    const dtMs = mediaTimeMs - previous.timestamp.mediaTimeMs;
-    if (!Number.isFinite(dtMs) || dtMs < 0 || dtMs > PREVIOUS_HOLD_MS) {
-        return undefined;
-    }
-    return { group, curl: clamp01(previousGroup.curl), source: "previous", warnings: [] };
-}
-
 function applyIntentOverride(
     state: FingerCurlGroupState,
     intent: ArmMotionIntent,
+    weight: number,
 ): FingerCurlGroupState {
     const curl = intentOverrideCurl(state.group, state.curl, intent);
     if (curl === undefined) {
         return state;
     }
-    return { ...state, curl, source: "intent" };
+    return { ...state, curl: state.curl + (curl - state.curl) * weight, source: "intent" };
 }
 
 function intentOverrideCurl(
@@ -265,9 +275,6 @@ function pointingCurl(group: FingerCurlGroup, curl: number): number {
 }
 
 function scaleGroupState(state: FingerCurlGroupState, curlScale: number): FingerCurlGroupState {
-    if (state.source === "previous") {
-        return { ...state, curl: clamp01(state.curl) };
-    }
     const scale = Number.isFinite(curlScale) ? curlScale : 1;
     return { ...state, curl: clamp01(state.curl * scale) };
 }

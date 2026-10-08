@@ -1,3 +1,4 @@
+// reason: structure-threshold-exception 既存IK所有者が計測時の親座標と極履歴を管理する。今回の変更は両基準の選択であり、解法と制約処理の大規模な分割は行わない。
 import type { Object3D } from "three/src/core/Object3D.js";
 import { MathUtils } from "three/src/math/MathUtils.js";
 import { Quaternion } from "three/src/math/Quaternion.js";
@@ -116,6 +117,7 @@ export class SincroArmIkSolver {
     readonly shoulderWidth: number;
 
     private readonly upperArmNode: Object3D;
+    private readonly bindParentWorldQuaternion: Quaternion;
     private readonly neutralUpperArmQuaternion: Quaternion;
     private readonly neutralLowerArmQuaternion: Quaternion;
     private readonly bindUpperDirectionInParent: Vector3;
@@ -159,6 +161,7 @@ export class SincroArmIkSolver {
     }: SincroArmIkSolverConstructorOptions) {
         this.side = side;
         this.upperArmNode = upperArmNode;
+        this.bindParentWorldQuaternion = this.parentWorldQuaternion();
         this.neutralUpperArmQuaternion = upperArmNode.quaternion.clone();
         this.neutralLowerArmQuaternion = lowerArmNode.quaternion.clone();
         this.options = options;
@@ -193,7 +196,8 @@ export class SincroArmIkSolver {
         });
     }
 
-    solve(target: SincroArmIkTarget): SincroArmIkSolveResult | undefined {
+    /** 実観測だけが極履歴を確定する。描画予測はcommitPole=falseで同じ基点を参照する。 */
+    solve(target: SincroArmIkTarget, commitPole = true): SincroArmIkSolveResult | undefined {
         if (!targetDirectionIsUsable(target.wrist)) {
             return undefined;
         }
@@ -205,7 +209,7 @@ export class SincroArmIkSolver {
             return undefined;
         }
 
-        this.commitPoleDirection(evaluated.prepared);
+        if (commitPole) this.commitPoleDirection(evaluated.prepared);
         return evaluated.result;
     }
 
@@ -297,7 +301,7 @@ export class SincroArmIkSolver {
             return undefined;
         }
 
-        const solved = this.solveLocalQuaternions(prepared);
+        const solved = this.solveLocalQuaternions(prepared, target.bodyLocal);
         const forearmCollision = this.constraintResolver.forearmCollisionReason(
             prepared.elbow,
             prepared.targetClamp.target,
@@ -358,11 +362,14 @@ export class SincroArmIkSolver {
         };
     }
 
-    private solveLocalQuaternions({
-        upperDirection,
-        lowerDirection,
-    }: SincroArmIkPreparedTarget): SincroArmIkSolvedQuaternions {
-        const parentWorldQuaternion = this.parentWorldQuaternion();
+    private solveLocalQuaternions(
+        { upperDirection, lowerDirection }: SincroArmIkPreparedTarget,
+        bodyLocal = false,
+    ): SincroArmIkSolvedQuaternions {
+        // 共通座標の腕には親の体幹回転が後から一度だけ掛かる。前フレームのVRM姿勢を入力へ戻さない。
+        const parentWorldQuaternion = bodyLocal
+            ? this.bindParentWorldQuaternion
+            : this.parentWorldQuaternion();
         const upperLocalQuaternion = localQuaternionFromParentDirection(
             this.bindUpperDirectionInParent,
             directionInWorldQuaternionSpace(parentWorldQuaternion, upperDirection),

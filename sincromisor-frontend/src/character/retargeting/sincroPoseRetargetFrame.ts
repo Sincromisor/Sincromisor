@@ -1,4 +1,4 @@
-// reason: structure-threshold-exception 既存のフレーム生成・複製・平滑化の対称性を保つ。追加は腕の適用重みの受け渡しだけである。
+// reason: structure-threshold-exception 既存のフレーム生成・複製・平滑化の対称性を保つ。体幹クォータニオンも同じ複製・補間境界で扱う。
 import { MathUtils } from "three/src/math/MathUtils.js";
 import { Quaternion } from "three/src/math/Quaternion.js";
 import type { Vector3 } from "three/src/math/Vector3.js";
@@ -40,6 +40,13 @@ export function smoothFrame(
             ),
         },
         upperBody: {
+            torsoQuaternion: target.upperBody.torsoQuaternion
+                ? blendQuaternion(
+                      current.upperBody.torsoQuaternion ?? { x: 0, y: 0, z: 0, w: 1 },
+                      target.upperBody.torsoQuaternion,
+                      alpha,
+                  )
+                : undefined,
             spine: smoothVector(current.upperBody.spine, target.upperBody.spine, alpha),
             chest: smoothVector(current.upperBody.chest, target.upperBody.chest, alpha),
             leftShoulder: smoothVector(
@@ -108,6 +115,9 @@ export function cloneFrame(frame: SincroPoseRetargetFrame): SincroPoseRetargetFr
             shoulderOffset: { ...frame.anchor.shoulderOffset },
         },
         upperBody: {
+            torsoQuaternion: frame.upperBody.torsoQuaternion
+                ? { ...frame.upperBody.torsoQuaternion }
+                : undefined,
             spine: { ...frame.upperBody.spine },
             chest: { ...frame.upperBody.chest },
             leftShoulder: { ...frame.upperBody.leftShoulder },

@@ -77,6 +77,7 @@ export function createTemporalArmIkInput(
 
     return {
         target: {
+            bodyLocal: true,
             wrist: wristAfterClamp,
             elbowPole: elbowPoleBeforeNormalize,
             weight: weightAfterStateScale,

@@ -11,7 +11,7 @@ function createObjectAt(x: number, y: number, z: number): Object3D {
     return object;
 }
 
-function createArmVrmSource(): SincroArmIkVrmSource {
+function createArmVrmSource(): SincroArmIkVrmSource & { scene: Object3D } {
     const scene = new Object3D();
     const leftUpperArm = createObjectAt(0, 0, 0);
     const leftLowerArm = createObjectAt(0, -0.45, 0.2);
@@ -50,6 +50,41 @@ function createLeftSolver(): SincroArmIkSolver {
 }
 
 describe("SincroArmIkSolver", () => {
+    it("体幹相対の腕は描画済みの親回転から独立し、体幹が二重に掛からない", () => {
+        const source = createArmVrmSource();
+        const solver = SincroArmIkSolver.fromVrm(source, "left");
+        if (!solver) throw new Error("Missing solver");
+        const target = {
+            wrist: new Vector3(0.55, 0.1, 0.2),
+            elbowPole: new Vector3(0, 1, 0),
+            weight: 1,
+            bodyLocal: true,
+            targetReachRatio: 0.6,
+        };
+        const neutral = solver.solve(target, false);
+        source.scene.rotation.set(0.2, 0.3, -0.1);
+        source.scene.updateMatrixWorld(true);
+        expect(solver.solve(target, false)).toEqual(neutral);
+    });
+    it("描画予測の回数を変えても次の観測の極が変わらない", () => {
+        const sparse = createLeftSolver(),
+            dense = createLeftSolver();
+        const observed = {
+            wrist: new Vector3(0.55, 0, 0),
+            elbowPole: new Vector3(0, 1, 0),
+            weight: 1,
+            targetReachRatio: 0.5,
+        };
+        sparse.solve(observed);
+        dense.solve(observed);
+        const predicted = { ...observed, elbowPole: new Vector3(0, -1, 0) };
+        for (let i = 0; i < 20; i++) dense.solve(predicted, false);
+        expect(dense.solve(predicted)).toEqual(sparse.solve(predicted));
+        dense.resetPoleHistory();
+        sparse.resetPoleHistory();
+        expect(dense.solve(observed)).toEqual(sparse.solve(observed));
+    });
+
     it("stores default target reach ratio as extended pole state and clamps wrist roll influence", () => {
         const solver = createLeftSolver();
         const armLength = solver.upperArmLength + solver.lowerArmLength;

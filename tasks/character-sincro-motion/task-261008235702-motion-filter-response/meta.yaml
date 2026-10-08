@@ -1,0 +1,16 @@
+id: task-261008235702-motion-filter-response
+title: 既存録画で腕の揺れと追従遅れを両立する
+category: character-sincro-motion
+status: done
+depends_on:
+  - task-261008235701-recorded-motion-quality-baseline
+  - task-261008235701-motion-coordinate-consistency
+  - task-261008235702-motion-dropout-application
+superseded_by: null
+review: APPROVED
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-10-08
+closed_at: 2026-10-09
+legacy_ids: []

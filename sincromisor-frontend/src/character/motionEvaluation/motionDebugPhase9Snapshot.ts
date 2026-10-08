@@ -1,3 +1,4 @@
+// reason: structure-threshold-exception 既存の診断スキーマと生成処理の対応を維持し、今回は診断値から観測への逆流だけを除く。
 /**
  * Phase 9 semantic motion / finger curl の debug snapshot contract を定義する。
  * semantic layer、finger layer、hand snapshot は保存可能な低次元値だけを受け、VRM bone node や raw landmark は含めない。
@@ -56,7 +57,6 @@ export type MotionDebugPhase9SnapshotInput = {
     intent: MotionIntentState;
     profile?: AvatarMotionProfile;
     hand?: SincroHandMotionSnapshot;
-    previousFinger?: Partial<Record<"left" | "right", FingerCurlPoseDebugSnapshot>>;
 };
 
 type PlainRecord = Record<string, unknown>;
@@ -259,7 +259,7 @@ function createFingerDebug(
         intent: input.intent,
         profile: input.profile,
         mediaTimeMs: input.intent.timestamp.mediaTimeMs,
-        previous: input.previousFinger,
+        // 診断出力は観測へ戻さない。描画中の保持は本番合成サービスが所有する。
     });
     const debug: MotionDebugPhase9SemanticSnapshot["finger"] = {};
     for (const snapshot of result.debug) {

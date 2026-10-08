@@ -1,6 +1,8 @@
 import { MathUtils } from "three/src/math/MathUtils.js";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
+import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfileTypes";
 import type { SincroPoseRetargetConfig, SincroPoseRetargetFrame } from "./sincroPoseRetargetTypes";
+import { createSincroPoseTorsoRotation } from "./sincroPoseTorsoRotation";
 
 type UpperBodyAnchor = SincroPoseRetargetFrame["anchor"];
 
@@ -9,41 +11,27 @@ type SincroPoseRetargetUpperBodyOptions = {
     config: SincroPoseRetargetConfig;
     anchor: UpperBodyAnchor;
     upperBodyWeight: number;
+    profile?: AvatarMotionProfile;
 };
 
+/** 肩・腰からの回転だけを返す。画面内の平行移動は姿勢へ混ぜない。 */
 export function createSincroPoseUpperBodyFrame({
     snapshot,
     config,
-    anchor,
     upperBodyWeight,
+    profile,
 }: SincroPoseRetargetUpperBodyOptions): SincroPoseRetargetFrame["upperBody"] {
+    // 体幹回転は合成側で各ボーンへ一度だけ配分する。肩の追加回転は二重適用になるため行わない。
+    const neutral = { x: 0, y: 0, z: 0 };
     return {
-        spine: {
-            x: 0,
-            y: -snapshot.upperBody.torsoLean * config.torsoLeanRad * 0.45 * upperBodyWeight,
-            z: -snapshot.upperBody.shoulderRoll * config.shoulderRollRad * 0.35 * upperBodyWeight,
-        },
-        chest: {
-            x: 0,
-            y:
-                (-snapshot.upperBody.torsoLean * config.torsoLeanRad -
-                    anchor.shoulderOffset.x * config.shoulderAnchorOffsetRad) *
-                upperBodyWeight,
-            z:
-                (-snapshot.upperBody.shoulderRoll * config.shoulderRollRad -
-                    anchor.shoulderOffset.y * config.shoulderAnchorOffsetRad) *
-                upperBodyWeight,
-        },
-        leftShoulder: {
-            x: 0,
-            y: 0,
-            z: -snapshot.upperBody.shoulderRoll * config.shoulderLiftRad * upperBodyWeight,
-        },
-        rightShoulder: {
-            x: 0,
-            y: 0,
-            z: -snapshot.upperBody.shoulderRoll * config.shoulderLiftRad * upperBodyWeight,
-        },
+        spine: { ...neutral },
+        chest: { ...neutral },
+        leftShoulder: { ...neutral },
+        rightShoulder: { ...neutral },
+        torsoQuaternion: createSincroPoseTorsoRotation(
+            snapshot,
+            profile ? profile.torso.chestFollow * config.intensityScale : upperBodyWeight,
+        ),
     };
 }
 

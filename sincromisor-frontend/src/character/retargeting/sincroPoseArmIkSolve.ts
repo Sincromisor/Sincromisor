@@ -36,6 +36,8 @@ type SolveArmIkOptions = {
     side: ArmSide;
     config: SincroPoseRetargetConfig;
     armIkSolvers?: ArmIkSolvers;
+    /** 観測時刻がない旧入力は極履歴へ確定しない。 */
+    commitPole?: boolean;
 };
 
 /**
@@ -75,7 +77,7 @@ export function solveWorldArmIk(options: SolveArmIkOptions): WorldArmIkSolveResu
         1,
     );
     return {
-        result: solver.solve({ wrist, elbowPole, weight }) ?? undefined,
+        result: solver.solve({ wrist, elbowPole, weight }, options.commitPole) ?? undefined,
         fallbackReason: undefined,
     };
 }

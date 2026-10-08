@@ -30,12 +30,10 @@ export class MotionDebugLiveComputation {
     /** FaceとHandも本番と同じ到着順で観測し、状態付き推定はPoseだけで進める。 */
     readonly pipeline = new SincroMotionObserveOnlyPipeline();
     private readonly postProcessor = new NoopMotionPostProcessor();
-    private latestPhase9?: MotionDebugPhase9SemanticSnapshot;
 
     /** 入力停止・切替時だけ履歴を捨てる。録画開始停止からは呼ばない。 */
     reset(): void {
         this.pipeline.reset();
-        this.latestPhase9 = undefined;
     }
 
     /** 本番の観測経路を一度進め、検証専用の派生値を同じ時刻で算出する。 */
@@ -61,9 +59,7 @@ export class MotionDebugLiveComputation {
             intent,
             profile,
             hand: state.hand,
-            previousFinger: this.latestPhase9?.finger,
         });
-        this.latestPhase9 = phase9;
         return {
             state: { ...state, canonical, reliability, temporal, intent },
             postProcessing,

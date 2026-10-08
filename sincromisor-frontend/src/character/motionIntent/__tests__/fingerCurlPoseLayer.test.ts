@@ -42,6 +42,7 @@ describe("createFingerCurlPoseLayer", () => {
         expect(sideMismatch.debug.groups.every((group) => group.source === "default")).toBe(true);
 
         hand.leftHand.features.openness = "half";
+        hand.lastUpdatedAtMs = 1300;
         const openness = createFingerCurlPoseLayer({
             side: "left",
             hand,
@@ -52,7 +53,7 @@ describe("createFingerCurlPoseLayer", () => {
         expect(openness.debug.groups[0]).toMatchObject({ curl: 0.55, source: "openness" });
     });
 
-    it("applies semantic intent overrides without replacing tracking hand curl", () => {
+    it("意図が変わっても有効な観測指を置き換えない", () => {
         const pointingHand = createHand({ thumb: 0, index: 1, middle: 0, ring: 0, little: 0 });
         const pointing = createFingerCurlPoseLayer({
             side: "left",
@@ -69,11 +70,8 @@ describe("createFingerCurlPoseLayer", () => {
             mediaTimeMs: 1000,
         });
 
-        expect(groupCurl(pointing.debug, "thumb")).toBeGreaterThanOrEqual(0.35);
-        expect(groupCurl(pointing.debug, "index")).toBeLessThanOrEqual(0.15);
-        expect(groupCurl(pointing.debug, "middle")).toBeGreaterThanOrEqual(0.75);
-        expect(groupCurl(pointing.debug, "ringLittle")).toBeGreaterThanOrEqual(0.75);
-        expect(pointing.debug.groups.every((group) => group.source === "intent")).toBe(true);
+        expect(pointing.debug.groups).toEqual(tracking.debug.groups);
+        expect(pointing.layer?.pose).toEqual(tracking.layer?.pose);
         expect(groupCurl(tracking.debug, "index")).toBe(1);
         expect(groupCurl(tracking.debug, "middle")).toBe(0);
     });

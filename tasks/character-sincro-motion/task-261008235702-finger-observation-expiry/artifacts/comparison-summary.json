@@ -1,0 +1,1 @@
+[{"fixture": "hand-out-and-return", "frames": 38, "accepted": {"left": 0, "right": 27}, "expiredAfter1000Ms": 38}, {"fixture": "fast-wave", "frames": 35, "accepted": {"left": 4, "right": 17}, "expiredAfter1000Ms": 35}, {"fixture": "neutral-10s", "frames": 45, "accepted": {"left": 39, "right": 20}, "expiredAfter1000Ms": 45}]

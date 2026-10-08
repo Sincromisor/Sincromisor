@@ -203,7 +203,7 @@
 - `VrmPoseComposer`
     - `VrmNormalizedLocalPose`は `VRMHumanBoneName`キーの通常のクォータニオンオブジェクトとし、`THREE.Quaternion`インスタンスは計算中だけ使う。
     - `ownedBones`は姿勢合成処理順序の初出順で重複のない出力対象ボーンとし、重複所有は `owned_bone_conflict:<bone>`警告に残す。追跡層のIKクォータニオンが同じ腕のボーンを所有している場合、待機 / 発話ジェスチャー相当の加算はそのボーンだけ `tracking_owns_bone`として抑制する。
-    - `semantic`層は `MotionIntentState`から作る開発者が確認できる意図表現層とし、追跡姿勢の後、待機 / 演出の前で部分上書き / 加算として扱う。同じ `upperArm` / `lowerArm` / 手ボーンを追跡層が所有している場合、意味に基づく動作メタデータの `intentConfidence`が `0.65`未満ならそのボーンだけ `semantic_conflict`として抑制する。メタデータが無い意味に基づく動作のレイヤーは信頼度 `0`とみなす。
+    - `semantic`層は `MotionIntentState`から作る開発者が確認できる意図表現層とし、追跡姿勢の後、待機 / 演出の前で部分上書き / 加算として扱う。同じ `upperArm` / `lowerArm` / 手ボーンは追跡の観測信頼度と経過時間を優先し、不足分だけを意味に基づく動作で補う。意図の確信度で追跡の所有を奪わず、部分抑制も `semantic_conflict`として記録する。
     - 意味に基づく動作のプリセットIDは `small_wave`、`point_forward_or_up`、`thumbs_up_hold`、`peace_hold`、`shy_hand_near_face`、`explain_open_palm`、`soft_clap_like`、`lost_to_comfort`に固定する。v1の意味に基づく動作の姿勢は `upperArm` / `lowerArm` / 手相当のVRM人型ボーンクォータニオンだけを出し、spine / chest / 頭部 / 表情 / 指のボーン列全体は所有しない。
     - 指の曲げ意味に基づく動作のレイヤーは腕意味に基づく動作のプリセットとは別に `id: "finger-curl:<side>"`、`kind: "semantic"`、`blendMode: "additive"`として生成する。所有ボーンは `AvatarMotionProfile.capabilities.fingerChains`で存在が確認できる親指 / 人差し指 / 中指 / 薬指 / 小指の指のボーン列だけに限定し、`upperArm` / `lowerArm` / 手 / 体幹 / 頭部は所有しない。
     - 指グループは `thumb`、`index`、`middle`、`ringLittle`に固定する。`ring`と `little`はv1では同じグループ曲げを使い、個別意味に基づく動作意図は作らない。`open / half / closed / unknown`開き具合は指の曲げ欠損時だけ代替処理として使い、`unknown`は前回のデバッグの左右と時刻差が有効な場合だけ保持する。
@@ -519,9 +519,9 @@
 
 意味に基づく動作のレイヤーは `createSemanticMotionPoseLayer()`、指の曲げ層は `createFingerCurlPoseLayers()`を
 正本にし、ジェスチャーRecognizer未加工の結果、MediaPipe未加工のランドマーク、VRM Object3D、元のボーンノードは
-本番層生成入力にしない。`MotionIntentState`が解析処理で無効、プロファイルが
-`MinimalAvatarMotionProfile`だけ、またはHandスナップショットが欠損する場合は
-`semantic_finger_application_*`警告を合成要約へ出し、該当層を追加しない。追跡層が
+本番層生成入力にしない。`MotionIntentState`の解析失敗やHand欠損は
+`semantic_finger_application_*`警告を残す。指の期限評価は意図解析から独立して続ける。
+`MinimalAvatarMotionProfile`だけの場合は補助層を追加しない。追跡層が
 所有する腕ボーンと意味に基づく動作のプリセットが競合する場合は、`semantic_conflict`抑制または
 `owned_bone_conflict:<bone>`警告で説明する。指の曲げ層は指ボーンだけを所有し、低下した指
 ボーン列では存在ボーンへ曲げ重みを再分配するため、欠損ボーン列は姿勢合成処理競合ではなく
@@ -617,3 +617,27 @@ Mouth / Emotion制御処理、`LegBoneController`、`vrm.update(deltaSeconds)`�
 入力動作との相関による系列内の遅れ、復帰時の最大回転差と有効標本数を返す。クォータニオンの符号反転は同じ回転とする。
 遅れは撮影から表示までの絶対遅延でも人体の正解値でもない。入力特徴と出力回転の関係が弱い区間は相関値とともに扱い、
 振幅が消えた候補を揺れだけで採用しない。静止区間以外の回転差RMSを静止時の揺れと呼ばない。
+
+### 指の実観測と補助動作の調停
+
+合成サービスは左右別に最後の有効なHand特徴量と観測時刻を保持する。検出、左右割当、
+実観測の由来、信頼度0.2以上、無効警告と有限時刻を確認し、欠損の既定曲げ0を採用しない。
+`VRMCharacterManager.update()`がHand時計へ写した評価時刻を渡し、実観測から250msを超えると
+中立指へ戻す。保持した出力や診断時刻を基点へ戻さず、曲げ尺度は毎回未加工特徴へ一度だけ掛ける。
+意図が止まっても期限を評価し、再生一時停止では仮想時刻を進めない。系列初期化で左右の保持を捨てる。
+
+腕の補助姿勢は、観測信頼度0.65以上かつ観測後250ms以内の追跡を保護する。信頼度と250〜700msの
+経過から連続した保護重みを求め、不足分にだけ補助姿勢を混ぜる。意図自体の新鮮さはPose時計で
+評価し250msで失効させる。部分抑制を含め `suppressedLayers`の `semantic_conflict`へ記録する。
+指は観測曲げを優先し、未観測の群だけ新鮮な意図で補う。停止後の古い意図を再使用しない。
+
+### 体幹の回転と腕の親座標
+
+肩・腰の共通基底から中立XYZ基底との差を求め、`chestFollow`と追跡強度を掛けた回転を
+`spine`・`chest`・`upperChest`へプロファイルの比率で配分する。存在するボーンの比率を正規化し、
+合計回転を保つ。画面内の移動や顔の向きは体幹回転に使わない。腰欠損時は肩線から旋回・横傾斜だけを制限して反映する。
+体幹相対の腕IKは読込時の親座標で解き、描画済みの体幹回転を入力へ戻さない。親の回転は最終階層で一度だけ掛かる。
+
+IKの極履歴は新しいPose観測でだけ確定し、描画予測では読み取る。手首のOne Euro Filter、
+155msの描画補間、最終角速度制限は維持する。肘フィルターと短い描画補間は既存録画で比較したが、
+揺れ・遅れ・振幅の改善を両立できず採用しない。
