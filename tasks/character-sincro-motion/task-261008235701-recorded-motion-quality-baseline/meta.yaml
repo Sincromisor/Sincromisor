@@ -1,0 +1,13 @@
+id: task-261008235701-recorded-motion-quality-baseline
+title: 既存撮影データでモーションの再計算比較と表示品質評価を整える
+category: character-sincro-motion
+status: done
+depends_on: []
+superseded_by: null
+review: APPROVED
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-10-08
+closed_at: 2026-10-09
+legacy_ids: []

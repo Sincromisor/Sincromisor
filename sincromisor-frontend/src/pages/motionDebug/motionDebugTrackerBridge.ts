@@ -1,3 +1,4 @@
+// reason: structure-threshold-exception 追跡の開始・停止と4種の到着処理が同じ系列を共有するため、時計の破棄境界をこの接続所有者に集約する。
 import type { AvatarMotionProfile } from "../../character/avatarProfile/avatarMotionProfileTypes";
 /**
  * TrackerRuntime callback から retarget、reliability、temporal、intent、recording を接続する bridge。
@@ -99,6 +100,7 @@ export class MotionDebugTrackerBridge {
     /** 追跡停止とともにソース固有の観測・推定履歴を破棄する。 */
     stop(reason: string): void {
         this.trackerRuntime.stopFaceTracking(reason);
+        this.params.behaviorState.motionClock.reset();
         this.live.reset();
         this.latestFaceSnapshot = DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT;
         this.latestHandSnapshot = undefined;
@@ -113,7 +115,7 @@ export class MotionDebugTrackerBridge {
         renderOnce: () => void,
     ): void {
         this.latestPoseSnapshot = snapshot;
-        this.params.behaviorState.applyPoseMotion(snapshot, mediaTimeMs);
+        this.params.behaviorState.applyPoseMotion(snapshot, mediaTimeMs, "replay");
         this.params.debugConsole.updateSincroPoseMotion(snapshot);
         this.params.overlayRenderer.render(snapshot, this.params.video);
         renderOnce();
@@ -216,6 +218,13 @@ export class MotionDebugTrackerBridge {
     ): void {
         this.params.camera.updateFrameTiming(timing);
         this.latestHandSnapshot = snapshot;
+        this.params.behaviorState.motionClock.receive(
+            "hand",
+            timing ?? {
+                mediaTimeMs: snapshot.lastUpdatedAtMs ?? performance.now(),
+                receivedAtPerformanceMs: performance.now(),
+            },
+        );
         this.live.pipeline.updateHand(
             snapshot,
             createMotionDebugLiveInput(
@@ -252,7 +261,11 @@ export class MotionDebugTrackerBridge {
             this.params.behaviorState.applySincroMotionPipelineState(frame.state);
             this.params.onLiveFrame(frame);
         }
-        this.params.behaviorState.applyPoseMotion(snapshot);
+        this.params.behaviorState.applyPoseMotion(
+            snapshot,
+            timing?.receivedAtPerformanceMs ?? performance.now(),
+            timing,
+        );
         this.params.debugConsole.updateSincroPoseMotion(snapshot);
         if (frame) this.recordPoseFrame(snapshot, frame, timing);
         if (renderOverlay) {

@@ -77,6 +77,7 @@ type MotionDebugReplayRuntimeParams = {
  */
 export class MotionDebugReplayRuntime {
     // reason: structure-threshold-exception 保存値の採用順と再生時の初期化境界を同じ所有者に維持する。計算本体は共通実装へ委譲する。
+    private recompute = false;
     readonly player: MotionReplayPlayer<MotionDebugSnapshot>;
     private readonly computation = new SincroMotionComputation();
     private readonly timer: MotionDebugReplayTimer;
@@ -143,8 +144,12 @@ export class MotionDebugReplayRuntime {
     startReplay(options: {
         mode: NonNullable<MotionDebugReplayState["mode"]>;
         autoplay?: boolean;
+        /** 保存済み下流値を使わず、選択した入力段階から本番処理を再計算する。 */
+        recompute?: boolean;
     }): MotionDebugReplayFrameResult {
         this.clearTimer();
+        this.recompute = options.recompute === true;
+        this.resetReplayHistory();
         if (this.player.getReplayState().currentFrameIndex !== undefined) {
             this.resetTemporalState();
         }
@@ -176,7 +181,7 @@ export class MotionDebugReplayRuntime {
         this.clearTimer();
         const currentFrameIndex = this.player.getReplayState().currentFrameIndex;
         if (currentFrameIndex !== undefined && frameIndex !== currentFrameIndex + 1) {
-            this.resetTemporalState();
+            this.resetReplayHistory();
         }
         const result = this.player.stepReplay(frameIndex);
         this.timer.updateReplayStatus(result, false);
@@ -290,6 +295,15 @@ export class MotionDebugReplayRuntime {
         this.timer.clear();
     }
 
+    /** 条件先頭と非連続移動では、推定・観測・表示の履歴をまとめて捨てる。 */
+    private resetReplayHistory(): void {
+        this.resetCanonicalState();
+        this.resetTemporalState();
+        this.params.tracker.resetReliabilityState();
+        this.params.tracker.setHandSnapshot(undefined);
+        this.params.behaviorState.motionClock.reset();
+    }
+
     private applyReplayPoseSnapshot(
         snapshot: SincroPoseMotionSnapshot,
         context: MotionReplayApplyContext,
@@ -299,7 +313,7 @@ export class MotionDebugReplayRuntime {
         this.params.tracker.updateReplayReliability(
             snapshot,
             previousPose,
-            context.frame.reliability,
+            this.recompute ? undefined : context.frame.reliability,
             context.mediaTimeMs,
             context.frame.video,
         );
@@ -307,6 +321,20 @@ export class MotionDebugReplayRuntime {
         this.updateReplayTemporal(context);
         this.updateReplayIntent(context, gesture);
         this.updateReplayPostProcessing(context);
+        const observations = this.params.tracker.snapshotState();
+        const temporal = this.latestTemporal;
+        // 閲覧・比較とも現在選ばれた状態を本番リターゲットへ渡す。保存finalPoseは再利用しない。
+        this.params.behaviorState.applySincroMotionPipelineState({
+            pose: snapshot,
+            face: observations.face,
+            hand: observations.hand,
+            canonical: this.latestValidCanonical(),
+            temporal: temporal && !("parseStatus" in temporal) ? temporal : undefined,
+            reliability: this.params.tracker.latestValidReliability(),
+            intent: this.latestIntent,
+            updatedAtMs: context.mediaTimeMs,
+        });
+        this.params.behaviorState.applyFaceMotion(observations.face, context.mediaTimeMs);
         this.params.tracker.applyReplayPoseSnapshot(snapshot, context.mediaTimeMs, () => {
             this.params.scene.renderOnce(context.mediaTimeMs);
         });
@@ -322,6 +350,7 @@ export class MotionDebugReplayRuntime {
             this.params.tracker.setFaceSnapshot(face);
         }
         const pose = this.normalizeReplayPose(raw, context);
+        this.params.tracker.setHandSnapshot(undefined);
         const hand =
             pose === undefined || raw.hand === undefined
                 ? undefined
@@ -443,7 +472,7 @@ export class MotionDebugReplayRuntime {
         snapshot: SincroPoseMotionSnapshot,
         context: MotionReplayApplyContext,
     ): void {
-        if (context.frame.canonical !== undefined) {
+        if (!this.recompute && context.frame.canonical !== undefined) {
             const parsed = parseCanonicalUpperBodyState(context.frame.canonical);
             this.latestCanonical = parsed.ok
                 ? parsed.state
@@ -472,7 +501,7 @@ export class MotionDebugReplayRuntime {
 
     /** 有効な保存値は推定器を進めず採用する。無効値を再計算で隠さない。 */
     private updateReplayTemporal(context: MotionReplayApplyContext): void {
-        if (context.frame.temporal !== undefined) {
+        if (!this.recompute && context.frame.temporal !== undefined) {
             const parsed = parseTemporalUpperBodyState(context.frame.temporal);
             this.latestTemporal = parsed.ok
                 ? parsed.state
@@ -515,7 +544,7 @@ export class MotionDebugReplayRuntime {
 
     /** 後処理は保存値の表示専用とし、欠損時も新たな結果を合成しない。 */
     private updateReplayPostProcessing(context: MotionReplayApplyContext): void {
-        if (context.frame.postProcessing !== undefined) {
+        if (!this.recompute && context.frame.postProcessing !== undefined) {
             const parsed = parseMotionPostProcessingResult(context.frame.postProcessing);
             this.latestPostProcessing = parsed.ok
                 ? parsed.result

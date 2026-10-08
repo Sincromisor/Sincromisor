@@ -1,0 +1,43 @@
+{
+	"head": "86929dfdbc43e31390da98c987c864bb39e6686a",
+	"inputKind": "synthetic",
+	"results": [
+		{
+			"probe": "uniform_avatar_scale",
+			"directionAngleDeg": 12.51164172953545,
+			"original": [
+				0.2042744554022341, -0.1960209420526489, 0.061901350121889125
+			],
+			"doubled": [0.309781357797226, -0.4671306189005789, 0.14751493228439333]
+		},
+		{
+			"probe": "missing_finger_after_1000ms",
+			"group": {
+				"group": "index",
+				"curl": 0.8,
+				"source": "previous",
+				"warnings": []
+			},
+			"timestamp": {
+				"mediaTimeMs": 1000
+			}
+		},
+		{
+			"probe": "prediction_weight_on_loss",
+			"state": "predicted",
+			"confidence": 0,
+			"weight": 0
+		},
+		{
+			"probe": "torso_basis",
+			"rightDotUp": 0.19611613513818402
+		},
+		{
+			"probe": "production_normalizer_torso",
+			"shoulderCenter": [0, 0, 0],
+			"source": "mixed",
+			"confidence": 0.45,
+			"warnings": ["missing_world_coordinates"]
+		}
+	]
+}

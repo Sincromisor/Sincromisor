@@ -104,7 +104,11 @@ export class SincroCharacterMotionEventSink {
         );
         this.recordInitialCalibrationStep(observeOnly.state, quality, timing);
         this.characterBehaviorState.applySincroMotionPipelineState(observeOnly.state);
-        this.characterBehaviorState.applyPoseMotion(snapshot);
+        this.characterBehaviorState.applyPoseMotion(
+            snapshot,
+            timing?.receivedAtPerformanceMs ?? performance.now(),
+            timing,
+        );
         this.debugConsoleManager.updateSincroPoseMotion(snapshot);
         this.debugConsoleManager.updateSincroObserveOnlySummary(observeOnly.summary);
         if (snapshot.degradedToFaceOnly || snapshot.fallbackReason) {
@@ -141,6 +145,13 @@ export class SincroCharacterMotionEventSink {
         if (!this.isSincroTrackingEnabled()) {
             return;
         }
+        this.characterBehaviorState.motionClock.receive(
+            "hand",
+            timing ?? {
+                mediaTimeMs: snapshot.lastUpdatedAtMs ?? performance.now(),
+                receivedAtPerformanceMs: performance.now(),
+            },
+        );
         const observeOnly = this.observeOnlyPipeline.updateHand(
             snapshot,
             this.createObserveOnlyInput(timing),
@@ -194,6 +205,7 @@ export class SincroCharacterMotionEventSink {
      * VRM 適用済み姿勢はこの sink では変更しない。
      */
     resetObserveOnlyPipeline(): void {
+        this.characterBehaviorState.motionClock.reset();
         this.observeOnlyPipeline.reset();
         this.cameraQualityRuntime.reset();
         emitCameraQualityReset(this.emitEvent);

@@ -1,3 +1,4 @@
+// reason: structure-threshold-exception 行動モードと追跡状態を所有する既存クラスで、モード切替と時計の破棄を原子的に行う。
 import type { Detection } from "@mediapipe/tasks-vision";
 import { TalkManager, type TalkManagerEvent } from "../../features/conversation/talk/talkManager";
 import type { CharacterGaze } from "../../features/gaze/characterGaze/characterGaze";
@@ -5,6 +6,10 @@ import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { VadStateReport } from "../../features/media/userMedia/userMediaManager";
 import type { ChatMessage, TelopChannelMessage } from "../../features/rtc/rtcMessage";
+import {
+    SincroMotionClock,
+    type SincroMotionObservationTiming,
+} from "../runtime/sincroMotionClock";
 import {
     cloneSincroMotionPipelineState,
     type SincroMotionPipelineState,
@@ -60,6 +65,8 @@ export type {
 // 後続の姿勢・目線・発話同期モーションはこの snapshot を正本として参照する。
 export class CharacterBehaviorState {
     private static instance: CharacterBehaviorState;
+    /** 実行時だけの入力時計。保存用スナップショットには複製しない。 */
+    readonly motionClock = new SincroMotionClock();
     private talkMode: CharacterTalkMode = "chat";
     private talkModeChangedAtMs = performance.now();
     private previousState: CharacterInteractionState = "idle";
@@ -124,7 +131,21 @@ export class CharacterBehaviorState {
         this.faceMotion = cloneFaceMotionSnapshot(snapshot, nowMs);
     }
 
-    applyPoseMotion(snapshot: SincroPoseMotionSnapshot, nowMs: number = performance.now()): void {
+    applyPoseMotion(
+        snapshot: SincroPoseMotionSnapshot,
+        nowMs: number = performance.now(),
+        timing?: SincroMotionObservationTiming | "replay",
+    ): void {
+        if (timing === "replay") this.motionClock.setReplayTime(nowMs);
+        else
+            this.motionClock.receive(
+                "pose",
+                timing ?? {
+                    mediaTimeMs: snapshot.lastUpdatedAtMs ?? nowMs,
+                    receivedAtPerformanceMs: nowMs,
+                },
+            );
+        if (!snapshot.trackingEnabled || snapshot.degradedToFaceOnly) this.motionClock.reset();
         this.poseMotion = clonePoseMotionSnapshot(snapshot, nowMs);
     }
 
@@ -146,6 +167,7 @@ export class CharacterBehaviorState {
             return;
         }
 
+        this.motionClock.reset();
         this.talkMode = nextMode;
         this.talkModeChangedAtMs = nowMs;
         this.lastUserSpeechEndedAtMs = undefined;
@@ -174,6 +196,7 @@ export class CharacterBehaviorState {
     }
 
     setPoseMotionTrackingEnabled(enabled: boolean, nowMs: number = performance.now()): void {
+        if (!enabled) this.motionClock.reset();
         this.poseMotion = {
             ...this.poseMotion,
             trackingEnabled: enabled,

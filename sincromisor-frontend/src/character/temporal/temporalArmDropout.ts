@@ -5,6 +5,10 @@ import {
     holdPreviousArm,
     tupleOrUndefined,
 } from "./temporalArmFilters";
+import {
+    predictTemporalArmFromObservation,
+    temporalArmApplicationWeight,
+} from "./temporalArmPrediction";
 import type { ArmUpdateContext } from "./temporalArmStateEstimator";
 import type { ArmSide } from "./temporalReliabilityAggregation";
 import type {
@@ -24,27 +28,25 @@ export function createPredictedArm(
     classification: ArmClassification,
     observedAgeMs: number,
 ): TemporalArmState {
-    const damping = dampingForDt(context.config.predictionVelocityDampingPerSec, context.dtMs);
-    const velocity = dampArmVelocity(baseArm.velocity, damping);
-    const predicted = advanceArm(baseArm, velocity, context.dtMs);
+    // 観測欠損も描画だけの無到着も同じ減衰積分を使う。積分用dtと欠損年齢は分ける。
+    const predicted = predictTemporalArmFromObservation(baseArm, context.dtMs, context.config);
     return {
-        ...baseArm,
-        state: "predicted",
+        ...predicted,
         confidence: context.canonicalArm.confidence,
-        source: "predicted",
-        stateAgeMs: baseArm.state === "predicted" ? baseArm.stateAgeMs + context.dtMs : 0,
+        applicationWeight:
+            temporalArmApplicationWeight(baseArm) *
+            Math.max(
+                0,
+                (context.config.predictionMaxMs - observedAgeMs) /
+                    Math.max(1, context.config.predictionMaxMs - baseArm.observedAgeMs),
+            ),
+        stateAgeMs:
+            baseArm.state === "predicted"
+                ? baseArm.stateAgeMs + (context.elapsedMs ?? context.dtMs)
+                : 0,
         observedAgeMs,
         warnings: uniqueWarnings([...warnings, "prediction_active", "velocity_damped"]),
-        reach: predicted.reach,
-        elevationRad: predicted.elevationRad,
-        openness: predicted.openness,
-        forwardness: predicted.forwardness,
-        elbowFlexionRad: predicted.elbowFlexionRad,
         classification,
-        bodyLocalWrist: predicted.bodyLocalWrist,
-        bodyLocalElbow: baseArm.bodyLocalElbow,
-        velocity,
-        recoveringBlend: undefined,
     };
 }
 
@@ -61,6 +63,7 @@ export function createComfortableArm(
         ...baseArm,
         state: "lost",
         confidence: context.canonicalArm.confidence,
+        applicationWeight: 0,
         source: "comfortable",
         stateAgeMs: baseArm.state === "lost" ? baseArm.stateAgeMs + context.dtMs : 0,
         observedAgeMs,
@@ -103,6 +106,7 @@ export function createRecoveringArm(
     return {
         state: "recovering",
         confidence: context.canonicalArm.confidence,
+        applicationWeight: context.canonicalArm.confidence,
         source: "mixed",
         stateAgeMs: baseArm.state === "recovering" ? baseArm.stateAgeMs + context.dtMs : 0,
         observedAgeMs: 0,
@@ -138,6 +142,7 @@ function createRecoveredTrackedArm(
     return {
         state: "tracked",
         confidence: context.canonicalArm.confidence,
+        applicationWeight: context.canonicalArm.confidence,
         source: "canonical",
         stateAgeMs: 0,
         observedAgeMs: 0,
@@ -152,62 +157,6 @@ function createRecoveredTrackedArm(
         bodyLocalElbow:
             tupleOrUndefined(context.canonicalArm.bodyLocalElbow) ?? baseArm.bodyLocalElbow,
         velocity: calculateVelocity(filtered, context.previousArm, context.dtMs),
-    };
-}
-
-function dampingForDt(dampingPerSec: number, dtMs: number): number {
-    return dampingPerSec ** (Math.max(0, dtMs) / 1000);
-}
-
-function dampArmVelocity(
-    velocity: TemporalArmState["velocity"],
-    damping: number,
-): TemporalArmState["velocity"] {
-    return {
-        wrist:
-            velocity.wrist === undefined
-                ? undefined
-                : [
-                      velocity.wrist[0] * damping,
-                      velocity.wrist[1] * damping,
-                      velocity.wrist[2] * damping,
-                  ],
-        reachPerSec: velocity.reachPerSec * damping,
-        elevationRadPerSec: velocity.elevationRadPerSec * damping,
-        opennessPerSec: velocity.opennessPerSec * damping,
-        forwardnessPerSec: velocity.forwardnessPerSec * damping,
-        elbowFlexionRadPerSec: velocity.elbowFlexionRadPerSec * damping,
-    };
-}
-
-function advanceArm(
-    arm: TemporalArmState,
-    velocity: TemporalArmState["velocity"],
-    dtMs: number,
-): FilteredArmValues {
-    const dtSec = dtMs / 1000;
-    return {
-        reach: clamp(arm.reach + velocity.reachPerSec * dtSec, 0, 1.15),
-        elevationRad: clamp(
-            arm.elevationRad + velocity.elevationRadPerSec * dtSec,
-            -Math.PI / 2,
-            Math.PI / 2,
-        ),
-        openness: clamp(arm.openness + velocity.opennessPerSec * dtSec, -1, 1),
-        forwardness: clamp(arm.forwardness + velocity.forwardnessPerSec * dtSec, 0, 1),
-        elbowFlexionRad: clamp(
-            arm.elbowFlexionRad + velocity.elbowFlexionRadPerSec * dtSec,
-            0,
-            Math.PI,
-        ),
-        bodyLocalWrist:
-            arm.bodyLocalWrist === undefined || velocity.wrist === undefined
-                ? arm.bodyLocalWrist
-                : [
-                      arm.bodyLocalWrist[0] + velocity.wrist[0] * dtSec,
-                      arm.bodyLocalWrist[1] + velocity.wrist[1] * dtSec,
-                      arm.bodyLocalWrist[2] + velocity.wrist[2] * dtSec,
-                  ],
     };
 }
 

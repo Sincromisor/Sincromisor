@@ -80,10 +80,13 @@ function createTarget(
             worldConfidence: confidence,
             worldUsableForIk: hasWorldCoordinates,
             worldIkWeight: hasWorldCoordinates ? confidence : 0,
+            rawX: hasWorldCoordinates ? -position[0] : undefined,
+            rawY: hasWorldCoordinates ? -position[1] : undefined,
+            rawZ: hasWorldCoordinates ? -position[2] : undefined,
             normalizedX: hasWorldCoordinates ? position[0] : undefined,
             normalizedY: hasWorldCoordinates ? position[1] : undefined,
             normalizedZ:
-                hasWorldCoordinates && options.omitWorldZ !== true ? position[2] : undefined,
+                hasWorldCoordinates && options.omitWorldZ !== true ? -position[2] : undefined,
         },
     };
 }

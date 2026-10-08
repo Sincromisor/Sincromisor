@@ -1,64 +1,31 @@
+import type {
+    TemporalArmIkBridgeInput,
+    TemporalArmIkBridgeResult,
+    TemporalArmIkDebugSnapshot,
+    TemporalArmIkScaleSnapshot,
+    TemporalArmIkSolverMeasurements,
+} from "./temporalArmSolverBridgeTypes";
+
+export type {
+    TemporalArmIkBridgeInput,
+    TemporalArmIkBridgeResult,
+    TemporalArmIkDebugSnapshot,
+    TemporalArmIkScaleSnapshot,
+    TemporalArmIkSolverMeasurements,
+} from "./temporalArmSolverBridgeTypes";
+
 import { Vector3 } from "three/src/math/Vector3.js";
 import type { MinimalAvatarMotionProfile } from "../avatarProfile/minimalAvatarMotionProfile";
-import type { SincroArmIkTarget, SincroArmSide } from "../ik/sincroArmIkTypes";
+import type { SincroArmSide } from "../ik/sincroArmIkTypes";
+import { temporalArmApplicationWeight } from "../temporal/temporalArmPrediction";
 import type {
     TemporalArmState,
     TemporalPartState,
     TemporalTuple3,
-    TemporalUpperBodyState,
 } from "../temporal/temporalUpperBodyState";
 
 const MAX_REACH_RATIO = 0.985;
 const MIN_VECTOR_LENGTH = 1e-6;
-
-export type TemporalArmIkSolverMeasurements = {
-    shoulderWidth: number;
-    upperArmLength: number;
-    lowerArmLength: number;
-};
-
-export type TemporalArmIkScaleSnapshot = {
-    shoulderWidth: number;
-    upperArmLength: number;
-    lowerArmLength: number;
-    armLength: number;
-    defaultReachScale: number;
-    lateralScale: number;
-    verticalScale: number;
-    depthCompression: number;
-    maxReachRatio: typeof MAX_REACH_RATIO;
-};
-
-export type TemporalArmIkDebugSnapshot = {
-    usedBodyLocalWrist: boolean;
-    usedBodyLocalElbow: boolean;
-    shoulderLocal: TemporalTuple3;
-    wristBeforeClamp?: TemporalTuple3;
-    wristAfterClamp?: TemporalTuple3;
-    elbowPoleBeforeNormalize?: TemporalTuple3;
-    weightBeforeStateScale: number;
-    weightAfterStateScale: number;
-};
-
-export type TemporalArmIkBridgeInput = {
-    temporal: TemporalUpperBodyState;
-    side: SincroArmSide;
-    profile: MinimalAvatarMotionProfile;
-    solver: TemporalArmIkSolverMeasurements;
-};
-
-export type TemporalArmIkBridgeResult = {
-    target?: SincroArmIkTarget;
-    reasonCodes: string[];
-    scale: TemporalArmIkScaleSnapshot;
-    sourceState: TemporalPartState;
-    debug: TemporalArmIkDebugSnapshot;
-    reach?: {
-        requestedReachRatio: number;
-        bridgeAppliedReachRatio: number;
-        bridgeClamped: boolean;
-    };
-};
 
 /**
  * TemporalUpperBodyState の body-local / scalar arm state を IK solver が読む肩ローカル target へ変換する。
@@ -72,7 +39,7 @@ export function createTemporalArmIkInput(
 ): TemporalArmIkBridgeResult {
     const arm = input.temporal.arms[input.side];
     const scale = createScaleSnapshot(input.side, input.profile, input.solver);
-    const shoulderLocal = createShoulderLocal(input.side, scale.shoulderWidth);
+    const shoulderLocal = createShoulderLocal(input.side, 1);
     const sourceState = knownTemporalPartStateOrLost(arm.state);
     const zeroDebug = createZeroDebug(arm, shoulderLocal);
 
@@ -104,7 +71,7 @@ export function createTemporalArmIkInput(
         ? bodyLocalTargetToShoulderLocal(arm.bodyLocalElbow, shoulderLocal, scale)
         : createFallbackElbowPole(arm, input.side, scale);
     const weightBeforeStateScale = arm.confidence;
-    const weightAfterStateScale = weightForTemporalArmState(arm);
+    const weightAfterStateScale = temporalArmApplicationWeight(arm);
     const requestedReachRatio = wristBeforeClamp.length() / scale.armLength;
     const targetReachRatio = wristAfterClamp.length() / scale.armLength;
 
@@ -199,8 +166,8 @@ function bodyLocalTargetToShoulderLocal(
 }
 
 /**
- * body-local tuple は tracker の torso-normalized 座標なので、avatar meter と直接減算した長さを
- * reach として扱わない。tuple は方向だけに使い、長さは temporal scalar と avatar arm length を正本にする。
+ * body-localは撮影者の肩幅を1とする座標。肩位置±0.5を同じ単位で引いてから、
+ * 方向をVRMの腕長へ変換する。VRMの肩幅はこの減算に使わない。
  */
 function bodyLocalWristToShoulderLocal(
     arm: TemporalArmState,
@@ -255,21 +222,6 @@ function clampToMaxReach(target: Vector3, maxReach: number): Vector3 {
         return target.clone();
     }
     return target.clone().multiplyScalar(maxReach / length);
-}
-
-function weightForTemporalArmState(arm: TemporalArmState): number {
-    switch (arm.state) {
-        case "tracked":
-            return arm.confidence;
-        case "suspect":
-            return arm.confidence * 0.55;
-        case "recovering":
-            return arm.confidence * (arm.recoveringBlend?.progress ?? 0);
-        case "predicted":
-            return arm.confidence * 0.35;
-        case "lost":
-            return 0;
-    }
 }
 
 function knownTemporalPartStateOrLost(state: string): TemporalPartState {

@@ -1,3 +1,4 @@
+// reason: structure-threshold-exception 既存のmotion-debug公開API型を一箇所に保ち、再計算指定だけを追加する。実装責務は含まない。
 /**
  * motion-debug page、viewer、window API、snapshot layer の developer-visible 型を定義する。
  * 公開 API は手動調整と Playwright 検証用であり、raw MediaPipe result、VRM instance、browser permission object を保存 contract に含めない。
@@ -302,6 +303,8 @@ export type MotionDebugApi = {
     startReplay: (options: {
         mode: MotionReplayMode;
         autoplay?: boolean;
+        /** 保存済み下流値を使わず、選択した入力段階から本番処理を再計算する。 */
+        recompute?: boolean;
     }) => MotionDebugReplayFrameResult;
     stepReplay: (frameIndex: number) => MotionDebugReplayFrameResult;
     stopReplay: () => MotionDebugReplayState;

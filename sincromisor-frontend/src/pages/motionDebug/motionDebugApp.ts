@@ -286,6 +286,8 @@ export class MotionDebugApp implements MotionDebugApi {
     startReplay(options: {
         mode: NonNullable<MotionDebugReplayState["mode"]>;
         autoplay?: boolean;
+        /** 保存済み下流値を使わず、選択した入力段階から本番処理を再計算する。 */
+        recompute?: boolean;
     }): MotionDebugReplayFrameResult {
         return this.replayRuntime.startReplay(options);
     }

@@ -424,9 +424,9 @@ describe("TemporalStateEstimator", () => {
         expect(temporal.arms.left.reach).toBe(0.4);
         expect(temporal.arms.left.velocity.reachPerSec).toBe(0);
         expect(temporal.arms.left.warnings).toEqual(
-            expect.arrayContaining(["classification_held", "out_of_range"]),
+            expect.arrayContaining(["classification_held"]),
         );
-        expect(temporal.warnings).toContain("out_of_range");
+        expect(temporal.warnings).not.toContain("out_of_range");
     });
 
     it("holds classification until the candidate is stable for the configured duration", () => {

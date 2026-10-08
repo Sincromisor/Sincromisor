@@ -2,7 +2,7 @@ import type {
     SincroPoseArmMotionSnapshot,
     SincroPoseTargetPointSnapshot,
 } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
-import { dot, isFiniteNumber, length, subtract, tuple3 } from "./canonicalTuple3Math";
+import { dot, length, subtract, tuple3 } from "./canonicalTuple3Math";
 import type {
     CanonicalArmClassification,
     CanonicalOutOfRangeField,
@@ -10,6 +10,7 @@ import type {
     CanonicalUpperBodyState,
     CanonicalWarningCode,
 } from "./canonicalUpperBodyState";
+import { readCanonicalWorldPoint } from "./canonicalWorldPoint";
 
 export const FALLBACK_CONFIDENCE_MAX = 0.45;
 export const MIN_ARM_LENGTH = 0.0001;
@@ -59,25 +60,10 @@ export function readBodyPoint(
     target: SincroPoseTargetPointSnapshot,
     neutral: CanonicalTuple3,
 ): CanonicalArmBodyPoint {
-    const worldPoint = readWorldTuple(target, neutral[2]);
-    if (worldPoint !== undefined) {
-        return { position: worldPoint, usedFallback: false };
-    }
-    if (
-        target.hasFiniteCoordinates &&
-        isFiniteNumber(target.localX) &&
-        isFiniteNumber(target.localY)
-    ) {
-        return {
-            position: tuple3(
-                target.localX,
-                target.localY,
-                isFiniteNumber(target.localZ) ? target.localZ : 0,
-            ),
-            usedFallback: true,
-        };
-    }
-    return { position: neutral, usedFallback: true };
+    const worldPoint = readCanonicalWorldPoint(target);
+    return worldPoint === undefined
+        ? { position: neutral, usedFallback: true }
+        : { position: worldPoint, usedFallback: false };
 }
 
 export function toBodyLocal(
@@ -86,9 +72,9 @@ export function toBodyLocal(
 ): CanonicalTuple3 {
     const offset = subtract(point, torsoFrame.shoulderCenter);
     return tuple3(
-        dot(offset, torsoFrame.bodyRight),
-        dot(offset, torsoFrame.bodyUp),
-        dot(offset, torsoFrame.bodyFront),
+        dot(offset, torsoFrame.bodyRight) / Math.max(torsoFrame.shoulderWidth, MIN_ARM_LENGTH),
+        dot(offset, torsoFrame.bodyUp) / Math.max(torsoFrame.shoulderWidth, MIN_ARM_LENGTH),
+        dot(offset, torsoFrame.bodyFront) / Math.max(torsoFrame.shoulderWidth, MIN_ARM_LENGTH),
     );
 }
 
@@ -98,11 +84,8 @@ export function calculateForwardness(options: {
     shoulderWidth: number;
     arm: SincroPoseArmMotionSnapshot;
 }): number {
-    const shoulderWidth = Math.max(options.shoulderWidth, 0.001);
-    const bodyLocalDirection = clamp01(
-        (options.wristLocal[2] - options.shoulderLocal[2]) / shoulderWidth,
-    );
-    const worldZ = forwardnessWorldZ(options.arm);
+    const bodyLocalDirection = clamp01(options.wristLocal[2] - options.shoulderLocal[2]);
+    const worldZ = forwardnessWorldZ(options.arm, options.shoulderWidth);
     const shortening = projectionShortening(options.arm);
     const weighted =
         bodyLocalDirection * DEFAULT_FORWARDNESS_WEIGHTS.bodyLocalDirection +
@@ -165,24 +148,6 @@ export function minWorldConfidence(arm: SincroPoseArmMotionSnapshot): number {
     );
 }
 
-function readWorldTuple(
-    target: SincroPoseTargetPointSnapshot,
-    fallbackZ: number,
-): CanonicalTuple3 | undefined {
-    const world = target.world;
-    if (!world.hasWorldCoordinates) {
-        return undefined;
-    }
-    if (isFiniteNumber(world.normalizedX) && isFiniteNumber(world.normalizedY)) {
-        return tuple3(
-            world.normalizedX,
-            world.normalizedY,
-            isFiniteNumber(world.normalizedZ) ? world.normalizedZ : fallbackZ,
-        );
-    }
-    return undefined;
-}
-
 function distance2d(
     a: SincroPoseTargetPointSnapshot,
     b: SincroPoseTargetPointSnapshot,
@@ -222,11 +187,14 @@ function projectionShortening(arm: SincroPoseArmMotionSnapshot): number | undefi
     return clamp01(1 - imageReach / imageArmLength);
 }
 
-function forwardnessWorldZ(arm: SincroPoseArmMotionSnapshot): number | undefined {
-    const shoulderZ = arm.targets.shoulder.world.normalizedZ;
-    const wristZ = arm.targets.wrist.world.normalizedZ;
-    if (!isFiniteNumber(shoulderZ) || !isFiniteNumber(wristZ)) {
+/** 画面の奥行き補助量もraw由来の同一単位で計算する。normalizedZのアンカーには依存しない。 */
+function forwardnessWorldZ(
+    arm: SincroPoseArmMotionSnapshot,
+    shoulderWidth: number,
+): number | undefined {
+    const shoulder = readCanonicalWorldPoint(arm.targets.shoulder);
+    const wrist = readCanonicalWorldPoint(arm.targets.wrist);
+    if (shoulder === undefined || wrist === undefined || shoulderWidth <= MIN_ARM_LENGTH)
         return undefined;
-    }
-    return clamp01((wristZ - shoulderZ + 1) / 2);
+    return clamp01(((wrist[2] - shoulder[2]) / shoulderWidth + 1) / 2);
 }

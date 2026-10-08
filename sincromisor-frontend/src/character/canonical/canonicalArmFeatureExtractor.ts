@@ -7,17 +7,19 @@ import type { ReliabilityMap } from "../reliability/reliabilityMap";
 import {
     angleBetween,
     calculateForwardness,
-    clampConfidence,
     clampRange,
     classifyArm,
     FALLBACK_CONFIDENCE_MAX,
-    hasLostJoint,
     MIN_ARM_LENGTH,
-    minWorldConfidence,
     pushWarning,
     readBodyPoint,
     toBodyLocal,
 } from "./canonicalArmFeatureMath";
+import {
+    calculateArmConfidence,
+    collectReliabilityWarnings,
+    resolveArmReliability,
+} from "./canonicalArmReliability";
 import { extractCanonicalHeadState } from "./canonicalHeadFeatureExtractor";
 import type { CanonicalTorsoFrameResult } from "./canonicalTorsoFrameEstimator";
 import { length, subtract, tuple3 } from "./canonicalTuple3Math";
@@ -54,6 +56,7 @@ export type CanonicalSingleArmFeatureInput = {
     reliability?: ReliabilityMap;
 };
 
+/** 共通の生座標から肩幅単位の腕特徴を作る。元座標不足時は位置を保存せず信頼度0で欠損を伝える。 */
 export function extractCanonicalArmState(input: CanonicalSingleArmFeatureInput): CanonicalArmState {
     const { torso: torsoFrame } = input.torso;
     const outOfRangeFields: CanonicalOutOfRangeField[] = [];
@@ -67,7 +70,9 @@ export function extractCanonicalArmState(input: CanonicalSingleArmFeatureInput):
     const upperArmVector = subtract(elbowPoint.position, shoulderPoint.position);
     const lowerArmVector = subtract(wristPoint.position, elbowPoint.position);
     const shoulderToWrist = subtract(wristLocal, shoulderLocal);
-    const armLength = length(upperArmVector) + length(lowerArmVector);
+    const armLength =
+        (length(upperArmVector) + length(lowerArmVector)) /
+        Math.max(torsoFrame.shoulderWidth, MIN_ARM_LENGTH);
     const invalidArmLength = !Number.isFinite(armLength) || armLength <= MIN_ARM_LENGTH;
     const usedWorldFallback =
         shoulderPoint.usedFallback || elbowPoint.usedFallback || wristPoint.usedFallback;
@@ -143,8 +148,7 @@ export function extractCanonicalArmState(input: CanonicalSingleArmFeatureInput):
         forwardness,
         elbowFlexionRad,
         classification: classifyArm(confidence, openness, forwardness),
-        bodyLocalWrist: wristLocal,
-        bodyLocalElbow: elbowLocal,
+        ...(usedWorldFallback ? {} : { bodyLocalWrist: wristLocal, bodyLocalElbow: elbowLocal }),
         confidence,
         source:
             !lostReliability && confidence > 0 && input.arm.tracked && !invalidArmLength
@@ -235,111 +239,4 @@ function normalizeDirection(
         return tuple3(0, 0, 0);
     }
     return tuple3(value[0] / vectorLength, value[1] / vectorLength, value[2] / vectorLength);
-}
-
-function calculateArmConfidence(options: {
-    arm: SincroPoseArmMotionSnapshot;
-    torsoConfidence: number;
-    torsoWarnings: CanonicalWarningCode[];
-    usedWorldFallback: boolean;
-    invalidArmLength: boolean;
-    reliability?: CanonicalArmReliability;
-}): number {
-    if (options.invalidArmLength) {
-        return 0;
-    }
-
-    const baseConfidence = Math.min(
-        clampConfidence(options.arm.confidence),
-        minWorldConfidence(options.arm),
-        clampConfidence(options.torsoConfidence),
-    );
-    const shouldClampConfidence =
-        options.torsoConfidence < FALLBACK_CONFIDENCE_MAX ||
-        options.torsoWarnings.includes("torso_frame_unreliable") ||
-        options.usedWorldFallback ||
-        options.arm.tracked === false ||
-        hasLostJoint(options.arm);
-    const poseConfidence = clampConfidence(
-        shouldClampConfidence ? Math.min(baseConfidence, FALLBACK_CONFIDENCE_MAX) : baseConfidence,
-    );
-    if (options.reliability === undefined) {
-        return poseConfidence;
-    }
-    if (options.reliability.part.state === "lost") {
-        return 0;
-    }
-    return clampConfidence(
-        poseConfidence *
-            Math.sqrt(options.reliability.partWeight * options.reliability.minJointWeight),
-    );
-}
-
-type CanonicalArmReliability = {
-    part: ReliabilityMap["parts"]["leftArm"];
-    joints: ReliabilityMap["joints"]["leftShoulder"][];
-    partWeight: number;
-    minJointWeight: number;
-};
-
-function resolveArmReliability(
-    reliability: ReliabilityMap | undefined,
-    side: "left" | "right",
-): CanonicalArmReliability | undefined {
-    if (reliability === undefined) {
-        return undefined;
-    }
-    const part = side === "left" ? reliability.parts.leftArm : reliability.parts.rightArm;
-    const joints =
-        side === "left"
-            ? [
-                  reliability.joints.leftShoulder,
-                  reliability.joints.leftElbow,
-                  reliability.joints.leftWrist,
-              ]
-            : [
-                  reliability.joints.rightShoulder,
-                  reliability.joints.rightElbow,
-                  reliability.joints.rightWrist,
-              ];
-    const partWeight = clampConfidence(part.finalWeight);
-    const minJointWeight = Math.min(...joints.map((joint) => clampConfidence(joint.finalWeight)));
-    return {
-        part,
-        joints,
-        partWeight,
-        minJointWeight,
-    };
-}
-
-function collectReliabilityWarnings(
-    warnings: CanonicalWarningCode[],
-    reliability: CanonicalArmReliability | undefined,
-): void {
-    if (reliability === undefined) {
-        return;
-    }
-    if (reliability.partWeight < 0.35 || reliability.minJointWeight < 0.35) {
-        pushWarning(warnings, "low_confidence");
-    }
-    const reasonSources = [
-        reliability.part.components,
-        ...reliability.joints.map((joint) => joint.components),
-    ];
-    if (
-        reasonSources.some((components) =>
-            components.side.reasonCodes.includes("side_inconsistent"),
-        )
-    ) {
-        pushWarning(warnings, "left_right_swap_suspect");
-    }
-    if (
-        reasonSources.some(
-            (components) =>
-                components.boneLength.reasonCodes.includes("bone_length_inconsistent") ||
-                components.bodyScale.reasonCodes.includes("body_scale_jump"),
-        )
-    ) {
-        pushWarning(warnings, "out_of_range");
-    }
 }

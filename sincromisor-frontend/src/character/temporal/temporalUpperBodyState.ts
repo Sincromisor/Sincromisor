@@ -1,3 +1,4 @@
+// reason: structure-threshold-exception 保存型とZod読み取り契約の対応を一箇所に保つため、任意の適用重みを同じスキーマに追加する。
 import { z } from "zod";
 
 export const TEMPORAL_UPPER_BODY_SCHEMA_VERSION = "sincro.temporal-upper-body.v1" as const;
@@ -66,6 +67,8 @@ type TemporalRecoveringBlend = {
 };
 
 export type TemporalArmState = TemporalPartMeta & {
+    /** 観測信頼度と独立した表示用の重み。欠損中も最後の有効姿勢から減衰する。 */
+    applicationWeight?: number;
     reach: number;
     elevationRad: number;
     openness: number;
@@ -182,6 +185,7 @@ const temporalArmVelocitySchema: z.ZodType<TemporalArmState["velocity"]> = plain
 });
 
 const temporalArmStateSchema: z.ZodType<TemporalArmState> = plainObjectSchema({
+    applicationWeight: confidenceSchema.optional(),
     ...temporalPartMetaShape,
     reach: finiteNumberSchema.min(0).max(1.15),
     elevationRad: finiteNumberSchema.min(-Math.PI / 2).max(Math.PI / 2),

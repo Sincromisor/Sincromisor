@@ -1,3 +1,4 @@
+// reason: structure-threshold-exception 既存のフレーム生成・複製・平滑化の対称性を保つ。追加は腕の適用重みの受け渡しだけである。
 import { MathUtils } from "three/src/math/MathUtils.js";
 import { Quaternion } from "three/src/math/Quaternion.js";
 import type { Vector3 } from "three/src/math/Vector3.js";
@@ -120,6 +121,7 @@ export function cloneFrame(frame: SincroPoseRetargetFrame): SincroPoseRetargetFr
 export function cloneArm(arm: SincroPoseRetargetedArm): SincroPoseRetargetedArm {
     return {
         active: arm.active,
+        trackingWeight: arm.trackingWeight,
         ikActive: arm.ikActive,
         ikWeight: arm.ikWeight,
         ikSolverMode: arm.ikSolverMode,
@@ -225,6 +227,7 @@ function smoothArm(
 ): SincroPoseRetargetedArm {
     return {
         active: target.active,
+        trackingWeight: target.trackingWeight,
         ikActive: target.ikActive,
         ikWeight: MathUtils.lerp(current.ikWeight, target.ikWeight, alpha),
         ikSolverMode: target.ikSolverMode,
