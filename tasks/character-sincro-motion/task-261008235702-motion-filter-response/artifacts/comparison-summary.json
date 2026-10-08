@@ -1,0 +1,4046 @@
+[
+  {
+    "fixture": "neutral-10s",
+    "conditions": [
+      {
+        "label": "filter-baseline",
+        "config": {
+          "armIkMode": "world_3d_ik",
+          "armIkStrength": 1,
+          "armIkTargetScale": 1,
+          "smoothingMs": 155,
+          "minConfidence": 0.45
+        },
+        "frames": 110,
+        "metrics": [
+          {
+            "section": "調整",
+            "bone": "leftUpperArm",
+            "startMs": 4833.659,
+            "endMs": 10233.9805,
+            "maxLagMs": 600,
+            "sampleCount": 45,
+            "differenceSampleCount": 44,
+            "intervalsMs": {
+              "min": 98.41700000000037,
+              "max": 167.46199999999953,
+              "median": 100.49199999999928
+            },
+            "rotationStepRmsRad": 0.002965917809437125,
+            "angularVelocityRmsRadPerSec": 0.026213665101922797,
+            "inputAmplitudeRad": 0.09821063632058213,
+            "outputAmplitudeRad": 0.015358307874101081,
+            "amplitudeRatio": 0.15638130908721565,
+            "lag": {
+              "lagMs": 534.101999999999,
+              "correlation": -0.20735420239906313,
+              "sampleCount": 39
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftUpperArm",
+            "startMs": 10233.9805,
+            "endMs": 15634.302,
+            "maxLagMs": 600,
+            "sampleCount": 48,
+            "differenceSampleCount": 47,
+            "intervalsMs": {
+              "min": 94.4330000000009,
+              "max": 167.8670000000002,
+              "median": 99.85099999999875
+            },
+            "rotationStepRmsRad": 0.002692621961524963,
+            "angularVelocityRmsRadPerSec": 0.02356593746705805,
+            "inputAmplitudeRad": 0.0781080995648562,
+            "outputAmplitudeRad": 0.010102031792027975,
+            "amplitudeRatio": 0.1293339851860032,
+            "lag": {
+              "lagMs": 266.3140000000003,
+              "correlation": 0.21487333622680022,
+              "sampleCount": 45
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "leftLowerArm",
+            "startMs": 4833.659,
+            "endMs": 10233.9805,
+            "maxLagMs": 600,
+            "sampleCount": 45,
+            "differenceSampleCount": 44,
+            "intervalsMs": {
+              "min": 98.41700000000037,
+              "max": 167.46199999999953,
+              "median": 100.49199999999928
+            },
+            "rotationStepRmsRad": 0.004694087994130511,
+            "angularVelocityRmsRadPerSec": 0.04197400669258637,
+            "inputAmplitudeRad": 0.07124442268765607,
+            "outputAmplitudeRad": 0.04419969133224237,
+            "amplitudeRatio": 0.6203951083443965,
+            "lag": {
+              "lagMs": 0,
+              "correlation": 0.4204557592272969,
+              "sampleCount": 45
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftLowerArm",
+            "startMs": 10233.9805,
+            "endMs": 15634.302,
+            "maxLagMs": 600,
+            "sampleCount": 48,
+            "differenceSampleCount": 47,
+            "intervalsMs": {
+              "min": 94.4330000000009,
+              "max": 167.8670000000002,
+              "median": 99.85099999999875
+            },
+            "rotationStepRmsRad": 0.004563002383359096,
+            "angularVelocityRmsRadPerSec": 0.03988195524586191,
+            "inputAmplitudeRad": 0.05296514793229079,
+            "outputAmplitudeRad": 0.017540455317394295,
+            "amplitudeRatio": 0.33116975977896895,
+            "lag": {
+              "lagMs": 432.4879999999994,
+              "correlation": 0.5478007634782074,
+              "sampleCount": 44
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightUpperArm",
+            "startMs": 4833.659,
+            "endMs": 10233.9805,
+            "maxLagMs": 600,
+            "sampleCount": 45,
+            "differenceSampleCount": 44,
+            "intervalsMs": {
+              "min": 98.41700000000037,
+              "max": 167.46199999999953,
+              "median": 100.49199999999928
+            },
+            "rotationStepRmsRad": 0.007482680065748366,
+            "angularVelocityRmsRadPerSec": 0.0622352124487838,
+            "inputAmplitudeRad": 0.18313510138175237,
+            "outputAmplitudeRad": 0.047586472326119796,
+            "amplitudeRatio": 0.2598435360948304,
+            "lag": {
+              "lagMs": 98.41700000000037,
+              "correlation": 0.5245367673451351,
+              "sampleCount": 44
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightUpperArm",
+            "startMs": 10233.9805,
+            "endMs": 15634.302,
+            "maxLagMs": 600,
+            "sampleCount": 48,
+            "differenceSampleCount": 47,
+            "intervalsMs": {
+              "min": 94.4330000000009,
+              "max": 167.8670000000002,
+              "median": 99.85099999999875
+            },
+            "rotationStepRmsRad": 0.010696425343182405,
+            "angularVelocityRmsRadPerSec": 0.10083661033779204,
+            "inputAmplitudeRad": 0.17084619279546276,
+            "outputAmplitudeRad": 0.03721840590487597,
+            "amplitudeRatio": 0.2178474409987812,
+            "lag": {
+              "lagMs": 599.3320000000003,
+              "correlation": 0.184597047973988,
+              "sampleCount": 42
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightLowerArm",
+            "startMs": 4833.659,
+            "endMs": 10233.9805,
+            "maxLagMs": 600,
+            "sampleCount": 45,
+            "differenceSampleCount": 44,
+            "intervalsMs": {
+              "min": 98.41700000000037,
+              "max": 167.46199999999953,
+              "median": 100.49199999999928
+            },
+            "rotationStepRmsRad": 0.012505569069331104,
+            "angularVelocityRmsRadPerSec": 0.10682265357708655,
+            "inputAmplitudeRad": 0.1763643837483988,
+            "outputAmplitudeRad": 0.06212040088495073,
+            "amplitudeRatio": 0.35222758453073844,
+            "lag": {
+              "lagMs": 467.099000000002,
+              "correlation": 0.3968810256939795,
+              "sampleCount": 40
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightLowerArm",
+            "startMs": 10233.9805,
+            "endMs": 15634.302,
+            "maxLagMs": 600,
+            "sampleCount": 48,
+            "differenceSampleCount": 47,
+            "intervalsMs": {
+              "min": 94.4330000000009,
+              "max": 167.8670000000002,
+              "median": 99.85099999999875
+            },
+            "rotationStepRmsRad": 0.016806547805529103,
+            "angularVelocityRmsRadPerSec": 0.1597493235466135,
+            "inputAmplitudeRad": 0.2068819680519849,
+            "outputAmplitudeRad": 0.04477575953267642,
+            "amplitudeRatio": 0.2164314268386371,
+            "lag": {
+              "lagMs": 599.8919999999998,
+              "correlation": 0.40273422015063515,
+              "sampleCount": 42
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          }
+        ],
+        "reachClampedFrames": 0,
+        "elbowFlipFrames": 0
+      },
+      {
+        "label": "filter-input",
+        "config": {
+          "armIkMode": "world_3d_ik",
+          "armIkStrength": 1,
+          "armIkTargetScale": 1,
+          "smoothingMs": 155,
+          "minConfidence": 0.45
+        },
+        "frames": 110,
+        "metrics": [
+          {
+            "section": "調整",
+            "bone": "leftUpperArm",
+            "startMs": 4833.659,
+            "endMs": 10233.9805,
+            "maxLagMs": 600,
+            "sampleCount": 45,
+            "differenceSampleCount": 44,
+            "intervalsMs": {
+              "min": 98.41700000000037,
+              "max": 167.46199999999953,
+              "median": 100.49199999999928
+            },
+            "rotationStepRmsRad": 0.002908321781652761,
+            "angularVelocityRmsRadPerSec": 0.025738150428905864,
+            "inputAmplitudeRad": 0.09821063632058213,
+            "outputAmplitudeRad": 0.016206678490929587,
+            "amplitudeRatio": 0.16501958543499562,
+            "lag": {
+              "lagMs": 0,
+              "correlation": -0.23665401385628165,
+              "sampleCount": 45
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftUpperArm",
+            "startMs": 10233.9805,
+            "endMs": 15634.302,
+            "maxLagMs": 600,
+            "sampleCount": 48,
+            "differenceSampleCount": 47,
+            "intervalsMs": {
+              "min": 94.4330000000009,
+              "max": 167.8670000000002,
+              "median": 99.85099999999875
+            },
+            "rotationStepRmsRad": 0.0025146572996087154,
+            "angularVelocityRmsRadPerSec": 0.022158937463908207,
+            "inputAmplitudeRad": 0.0781080995648562,
+            "outputAmplitudeRad": 0.009515850580967322,
+            "amplitudeRatio": 0.12182924221662748,
+            "lag": {
+              "lagMs": 166.90100000000166,
+              "correlation": 0.002981680459317896,
+              "sampleCount": 46
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "leftLowerArm",
+            "startMs": 4833.659,
+            "endMs": 10233.9805,
+            "maxLagMs": 600,
+            "sampleCount": 45,
+            "differenceSampleCount": 44,
+            "intervalsMs": {
+              "min": 98.41700000000037,
+              "max": 167.46199999999953,
+              "median": 100.49199999999928
+            },
+            "rotationStepRmsRad": 0.00408868374617918,
+            "angularVelocityRmsRadPerSec": 0.036158438907310596,
+            "inputAmplitudeRad": 0.07124442268765607,
+            "outputAmplitudeRad": 0.0420156631992582,
+            "amplitudeRatio": 0.5897396822690221,
+            "lag": {
+              "lagMs": 0,
+              "correlation": 0.3801920776970338,
+              "sampleCount": 45
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftLowerArm",
+            "startMs": 10233.9805,
+            "endMs": 15634.302,
+            "maxLagMs": 600,
+            "sampleCount": 48,
+            "differenceSampleCount": 47,
+            "intervalsMs": {
+              "min": 94.4330000000009,
+              "max": 167.8670000000002,
+              "median": 99.85099999999875
+            },
+            "rotationStepRmsRad": 0.0036730159233933444,
+            "angularVelocityRmsRadPerSec": 0.03238644728583704,
+            "inputAmplitudeRad": 0.05296514793229079,
+            "outputAmplitudeRad": 0.015152003139538128,
+            "amplitudeRatio": 0.2860749706374471,
+            "lag": {
+              "lagMs": 399.98199999999815,
+              "correlation": 0.3097113450950333,
+              "sampleCount": 45
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightUpperArm",
+            "startMs": 4833.659,
+            "endMs": 10233.9805,
+            "maxLagMs": 600,
+            "sampleCount": 45,
+            "differenceSampleCount": 44,
+            "intervalsMs": {
+              "min": 98.41700000000037,
+              "max": 167.46199999999953,
+              "median": 100.49199999999928
+            },
+            "rotationStepRmsRad": 0.005962165594449374,
+            "angularVelocityRmsRadPerSec": 0.049374440774095876,
+            "inputAmplitudeRad": 0.18313510138175237,
+            "outputAmplitudeRad": 0.05093232744093396,
+            "amplitudeRatio": 0.2781134094810339,
+            "lag": {
+              "lagMs": 197.31900000000132,
+              "correlation": 0.48101546347157464,
+              "sampleCount": 43
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightUpperArm",
+            "startMs": 10233.9805,
+            "endMs": 15634.302,
+            "maxLagMs": 600,
+            "sampleCount": 48,
+            "differenceSampleCount": 47,
+            "intervalsMs": {
+              "min": 94.4330000000009,
+              "max": 167.8670000000002,
+              "median": 99.85099999999875
+            },
+            "rotationStepRmsRad": 0.009236105108533432,
+            "angularVelocityRmsRadPerSec": 0.07700534297015026,
+            "inputAmplitudeRad": 0.17084619279546276,
+            "outputAmplitudeRad": 0.03760981301474241,
+            "amplitudeRatio": 0.22013843211460332,
+            "lag": {
+              "lagMs": 599.8919999999998,
+              "correlation": 0.0531775057736517,
+              "sampleCount": 42
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightLowerArm",
+            "startMs": 4833.659,
+            "endMs": 10233.9805,
+            "maxLagMs": 600,
+            "sampleCount": 45,
+            "differenceSampleCount": 44,
+            "intervalsMs": {
+              "min": 98.41700000000037,
+              "max": 167.46199999999953,
+              "median": 100.49199999999928
+            },
+            "rotationStepRmsRad": 0.009484314424245653,
+            "angularVelocityRmsRadPerSec": 0.07926548032859362,
+            "inputAmplitudeRad": 0.1763643837483988,
+            "outputAmplitudeRad": 0.06658575557626681,
+            "amplitudeRatio": 0.3775464986811507,
+            "lag": {
+              "lagMs": 599.5260000000017,
+              "correlation": 0.3485518527122531,
+              "sampleCount": 39
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightLowerArm",
+            "startMs": 10233.9805,
+            "endMs": 15634.302,
+            "maxLagMs": 600,
+            "sampleCount": 48,
+            "differenceSampleCount": 47,
+            "intervalsMs": {
+              "min": 94.4330000000009,
+              "max": 167.8670000000002,
+              "median": 99.85099999999875
+            },
+            "rotationStepRmsRad": 0.013993792574165302,
+            "angularVelocityRmsRadPerSec": 0.11622429478882045,
+            "inputAmplitudeRad": 0.2068819680519849,
+            "outputAmplitudeRad": 0.044670165475322654,
+            "amplitudeRatio": 0.2159210195839689,
+            "lag": {
+              "lagMs": 599.8919999999998,
+              "correlation": 0.3431815063571717,
+              "sampleCount": 42
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          }
+        ],
+        "reachClampedFrames": 0,
+        "elbowFlipFrames": 0
+      },
+      {
+        "label": "filter-minimal",
+        "config": {
+          "armIkMode": "world_3d_ik",
+          "armIkStrength": 1,
+          "armIkTargetScale": 1,
+          "smoothingMs": 40,
+          "minConfidence": 0.45
+        },
+        "frames": 110,
+        "metrics": [
+          {
+            "section": "調整",
+            "bone": "leftUpperArm",
+            "startMs": 4833.659,
+            "endMs": 10233.9805,
+            "maxLagMs": 600,
+            "sampleCount": 45,
+            "differenceSampleCount": 44,
+            "intervalsMs": {
+              "min": 98.41700000000037,
+              "max": 167.46199999999953,
+              "median": 100.49199999999928
+            },
+            "rotationStepRmsRad": 0.0039984636479738185,
+            "angularVelocityRmsRadPerSec": 0.035976890675826975,
+            "inputAmplitudeRad": 0.09821063632058213,
+            "outputAmplitudeRad": 0.017943115634276103,
+            "amplitudeRatio": 0.18270032968430874,
+            "lag": {
+              "lagMs": 534.101999999999,
+              "correlation": -0.18366812150785533,
+              "sampleCount": 39
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftUpperArm",
+            "startMs": 10233.9805,
+            "endMs": 15634.302,
+            "maxLagMs": 600,
+            "sampleCount": 48,
+            "differenceSampleCount": 47,
+            "intervalsMs": {
+              "min": 94.4330000000009,
+              "max": 167.8670000000002,
+              "median": 99.85099999999875
+            },
+            "rotationStepRmsRad": 0.003724826561713296,
+            "angularVelocityRmsRadPerSec": 0.03190434161311948,
+            "inputAmplitudeRad": 0.0781080995648562,
+            "outputAmplitudeRad": 0.011560200876802143,
+            "amplitudeRatio": 0.14800258796724733,
+            "lag": {
+              "lagMs": 599.8919999999998,
+              "correlation": 0.1338142173541064,
+              "sampleCount": 42
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "leftLowerArm",
+            "startMs": 4833.659,
+            "endMs": 10233.9805,
+            "maxLagMs": 600,
+            "sampleCount": 45,
+            "differenceSampleCount": 44,
+            "intervalsMs": {
+              "min": 98.41700000000037,
+              "max": 167.46199999999953,
+              "median": 100.49199999999928
+            },
+            "rotationStepRmsRad": 0.0053052594035504375,
+            "angularVelocityRmsRadPerSec": 0.04786548311074163,
+            "inputAmplitudeRad": 0.07124442268765607,
+            "outputAmplitudeRad": 0.0462993446230977,
+            "amplitudeRatio": 0.6498662334043953,
+            "lag": {
+              "lagMs": 0,
+              "correlation": 0.4490759163869809,
+              "sampleCount": 45
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftLowerArm",
+            "startMs": 10233.9805,
+            "endMs": 15634.302,
+            "maxLagMs": 600,
+            "sampleCount": 48,
+            "differenceSampleCount": 47,
+            "intervalsMs": {
+              "min": 94.4330000000009,
+              "max": 167.8670000000002,
+              "median": 99.85099999999875
+            },
+            "rotationStepRmsRad": 0.005062340250020686,
+            "angularVelocityRmsRadPerSec": 0.04331317657150812,
+            "inputAmplitudeRad": 0.05296514793229079,
+            "outputAmplitudeRad": 0.017304116665596513,
+            "amplitudeRatio": 0.3267076056828469,
+            "lag": {
+              "lagMs": 427.0110000000004,
+              "correlation": 0.5594353232133765,
+              "sampleCount": 44
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightUpperArm",
+            "startMs": 4833.659,
+            "endMs": 10233.9805,
+            "maxLagMs": 600,
+            "sampleCount": 45,
+            "differenceSampleCount": 44,
+            "intervalsMs": {
+              "min": 98.41700000000037,
+              "max": 167.46199999999953,
+              "median": 100.49199999999928
+            },
+            "rotationStepRmsRad": 0.007559157935389602,
+            "angularVelocityRmsRadPerSec": 0.0664926184064471,
+            "inputAmplitudeRad": 0.18313510138175237,
+            "outputAmplitudeRad": 0.05090448380183145,
+            "amplitudeRatio": 0.2779613706916788,
+            "lag": {
+              "lagMs": 98.41700000000037,
+              "correlation": 0.5221700698787516,
+              "sampleCount": 44
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightUpperArm",
+            "startMs": 10233.9805,
+            "endMs": 15634.302,
+            "maxLagMs": 600,
+            "sampleCount": 48,
+            "differenceSampleCount": 47,
+            "intervalsMs": {
+              "min": 94.4330000000009,
+              "max": 167.8670000000002,
+              "median": 99.85099999999875
+            },
+            "rotationStepRmsRad": 0.009753587294972456,
+            "angularVelocityRmsRadPerSec": 0.08156437263235351,
+            "inputAmplitudeRad": 0.17084619279546276,
+            "outputAmplitudeRad": 0.042876405771530755,
+            "amplitudeRatio": 0.25096494730123975,
+            "lag": {
+              "lagMs": 599.3320000000003,
+              "correlation": 0.005272495649811297,
+              "sampleCount": 42
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightLowerArm",
+            "startMs": 4833.659,
+            "endMs": 10233.9805,
+            "maxLagMs": 600,
+            "sampleCount": 45,
+            "differenceSampleCount": 44,
+            "intervalsMs": {
+              "min": 98.41700000000037,
+              "max": 167.46199999999953,
+              "median": 100.49199999999928
+            },
+            "rotationStepRmsRad": 0.011907374129095831,
+            "angularVelocityRmsRadPerSec": 0.10180842597276828,
+            "inputAmplitudeRad": 0.1763643837483988,
+            "outputAmplitudeRad": 0.06808519048948071,
+            "amplitudeRatio": 0.3860484131910157,
+            "lag": {
+              "lagMs": 599.5260000000017,
+              "correlation": 0.36196803351794304,
+              "sampleCount": 39
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightLowerArm",
+            "startMs": 10233.9805,
+            "endMs": 15634.302,
+            "maxLagMs": 600,
+            "sampleCount": 48,
+            "differenceSampleCount": 47,
+            "intervalsMs": {
+              "min": 94.4330000000009,
+              "max": 167.8670000000002,
+              "median": 99.85099999999875
+            },
+            "rotationStepRmsRad": 0.014658988224021388,
+            "angularVelocityRmsRadPerSec": 0.12190277914999088,
+            "inputAmplitudeRad": 0.2068819680519849,
+            "outputAmplitudeRad": 0.04566502566345681,
+            "amplitudeRatio": 0.22072984945687577,
+            "lag": {
+              "lagMs": 599.8919999999998,
+              "correlation": 0.3267462068885095,
+              "sampleCount": 42
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          }
+        ],
+        "reachClampedFrames": 0,
+        "elbowFlipFrames": 0
+      }
+    ]
+  },
+  {
+    "fixture": "both-arms-slow-raise",
+    "conditions": [
+      {
+        "label": "filter-baseline",
+        "config": {
+          "armIkMode": "world_3d_ik",
+          "armIkStrength": 1,
+          "armIkTargetScale": 1,
+          "smoothingMs": 155,
+          "minConfidence": 0.45
+        },
+        "frames": 101,
+        "metrics": [
+          {
+            "section": "調整",
+            "bone": "leftUpperArm",
+            "startMs": 5335.713,
+            "endMs": 10968.110999999999,
+            "maxLagMs": 600,
+            "sampleCount": 42,
+            "differenceSampleCount": 41,
+            "intervalsMs": {
+              "min": 92.61300000000028,
+              "max": 174.34599999999955,
+              "median": 134.15899999999965
+            },
+            "rotationStepRmsRad": 0.43830343841916203,
+            "angularVelocityRmsRadPerSec": 2.7908413901970235,
+            "inputAmplitudeRad": 1.8391214532763536,
+            "outputAmplitudeRad": 2.448156102719513,
+            "amplitudeRatio": 1.331155209112578,
+            "lag": {
+              "lagMs": 166.76700000000073,
+              "correlation": -0.19232487078328722,
+              "sampleCount": 40
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftUpperArm",
+            "startMs": 10968.110999999999,
+            "endMs": 16600.509,
+            "maxLagMs": 600,
+            "sampleCount": 44,
+            "differenceSampleCount": 43,
+            "intervalsMs": {
+              "min": 83.41999999999825,
+              "max": 173.6830000000009,
+              "median": 104.58500000000095
+            },
+            "rotationStepRmsRad": 0.014465055367365582,
+            "angularVelocityRmsRadPerSec": 0.12434560096540465,
+            "inputAmplitudeRad": 0.19491097247185452,
+            "outputAmplitudeRad": 0.0978057763998908,
+            "amplitudeRatio": 0.5017971803204364,
+            "lag": {
+              "lagMs": 339.73199999999815,
+              "correlation": 0.46082132651262875,
+              "sampleCount": 41
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "leftLowerArm",
+            "startMs": 5335.713,
+            "endMs": 10968.110999999999,
+            "maxLagMs": 600,
+            "sampleCount": 42,
+            "differenceSampleCount": 41,
+            "intervalsMs": {
+              "min": 92.61300000000028,
+              "max": 174.34599999999955,
+              "median": 134.15899999999965
+            },
+            "rotationStepRmsRad": 0.179009982485399,
+            "angularVelocityRmsRadPerSec": 1.3773055625621682,
+            "inputAmplitudeRad": 0.3067043168800021,
+            "outputAmplitudeRad": 1.4646011879276903,
+            "amplitudeRatio": 4.775287165262545,
+            "lag": {
+              "lagMs": 92.61300000000028,
+              "correlation": 0.8370976206982286,
+              "sampleCount": 41
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftLowerArm",
+            "startMs": 10968.110999999999,
+            "endMs": 16600.509,
+            "maxLagMs": 600,
+            "sampleCount": 44,
+            "differenceSampleCount": 43,
+            "intervalsMs": {
+              "min": 83.41999999999825,
+              "max": 173.6830000000009,
+              "median": 104.58500000000095
+            },
+            "rotationStepRmsRad": 0.04942359072911791,
+            "angularVelocityRmsRadPerSec": 0.41971598341427124,
+            "inputAmplitudeRad": 0.09333241811740178,
+            "outputAmplitudeRad": 0.7061776769119001,
+            "amplitudeRatio": 7.566263589395137,
+            "lag": {
+              "lagMs": 459.3760000000002,
+              "correlation": 0.6130724704748418,
+              "sampleCount": 40
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightUpperArm",
+            "startMs": 5335.713,
+            "endMs": 10968.110999999999,
+            "maxLagMs": 600,
+            "sampleCount": 42,
+            "differenceSampleCount": 41,
+            "intervalsMs": {
+              "min": 92.61300000000028,
+              "max": 174.34599999999955,
+              "median": 134.15899999999965
+            },
+            "rotationStepRmsRad": 0.13754237564093477,
+            "angularVelocityRmsRadPerSec": 0.9810867229836535,
+            "inputAmplitudeRad": 1.5508146518514456,
+            "outputAmplitudeRad": 1.905454620261168,
+            "amplitudeRatio": 1.2286797896746295,
+            "lag": {
+              "lagMs": 599.8590000000004,
+              "correlation": -0.7573777672171762,
+              "sampleCount": 37
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightUpperArm",
+            "startMs": 10968.110999999999,
+            "endMs": 16600.509,
+            "maxLagMs": 600,
+            "sampleCount": 44,
+            "differenceSampleCount": 43,
+            "intervalsMs": {
+              "min": 83.41999999999825,
+              "max": 173.6830000000009,
+              "median": 104.58500000000095
+            },
+            "rotationStepRmsRad": 0.05659463599865112,
+            "angularVelocityRmsRadPerSec": 0.4421978558550293,
+            "inputAmplitudeRad": 0.2583069241687057,
+            "outputAmplitudeRad": 0.2680585678646879,
+            "amplitudeRatio": 1.037752157544229,
+            "lag": {
+              "lagMs": 0,
+              "correlation": -0.03267955432384047,
+              "sampleCount": 44
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightLowerArm",
+            "startMs": 5335.713,
+            "endMs": 10968.110999999999,
+            "maxLagMs": 600,
+            "sampleCount": 42,
+            "differenceSampleCount": 41,
+            "intervalsMs": {
+              "min": 92.61300000000028,
+              "max": 174.34599999999955,
+              "median": 134.15899999999965
+            },
+            "rotationStepRmsRad": 0.14312062593206554,
+            "angularVelocityRmsRadPerSec": 1.0050113925703434,
+            "inputAmplitudeRad": 0.1932420620603721,
+            "outputAmplitudeRad": 1.6443683357695482,
+            "amplitudeRatio": 8.509370673429368,
+            "lag": {
+              "lagMs": 0,
+              "correlation": 0.47038571589482114,
+              "sampleCount": 42
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightLowerArm",
+            "startMs": 10968.110999999999,
+            "endMs": 16600.509,
+            "maxLagMs": 600,
+            "sampleCount": 44,
+            "differenceSampleCount": 43,
+            "intervalsMs": {
+              "min": 83.41999999999825,
+              "max": 173.6830000000009,
+              "median": 104.58500000000095
+            },
+            "rotationStepRmsRad": 0.08125203197301005,
+            "angularVelocityRmsRadPerSec": 0.657675909230385,
+            "inputAmplitudeRad": 0.14360769598732137,
+            "outputAmplitudeRad": 0.6394408077042462,
+            "amplitudeRatio": 4.452691781648667,
+            "lag": {
+              "lagMs": 459.3760000000002,
+              "correlation": 0.4914480528364472,
+              "sampleCount": 40
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          }
+        ],
+        "reachClampedFrames": 0,
+        "elbowFlipFrames": 0
+      },
+      {
+        "label": "filter-input",
+        "config": {
+          "armIkMode": "world_3d_ik",
+          "armIkStrength": 1,
+          "armIkTargetScale": 1,
+          "smoothingMs": 155,
+          "minConfidence": 0.45
+        },
+        "frames": 101,
+        "metrics": [
+          {
+            "section": "調整",
+            "bone": "leftUpperArm",
+            "startMs": 5335.713,
+            "endMs": 10968.110999999999,
+            "maxLagMs": 600,
+            "sampleCount": 42,
+            "differenceSampleCount": 41,
+            "intervalsMs": {
+              "min": 92.61300000000028,
+              "max": 174.34599999999955,
+              "median": 134.15899999999965
+            },
+            "rotationStepRmsRad": 0.4328196047510557,
+            "angularVelocityRmsRadPerSec": 2.740823404405457,
+            "inputAmplitudeRad": 1.8391214532763536,
+            "outputAmplitudeRad": 2.6063100929720924,
+            "amplitudeRatio": 1.4171495244802943,
+            "lag": {
+              "lagMs": 166.76700000000073,
+              "correlation": 0.061237093756009345,
+              "sampleCount": 40
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftUpperArm",
+            "startMs": 10968.110999999999,
+            "endMs": 16600.509,
+            "maxLagMs": 600,
+            "sampleCount": 44,
+            "differenceSampleCount": 43,
+            "intervalsMs": {
+              "min": 83.41999999999825,
+              "max": 173.6830000000009,
+              "median": 104.58500000000095
+            },
+            "rotationStepRmsRad": 0.013078137277952182,
+            "angularVelocityRmsRadPerSec": 0.1109879432928355,
+            "inputAmplitudeRad": 0.19491097247185452,
+            "outputAmplitudeRad": 0.11004660215634968,
+            "amplitudeRatio": 0.5645993181437776,
+            "lag": {
+              "lagMs": 292.896999999999,
+              "correlation": 0.5863930252661468,
+              "sampleCount": 41
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "leftLowerArm",
+            "startMs": 5335.713,
+            "endMs": 10968.110999999999,
+            "maxLagMs": 600,
+            "sampleCount": 42,
+            "differenceSampleCount": 41,
+            "intervalsMs": {
+              "min": 92.61300000000028,
+              "max": 174.34599999999955,
+              "median": 134.15899999999965
+            },
+            "rotationStepRmsRad": 0.17254312923927573,
+            "angularVelocityRmsRadPerSec": 1.350451737491702,
+            "inputAmplitudeRad": 0.3067043168800021,
+            "outputAmplitudeRad": 1.3719609731519706,
+            "amplitudeRatio": 4.473236591869522,
+            "lag": {
+              "lagMs": 92.61300000000028,
+              "correlation": 0.8640710994151838,
+              "sampleCount": 41
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftLowerArm",
+            "startMs": 10968.110999999999,
+            "endMs": 16600.509,
+            "maxLagMs": 600,
+            "sampleCount": 44,
+            "differenceSampleCount": 43,
+            "intervalsMs": {
+              "min": 83.41999999999825,
+              "max": 173.6830000000009,
+              "median": 104.58500000000095
+            },
+            "rotationStepRmsRad": 0.04893008628750095,
+            "angularVelocityRmsRadPerSec": 0.4075257144499424,
+            "inputAmplitudeRad": 0.09333241811740178,
+            "outputAmplitudeRad": 0.6951712796256638,
+            "amplitudeRatio": 7.448336747808417,
+            "lag": {
+              "lagMs": 459.3760000000002,
+              "correlation": 0.6018428299001909,
+              "sampleCount": 40
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightUpperArm",
+            "startMs": 5335.713,
+            "endMs": 10968.110999999999,
+            "maxLagMs": 600,
+            "sampleCount": 42,
+            "differenceSampleCount": 41,
+            "intervalsMs": {
+              "min": 92.61300000000028,
+              "max": 174.34599999999955,
+              "median": 134.15899999999965
+            },
+            "rotationStepRmsRad": 0.13349025009935106,
+            "angularVelocityRmsRadPerSec": 0.9802489310134279,
+            "inputAmplitudeRad": 1.5508146518514456,
+            "outputAmplitudeRad": 1.592745505226749,
+            "amplitudeRatio": 1.027037952810959,
+            "lag": {
+              "lagMs": 599.8590000000004,
+              "correlation": -0.8119168698068672,
+              "sampleCount": 37
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightUpperArm",
+            "startMs": 10968.110999999999,
+            "endMs": 16600.509,
+            "maxLagMs": 600,
+            "sampleCount": 44,
+            "differenceSampleCount": 43,
+            "intervalsMs": {
+              "min": 83.41999999999825,
+              "max": 173.6830000000009,
+              "median": 104.58500000000095
+            },
+            "rotationStepRmsRad": 0.05338146052889601,
+            "angularVelocityRmsRadPerSec": 0.40473748243169644,
+            "inputAmplitudeRad": 0.2583069241687057,
+            "outputAmplitudeRad": 0.2806783062885888,
+            "amplitudeRatio": 1.0866077523546054,
+            "lag": {
+              "lagMs": 0,
+              "correlation": -0.029880587920023082,
+              "sampleCount": 44
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightLowerArm",
+            "startMs": 5335.713,
+            "endMs": 10968.110999999999,
+            "maxLagMs": 600,
+            "sampleCount": 42,
+            "differenceSampleCount": 41,
+            "intervalsMs": {
+              "min": 92.61300000000028,
+              "max": 174.34599999999955,
+              "median": 134.15899999999965
+            },
+            "rotationStepRmsRad": 0.14094448156368716,
+            "angularVelocityRmsRadPerSec": 1.0213931181274634,
+            "inputAmplitudeRad": 0.1932420620603721,
+            "outputAmplitudeRad": 1.616214700154928,
+            "amplitudeRatio": 8.363679640563943,
+            "lag": {
+              "lagMs": 0,
+              "correlation": 0.563447230507723,
+              "sampleCount": 42
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightLowerArm",
+            "startMs": 10968.110999999999,
+            "endMs": 16600.509,
+            "maxLagMs": 600,
+            "sampleCount": 44,
+            "differenceSampleCount": 43,
+            "intervalsMs": {
+              "min": 83.41999999999825,
+              "max": 173.6830000000009,
+              "median": 104.58500000000095
+            },
+            "rotationStepRmsRad": 0.07872128769011015,
+            "angularVelocityRmsRadPerSec": 0.6176773719708428,
+            "inputAmplitudeRad": 0.14360769598732137,
+            "outputAmplitudeRad": 0.6262965690738337,
+            "amplitudeRatio": 4.361162991773973,
+            "lag": {
+              "lagMs": 191.95900000000074,
+              "correlation": 0.5107582746019584,
+              "sampleCount": 42
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          }
+        ],
+        "reachClampedFrames": 0,
+        "elbowFlipFrames": 0
+      },
+      {
+        "label": "filter-minimal",
+        "config": {
+          "armIkMode": "world_3d_ik",
+          "armIkStrength": 1,
+          "armIkTargetScale": 1,
+          "smoothingMs": 40,
+          "minConfidence": 0.45
+        },
+        "frames": 101,
+        "metrics": [
+          {
+            "section": "調整",
+            "bone": "leftUpperArm",
+            "startMs": 5335.713,
+            "endMs": 10968.110999999999,
+            "maxLagMs": 600,
+            "sampleCount": 42,
+            "differenceSampleCount": 41,
+            "intervalsMs": {
+              "min": 92.61300000000028,
+              "max": 174.34599999999955,
+              "median": 134.15899999999965
+            },
+            "rotationStepRmsRad": 0.4269644553583398,
+            "angularVelocityRmsRadPerSec": 2.6920213724044673,
+            "inputAmplitudeRad": 1.8391214532763536,
+            "outputAmplitudeRad": 2.5608193349494552,
+            "amplitudeRatio": 1.39241447615513,
+            "lag": {
+              "lagMs": 0,
+              "correlation": -0.5841230396133897,
+              "sampleCount": 42
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftUpperArm",
+            "startMs": 10968.110999999999,
+            "endMs": 16600.509,
+            "maxLagMs": 600,
+            "sampleCount": 44,
+            "differenceSampleCount": 43,
+            "intervalsMs": {
+              "min": 83.41999999999825,
+              "max": 173.6830000000009,
+              "median": 104.58500000000095
+            },
+            "rotationStepRmsRad": 0.017573661070161964,
+            "angularVelocityRmsRadPerSec": 0.14662781429658386,
+            "inputAmplitudeRad": 0.19491097247185452,
+            "outputAmplitudeRad": 0.14088378905143825,
+            "amplitudeRatio": 0.7228109698738593,
+            "lag": {
+              "lagMs": 200.11499999999978,
+              "correlation": 0.5174238066187079,
+              "sampleCount": 41
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "leftLowerArm",
+            "startMs": 5335.713,
+            "endMs": 10968.110999999999,
+            "maxLagMs": 600,
+            "sampleCount": 42,
+            "differenceSampleCount": 41,
+            "intervalsMs": {
+              "min": 92.61300000000028,
+              "max": 174.34599999999955,
+              "median": 134.15899999999965
+            },
+            "rotationStepRmsRad": 0.1965938192352966,
+            "angularVelocityRmsRadPerSec": 1.5091707467012052,
+            "inputAmplitudeRad": 0.3067043168800021,
+            "outputAmplitudeRad": 1.6805879450711338,
+            "amplitudeRatio": 5.479505349540492,
+            "lag": {
+              "lagMs": 0,
+              "correlation": 0.760293215801476,
+              "sampleCount": 42
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftLowerArm",
+            "startMs": 10968.110999999999,
+            "endMs": 16600.509,
+            "maxLagMs": 600,
+            "sampleCount": 44,
+            "differenceSampleCount": 43,
+            "intervalsMs": {
+              "min": 83.41999999999825,
+              "max": 173.6830000000009,
+              "median": 104.58500000000095
+            },
+            "rotationStepRmsRad": 0.053976287018641815,
+            "angularVelocityRmsRadPerSec": 0.4325638367939002,
+            "inputAmplitudeRad": 0.09333241811740178,
+            "outputAmplitudeRad": 0.6672445704075539,
+            "amplitudeRatio": 7.149119072091699,
+            "lag": {
+              "lagMs": 361.5010000000002,
+              "correlation": 0.5991175851447637,
+              "sampleCount": 41
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightUpperArm",
+            "startMs": 5335.713,
+            "endMs": 10968.110999999999,
+            "maxLagMs": 600,
+            "sampleCount": 42,
+            "differenceSampleCount": 41,
+            "intervalsMs": {
+              "min": 92.61300000000028,
+              "max": 174.34599999999955,
+              "median": 134.15899999999965
+            },
+            "rotationStepRmsRad": 0.14064070971450637,
+            "angularVelocityRmsRadPerSec": 0.9886258887729875,
+            "inputAmplitudeRad": 1.5508146518514456,
+            "outputAmplitudeRad": 1.9341208327452828,
+            "amplitudeRatio": 1.2471644051313455,
+            "lag": {
+              "lagMs": 599.8590000000004,
+              "correlation": -0.7579371483269186,
+              "sampleCount": 37
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightUpperArm",
+            "startMs": 10968.110999999999,
+            "endMs": 16600.509,
+            "maxLagMs": 600,
+            "sampleCount": 44,
+            "differenceSampleCount": 43,
+            "intervalsMs": {
+              "min": 83.41999999999825,
+              "max": 173.6830000000009,
+              "median": 104.58500000000095
+            },
+            "rotationStepRmsRad": 0.05400660093633827,
+            "angularVelocityRmsRadPerSec": 0.4075550945182269,
+            "inputAmplitudeRad": 0.2583069241687057,
+            "outputAmplitudeRad": 0.2680711341141835,
+            "amplitudeRatio": 1.0378008060639543,
+            "lag": {
+              "lagMs": 0,
+              "correlation": -0.03636857907286093,
+              "sampleCount": 44
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightLowerArm",
+            "startMs": 5335.713,
+            "endMs": 10968.110999999999,
+            "maxLagMs": 600,
+            "sampleCount": 42,
+            "differenceSampleCount": 41,
+            "intervalsMs": {
+              "min": 92.61300000000028,
+              "max": 174.34599999999955,
+              "median": 134.15899999999965
+            },
+            "rotationStepRmsRad": 0.15372391771913116,
+            "angularVelocityRmsRadPerSec": 1.0691423671508045,
+            "inputAmplitudeRad": 0.1932420620603721,
+            "outputAmplitudeRad": 1.723687196744378,
+            "amplitudeRatio": 8.919834420965085,
+            "lag": {
+              "lagMs": 0,
+              "correlation": 0.38832989150511055,
+              "sampleCount": 42
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightLowerArm",
+            "startMs": 10968.110999999999,
+            "endMs": 16600.509,
+            "maxLagMs": 600,
+            "sampleCount": 44,
+            "differenceSampleCount": 43,
+            "intervalsMs": {
+              "min": 83.41999999999825,
+              "max": 173.6830000000009,
+              "median": 104.58500000000095
+            },
+            "rotationStepRmsRad": 0.08508333158125053,
+            "angularVelocityRmsRadPerSec": 0.6595853763039382,
+            "inputAmplitudeRad": 0.14360769598732137,
+            "outputAmplitudeRad": 0.6254517453632268,
+            "amplitudeRatio": 4.355280133583132,
+            "lag": {
+              "lagMs": 191.95900000000074,
+              "correlation": 0.5556412561760732,
+              "sampleCount": 42
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          }
+        ],
+        "reachClampedFrames": 0,
+        "elbowFlipFrames": 0
+      }
+    ]
+  },
+  {
+    "fixture": "single-arm-slow-raise",
+    "conditions": [
+      {
+        "label": "filter-baseline",
+        "config": {
+          "armIkMode": "world_3d_ik",
+          "armIkStrength": 1,
+          "armIkTargetScale": 1,
+          "smoothingMs": 155,
+          "minConfidence": 0.45
+        },
+        "frames": 92,
+        "metrics": [
+          {
+            "section": "調整",
+            "bone": "leftUpperArm",
+            "startMs": 5366.909,
+            "endMs": 10233.938,
+            "maxLagMs": 600,
+            "sampleCount": 38,
+            "differenceSampleCount": 37,
+            "intervalsMs": {
+              "min": 93.8110000000006,
+              "max": 168.20900000000256,
+              "median": 133.8120000000008
+            },
+            "rotationStepRmsRad": 0.03672179700736209,
+            "angularVelocityRmsRadPerSec": 0.301635535309256,
+            "inputAmplitudeRad": 0.6573909341367132,
+            "outputAmplitudeRad": 0.5337850347354176,
+            "amplitudeRatio": 0.8119750471405343,
+            "lag": {
+              "lagMs": 599.9340000000002,
+              "correlation": -0.8655447495427501,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftUpperArm",
+            "startMs": 10233.938,
+            "endMs": 15100.967,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 94.64399999999841,
+              "max": 233.52000000000044,
+              "median": 134.47500000000036
+            },
+            "rotationStepRmsRad": 0.040789778558811975,
+            "angularVelocityRmsRadPerSec": 0.3382263151809098,
+            "inputAmplitudeRad": 0.8905377584912136,
+            "outputAmplitudeRad": 0.36221364037646864,
+            "amplitudeRatio": 0.4067358592297604,
+            "lag": {
+              "lagMs": 599.5000000000018,
+              "correlation": 0.5086326492400953,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "leftLowerArm",
+            "startMs": 5366.909,
+            "endMs": 10233.938,
+            "maxLagMs": 600,
+            "sampleCount": 38,
+            "differenceSampleCount": 37,
+            "intervalsMs": {
+              "min": 93.8110000000006,
+              "max": 168.20900000000256,
+              "median": 133.8120000000008
+            },
+            "rotationStepRmsRad": 0.02685723984658068,
+            "angularVelocityRmsRadPerSec": 0.2244453050727468,
+            "inputAmplitudeRad": 0.13564208517260345,
+            "outputAmplitudeRad": 0.12321823967388254,
+            "amplitudeRatio": 0.9084071475094793,
+            "lag": {
+              "lagMs": 505.1229999999996,
+              "correlation": 0.703469523755817,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftLowerArm",
+            "startMs": 10233.938,
+            "endMs": 15100.967,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 94.64399999999841,
+              "max": 233.52000000000044,
+              "median": 134.47500000000036
+            },
+            "rotationStepRmsRad": 0.05960909527211299,
+            "angularVelocityRmsRadPerSec": 0.4821947263907696,
+            "inputAmplitudeRad": 0.08246272384149078,
+            "outputAmplitudeRad": 0.4109136269861278,
+            "amplitudeRatio": 4.983022726437983,
+            "lag": {
+              "lagMs": 499.6349999999984,
+              "correlation": 0.07294522865382343,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightUpperArm",
+            "startMs": 5366.909,
+            "endMs": 10233.938,
+            "maxLagMs": 600,
+            "sampleCount": 38,
+            "differenceSampleCount": 37,
+            "intervalsMs": {
+              "min": 93.8110000000006,
+              "max": 168.20900000000256,
+              "median": 133.8120000000008
+            },
+            "rotationStepRmsRad": 0.02781353290633847,
+            "angularVelocityRmsRadPerSec": 0.23456685901877658,
+            "inputAmplitudeRad": 0.11582206763685954,
+            "outputAmplitudeRad": 0.14230163109769484,
+            "amplitudeRatio": 1.2286227832148315,
+            "lag": {
+              "lagMs": 599.9340000000002,
+              "correlation": -0.4401089070621886,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightUpperArm",
+            "startMs": 10233.938,
+            "endMs": 15100.967,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 94.64399999999841,
+              "max": 233.52000000000044,
+              "median": 134.47500000000036
+            },
+            "rotationStepRmsRad": 0.054766333938527194,
+            "angularVelocityRmsRadPerSec": 0.3941736604340612,
+            "inputAmplitudeRad": 0.0616700371354042,
+            "outputAmplitudeRad": 0.20000942377229966,
+            "amplitudeRatio": 3.2432187989956,
+            "lag": {
+              "lagMs": 400.3550000000014,
+              "correlation": 0.3037585215445224,
+              "sampleCount": 35
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightLowerArm",
+            "startMs": 5366.909,
+            "endMs": 10233.938,
+            "maxLagMs": 600,
+            "sampleCount": 38,
+            "differenceSampleCount": 37,
+            "intervalsMs": {
+              "min": 93.8110000000006,
+              "max": 168.20900000000256,
+              "median": 133.8120000000008
+            },
+            "rotationStepRmsRad": 0.03874589998310715,
+            "angularVelocityRmsRadPerSec": 0.3164910799228885,
+            "inputAmplitudeRad": 0.08940650505708003,
+            "outputAmplitudeRad": 0.1252658686809191,
+            "amplitudeRatio": 1.401082265780832,
+            "lag": {
+              "lagMs": 95.2489999999998,
+              "correlation": -0.1727698075195622,
+              "sampleCount": 37
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightLowerArm",
+            "startMs": 10233.938,
+            "endMs": 15100.967,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 94.64399999999841,
+              "max": 233.52000000000044,
+              "median": 134.47500000000036
+            },
+            "rotationStepRmsRad": 0.07757425575156486,
+            "angularVelocityRmsRadPerSec": 0.5615157744622481,
+            "inputAmplitudeRad": 0.20617232443116418,
+            "outputAmplitudeRad": 0.35094492266282135,
+            "amplitudeRatio": 1.7021922007771375,
+            "lag": {
+              "lagMs": 599.5000000000018,
+              "correlation": 0.6209457309795283,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          }
+        ],
+        "reachClampedFrames": 0,
+        "elbowFlipFrames": 0
+      },
+      {
+        "label": "filter-input",
+        "config": {
+          "armIkMode": "world_3d_ik",
+          "armIkStrength": 1,
+          "armIkTargetScale": 1,
+          "smoothingMs": 155,
+          "minConfidence": 0.45
+        },
+        "frames": 92,
+        "metrics": [
+          {
+            "section": "調整",
+            "bone": "leftUpperArm",
+            "startMs": 5366.909,
+            "endMs": 10233.938,
+            "maxLagMs": 600,
+            "sampleCount": 38,
+            "differenceSampleCount": 37,
+            "intervalsMs": {
+              "min": 93.8110000000006,
+              "max": 168.20900000000256,
+              "median": 133.8120000000008
+            },
+            "rotationStepRmsRad": 0.03651471191656395,
+            "angularVelocityRmsRadPerSec": 0.3037222196234683,
+            "inputAmplitudeRad": 0.6573909341367132,
+            "outputAmplitudeRad": 0.5239859733617555,
+            "amplitudeRatio": 0.797069059143407,
+            "lag": {
+              "lagMs": 599.9340000000002,
+              "correlation": -0.8870099750630293,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftUpperArm",
+            "startMs": 10233.938,
+            "endMs": 15100.967,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 94.64399999999841,
+              "max": 233.52000000000044,
+              "median": 134.47500000000036
+            },
+            "rotationStepRmsRad": 0.03866223072965514,
+            "angularVelocityRmsRadPerSec": 0.3211395358882098,
+            "inputAmplitudeRad": 0.8905377584912136,
+            "outputAmplitudeRad": 0.3209002986873813,
+            "amplitudeRatio": 0.36034440497061465,
+            "lag": {
+              "lagMs": 599.5000000000018,
+              "correlation": 0.3631785261682925,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "leftLowerArm",
+            "startMs": 5366.909,
+            "endMs": 10233.938,
+            "maxLagMs": 600,
+            "sampleCount": 38,
+            "differenceSampleCount": 37,
+            "intervalsMs": {
+              "min": 93.8110000000006,
+              "max": 168.20900000000256,
+              "median": 133.8120000000008
+            },
+            "rotationStepRmsRad": 0.026753721104720383,
+            "angularVelocityRmsRadPerSec": 0.22242573993710185,
+            "inputAmplitudeRad": 0.13564208517260345,
+            "outputAmplitudeRad": 0.1356529493178446,
+            "amplitudeRatio": 1.0000800942069514,
+            "lag": {
+              "lagMs": 505.1229999999996,
+              "correlation": 0.7273540888832715,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftLowerArm",
+            "startMs": 10233.938,
+            "endMs": 15100.967,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 94.64399999999841,
+              "max": 233.52000000000044,
+              "median": 134.47500000000036
+            },
+            "rotationStepRmsRad": 0.05931895929347559,
+            "angularVelocityRmsRadPerSec": 0.48081541706489483,
+            "inputAmplitudeRad": 0.08246272384149078,
+            "outputAmplitudeRad": 0.40746153714174627,
+            "amplitudeRatio": 4.941160298378764,
+            "lag": {
+              "lagMs": 499.6349999999984,
+              "correlation": 0.10485982996308867,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightUpperArm",
+            "startMs": 5366.909,
+            "endMs": 10233.938,
+            "maxLagMs": 600,
+            "sampleCount": 38,
+            "differenceSampleCount": 37,
+            "intervalsMs": {
+              "min": 93.8110000000006,
+              "max": 168.20900000000256,
+              "median": 133.8120000000008
+            },
+            "rotationStepRmsRad": 0.027840370176350795,
+            "angularVelocityRmsRadPerSec": 0.23287429523373362,
+            "inputAmplitudeRad": 0.11582206763685954,
+            "outputAmplitudeRad": 0.13328124297081478,
+            "amplitudeRatio": 1.1507413543047387,
+            "lag": {
+              "lagMs": 0,
+              "correlation": -0.45150438449480473,
+              "sampleCount": 38
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightUpperArm",
+            "startMs": 10233.938,
+            "endMs": 15100.967,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 94.64399999999841,
+              "max": 233.52000000000044,
+              "median": 134.47500000000036
+            },
+            "rotationStepRmsRad": 0.05471208116511832,
+            "angularVelocityRmsRadPerSec": 0.3930658619883195,
+            "inputAmplitudeRad": 0.0616700371354042,
+            "outputAmplitudeRad": 0.20352674768443257,
+            "amplitudeRatio": 3.300253366761632,
+            "lag": {
+              "lagMs": 400.3550000000014,
+              "correlation": 0.29619134128657804,
+              "sampleCount": 35
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightLowerArm",
+            "startMs": 5366.909,
+            "endMs": 10233.938,
+            "maxLagMs": 600,
+            "sampleCount": 38,
+            "differenceSampleCount": 37,
+            "intervalsMs": {
+              "min": 93.8110000000006,
+              "max": 168.20900000000256,
+              "median": 133.8120000000008
+            },
+            "rotationStepRmsRad": 0.038142347777188924,
+            "angularVelocityRmsRadPerSec": 0.30674212493133973,
+            "inputAmplitudeRad": 0.08940650505708003,
+            "outputAmplitudeRad": 0.11111661645234873,
+            "amplitudeRatio": 1.2428247405645512,
+            "lag": {
+              "lagMs": 133.8120000000008,
+              "correlation": -0.022442894214382583,
+              "sampleCount": 37
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightLowerArm",
+            "startMs": 10233.938,
+            "endMs": 15100.967,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 94.64399999999841,
+              "max": 233.52000000000044,
+              "median": 134.47500000000036
+            },
+            "rotationStepRmsRad": 0.07733719145295244,
+            "angularVelocityRmsRadPerSec": 0.5578805056885662,
+            "inputAmplitudeRad": 0.20617232443116418,
+            "outputAmplitudeRad": 0.3438424229211159,
+            "amplitudeRatio": 1.6677428644692627,
+            "lag": {
+              "lagMs": 599.5000000000018,
+              "correlation": 0.6186827680450139,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          }
+        ],
+        "reachClampedFrames": 0,
+        "elbowFlipFrames": 0
+      },
+      {
+        "label": "filter-minimal",
+        "config": {
+          "armIkMode": "world_3d_ik",
+          "armIkStrength": 1,
+          "armIkTargetScale": 1,
+          "smoothingMs": 40,
+          "minConfidence": 0.45
+        },
+        "frames": 92,
+        "metrics": [
+          {
+            "section": "調整",
+            "bone": "leftUpperArm",
+            "startMs": 5366.909,
+            "endMs": 10233.938,
+            "maxLagMs": 600,
+            "sampleCount": 38,
+            "differenceSampleCount": 37,
+            "intervalsMs": {
+              "min": 93.8110000000006,
+              "max": 168.20900000000256,
+              "median": 133.8120000000008
+            },
+            "rotationStepRmsRad": 0.04004836836344881,
+            "angularVelocityRmsRadPerSec": 0.32620152390394924,
+            "inputAmplitudeRad": 0.6573909341367132,
+            "outputAmplitudeRad": 0.5396428640998407,
+            "amplitudeRatio": 0.8208857714299035,
+            "lag": {
+              "lagMs": 599.9340000000002,
+              "correlation": -0.8776186776670732,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftUpperArm",
+            "startMs": 10233.938,
+            "endMs": 15100.967,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 94.64399999999841,
+              "max": 233.52000000000044,
+              "median": 134.47500000000036
+            },
+            "rotationStepRmsRad": 0.042426642246948185,
+            "angularVelocityRmsRadPerSec": 0.3476255998983802,
+            "inputAmplitudeRad": 0.8905377584912136,
+            "outputAmplitudeRad": 0.3520884139021897,
+            "amplitudeRatio": 0.3953660701582296,
+            "lag": {
+              "lagMs": 599.5000000000018,
+              "correlation": 0.521665248390163,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "leftLowerArm",
+            "startMs": 5366.909,
+            "endMs": 10233.938,
+            "maxLagMs": 600,
+            "sampleCount": 38,
+            "differenceSampleCount": 37,
+            "intervalsMs": {
+              "min": 93.8110000000006,
+              "max": 168.20900000000256,
+              "median": 133.8120000000008
+            },
+            "rotationStepRmsRad": 0.03369246235756924,
+            "angularVelocityRmsRadPerSec": 0.27385211351091093,
+            "inputAmplitudeRad": 0.13564208517260345,
+            "outputAmplitudeRad": 0.15627393192843456,
+            "amplitudeRatio": 1.1521050544864246,
+            "lag": {
+              "lagMs": 499.77100000000064,
+              "correlation": 0.747819235695549,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftLowerArm",
+            "startMs": 10233.938,
+            "endMs": 15100.967,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 94.64399999999841,
+              "max": 233.52000000000044,
+              "median": 134.47500000000036
+            },
+            "rotationStepRmsRad": 0.06728515724129729,
+            "angularVelocityRmsRadPerSec": 0.5205059543783487,
+            "inputAmplitudeRad": 0.08246272384149078,
+            "outputAmplitudeRad": 0.4414310189782367,
+            "amplitudeRatio": 5.353097719968019,
+            "lag": {
+              "lagMs": 499.6349999999984,
+              "correlation": 0.16324210123045313,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightUpperArm",
+            "startMs": 5366.909,
+            "endMs": 10233.938,
+            "maxLagMs": 600,
+            "sampleCount": 38,
+            "differenceSampleCount": 37,
+            "intervalsMs": {
+              "min": 93.8110000000006,
+              "max": 168.20900000000256,
+              "median": 133.8120000000008
+            },
+            "rotationStepRmsRad": 0.029451023726298216,
+            "angularVelocityRmsRadPerSec": 0.24858468574938117,
+            "inputAmplitudeRad": 0.11582206763685954,
+            "outputAmplitudeRad": 0.13639356991475288,
+            "amplitudeRatio": 1.1776129773679382,
+            "lag": {
+              "lagMs": 0,
+              "correlation": -0.42315619799574644,
+              "sampleCount": 38
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightUpperArm",
+            "startMs": 10233.938,
+            "endMs": 15100.967,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 94.64399999999841,
+              "max": 233.52000000000044,
+              "median": 134.47500000000036
+            },
+            "rotationStepRmsRad": 0.05537748365017593,
+            "angularVelocityRmsRadPerSec": 0.39496239026037944,
+            "inputAmplitudeRad": 0.0616700371354042,
+            "outputAmplitudeRad": 0.20496475123005764,
+            "amplitudeRatio": 3.3235710687190307,
+            "lag": {
+              "lagMs": 400.3550000000014,
+              "correlation": 0.29502858002760746,
+              "sampleCount": 35
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightLowerArm",
+            "startMs": 5366.909,
+            "endMs": 10233.938,
+            "maxLagMs": 600,
+            "sampleCount": 38,
+            "differenceSampleCount": 37,
+            "intervalsMs": {
+              "min": 93.8110000000006,
+              "max": 168.20900000000256,
+              "median": 133.8120000000008
+            },
+            "rotationStepRmsRad": 0.045808574001994305,
+            "angularVelocityRmsRadPerSec": 0.36035525356341724,
+            "inputAmplitudeRad": 0.08940650505708003,
+            "outputAmplitudeRad": 0.1333460835040159,
+            "amplitudeRatio": 1.491458405838405,
+            "lag": {
+              "lagMs": 133.8120000000008,
+              "correlation": -0.06422668827764226,
+              "sampleCount": 37
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightLowerArm",
+            "startMs": 10233.938,
+            "endMs": 15100.967,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 94.64399999999841,
+              "max": 233.52000000000044,
+              "median": 134.47500000000036
+            },
+            "rotationStepRmsRad": 0.08049645258748837,
+            "angularVelocityRmsRadPerSec": 0.5776973152715299,
+            "inputAmplitudeRad": 0.20617232443116418,
+            "outputAmplitudeRad": 0.3488345512650287,
+            "amplitudeRatio": 1.6919562420779513,
+            "lag": {
+              "lagMs": 599.5000000000018,
+              "correlation": 0.614196631954968,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          }
+        ],
+        "reachClampedFrames": 0,
+        "elbowFlipFrames": 0
+      }
+    ]
+  },
+  {
+    "fixture": "fast-wave",
+    "conditions": [
+      {
+        "label": "filter-baseline",
+        "config": {
+          "armIkMode": "world_3d_ik",
+          "armIkStrength": 1,
+          "armIkTargetScale": 1,
+          "smoothingMs": 155,
+          "minConfidence": 0.45
+        },
+        "frames": 84,
+        "metrics": [
+          {
+            "section": "調整",
+            "bone": "leftUpperArm",
+            "startMs": 5311.888999999999,
+            "endMs": 10240.003,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 84.15500000000065,
+              "max": 164.70100000000093,
+              "median": 154.58600000000115
+            },
+            "rotationStepRmsRad": 0.3192263319059079,
+            "angularVelocityRmsRadPerSec": 2.313042773315471,
+            "inputAmplitudeRad": 1.2479933689222955,
+            "outputAmplitudeRad": 1.1555253091303745,
+            "amplitudeRatio": 0.9259066096867392,
+            "lag": {
+              "lagMs": 85.4980000000005,
+              "correlation": 0.9498978702015154,
+              "sampleCount": 35
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftUpperArm",
+            "startMs": 10240.003,
+            "endMs": 15168.117,
+            "maxLagMs": 600,
+            "sampleCount": 34,
+            "differenceSampleCount": 33,
+            "intervalsMs": {
+              "min": 83.49699999999939,
+              "max": 159.7480000000014,
+              "median": 155.0020000000004
+            },
+            "rotationStepRmsRad": 0.15363654251791856,
+            "angularVelocityRmsRadPerSec": 0.994165550215276,
+            "inputAmplitudeRad": 1.3193779357864128,
+            "outputAmplitudeRad": 0.8547079163963892,
+            "amplitudeRatio": 0.647811285313743,
+            "lag": {
+              "lagMs": 83.49699999999939,
+              "correlation": 0.3036598208620789,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "leftLowerArm",
+            "startMs": 5311.888999999999,
+            "endMs": 10240.003,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 84.15500000000065,
+              "max": 164.70100000000093,
+              "median": 154.58600000000115
+            },
+            "rotationStepRmsRad": 0.23793149415643142,
+            "angularVelocityRmsRadPerSec": 1.6876654739319576,
+            "inputAmplitudeRad": 0.8930673879253985,
+            "outputAmplitudeRad": 0.873028548312437,
+            "amplitudeRatio": 0.9775617832608222,
+            "lag": {
+              "lagMs": 361.59700000000066,
+              "correlation": 0.2597370007702115,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftLowerArm",
+            "startMs": 10240.003,
+            "endMs": 15168.117,
+            "maxLagMs": 600,
+            "sampleCount": 34,
+            "differenceSampleCount": 33,
+            "intervalsMs": {
+              "min": 83.49699999999939,
+              "max": 159.7480000000014,
+              "median": 155.0020000000004
+            },
+            "rotationStepRmsRad": 0.18161365094869628,
+            "angularVelocityRmsRadPerSec": 1.192785798410204,
+            "inputAmplitudeRad": 0.8037662698936558,
+            "outputAmplitudeRad": 1.0333555053409427,
+            "amplitudeRatio": 1.285641789220221,
+            "lag": {
+              "lagMs": 155.29000000000087,
+              "correlation": 0.17100874812537079,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightUpperArm",
+            "startMs": 5311.888999999999,
+            "endMs": 10240.003,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 84.15500000000065,
+              "max": 164.70100000000093,
+              "median": 154.58600000000115
+            },
+            "rotationStepRmsRad": 0.11717549482297085,
+            "angularVelocityRmsRadPerSec": 0.8227606232524362,
+            "inputAmplitudeRad": 0.7039068271065889,
+            "outputAmplitudeRad": 0.35528680293763076,
+            "amplitudeRatio": 0.5047355548432997,
+            "lag": {
+              "lagMs": 0,
+              "correlation": 0.6810756307493632,
+              "sampleCount": 36
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightUpperArm",
+            "startMs": 10240.003,
+            "endMs": 15168.117,
+            "maxLagMs": 600,
+            "sampleCount": 34,
+            "differenceSampleCount": 33,
+            "intervalsMs": {
+              "min": 83.49699999999939,
+              "max": 159.7480000000014,
+              "median": 155.0020000000004
+            },
+            "rotationStepRmsRad": 0.06909748367673736,
+            "angularVelocityRmsRadPerSec": 0.4489739195884517,
+            "inputAmplitudeRad": 0.4886264825810822,
+            "outputAmplitudeRad": 0.21383115308957482,
+            "amplitudeRatio": 0.4376167905596314,
+            "lag": {
+              "lagMs": 398.0039999999972,
+              "correlation": 0.10237214869577838,
+              "sampleCount": 31
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightLowerArm",
+            "startMs": 5311.888999999999,
+            "endMs": 10240.003,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 84.15500000000065,
+              "max": 164.70100000000093,
+              "median": 154.58600000000115
+            },
+            "rotationStepRmsRad": 0.25292525484432915,
+            "angularVelocityRmsRadPerSec": 1.837113781159337,
+            "inputAmplitudeRad": 1.4904158193575887,
+            "outputAmplitudeRad": 0.8772016116546276,
+            "amplitudeRatio": 0.5885616619613755,
+            "lag": {
+              "lagMs": 84.15500000000065,
+              "correlation": 0.6690082967474311,
+              "sampleCount": 35
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightLowerArm",
+            "startMs": 10240.003,
+            "endMs": 15168.117,
+            "maxLagMs": 600,
+            "sampleCount": 34,
+            "differenceSampleCount": 33,
+            "intervalsMs": {
+              "min": 83.49699999999939,
+              "max": 159.7480000000014,
+              "median": 155.0020000000004
+            },
+            "rotationStepRmsRad": 0.1135370560128472,
+            "angularVelocityRmsRadPerSec": 0.7391826581479107,
+            "inputAmplitudeRad": 0.47062706406948696,
+            "outputAmplitudeRad": 0.6134539158613259,
+            "amplitudeRatio": 1.3034820194079424,
+            "lag": {
+              "lagMs": 387.119999999999,
+              "correlation": 0.6499000161794084,
+              "sampleCount": 31
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          }
+        ],
+        "reachClampedFrames": 0,
+        "elbowFlipFrames": 1
+      },
+      {
+        "label": "filter-input",
+        "config": {
+          "armIkMode": "world_3d_ik",
+          "armIkStrength": 1,
+          "armIkTargetScale": 1,
+          "smoothingMs": 155,
+          "minConfidence": 0.45
+        },
+        "frames": 84,
+        "metrics": [
+          {
+            "section": "調整",
+            "bone": "leftUpperArm",
+            "startMs": 5311.888999999999,
+            "endMs": 10240.003,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 84.15500000000065,
+              "max": 164.70100000000093,
+              "median": 154.58600000000115
+            },
+            "rotationStepRmsRad": 0.28679440180261556,
+            "angularVelocityRmsRadPerSec": 2.075235487670016,
+            "inputAmplitudeRad": 1.2479933689222955,
+            "outputAmplitudeRad": 0.9955343429864563,
+            "amplitudeRatio": 0.797708038982731,
+            "lag": {
+              "lagMs": 101.78899999999976,
+              "correlation": 0.9334454219910316,
+              "sampleCount": 35
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftUpperArm",
+            "startMs": 10240.003,
+            "endMs": 15168.117,
+            "maxLagMs": 600,
+            "sampleCount": 34,
+            "differenceSampleCount": 33,
+            "intervalsMs": {
+              "min": 83.49699999999939,
+              "max": 159.7480000000014,
+              "median": 155.0020000000004
+            },
+            "rotationStepRmsRad": 0.13681856673757403,
+            "angularVelocityRmsRadPerSec": 0.8836885568737015,
+            "inputAmplitudeRad": 1.3193779357864128,
+            "outputAmplitudeRad": 0.7504763246862967,
+            "amplitudeRatio": 0.5688107283975282,
+            "lag": {
+              "lagMs": 153.54100000000108,
+              "correlation": 0.4334631752121117,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "leftLowerArm",
+            "startMs": 5311.888999999999,
+            "endMs": 10240.003,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 84.15500000000065,
+              "max": 164.70100000000093,
+              "median": 154.58600000000115
+            },
+            "rotationStepRmsRad": 0.25589920024176427,
+            "angularVelocityRmsRadPerSec": 1.7774086118768462,
+            "inputAmplitudeRad": 0.8930673879253985,
+            "outputAmplitudeRad": 0.8988088355219396,
+            "amplitudeRatio": 1.0064289074645068,
+            "lag": {
+              "lagMs": 550.9080000000004,
+              "correlation": 0.38907662445289687,
+              "sampleCount": 32
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftLowerArm",
+            "startMs": 10240.003,
+            "endMs": 15168.117,
+            "maxLagMs": 600,
+            "sampleCount": 34,
+            "differenceSampleCount": 33,
+            "intervalsMs": {
+              "min": 83.49699999999939,
+              "max": 159.7480000000014,
+              "median": 155.0020000000004
+            },
+            "rotationStepRmsRad": 0.18620070759641102,
+            "angularVelocityRmsRadPerSec": 1.2172777887502977,
+            "inputAmplitudeRad": 0.8037662698936558,
+            "outputAmplitudeRad": 0.9224660415614246,
+            "amplitudeRatio": 1.1476794636872154,
+            "lag": {
+              "lagMs": 155.29000000000087,
+              "correlation": 0.16399556096013093,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightUpperArm",
+            "startMs": 5311.888999999999,
+            "endMs": 10240.003,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 84.15500000000065,
+              "max": 164.70100000000093,
+              "median": 154.58600000000115
+            },
+            "rotationStepRmsRad": 0.09417723090126422,
+            "angularVelocityRmsRadPerSec": 0.6531161583953077,
+            "inputAmplitudeRad": 0.7039068271065889,
+            "outputAmplitudeRad": 0.31649626915436724,
+            "amplitudeRatio": 0.4496280714527604,
+            "lag": {
+              "lagMs": 84.15500000000065,
+              "correlation": 0.6306020398464649,
+              "sampleCount": 35
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightUpperArm",
+            "startMs": 10240.003,
+            "endMs": 15168.117,
+            "maxLagMs": 600,
+            "sampleCount": 34,
+            "differenceSampleCount": 33,
+            "intervalsMs": {
+              "min": 83.49699999999939,
+              "max": 159.7480000000014,
+              "median": 155.0020000000004
+            },
+            "rotationStepRmsRad": 0.06862794980855724,
+            "angularVelocityRmsRadPerSec": 0.4461179332296687,
+            "inputAmplitudeRad": 0.4886264825810822,
+            "outputAmplitudeRad": 0.22513399390282424,
+            "amplitudeRatio": 0.4607486534777937,
+            "lag": {
+              "lagMs": 388.66100000000006,
+              "correlation": 0.17117967823465768,
+              "sampleCount": 31
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightLowerArm",
+            "startMs": 5311.888999999999,
+            "endMs": 10240.003,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 84.15500000000065,
+              "max": 164.70100000000093,
+              "median": 154.58600000000115
+            },
+            "rotationStepRmsRad": 0.24782322489558942,
+            "angularVelocityRmsRadPerSec": 1.7225527416596527,
+            "inputAmplitudeRad": 1.4904158193575887,
+            "outputAmplitudeRad": 0.9692194889485211,
+            "amplitudeRatio": 0.6503013966708177,
+            "lag": {
+              "lagMs": 84.15500000000065,
+              "correlation": 0.8392950836420054,
+              "sampleCount": 35
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightLowerArm",
+            "startMs": 10240.003,
+            "endMs": 15168.117,
+            "maxLagMs": 600,
+            "sampleCount": 34,
+            "differenceSampleCount": 33,
+            "intervalsMs": {
+              "min": 83.49699999999939,
+              "max": 159.7480000000014,
+              "median": 155.0020000000004
+            },
+            "rotationStepRmsRad": 0.11536564164726727,
+            "angularVelocityRmsRadPerSec": 0.748402701963246,
+            "inputAmplitudeRad": 0.47062706406948696,
+            "outputAmplitudeRad": 0.6455285851218333,
+            "amplitudeRatio": 1.3716350682002483,
+            "lag": {
+              "lagMs": 83.49699999999939,
+              "correlation": 0.656631969064369,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          }
+        ],
+        "reachClampedFrames": 0,
+        "elbowFlipFrames": 0
+      },
+      {
+        "label": "filter-minimal",
+        "config": {
+          "armIkMode": "world_3d_ik",
+          "armIkStrength": 1,
+          "armIkTargetScale": 1,
+          "smoothingMs": 40,
+          "minConfidence": 0.45
+        },
+        "frames": 84,
+        "metrics": [
+          {
+            "section": "調整",
+            "bone": "leftUpperArm",
+            "startMs": 5311.888999999999,
+            "endMs": 10240.003,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 84.15500000000065,
+              "max": 164.70100000000093,
+              "median": 154.58600000000115
+            },
+            "rotationStepRmsRad": 0.44355349904887253,
+            "angularVelocityRmsRadPerSec": 3.2313510977727233,
+            "inputAmplitudeRad": 1.2479933689222955,
+            "outputAmplitudeRad": 1.3792306444579745,
+            "amplitudeRatio": 1.1051586320919389,
+            "lag": {
+              "lagMs": 84.15500000000065,
+              "correlation": 0.944806077932551,
+              "sampleCount": 35
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftUpperArm",
+            "startMs": 10240.003,
+            "endMs": 15168.117,
+            "maxLagMs": 600,
+            "sampleCount": 34,
+            "differenceSampleCount": 33,
+            "intervalsMs": {
+              "min": 83.49699999999939,
+              "max": 159.7480000000014,
+              "median": 155.0020000000004
+            },
+            "rotationStepRmsRad": 0.1922321809415079,
+            "angularVelocityRmsRadPerSec": 1.2445325666186933,
+            "inputAmplitudeRad": 1.3193779357864128,
+            "outputAmplitudeRad": 0.9158429639112262,
+            "amplitudeRatio": 0.6941475517137095,
+            "lag": {
+              "lagMs": 0,
+              "correlation": 0.636365609493417,
+              "sampleCount": 34
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "leftLowerArm",
+            "startMs": 5311.888999999999,
+            "endMs": 10240.003,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 84.15500000000065,
+              "max": 164.70100000000093,
+              "median": 154.58600000000115
+            },
+            "rotationStepRmsRad": 0.4312540229133819,
+            "angularVelocityRmsRadPerSec": 2.9460760109157773,
+            "inputAmplitudeRad": 0.8930673879253985,
+            "outputAmplitudeRad": 1.2681321805358223,
+            "amplitudeRatio": 1.419973674642517,
+            "lag": {
+              "lagMs": 551.2819999999992,
+              "correlation": 0.4419191846037595,
+              "sampleCount": 32
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftLowerArm",
+            "startMs": 10240.003,
+            "endMs": 15168.117,
+            "maxLagMs": 600,
+            "sampleCount": 34,
+            "differenceSampleCount": 33,
+            "intervalsMs": {
+              "min": 83.49699999999939,
+              "max": 159.7480000000014,
+              "median": 155.0020000000004
+            },
+            "rotationStepRmsRad": 0.30495974000164916,
+            "angularVelocityRmsRadPerSec": 1.9733495441376216,
+            "inputAmplitudeRad": 0.8037662698936558,
+            "outputAmplitudeRad": 1.1559820606982834,
+            "amplitudeRatio": 1.4382067324761316,
+            "lag": {
+              "lagMs": 83.49699999999939,
+              "correlation": 0.41609355540765025,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightUpperArm",
+            "startMs": 5311.888999999999,
+            "endMs": 10240.003,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 84.15500000000065,
+              "max": 164.70100000000093,
+              "median": 154.58600000000115
+            },
+            "rotationStepRmsRad": 0.1551329023449821,
+            "angularVelocityRmsRadPerSec": 1.0988692074965338,
+            "inputAmplitudeRad": 0.7039068271065889,
+            "outputAmplitudeRad": 0.5448013433741209,
+            "amplitudeRatio": 0.7739679775710209,
+            "lag": {
+              "lagMs": 0,
+              "correlation": 0.6222881267195466,
+              "sampleCount": 36
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightUpperArm",
+            "startMs": 10240.003,
+            "endMs": 15168.117,
+            "maxLagMs": 600,
+            "sampleCount": 34,
+            "differenceSampleCount": 33,
+            "intervalsMs": {
+              "min": 83.49699999999939,
+              "max": 159.7480000000014,
+              "median": 155.0020000000004
+            },
+            "rotationStepRmsRad": 0.08301794860384111,
+            "angularVelocityRmsRadPerSec": 0.5387295251119879,
+            "inputAmplitudeRad": 0.4886264825810822,
+            "outputAmplitudeRad": 0.2244465272064869,
+            "amplitudeRatio": 0.4593417164392895,
+            "lag": {
+              "lagMs": 388.8850000000002,
+              "correlation": 0.22817766312575535,
+              "sampleCount": 31
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightLowerArm",
+            "startMs": 5311.888999999999,
+            "endMs": 10240.003,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 84.15500000000065,
+              "max": 164.70100000000093,
+              "median": 154.58600000000115
+            },
+            "rotationStepRmsRad": 0.35564792895934166,
+            "angularVelocityRmsRadPerSec": 2.4756049223533076,
+            "inputAmplitudeRad": 1.4904158193575887,
+            "outputAmplitudeRad": 1.4512915256005523,
+            "amplitudeRatio": 0.9737494105679179,
+            "lag": {
+              "lagMs": 0,
+              "correlation": 0.9075709528819246,
+              "sampleCount": 36
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightLowerArm",
+            "startMs": 10240.003,
+            "endMs": 15168.117,
+            "maxLagMs": 600,
+            "sampleCount": 34,
+            "differenceSampleCount": 33,
+            "intervalsMs": {
+              "min": 83.49699999999939,
+              "max": 159.7480000000014,
+              "median": 155.0020000000004
+            },
+            "rotationStepRmsRad": 0.15217887052187606,
+            "angularVelocityRmsRadPerSec": 0.9859150363502761,
+            "inputAmplitudeRad": 0.47062706406948696,
+            "outputAmplitudeRad": 0.7078513010035644,
+            "amplitudeRatio": 1.5040599129230101,
+            "lag": {
+              "lagMs": 83.49699999999939,
+              "correlation": 0.6683361051754289,
+              "sampleCount": 33
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          }
+        ],
+        "reachClampedFrames": 0,
+        "elbowFlipFrames": 0
+      }
+    ]
+  },
+  {
+    "fixture": "arms-cross",
+    "conditions": [
+      {
+        "label": "filter-baseline",
+        "config": {
+          "armIkMode": "world_3d_ik",
+          "armIkStrength": 1,
+          "armIkTargetScale": 1,
+          "smoothingMs": 155,
+          "minConfidence": 0.45
+        },
+        "frames": 134,
+        "metrics": [
+          {
+            "section": "調整",
+            "bone": "leftUpperArm",
+            "startMs": 5202.094999999999,
+            "endMs": 10718.059000000001,
+            "maxLagMs": 600,
+            "sampleCount": 56,
+            "differenceSampleCount": 55,
+            "intervalsMs": {
+              "min": 87.74699999999939,
+              "max": 171.6309999999994,
+              "median": 93.17499999999927
+            },
+            "rotationStepRmsRad": 0.18677243583348746,
+            "angularVelocityRmsRadPerSec": 2.005792091223631,
+            "inputAmplitudeRad": 0.8780127384357803,
+            "outputAmplitudeRad": 1.513096790910164,
+            "amplitudeRatio": 1.7233198616295873,
+            "lag": {
+              "lagMs": 560.6819999999998,
+              "correlation": 0.7569971303838708,
+              "sampleCount": 50
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftUpperArm",
+            "startMs": 10718.059000000001,
+            "endMs": 16234.023000000001,
+            "maxLagMs": 600,
+            "sampleCount": 57,
+            "differenceSampleCount": 56,
+            "intervalsMs": {
+              "min": 88.1830000000009,
+              "max": 157.27900000000227,
+              "median": 93.12599999999838
+            },
+            "rotationStepRmsRad": 0.07322024674618348,
+            "angularVelocityRmsRadPerSec": 0.7797529177028103,
+            "inputAmplitudeRad": 0.8866269506277763,
+            "outputAmplitudeRad": 0.9342729589280259,
+            "amplitudeRatio": 1.0537385066701546,
+            "lag": {
+              "lagMs": 592.0560000000005,
+              "correlation": -0.6837398482812755,
+              "sampleCount": 50
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "leftLowerArm",
+            "startMs": 5202.094999999999,
+            "endMs": 10718.059000000001,
+            "maxLagMs": 600,
+            "sampleCount": 56,
+            "differenceSampleCount": 55,
+            "intervalsMs": {
+              "min": 87.74699999999939,
+              "max": 171.6309999999994,
+              "median": 93.17499999999927
+            },
+            "rotationStepRmsRad": 0.17750306821091366,
+            "angularVelocityRmsRadPerSec": 1.9019822778494786,
+            "inputAmplitudeRad": 0.8350956129245297,
+            "outputAmplitudeRad": 1.6009541968658463,
+            "amplitudeRatio": 1.9170908960463304,
+            "lag": {
+              "lagMs": 108.33899999999994,
+              "correlation": 0.7242125108866935,
+              "sampleCount": 54
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftLowerArm",
+            "startMs": 10718.059000000001,
+            "endMs": 16234.023000000001,
+            "maxLagMs": 600,
+            "sampleCount": 57,
+            "differenceSampleCount": 56,
+            "intervalsMs": {
+              "min": 88.1830000000009,
+              "max": 157.27900000000227,
+              "median": 93.12599999999838
+            },
+            "rotationStepRmsRad": 0.07709212691288718,
+            "angularVelocityRmsRadPerSec": 0.8254788585416822,
+            "inputAmplitudeRad": 0.13186042060900283,
+            "outputAmplitudeRad": 0.635552853260246,
+            "amplitudeRatio": 4.819890990222227,
+            "lag": {
+              "lagMs": 0,
+              "correlation": -0.5280369007645659,
+              "sampleCount": 57
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightUpperArm",
+            "startMs": 5202.094999999999,
+            "endMs": 10718.059000000001,
+            "maxLagMs": 600,
+            "sampleCount": 56,
+            "differenceSampleCount": 55,
+            "intervalsMs": {
+              "min": 87.74699999999939,
+              "max": 171.6309999999994,
+              "median": 93.17499999999927
+            },
+            "rotationStepRmsRad": 0.1587323627972667,
+            "angularVelocityRmsRadPerSec": 1.697221355088243,
+            "inputAmplitudeRad": 0.649620025642958,
+            "outputAmplitudeRad": 1.0989412509563399,
+            "amplitudeRatio": 1.6916677558834006,
+            "lag": {
+              "lagMs": 434.9459999999999,
+              "correlation": 0.3112930155211331,
+              "sampleCount": 51
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightUpperArm",
+            "startMs": 10718.059000000001,
+            "endMs": 16234.023000000001,
+            "maxLagMs": 600,
+            "sampleCount": 57,
+            "differenceSampleCount": 56,
+            "intervalsMs": {
+              "min": 88.1830000000009,
+              "max": 157.27900000000227,
+              "median": 93.12599999999838
+            },
+            "rotationStepRmsRad": 0.08587171521209042,
+            "angularVelocityRmsRadPerSec": 0.9111821947668085,
+            "inputAmplitudeRad": 0.9588100597735103,
+            "outputAmplitudeRad": 1.010547040845318,
+            "amplitudeRatio": 1.0539595726436466,
+            "lag": {
+              "lagMs": 277.97700000000077,
+              "correlation": 0.6538550173859737,
+              "sampleCount": 53
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightLowerArm",
+            "startMs": 5202.094999999999,
+            "endMs": 10718.059000000001,
+            "maxLagMs": 600,
+            "sampleCount": 56,
+            "differenceSampleCount": 55,
+            "intervalsMs": {
+              "min": 87.74699999999939,
+              "max": 171.6309999999994,
+              "median": 93.17499999999927
+            },
+            "rotationStepRmsRad": 0.18260688820252752,
+            "angularVelocityRmsRadPerSec": 1.9356556874223947,
+            "inputAmplitudeRad": 0.6815147937595312,
+            "outputAmplitudeRad": 1.012360966624578,
+            "amplitudeRatio": 1.4854570669551515,
+            "lag": {
+              "lagMs": 465.7609999999986,
+              "correlation": -0.16945553811234143,
+              "sampleCount": 51
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightLowerArm",
+            "startMs": 10718.059000000001,
+            "endMs": 16234.023000000001,
+            "maxLagMs": 600,
+            "sampleCount": 57,
+            "differenceSampleCount": 56,
+            "intervalsMs": {
+              "min": 88.1830000000009,
+              "max": 157.27900000000227,
+              "median": 93.12599999999838
+            },
+            "rotationStepRmsRad": 0.0775502156812984,
+            "angularVelocityRmsRadPerSec": 0.8289660466191147,
+            "inputAmplitudeRad": 0.21685334184847882,
+            "outputAmplitudeRad": 0.8193145694783607,
+            "amplitudeRatio": 3.7781966489169325,
+            "lag": {
+              "lagMs": 557.8329999999987,
+              "correlation": -0.25081368026837264,
+              "sampleCount": 50
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          }
+        ],
+        "reachClampedFrames": 0,
+        "elbowFlipFrames": 0
+      },
+      {
+        "label": "filter-input",
+        "config": {
+          "armIkMode": "world_3d_ik",
+          "armIkStrength": 1,
+          "armIkTargetScale": 1,
+          "smoothingMs": 155,
+          "minConfidence": 0.45
+        },
+        "frames": 134,
+        "metrics": [
+          {
+            "section": "調整",
+            "bone": "leftUpperArm",
+            "startMs": 5202.094999999999,
+            "endMs": 10718.059000000001,
+            "maxLagMs": 600,
+            "sampleCount": 56,
+            "differenceSampleCount": 55,
+            "intervalsMs": {
+              "min": 87.74699999999939,
+              "max": 171.6309999999994,
+              "median": 93.17499999999927
+            },
+            "rotationStepRmsRad": 0.18727594437900627,
+            "angularVelocityRmsRadPerSec": 1.9496040445676333,
+            "inputAmplitudeRad": 0.8780127384357803,
+            "outputAmplitudeRad": 1.5248357561954438,
+            "amplitudeRatio": 1.7366897875673286,
+            "lag": {
+              "lagMs": 560.6819999999998,
+              "correlation": 0.7325300022753815,
+              "sampleCount": 50
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftUpperArm",
+            "startMs": 10718.059000000001,
+            "endMs": 16234.023000000001,
+            "maxLagMs": 600,
+            "sampleCount": 57,
+            "differenceSampleCount": 56,
+            "intervalsMs": {
+              "min": 88.1830000000009,
+              "max": 157.27900000000227,
+              "median": 93.12599999999838
+            },
+            "rotationStepRmsRad": 0.0739009728881329,
+            "angularVelocityRmsRadPerSec": 0.7876451906270974,
+            "inputAmplitudeRad": 0.8866269506277763,
+            "outputAmplitudeRad": 0.9610668063484119,
+            "amplitudeRatio": 1.0839584852095105,
+            "lag": {
+              "lagMs": 592.0560000000005,
+              "correlation": 0.28485849610740244,
+              "sampleCount": 50
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "leftLowerArm",
+            "startMs": 5202.094999999999,
+            "endMs": 10718.059000000001,
+            "maxLagMs": 600,
+            "sampleCount": 56,
+            "differenceSampleCount": 55,
+            "intervalsMs": {
+              "min": 87.74699999999939,
+              "max": 171.6309999999994,
+              "median": 93.17499999999927
+            },
+            "rotationStepRmsRad": 0.1739608784558428,
+            "angularVelocityRmsRadPerSec": 1.808196257832151,
+            "inputAmplitudeRad": 0.8350956129245297,
+            "outputAmplitudeRad": 1.395702558796912,
+            "amplitudeRatio": 1.6713086947123577,
+            "lag": {
+              "lagMs": 0,
+              "correlation": 0.24720522857683652,
+              "sampleCount": 56
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftLowerArm",
+            "startMs": 10718.059000000001,
+            "endMs": 16234.023000000001,
+            "maxLagMs": 600,
+            "sampleCount": 57,
+            "differenceSampleCount": 56,
+            "intervalsMs": {
+              "min": 88.1830000000009,
+              "max": 157.27900000000227,
+              "median": 93.12599999999838
+            },
+            "rotationStepRmsRad": 0.07559119787386168,
+            "angularVelocityRmsRadPerSec": 0.8091422458334605,
+            "inputAmplitudeRad": 0.13186042060900283,
+            "outputAmplitudeRad": 0.5767447333626732,
+            "amplitudeRatio": 4.37390333429056,
+            "lag": {
+              "lagMs": 0,
+              "correlation": -0.5626045701434429,
+              "sampleCount": 57
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightUpperArm",
+            "startMs": 5202.094999999999,
+            "endMs": 10718.059000000001,
+            "maxLagMs": 600,
+            "sampleCount": 56,
+            "differenceSampleCount": 55,
+            "intervalsMs": {
+              "min": 87.74699999999939,
+              "max": 171.6309999999994,
+              "median": 93.17499999999927
+            },
+            "rotationStepRmsRad": 0.1462783075597901,
+            "angularVelocityRmsRadPerSec": 1.5716146292110034,
+            "inputAmplitudeRad": 0.649620025642958,
+            "outputAmplitudeRad": 1.1003910974556639,
+            "amplitudeRatio": 1.6938995936379235,
+            "lag": {
+              "lagMs": 434.9459999999999,
+              "correlation": 0.30642869791588334,
+              "sampleCount": 51
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightUpperArm",
+            "startMs": 10718.059000000001,
+            "endMs": 16234.023000000001,
+            "maxLagMs": 600,
+            "sampleCount": 57,
+            "differenceSampleCount": 56,
+            "intervalsMs": {
+              "min": 88.1830000000009,
+              "max": 157.27900000000227,
+              "median": 93.12599999999838
+            },
+            "rotationStepRmsRad": 0.08981821930761988,
+            "angularVelocityRmsRadPerSec": 0.9556736474910404,
+            "inputAmplitudeRad": 0.9588100597735103,
+            "outputAmplitudeRad": 1.0709115259653335,
+            "amplitudeRatio": 1.1169172820509452,
+            "lag": {
+              "lagMs": 464.99099999999817,
+              "correlation": 0.925676703642041,
+              "sampleCount": 52
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightLowerArm",
+            "startMs": 5202.094999999999,
+            "endMs": 10718.059000000001,
+            "maxLagMs": 600,
+            "sampleCount": 56,
+            "differenceSampleCount": 55,
+            "intervalsMs": {
+              "min": 87.74699999999939,
+              "max": 171.6309999999994,
+              "median": 93.17499999999927
+            },
+            "rotationStepRmsRad": 0.14828235335187628,
+            "angularVelocityRmsRadPerSec": 1.593147008901636,
+            "inputAmplitudeRad": 0.6815147937595312,
+            "outputAmplitudeRad": 0.9395527322710236,
+            "amplitudeRatio": 1.378624119203698,
+            "lag": {
+              "lagMs": 558.0970000000016,
+              "correlation": -0.22309387693561236,
+              "sampleCount": 50
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightLowerArm",
+            "startMs": 10718.059000000001,
+            "endMs": 16234.023000000001,
+            "maxLagMs": 600,
+            "sampleCount": 57,
+            "differenceSampleCount": 56,
+            "intervalsMs": {
+              "min": 88.1830000000009,
+              "max": 157.27900000000227,
+              "median": 93.12599999999838
+            },
+            "rotationStepRmsRad": 0.0753492979815846,
+            "angularVelocityRmsRadPerSec": 0.8071061229654399,
+            "inputAmplitudeRad": 0.21685334184847882,
+            "outputAmplitudeRad": 0.7614938336353109,
+            "amplitudeRatio": 3.5115614412222746,
+            "lag": {
+              "lagMs": 557.8329999999987,
+              "correlation": -0.26794315625930204,
+              "sampleCount": 50
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          }
+        ],
+        "reachClampedFrames": 0,
+        "elbowFlipFrames": 31
+      },
+      {
+        "label": "filter-minimal",
+        "config": {
+          "armIkMode": "world_3d_ik",
+          "armIkStrength": 1,
+          "armIkTargetScale": 1,
+          "smoothingMs": 40,
+          "minConfidence": 0.45
+        },
+        "frames": 134,
+        "metrics": [
+          {
+            "section": "調整",
+            "bone": "leftUpperArm",
+            "startMs": 5202.094999999999,
+            "endMs": 10718.059000000001,
+            "maxLagMs": 600,
+            "sampleCount": 56,
+            "differenceSampleCount": 55,
+            "intervalsMs": {
+              "min": 87.74699999999939,
+              "max": 171.6309999999994,
+              "median": 93.17499999999927
+            },
+            "rotationStepRmsRad": 0.22300297085045126,
+            "angularVelocityRmsRadPerSec": 2.3602606743537726,
+            "inputAmplitudeRad": 0.8780127384357803,
+            "outputAmplitudeRad": 1.8014906163462423,
+            "amplitudeRatio": 2.051781867716042,
+            "lag": {
+              "lagMs": 533.123999999998,
+              "correlation": 0.791854255548721,
+              "sampleCount": 50
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftUpperArm",
+            "startMs": 10718.059000000001,
+            "endMs": 16234.023000000001,
+            "maxLagMs": 600,
+            "sampleCount": 57,
+            "differenceSampleCount": 56,
+            "intervalsMs": {
+              "min": 88.1830000000009,
+              "max": 157.27900000000227,
+              "median": 93.12599999999838
+            },
+            "rotationStepRmsRad": 0.05879966096970181,
+            "angularVelocityRmsRadPerSec": 0.6253742895941636,
+            "inputAmplitudeRad": 0.8866269506277763,
+            "outputAmplitudeRad": 0.7460594114519401,
+            "amplitudeRatio": 0.8414580798877055,
+            "lag": {
+              "lagMs": 557.8329999999987,
+              "correlation": -0.7042978990683,
+              "sampleCount": 50
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "leftLowerArm",
+            "startMs": 5202.094999999999,
+            "endMs": 10718.059000000001,
+            "maxLagMs": 600,
+            "sampleCount": 56,
+            "differenceSampleCount": 55,
+            "intervalsMs": {
+              "min": 87.74699999999939,
+              "max": 171.6309999999994,
+              "median": 93.17499999999927
+            },
+            "rotationStepRmsRad": 0.24204190495815858,
+            "angularVelocityRmsRadPerSec": 2.438568690394674,
+            "inputAmplitudeRad": 0.8350956129245297,
+            "outputAmplitudeRad": 1.7317510442130155,
+            "amplitudeRatio": 2.073715892421434,
+            "lag": {
+              "lagMs": 0,
+              "correlation": 0.26799503359882787,
+              "sampleCount": 56
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftLowerArm",
+            "startMs": 10718.059000000001,
+            "endMs": 16234.023000000001,
+            "maxLagMs": 600,
+            "sampleCount": 57,
+            "differenceSampleCount": 56,
+            "intervalsMs": {
+              "min": 88.1830000000009,
+              "max": 157.27900000000227,
+              "median": 93.12599999999838
+            },
+            "rotationStepRmsRad": 0.07485431986436168,
+            "angularVelocityRmsRadPerSec": 0.7974230299388156,
+            "inputAmplitudeRad": 0.13186042060900283,
+            "outputAmplitudeRad": 0.4623039642902775,
+            "amplitudeRatio": 3.5060100836559402,
+            "lag": {
+              "lagMs": 592.0560000000005,
+              "correlation": 0.6946961051812537,
+              "sampleCount": 50
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightUpperArm",
+            "startMs": 5202.094999999999,
+            "endMs": 10718.059000000001,
+            "maxLagMs": 600,
+            "sampleCount": 56,
+            "differenceSampleCount": 55,
+            "intervalsMs": {
+              "min": 87.74699999999939,
+              "max": 171.6309999999994,
+              "median": 93.17499999999927
+            },
+            "rotationStepRmsRad": 0.18438637588377443,
+            "angularVelocityRmsRadPerSec": 1.9766221994724307,
+            "inputAmplitudeRad": 0.649620025642958,
+            "outputAmplitudeRad": 1.4757319517446323,
+            "amplitudeRatio": 2.2716848211137495,
+            "lag": {
+              "lagMs": 533.123999999998,
+              "correlation": 0.4639520892870507,
+              "sampleCount": 50
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightUpperArm",
+            "startMs": 10718.059000000001,
+            "endMs": 16234.023000000001,
+            "maxLagMs": 600,
+            "sampleCount": 57,
+            "differenceSampleCount": 56,
+            "intervalsMs": {
+              "min": 88.1830000000009,
+              "max": 157.27900000000227,
+              "median": 93.12599999999838
+            },
+            "rotationStepRmsRad": 0.08282964287017695,
+            "angularVelocityRmsRadPerSec": 0.8743221253796077,
+            "inputAmplitudeRad": 0.9588100597735103,
+            "outputAmplitudeRad": 0.7578072605312586,
+            "amplitudeRatio": 0.7903622336944061,
+            "lag": {
+              "lagMs": 187.26499999999942,
+              "correlation": -0.39646230992769854,
+              "sampleCount": 55
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightLowerArm",
+            "startMs": 5202.094999999999,
+            "endMs": 10718.059000000001,
+            "maxLagMs": 600,
+            "sampleCount": 56,
+            "differenceSampleCount": 55,
+            "intervalsMs": {
+              "min": 87.74699999999939,
+              "max": 171.6309999999994,
+              "median": 93.17499999999927
+            },
+            "rotationStepRmsRad": 0.20662967531122806,
+            "angularVelocityRmsRadPerSec": 2.2109993347640673,
+            "inputAmplitudeRad": 0.6815147937595312,
+            "outputAmplitudeRad": 1.2280060446316405,
+            "amplitudeRatio": 1.8018773119471503,
+            "lag": {
+              "lagMs": 464.8179999999993,
+              "correlation": 0.011165678985903081,
+              "sampleCount": 51
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightLowerArm",
+            "startMs": 10718.059000000001,
+            "endMs": 16234.023000000001,
+            "maxLagMs": 600,
+            "sampleCount": 57,
+            "differenceSampleCount": 56,
+            "intervalsMs": {
+              "min": 88.1830000000009,
+              "max": 157.27900000000227,
+              "median": 93.12599999999838
+            },
+            "rotationStepRmsRad": 0.07684497564115413,
+            "angularVelocityRmsRadPerSec": 0.8193734329621137,
+            "inputAmplitudeRad": 0.21685334184847882,
+            "outputAmplitudeRad": 0.46552329760585714,
+            "amplitudeRatio": 2.1467195000902066,
+            "lag": {
+              "lagMs": 592.0560000000005,
+              "correlation": 0.43987523952344093,
+              "sampleCount": 50
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          }
+        ],
+        "reachClampedFrames": 0,
+        "elbowFlipFrames": 31
+      }
+    ]
+  },
+  {
+    "fixture": "hand-out-and-return",
+    "conditions": [
+      {
+        "label": "filter-baseline",
+        "config": {
+          "armIkMode": "world_3d_ik",
+          "armIkStrength": 1,
+          "armIkTargetScale": 1,
+          "smoothingMs": 155,
+          "minConfidence": 0.45
+        },
+        "frames": 89,
+        "metrics": [
+          {
+            "section": "調整",
+            "bone": "leftUpperArm",
+            "startMs": 5277.477000000001,
+            "endMs": 9739.339,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 96.71000000000004,
+              "max": 169.48700000000008,
+              "median": 100.72800000000007
+            },
+            "rotationStepRmsRad": 0.03730717517348292,
+            "angularVelocityRmsRadPerSec": 0.31704405798837965,
+            "inputAmplitudeRad": 0.8093639064240242,
+            "outputAmplitudeRad": 0.08791618043151107,
+            "amplitudeRatio": 0.10862379670468274,
+            "lag": {
+              "lagMs": 0,
+              "correlation": -0.1884527681678708,
+              "sampleCount": 36
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftUpperArm",
+            "startMs": 9739.339,
+            "endMs": 14201.201,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 97.79000000000087,
+              "max": 167.72199999999975,
+              "median": 100.9940000000006
+            },
+            "rotationStepRmsRad": 0.04197344629364089,
+            "angularVelocityRmsRadPerSec": 0.26112634623891817,
+            "inputAmplitudeRad": 0.5094062107148873,
+            "outputAmplitudeRad": 0.14414723744640048,
+            "amplitudeRatio": 0.28297110324608726,
+            "lag": {
+              "lagMs": 0,
+              "correlation": -0.0005269374338908125,
+              "sampleCount": 37
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "leftLowerArm",
+            "startMs": 5277.477000000001,
+            "endMs": 9739.339,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 96.71000000000004,
+              "max": 169.48700000000008,
+              "median": 100.72800000000007
+            },
+            "rotationStepRmsRad": 0.07130009782749604,
+            "angularVelocityRmsRadPerSec": 0.6051593055979927,
+            "inputAmplitudeRad": 0.7884601093126193,
+            "outputAmplitudeRad": 0.45293405367512046,
+            "amplitudeRatio": 0.5744539873678441,
+            "lag": {
+              "lagMs": 99.45800000000054,
+              "correlation": -0.5665031446212434,
+              "sampleCount": 35
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftLowerArm",
+            "startMs": 9739.339,
+            "endMs": 14201.201,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 97.79000000000087,
+              "max": 167.72199999999975,
+              "median": 100.9940000000006
+            },
+            "rotationStepRmsRad": 0.07835949207020378,
+            "angularVelocityRmsRadPerSec": 0.48526941447511374,
+            "inputAmplitudeRad": 0.276945525532561,
+            "outputAmplitudeRad": 0.2349265576691679,
+            "amplitudeRatio": 0.8482771375973978,
+            "lag": {
+              "lagMs": 299.01800000000003,
+              "correlation": 0.012515740745450041,
+              "sampleCount": 34
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightUpperArm",
+            "startMs": 5277.477000000001,
+            "endMs": 9739.339,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 96.71000000000004,
+              "max": 169.48700000000008,
+              "median": 100.72800000000007
+            },
+            "rotationStepRmsRad": 0.045082414846841286,
+            "angularVelocityRmsRadPerSec": 0.43500925601604673,
+            "inputAmplitudeRad": 0.15554992778718124,
+            "outputAmplitudeRad": 0.25851813936667395,
+            "amplitudeRatio": 1.6619624518268548,
+            "lag": {
+              "lagMs": 333.2650000000003,
+              "correlation": 0.49151494342967894,
+              "sampleCount": 34
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightUpperArm",
+            "startMs": 9739.339,
+            "endMs": 14201.201,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 97.79000000000087,
+              "max": 167.72199999999975,
+              "median": 100.9940000000006
+            },
+            "rotationStepRmsRad": 0.013249331758249633,
+            "angularVelocityRmsRadPerSec": 0.11375502517425116,
+            "inputAmplitudeRad": 0.09738454112168604,
+            "outputAmplitudeRad": 0.1663233465164637,
+            "amplitudeRatio": 1.707902964892916,
+            "lag": {
+              "lagMs": 0,
+              "correlation": -0.16364637766317594,
+              "sampleCount": 37
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightLowerArm",
+            "startMs": 5277.477000000001,
+            "endMs": 9739.339,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 96.71000000000004,
+              "max": 169.48700000000008,
+              "median": 100.72800000000007
+            },
+            "rotationStepRmsRad": 0.04966935964686766,
+            "angularVelocityRmsRadPerSec": 0.47200975445869775,
+            "inputAmplitudeRad": 0.291768880152969,
+            "outputAmplitudeRad": 0.3193088954156917,
+            "amplitudeRatio": 1.094389830910973,
+            "lag": {
+              "lagMs": 599.652,
+              "correlation": 0.7367638312601412,
+              "sampleCount": 31
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightLowerArm",
+            "startMs": 9739.339,
+            "endMs": 14201.201,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 97.79000000000087,
+              "max": 167.72199999999975,
+              "median": 100.9940000000006
+            },
+            "rotationStepRmsRad": 0.013189621965193368,
+            "angularVelocityRmsRadPerSec": 0.11260539226368738,
+            "inputAmplitudeRad": 0.15119334331194656,
+            "outputAmplitudeRad": 0.1046738097540055,
+            "amplitudeRatio": 0.6923175813239305,
+            "lag": {
+              "lagMs": 0,
+              "correlation": -0.43942376865014976,
+              "sampleCount": 37
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          }
+        ],
+        "reachClampedFrames": 0,
+        "elbowFlipFrames": 0
+      },
+      {
+        "label": "filter-input",
+        "config": {
+          "armIkMode": "world_3d_ik",
+          "armIkStrength": 1,
+          "armIkTargetScale": 1,
+          "smoothingMs": 155,
+          "minConfidence": 0.45
+        },
+        "frames": 89,
+        "metrics": [
+          {
+            "section": "調整",
+            "bone": "leftUpperArm",
+            "startMs": 5277.477000000001,
+            "endMs": 9739.339,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 96.71000000000004,
+              "max": 169.48700000000008,
+              "median": 100.72800000000007
+            },
+            "rotationStepRmsRad": 0.03795129791215603,
+            "angularVelocityRmsRadPerSec": 0.31806544473031984,
+            "inputAmplitudeRad": 0.8093639064240242,
+            "outputAmplitudeRad": 0.0992481959469313,
+            "amplitudeRatio": 0.12262493441971621,
+            "lag": {
+              "lagMs": 0,
+              "correlation": -0.12797778790446585,
+              "sampleCount": 36
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftUpperArm",
+            "startMs": 9739.339,
+            "endMs": 14201.201,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 97.79000000000087,
+              "max": 167.72199999999975,
+              "median": 100.9940000000006
+            },
+            "rotationStepRmsRad": 0.04181917606937785,
+            "angularVelocityRmsRadPerSec": 0.2568806536024865,
+            "inputAmplitudeRad": 0.5094062107148873,
+            "outputAmplitudeRad": 0.13891578332226198,
+            "amplitudeRatio": 0.27270139311279934,
+            "lag": {
+              "lagMs": 0,
+              "correlation": 0.0026867578340599185,
+              "sampleCount": 37
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "leftLowerArm",
+            "startMs": 5277.477000000001,
+            "endMs": 9739.339,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 96.71000000000004,
+              "max": 169.48700000000008,
+              "median": 100.72800000000007
+            },
+            "rotationStepRmsRad": 0.07048700035663104,
+            "angularVelocityRmsRadPerSec": 0.5954959976943384,
+            "inputAmplitudeRad": 0.7884601093126193,
+            "outputAmplitudeRad": 0.4398296997085691,
+            "amplitudeRatio": 0.5578338009921812,
+            "lag": {
+              "lagMs": 0,
+              "correlation": -0.5297615524743893,
+              "sampleCount": 36
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftLowerArm",
+            "startMs": 9739.339,
+            "endMs": 14201.201,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 97.79000000000087,
+              "max": 167.72199999999975,
+              "median": 100.9940000000006
+            },
+            "rotationStepRmsRad": 0.07772220028086275,
+            "angularVelocityRmsRadPerSec": 0.47541184672329795,
+            "inputAmplitudeRad": 0.276945525532561,
+            "outputAmplitudeRad": 0.23396179485007643,
+            "amplitudeRatio": 0.8447935542564636,
+            "lag": {
+              "lagMs": 299.01800000000003,
+              "correlation": -0.02101038000237766,
+              "sampleCount": 34
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightUpperArm",
+            "startMs": 5277.477000000001,
+            "endMs": 9739.339,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 96.71000000000004,
+              "max": 169.48700000000008,
+              "median": 100.72800000000007
+            },
+            "rotationStepRmsRad": 0.04235250770172862,
+            "angularVelocityRmsRadPerSec": 0.4273078437371564,
+            "inputAmplitudeRad": 0.15554992778718124,
+            "outputAmplitudeRad": 0.23850286454464956,
+            "amplitudeRatio": 1.5332881727271648,
+            "lag": {
+              "lagMs": 333.2650000000003,
+              "correlation": 0.4419502545550175,
+              "sampleCount": 34
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightUpperArm",
+            "startMs": 9739.339,
+            "endMs": 14201.201,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 97.79000000000087,
+              "max": 167.72199999999975,
+              "median": 100.9940000000006
+            },
+            "rotationStepRmsRad": 0.012050174519726167,
+            "angularVelocityRmsRadPerSec": 0.10423767179433881,
+            "inputAmplitudeRad": 0.09738454112168604,
+            "outputAmplitudeRad": 0.1557872252934649,
+            "amplitudeRatio": 1.5997120641437563,
+            "lag": {
+              "lagMs": 0,
+              "correlation": -0.13043607506969382,
+              "sampleCount": 37
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightLowerArm",
+            "startMs": 5277.477000000001,
+            "endMs": 9739.339,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 96.71000000000004,
+              "max": 169.48700000000008,
+              "median": 100.72800000000007
+            },
+            "rotationStepRmsRad": 0.04796351779969623,
+            "angularVelocityRmsRadPerSec": 0.4787185942810374,
+            "inputAmplitudeRad": 0.291768880152969,
+            "outputAmplitudeRad": 0.3167300594449158,
+            "amplitudeRatio": 1.0855512050457887,
+            "lag": {
+              "lagMs": 599.652,
+              "correlation": 0.7274871189382995,
+              "sampleCount": 31
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightLowerArm",
+            "startMs": 9739.339,
+            "endMs": 14201.201,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 97.79000000000087,
+              "max": 167.72199999999975,
+              "median": 100.9940000000006
+            },
+            "rotationStepRmsRad": 0.01511613094859776,
+            "angularVelocityRmsRadPerSec": 0.1273950366732837,
+            "inputAmplitudeRad": 0.15119334331194656,
+            "outputAmplitudeRad": 0.12369778381577627,
+            "amplitudeRatio": 0.8181430551513063,
+            "lag": {
+              "lagMs": 0,
+              "correlation": -0.631762053379253,
+              "sampleCount": 37
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          }
+        ],
+        "reachClampedFrames": 0,
+        "elbowFlipFrames": 0
+      },
+      {
+        "label": "filter-minimal",
+        "config": {
+          "armIkMode": "world_3d_ik",
+          "armIkStrength": 1,
+          "armIkTargetScale": 1,
+          "smoothingMs": 40,
+          "minConfidence": 0.45
+        },
+        "frames": 89,
+        "metrics": [
+          {
+            "section": "調整",
+            "bone": "leftUpperArm",
+            "startMs": 5277.477000000001,
+            "endMs": 9739.339,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 96.71000000000004,
+              "max": 169.48700000000008,
+              "median": 100.72800000000007
+            },
+            "rotationStepRmsRad": 0.0399047283719976,
+            "angularVelocityRmsRadPerSec": 0.33711309621452373,
+            "inputAmplitudeRad": 0.8093639064240242,
+            "outputAmplitudeRad": 0.09236772096311967,
+            "amplitudeRatio": 0.11412384494784772,
+            "lag": {
+              "lagMs": 599.652,
+              "correlation": 0.061987658845737245,
+              "sampleCount": 31
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftUpperArm",
+            "startMs": 9739.339,
+            "endMs": 14201.201,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 97.79000000000087,
+              "max": 167.72199999999975,
+              "median": 100.9940000000006
+            },
+            "rotationStepRmsRad": 0.042709307558189157,
+            "angularVelocityRmsRadPerSec": 0.26505932802530163,
+            "inputAmplitudeRad": 0.5094062107148873,
+            "outputAmplitudeRad": 0.14516630371041053,
+            "amplitudeRatio": 0.2849716015568164,
+            "lag": {
+              "lagMs": 0,
+              "correlation": 0.037945633905292306,
+              "sampleCount": 37
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "leftLowerArm",
+            "startMs": 5277.477000000001,
+            "endMs": 9739.339,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 96.71000000000004,
+              "max": 169.48700000000008,
+              "median": 100.72800000000007
+            },
+            "rotationStepRmsRad": 0.07485358088640943,
+            "angularVelocityRmsRadPerSec": 0.6298172323536937,
+            "inputAmplitudeRad": 0.7884601093126193,
+            "outputAmplitudeRad": 0.4169683323017595,
+            "amplitudeRatio": 0.5288388434327681,
+            "lag": {
+              "lagMs": 0,
+              "correlation": -0.5515490026111839,
+              "sampleCount": 36
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "leftLowerArm",
+            "startMs": 9739.339,
+            "endMs": 14201.201,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 97.79000000000087,
+              "max": 167.72199999999975,
+              "median": 100.9940000000006
+            },
+            "rotationStepRmsRad": 0.07804254154776709,
+            "angularVelocityRmsRadPerSec": 0.4790201240441532,
+            "inputAmplitudeRad": 0.276945525532561,
+            "outputAmplitudeRad": 0.23724326012150596,
+            "amplitudeRatio": 0.8566423294447225,
+            "lag": {
+              "lagMs": 299.01800000000003,
+              "correlation": 0.01992327193074584,
+              "sampleCount": 34
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightUpperArm",
+            "startMs": 5277.477000000001,
+            "endMs": 9739.339,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 96.71000000000004,
+              "max": 169.48700000000008,
+              "median": 100.72800000000007
+            },
+            "rotationStepRmsRad": 0.04472886132620752,
+            "angularVelocityRmsRadPerSec": 0.4478002863098915,
+            "inputAmplitudeRad": 0.15554992778718124,
+            "outputAmplitudeRad": 0.23845112693326723,
+            "amplitudeRatio": 1.5329555617634805,
+            "lag": {
+              "lagMs": 333.2650000000003,
+              "correlation": 0.4494392542862083,
+              "sampleCount": 34
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightUpperArm",
+            "startMs": 9739.339,
+            "endMs": 14201.201,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 97.79000000000087,
+              "max": 167.72199999999975,
+              "median": 100.9940000000006
+            },
+            "rotationStepRmsRad": 0.014981474775673579,
+            "angularVelocityRmsRadPerSec": 0.12672376662993348,
+            "inputAmplitudeRad": 0.09738454112168604,
+            "outputAmplitudeRad": 0.15543241480750478,
+            "amplitudeRatio": 1.5960686677496945,
+            "lag": {
+              "lagMs": 0,
+              "correlation": -0.12401860299439027,
+              "sampleCount": 37
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "調整",
+            "bone": "rightLowerArm",
+            "startMs": 5277.477000000001,
+            "endMs": 9739.339,
+            "maxLagMs": 600,
+            "sampleCount": 36,
+            "differenceSampleCount": 35,
+            "intervalsMs": {
+              "min": 96.71000000000004,
+              "max": 169.48700000000008,
+              "median": 100.72800000000007
+            },
+            "rotationStepRmsRad": 0.051636501846285474,
+            "angularVelocityRmsRadPerSec": 0.5087069691537494,
+            "inputAmplitudeRad": 0.291768880152969,
+            "outputAmplitudeRad": 0.3326777091481104,
+            "amplitudeRatio": 1.1402097063048455,
+            "lag": {
+              "lagMs": 599.652,
+              "correlation": 0.7426427515331707,
+              "sampleCount": 31
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          },
+          {
+            "section": "確認",
+            "bone": "rightLowerArm",
+            "startMs": 9739.339,
+            "endMs": 14201.201,
+            "maxLagMs": 600,
+            "sampleCount": 37,
+            "differenceSampleCount": 36,
+            "intervalsMs": {
+              "min": 97.79000000000087,
+              "max": 167.72199999999975,
+              "median": 100.9940000000006
+            },
+            "rotationStepRmsRad": 0.02200032101232938,
+            "angularVelocityRmsRadPerSec": 0.1870386610873623,
+            "inputAmplitudeRad": 0.15119334331194656,
+            "outputAmplitudeRad": 0.12948671433518885,
+            "amplitudeRatio": 0.8564313183287974,
+            "lag": {
+              "lagMs": 0,
+              "correlation": -0.49448138915154866,
+              "sampleCount": 37
+            },
+            "recoveryMaxAngleRad": null,
+            "recoverySampleCount": 0
+          }
+        ],
+        "reachClampedFrames": 0,
+        "elbowFlipFrames": 0
+      }
+    ]
+  }
+]

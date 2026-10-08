@@ -59,7 +59,15 @@ export function recomputeMotionReplay(input: MotionReplayComparisonInput) {
             profile,
             deltaSeconds: previousTimeMs === undefined ? 1 / 60 : (time - previousTimeMs) / 1000,
             mediaTimeMs: time,
-            semanticFinger: { mode: "composer", intent: state.intent, hand, mediaTimeMs: time },
+            semanticFinger: {
+                mode: "composer",
+                intent: state.intent,
+                hand,
+                mediaTimeMs: time,
+                poseMediaTimeMs: time,
+                temporal: state.temporal,
+                trackingEnabled: pose.trackingEnabled,
+            },
         });
         previousTimeMs = time;
         return {

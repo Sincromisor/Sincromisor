@@ -6,6 +6,8 @@ import type { SincroArmIkRefinementResult } from "./sincroArmIkRefinement";
 export type SincroArmSide = "left" | "right";
 
 export type SincroArmIkTarget = {
+    /** 体幹相対の方向は読込時の親基準で解き、描画済みの体幹回転を逆算しない。 */
+    bodyLocal?: boolean;
     wrist: Vector3;
     elbowPole: Vector3;
     weight: number;

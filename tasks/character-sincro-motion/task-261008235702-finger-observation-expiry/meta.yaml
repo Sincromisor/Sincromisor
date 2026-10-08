@@ -1,0 +1,14 @@
+id: task-261008235702-finger-observation-expiry
+title: 指姿勢の観測時刻と保持期限を修正する
+category: character-sincro-motion
+status: done
+depends_on:
+  - task-261008235702-motion-dropout-application
+superseded_by: null
+review: APPROVED
+reviewed_sha: null
+verdict: PASS
+attempts: 2
+created_at: 2026-10-08
+closed_at: 2026-10-09
+legacy_ids: []

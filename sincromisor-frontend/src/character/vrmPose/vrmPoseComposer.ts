@@ -17,7 +17,7 @@ import {
     overrideQuaternion,
     serializeQuaternion,
 } from "./vrmPoseQuaternionMath";
-import { shouldSuppressSemanticConflict } from "./vrmPoseSemanticPolicy";
+import { semanticTrackingWeight, trackingProtectionWeight } from "./vrmPoseSemanticPolicy";
 import type {
     VrmPoseComposerInput,
     VrmPoseComposerResult,
@@ -40,11 +40,13 @@ type PoseWrite = {
     quaternion: VrmPoseQuaternion;
 };
 
+/** ボーンの所有だけでなく実観測の保護重みも持つ。意図側の確信度とは分離する。 */
 type TrackingOwnership = {
-    left: Set<VRMHumanBoneName>;
-    right: Set<VRMHumanBoneName>;
+    left: Map<VRMHumanBoneName, number>;
+    right: Map<VRMHumanBoneName, number>;
 };
 
+/** 追跡品質を先に集め、優先順に層を合成してから最終角速度を制限する。骨格へは直接書かない。 */
 export function composeVrmPose(input: VrmPoseComposerInput): VrmPoseComposerResult {
     const result: VrmPoseComposerResult = {
         finalPose: {},
@@ -91,24 +93,20 @@ function applyLayer(
             addSuppressedLayer(result, layer, write.sourceBone, "tracking_owns_bone");
             continue;
         }
-        if (
-            shouldSuppressSemanticConflict(
-                layer,
-                write.bone,
-                isTrackingOwnedBone(write.bone, trackingOwnership),
-            )
-        ) {
+        const side = armSide(write.bone);
+        const protection = side ? (trackingOwnership[side].get(write.bone) ?? 0) : 0;
+        const weight = semanticTrackingWeight(layer, write.bone, protection);
+        if (weight < layer.weight)
             addSuppressedLayer(result, layer, write.sourceBone, "semantic_conflict");
-            continue;
-        }
+        if (shouldSuppressZeroWeight(weight)) continue;
         if (hasOwnedBoneConflict(layer, write.bone, result.ownedBones)) {
             addWarning(result, `owned_bone_conflict:${write.bone}`);
         }
         const current = finalQuaternions.get(write.bone);
         const next =
             layer.blendMode === "override"
-                ? overrideQuaternion(current, write.quaternion, layer.weight)
-                : additiveQuaternion(current, write.quaternion, layer.weight);
+                ? overrideQuaternion(current, write.quaternion, weight)
+                : additiveQuaternion(current, write.quaternion, weight);
         finalQuaternions.set(write.bone, next);
         addOwnedBone(result, write.bone);
     }
@@ -209,11 +207,12 @@ function clampAngularVelocity(
     return clamped;
 }
 
+/** 複数の追跡層が同じ部位を持つ場合は最大の保護重みを使い、後段の補助層へ渡す。 */
 function createTrackingOwnership(
     layers: VrmPoseLayer[],
     optionalBones: AvatarOptionalBoneCapabilities,
 ): TrackingOwnership {
-    const ownership: TrackingOwnership = { left: new Set(), right: new Set() };
+    const ownership: TrackingOwnership = { left: new Map(), right: new Map() };
     for (const layer of layers) {
         if (layer.kind !== "tracking" || shouldSuppressZeroWeight(layer.weight)) {
             continue;
@@ -221,7 +220,10 @@ function createTrackingOwnership(
         for (const write of createTrackingWrites(layer, optionalBones)) {
             const side = armSide(write.bone);
             if (side) {
-                ownership[side].add(write.bone);
+                ownership[side].set(
+                    write.bone,
+                    Math.max(ownership[side].get(write.bone) ?? 0, trackingProtectionWeight(layer)),
+                );
             }
         }
     }
@@ -270,14 +272,6 @@ function hasOwnedBoneConflict(
     ownedBones: VRMHumanBoneName[],
 ): boolean {
     return layer.kind !== "tracking" && ownedBones.includes(bone);
-}
-
-function isTrackingOwnedBone(
-    bone: VRMHumanBoneName,
-    trackingOwnership: TrackingOwnership,
-): boolean {
-    const side = armSide(bone);
-    return side !== undefined && trackingOwnership[side].has(bone);
 }
 
 function shouldSuppressZeroWeight(weight: number): boolean {

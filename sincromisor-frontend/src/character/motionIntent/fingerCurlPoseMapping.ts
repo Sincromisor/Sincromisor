@@ -113,8 +113,14 @@ export function normalizedProfileDistribution(
     return { ...distribution };
 }
 
+/** 曲げ・開き・親指の対立は同じ有効観測から生成し、期限後は呼び出し元が中立特徴を渡す。 */
+type FingerCurlMappingInput = Pick<FingerCurlPoseLayerInput, "side" | "profile"> & {
+    features: SincroHandMotionSnapshot["leftHand"]["features"];
+};
+
+/** 存在する指ボーンへ群の曲げを配分し、開きと親指の対立を同じ観測から加える。 */
 export function addGroupPose(
-    input: FingerCurlPoseLayerInput,
+    input: FingerCurlMappingInput,
     groupState: FingerCurlGroupState,
     distribution: FingerCurlDistribution,
     pose: VrmNormalizedLocalPose,
@@ -135,7 +141,7 @@ export function addGroupPose(
 }
 
 function availableGroupBones(
-    input: FingerCurlPoseLayerInput,
+    input: FingerCurlMappingInput,
     group: FingerCurlGroup,
     distribution: FingerCurlDistribution,
 ): Array<{ name: VRMHumanBoneName; part: FingerChainPart; weight: number; finger: FingerName }> {
@@ -154,7 +160,7 @@ function availableGroupBones(
 }
 
 function availableRawBones(
-    input: FingerCurlPoseLayerInput,
+    input: FingerCurlMappingInput,
     group: FingerCurlGroup,
     distribution: FingerCurlDistribution,
 ): Array<{ name: VRMHumanBoneName; part: FingerChainPart; rawWeight: number; finger: FingerName }> {
@@ -181,7 +187,7 @@ function availableRawBones(
 }
 
 function createFingerQuaternion(
-    input: FingerCurlPoseLayerInput,
+    input: FingerCurlMappingInput,
     groupState: FingerCurlGroupState,
     bone: { part: FingerChainPart; weight: number; finger: FingerName },
 ): { x: number; y: number; z: number; w: number } {
@@ -196,15 +202,14 @@ function createFingerQuaternion(
 }
 
 function splayDegrees(
-    input: FingerCurlPoseLayerInput,
+    input: FingerCurlMappingInput,
     group: FingerCurlGroup,
     finger: FingerName,
 ): number {
     if (group === "thumb") {
         return 0;
     }
-    const features =
-        input.side === "left" ? input.hand.leftHand.features : input.hand.rightHand.features;
+    const features = input.features;
     const sideSign = input.side === "left" ? 1 : -1;
     return (
         sideSign * clamp01(fingerSplayValue(finger, features)) * input.profile.fingers.splayLimitDeg
@@ -225,7 +230,7 @@ function fingerSplayValue(
 }
 
 function thumbOpposeDegrees(
-    input: FingerCurlPoseLayerInput,
+    input: FingerCurlMappingInput,
     group: FingerCurlGroup,
     part: FingerChainPart,
     finger: FingerName,
@@ -233,13 +238,12 @@ function thumbOpposeDegrees(
     if (group !== "thumb" || finger !== "thumb" || part !== firstAvailableThumbPart(input)) {
         return 0;
     }
-    const features =
-        input.side === "left" ? input.hand.leftHand.features : input.hand.rightHand.features;
+    const features = input.features;
     const sideSign = input.side === "left" ? 1 : -1;
     return sideSign * clamp01(features.thumbOppose) * THUMB_OPPOSE_MAX_DEG;
 }
 
-function firstAvailableThumbPart(input: FingerCurlPoseLayerInput): FingerChainPart | undefined {
+function firstAvailableThumbPart(input: FingerCurlMappingInput): FingerChainPart | undefined {
     const chain = input.profile.capabilities.fingerChains[input.side].thumb;
     return FINGER_CHAIN_PARTS.find((part) => chain[part]);
 }

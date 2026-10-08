@@ -2,18 +2,23 @@ import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/
 import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfileTypes";
 import type { MinimalAvatarMotionProfile } from "../avatarProfile/minimalAvatarMotionProfile";
 import {
-    createFingerCurlPoseLayers,
-    type FingerCurlPoseDebugSnapshot,
-} from "../motionIntent/fingerCurlPoseLayer";
-import { parseMotionIntentState } from "../motionIntent/motionIntentState";
+    type FingerCurlObservation,
+    observeFingerCurl,
+} from "../motionIntent/fingerCurlObservation";
+import { createFingerCurlPoseLayers } from "../motionIntent/fingerCurlPoseLayer";
+import {
+    createDefaultMotionIntentState,
+    parseMotionIntentState,
+} from "../motionIntent/motionIntentState";
 import { createSemanticMotionPoseLayer } from "../motionIntent/semanticMotionPoseLayer";
 import type { ComposerSemanticFingerApplicationMode } from "../retargeting/sincroPoseRetargetTypes";
+import type { TemporalUpperBodyState } from "../temporal/temporalUpperBodyState";
 import type { VrmPoseLayer } from "../vrmPose/vrmPoseTypes";
 
 /**
  * production composer に semantic / finger layer を追加するための snapshot-only 入力。
  *
- * `intent` は parser 境界で検証されるため `unknown` のまま受け、失敗時は warning 付きで layer を生成しない。
+ * `intent` は parser 境界で検証されるため `unknown` のまま受け、失敗時は警告を残し、指の保持期限だけは評価する。
  * `hand` は低次元 `SincroHandMotionSnapshot` に限定し、Gesture Recognizer raw result、MediaPipe raw landmark、
  * VRM Object3D、raw bone node はこの境界へ入れない。
  */
@@ -21,6 +26,12 @@ export type SincroVrmPoseComposerSemanticFingerInput = {
     mode: ComposerSemanticFingerApplicationMode;
     /** 管理側でHandの観測時計へ写した時刻。指側で独自採時しない。 */
     mediaTimeMs?: number;
+    /** Handの実観測時刻。同じ観測の再描画では更新しない。 */
+    observedAtMs?: number;
+    /** Pose時計で評価する意図と腕の新鮮さ。Hand時計とは直接減算しない。 */
+    poseMediaTimeMs?: number;
+    temporal?: TemporalUpperBodyState;
+    trackingEnabled?: boolean;
     intent?: unknown;
     hand?: SincroHandMotionSnapshot;
 };
@@ -29,10 +40,10 @@ export type SincroVrmPoseComposerSemanticFingerInput = {
  * 合成サービスがフレーム間で指を短時間保持するための状態。
  *
  * VRM初期化と切り戻しフラグの変更時は `SincroVrmPoseComposerService.reset()` で破棄する。
- * semantic preset は前回 state を参照せず、Hand 欠損時にも previous を layer として昇格しない。
+ * semantic preset は前回 state を参照せず、保持した出力を観測へ昇格せず、Hand欠損時も実観測からの期限を評価する。
  */
 export type SincroVrmPoseComposerSemanticFingerState = {
-    previousFinger: Partial<Record<"left" | "right", FingerCurlPoseDebugSnapshot>>;
+    previousFinger: Partial<Record<"left" | "right", FingerCurlObservation>>;
 };
 
 /**
@@ -54,7 +65,7 @@ export type SincroVrmPoseComposerSemanticFingerLayerResult = {
  * 入力は parsed 可能な `MotionIntentState`、低次元 Hand snapshot、完成版 `AvatarMotionProfile` に限定する。
  * Gesture Recognizer raw result、MediaPipe raw landmark、VRM Object3D、raw bone node は受け取らないため、
  * replay と live の composer input が同じ contract で説明できる。invalid intent、Minimal profile、
- * Hand 欠損は warning 付きで該当 layer を追加しない。
+ * Hand欠損では警告を残し、指を期限付きで保持して中立へ戻す。
  */
 export function createSemanticFingerComposerLayers(
     profile: AvatarMotionProfile | MinimalAvatarMotionProfile,
@@ -75,47 +86,47 @@ export function createSemanticFingerComposerLayers(
         };
     }
     const intent = parseMotionIntentState(input.intent);
-    if (!intent.ok) {
-        return {
-            layers: [],
-            warnings: [
-                "semantic_finger_application_intent_invalid",
-                ...intent.errors.map(
-                    (error) => `intent_invalid:${error.code}:${error.path.join(".")}`,
-                ),
-            ],
-            previousFinger: state.previousFinger,
-        };
+    // 意図の欠損や停止は指の時計を止めない。観測済みの指は独立に期限を評価する。
+    const warnings = intent.ok ? [] : ["semantic_finger_application_intent_invalid"];
+    if (!input.hand) warnings.push("semantic_finger_application_hand_missing");
+    const intentState = intent.ok ? intent.state : createDefaultMotionIntentState(0);
+    const semantic = createSemanticMotionPoseLayer({ intent: intentState, profile });
+    const intentAge = (input.poseMediaTimeMs ?? Number.NaN) - intentState.timestamp.mediaTimeMs;
+    const intentWeight =
+        input.trackingEnabled !== false && Number.isFinite(intentAge) && intentAge >= 0
+            ? Math.max(0, 1 - intentAge / 250)
+            : 0;
+    for (const layer of semantic.layers) layer.weight *= intentWeight;
+    const mediaTimeMs = input.mediaTimeMs ?? Number.NaN;
+    const observedAtMs = input.observedAtMs ?? input.hand?.lastUpdatedAtMs;
+    const hand =
+        input.trackingEnabled === false && input.hand
+            ? { ...input.hand, trackingEnabled: false }
+            : input.hand;
+    const previous = input.trackingEnabled === false ? {} : state.previousFinger;
+    const previousFinger = { ...previous };
+    for (const side of ["left", "right"] as const) {
+        previousFinger[side] = observeFingerCurl(
+            hand,
+            side,
+            observedAtMs,
+            mediaTimeMs,
+            previousFinger[side],
+        );
     }
-
-    const semantic = createSemanticMotionPoseLayer({
-        intent: intent.state,
-        profile,
-    });
-    if (input.hand === undefined) {
-        return {
-            layers: semantic.layers,
-            warnings: [...semantic.debug.warnings, "semantic_finger_application_hand_missing"],
-            previousFinger: state.previousFinger,
-        };
-    }
-
     const finger = createFingerCurlPoseLayers({
-        hand: input.hand,
-        intent: intent.state,
+        hand,
+        intent: intentState,
+        intentWeight,
         profile,
-        mediaTimeMs: input.mediaTimeMs ?? intent.state.timestamp.mediaTimeMs,
-        previous: state.previousFinger,
+        mediaTimeMs,
+        observedAtMs,
+        previous,
     });
-    const previousFinger = finger.debug.reduce<
-        SincroVrmPoseComposerSemanticFingerState["previousFinger"]
-    >((acc, snapshot) => {
-        acc[snapshot.side] = snapshot;
-        return acc;
-    }, {});
     return {
         layers: [...semantic.layers, ...finger.layers],
         warnings: [
+            ...warnings,
             ...semantic.debug.warnings,
             ...finger.debug.flatMap((snapshot) => snapshot.warnings),
         ],

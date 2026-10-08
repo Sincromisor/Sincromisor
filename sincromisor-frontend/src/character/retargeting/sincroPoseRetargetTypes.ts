@@ -86,6 +86,8 @@ export type SincroPoseRetargetFrame = {
         shoulderOffset: { x: number; y: number };
     };
     upperBody: {
+        /** 中立基底との差。合成時にプロファイルで配分する任意の正規化回転。 */
+        torsoQuaternion?: { x: number; y: number; z: number; w: number };
         spine: { x: number; y: number; z: number };
         chest: { x: number; y: number; z: number };
         leftShoulder: { x: number; y: number; z: number };

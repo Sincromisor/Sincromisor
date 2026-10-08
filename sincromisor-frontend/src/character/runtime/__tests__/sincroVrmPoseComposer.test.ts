@@ -92,6 +92,8 @@ describe("SincroVrmPoseComposerService", () => {
             profile: FULL_PROFILE,
             semanticFinger: {
                 mode: "composer",
+                mediaTimeMs: 1000,
+                poseMediaTimeMs: 1000,
                 intent,
                 hand: createHand({ index: 0.1, middle: 0.1, ring: 0.8, little: 0.8 }),
             },
@@ -117,6 +119,8 @@ describe("SincroVrmPoseComposerService", () => {
             profile: FULL_PROFILE,
             semanticFinger: {
                 mode: "composer",
+                mediaTimeMs: 1000,
+                poseMediaTimeMs: 1000,
                 intent: { schemaVersion: "sincro.motion-intent.v1", rawLandmarks: [] },
                 hand: createHand(),
             },
@@ -127,13 +131,15 @@ describe("SincroVrmPoseComposerService", () => {
             profile: COMPLETE_PROFILE,
             semanticFinger: {
                 mode: "composer",
+                mediaTimeMs: 1000,
+                poseMediaTimeMs: 1000,
                 intent: createIntent("thumbsUp"),
                 hand: createHand(),
             },
             deltaSeconds: 1 / 60,
         });
 
-        expect(invalidIntentResult.result?.ownedBones).not.toContain("leftIndexProximal");
+        expect(invalidIntentResult.result?.ownedBones).toContain("leftIndexProximal");
         expect(invalidIntentResult.warnings).toContain(
             "semantic_finger_application_intent_invalid",
         );
@@ -152,6 +158,8 @@ describe("SincroVrmPoseComposerService", () => {
             profile: FULL_PROFILE,
             semanticFinger: {
                 mode: "composer",
+                mediaTimeMs: 1000,
+                poseMediaTimeMs: 1000,
                 intent,
             },
             deltaSeconds: 1 / 60,
@@ -163,7 +171,7 @@ describe("SincroVrmPoseComposerService", () => {
             bone: "leftUpperArm",
             reason: "semantic_conflict",
         });
-        expect(result.result?.ownedBones).not.toContain("leftIndexProximal");
+        expect(result.result?.ownedBones).toContain("leftIndexProximal");
         expect(result.warnings).toContain("semantic_finger_application_hand_missing");
     });
 
@@ -176,6 +184,8 @@ describe("SincroVrmPoseComposerService", () => {
             profile,
             semanticFinger: {
                 mode: "composer",
+                mediaTimeMs: 1000,
+                poseMediaTimeMs: 1000,
                 intent: createIntent("tracking"),
                 hand: createHand({ index: 0.1, middle: 0.8, ring: 0.8, little: 0.8 }),
             },

@@ -12,7 +12,7 @@ import {
 } from "./vrmPoseComposerTestHelpers";
 
 describe("composeVrmPose", () => {
-    it("applies semantic layers after tracking and before idle or style", () => {
+    it("高信頼の追跡を意味動作と待機姿勢より優先する", () => {
         const tracking = layer({
             id: "tracking",
             kind: "tracking",
@@ -46,14 +46,14 @@ describe("composeVrmPose", () => {
         });
 
         expect(LAYER_ORDER).toEqual(["fallback", "tracking", "semantic", "idle", "style"]);
-        expectNormalizedQuaternion(result.finalPose.leftLowerArm, eulerQuaternion(0, 0.6, 0));
+        expectNormalizedQuaternion(result.finalPose.leftLowerArm, eulerQuaternion(0, 0.2, 0));
         expect(result.suppressedLayers).toContainEqual({
             id: "idle",
             kind: "idle",
             bone: "leftLowerArm",
             reason: "tracking_owns_bone",
         });
-        expect(result.warnings).toContain("owned_bone_conflict:leftLowerArm");
+        expect(result.warnings).not.toContain("owned_bone_conflict:leftLowerArm");
     });
 
     it("suppresses idle and speech style additives for bones owned by active tracking IK", () => {

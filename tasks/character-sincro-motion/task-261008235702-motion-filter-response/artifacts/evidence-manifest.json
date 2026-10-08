@@ -1,0 +1,175 @@
+{
+  "baseCommit": "c48125b6d9ea20fe1e096643df8429cc6772cf6d",
+  "recordings": [
+    {
+      "fixture": "arms-cross",
+      "videoSha256": "21296ea0fbd2f8655d4c20bbffe67541457ed04ddef9468eacb7fa172cd1cf54",
+      "replaySha256": "f86967866cf3bdccc801f5250dc038a6cbddda4b296925aa00b5dbe903282c73",
+      "frames": 134
+    },
+    {
+      "fixture": "both-arms-slow-raise",
+      "videoSha256": "1020dd63f78765ee83f28abc914ca0838f58db6ab3b6654a1119a429e44ab1cd",
+      "replaySha256": "060e1879ed897396f83ee938ecfa6cdc1e797db4e5f511e0bb569d59bca7d589",
+      "frames": 101
+    },
+    {
+      "fixture": "fast-wave",
+      "videoSha256": "4c7ed7b36b011d10e8034c2a20ec0d4cef61f7c0f3f4a29e5a17aa4258944a6e",
+      "replaySha256": "9c5f5173e79874b668ebf05e789de0044e04ea008e612d5bc98618ca3256c1af",
+      "frames": 84
+    },
+    {
+      "fixture": "hand-out-and-return",
+      "videoSha256": "fbda14dcb1dd365f18ba352a5eaaf8fe842a2d9ce80524e40ff8f0db0adf58f4",
+      "replaySha256": "48eae5a06e7d9d7974019dfd8ea895f3b71fd7bbf347f7915501d81099b7608b",
+      "frames": 89
+    },
+    {
+      "fixture": "neutral-10s",
+      "videoSha256": "47f79e6b939f53a2d42ef3bd7e69bea1e03d24efd9c52a78f6399e233dfb49d0",
+      "replaySha256": "0772fbec79c3a7007fd7d11e8fa3d6e89429a857f3af3775298875bf4f29341a",
+      "frames": 110
+    },
+    {
+      "fixture": "single-arm-slow-raise",
+      "videoSha256": "887fbeb56cb69ee2f6e3749a616c20941f455bb0826f66a3f1946a1c0406a0b4",
+      "replaySha256": "fa33d098b9725a1498e5adc3a57bdb9afe53e2240dd2b237a43aab09e9e2183b",
+      "frames": 92
+    }
+  ],
+  "outputs": [
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/filter-baseline-arms-cross.json",
+      "sha256": "1fb065135bddb2a85aa11e9d10067ee0c0bc6db5dd5d00465302ecd27673a701"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/filter-baseline-both-arms-slow-raise.json",
+      "sha256": "dfea3a764dfe9bfdbb5e7d12eca339fe663594157d99ddbd9d808a8705582e39"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/filter-baseline-fast-wave.json",
+      "sha256": "ea9979cc99372d63697d18e5322edeadbec881746ec361d2beaa5eef88e6146d"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/filter-baseline-hand-out-and-return.json",
+      "sha256": "0967bfa0ec973d5dcfc802c4568ab59317fe656e51629344693e985538451eed"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/filter-baseline-neutral-10s.json",
+      "sha256": "e1218c8ab82087282258a5a9d306d4138f3452a49f4800123c91181ed7a228f0"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/filter-baseline-single-arm-slow-raise.json",
+      "sha256": "6f05fc6b42914c241bab861e0c291b623e8c36106166de2b47c319f9e76faf2b"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/filter-input-arms-cross.json",
+      "sha256": "c4f60552f2f448ede99f3300bc4359975f0b22fac1cc4c0139e8771b20bec5ab"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/filter-input-both-arms-slow-raise.json",
+      "sha256": "f83600b96316a193b8d4bd552594da4cc1feb0f97e3cb3eed0270e0f304f05de"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/filter-input-fast-wave.json",
+      "sha256": "18d67b30ba7fd1fdefaa344ccddc469e88b1953299fa4a415aef774b40d895ea"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/filter-input-hand-out-and-return.json",
+      "sha256": "94659dfec5e13d4b4d52585709e1a29e9a9399d695df435ece6a7b6fd043f5ea"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/filter-input-neutral-10s.json",
+      "sha256": "f6e5978e2abd58901bdf2e91a8cf7233764572b5e68e1333961e04c917552f49"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/filter-input-single-arm-slow-raise.json",
+      "sha256": "87ce3c25f5b17b90c45aba0eb47dc6c3de6c018ff3ba71a6ec8db7cf0e76a8ff"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/filter-minimal-arms-cross.json",
+      "sha256": "24f42ef904b0c705f6eeac7b1508beb7f309024b3acec9d7b59bfad309118e45"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/filter-minimal-both-arms-slow-raise.json",
+      "sha256": "ace65577b0cf8a14b3ed70c4de332f73af3d67403943a2dadddcee108bfd3d6e"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/filter-minimal-fast-wave.json",
+      "sha256": "21acc0aec802e00598d7b21b1d1d108d04be7303b8d3d1f09e2e9a797276de28"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/filter-minimal-hand-out-and-return.json",
+      "sha256": "e914cd0875c4f31b91edfabbf048e061b1dc788441e373aeafdc7a69f59cb7fa"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/filter-minimal-neutral-10s.json",
+      "sha256": "02d1567ab7cac54ea6bbb1ef5ce1e9f531db41da1fcdffbbe33bc5b4647e6427"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/filter-minimal-single-arm-slow-raise.json",
+      "sha256": "71e10fb8c43fffeab1c8b4f661bf0bf942f37be30c2a0982ec9938fe17fffa48"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/filter-summary.json",
+      "sha256": "2680f9f756747289abfe401611594627b556ee30fc95963ec11b477358391163"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/hand-observations-fast-wave.json",
+      "sha256": "ed7b08aefeef80c744c9e628091de8ee8a01f9129ee04d470fa6410498174451"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/hand-observations-hand-out-and-return.json",
+      "sha256": "5218ef059279bb2d8624ec5449ed175c2a0b14de500d2efe288f2027d5d09647"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/hand-observations-neutral-10s.json",
+      "sha256": "ac42e4947c3297819db089b58261380e4d53eec206bc063b7625a0d3c61dcb5c"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/motion-final-arms-cross.json",
+      "sha256": "f490b07dd56183ba458872a506fcfa0ce7513d2ed2562dfc506e9cdd656b1b36"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/motion-final-both-arms-slow-raise.json",
+      "sha256": "9f731e53ba533e458ec6eee0ba8d94e141e10d849d9d9f8a63293a0b276b0fe5"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/motion-final-fast-wave.json",
+      "sha256": "084f9e1f197bc40dedef5340aec504e8b90375b8a3f614046f4ac326a8cd25d6"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/motion-final-hand-out-and-return.json",
+      "sha256": "29064dfe103a9350591eedec1f59c455d3b424a80544be1a765197e2c81da8d7"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/motion-final-hands-fast-wave.json",
+      "sha256": "3874afd43742bb95290362622871656b934d56071fa3841430102db4350d49a3"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/motion-final-hands-hand-out-and-return.json",
+      "sha256": "9a144684e46490fba710954336e3c9846720ae273ce1c3244e28dc9dcf9137cc"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/motion-final-hands-neutral-10s.json",
+      "sha256": "750adff0455654e97252dc690de3c2d303632514c144bec105ef995b6dcb75d6"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/motion-final-neutral-10s.json",
+      "sha256": "d9c744292c4ef59119a5d9c5957dcfc6729cdfc1a4fee23b0f4d20329758bc74"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/motion-final-single-arm-slow-raise.json",
+      "sha256": "bc77ff7e9a0e076c9fb0006f24c969f2dfbed83cee7a0b03ae1fdf5f47288701"
+    },
+    {
+      "privatePath": "work/private-artifacts/task-261008235701-recorded-motion-quality-baseline/motion-final-summary.json",
+      "sha256": "0468451e00a049690c288e7ab30dea932b7b3441a9222fcc143ea5ac92daf38e"
+    }
+  ],
+  "model": {
+    "path": "sincromisor-frontend/public/characters/default.vrm",
+    "sha256": "12c2b97e95e700783a6a550dc0eee2d7880aeedccef9ae67bc4c5a2f0f2631a2"
+  }
+}

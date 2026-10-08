@@ -274,6 +274,11 @@ export class VRMCharacterManager {
                 intent: this.latestBehaviorSnapshot.sincroMotionPipeline?.intent,
                 hand: this.latestBehaviorSnapshot.sincroMotionPipeline?.hand,
                 mediaTimeMs: clock.handTimeMs,
+                poseMediaTimeMs: clock.poseTimeMs,
+                temporal: this.latestBehaviorSnapshot.sincroMotionPipeline?.temporal,
+                trackingEnabled: this.latestBehaviorSnapshot.motionPolicy.allowPoseRetarget,
+                observedAtMs:
+                    this.latestBehaviorSnapshot.sincroMotionPipeline?.hand?.lastUpdatedAtMs,
             },
             deltaSeconds: motionDeltaSeconds,
             mediaTimeMs: motionTimeMs,

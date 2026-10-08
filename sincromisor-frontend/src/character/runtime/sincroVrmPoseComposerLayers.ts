@@ -8,6 +8,7 @@ import type {
     SincroPoseRetargetFrame,
 } from "../retargeting/sincroPoseRetargeter";
 import { CHARACTER_ARM_REST_POSE } from "../vrmCharacter/characterMotionConfig";
+import { createTorsoFallbackLayer } from "../vrmPose/vrmPoseTorsoFallback";
 import type {
     VrmNormalizedLocalPose,
     VrmPoseLayer,
@@ -34,7 +35,7 @@ const FALLBACK_BONES: VRMHumanBoneName[] = [
     "rightHand",
 ];
 
-/** 追跡フレームが回転を供給するボーン。upperChestへの配分は合成側で行う。 */
+/** 旧追跡フレームのボーン一覧。左右の抽出に使い、体幹の三分配は別の追跡層が所有する。 */
 const TRACKING_BONES: VRMHumanBoneName[] = [
     "spine",
     "chest",
@@ -57,14 +58,32 @@ export function createComposerLayers(
 ): { layers: VrmPoseLayer[]; warnings: string[]; previousFinger: typeof state.previousFinger } {
     const semanticFingerResult = createSemanticFingerComposerLayers(profile, semanticFinger, state);
     return {
-        layers: [...createBaseComposerLayers(frame), ...semanticFingerResult.layers],
+        layers: [
+            ...createBaseComposerLayers(frame, profile, semanticFinger),
+            ...semanticFingerResult.layers,
+        ],
         warnings: semanticFingerResult.warnings,
         previousFinger: semanticFingerResult.previousFinger,
     };
 }
 
 // 追跡が無効なら重みを0にし、同じフレームの代替姿勢を合成結果に残す。
-function createBaseComposerLayers(frame: SincroPoseRetargetFrame): VrmPoseLayer[] {
+function createBaseComposerLayers(
+    frame: SincroPoseRetargetFrame,
+    profile: AvatarMotionProfile | MinimalAvatarMotionProfile,
+    semanticFinger?: SincroVrmPoseComposerInput["semanticFinger"],
+): VrmPoseLayer[] {
+    const torso =
+        frame.upperBody.torsoQuaternion &&
+        profile.schemaVersion === "sincro.avatar-motion-profile.v1"
+            ? createTorsoFallbackLayer({
+                  id: "production:tracking",
+                  kind: "tracking",
+                  profile,
+                  delta: frame.upperBody.torsoQuaternion,
+                  weight: frame.active ? 1 : 0,
+              })
+            : undefined;
     return [
         {
             id: "production:fallback",
@@ -74,17 +93,19 @@ function createBaseComposerLayers(frame: SincroPoseRetargetFrame): VrmPoseLayer[
             pose: createFallbackPose(),
             ownedBones: [...FALLBACK_BONES],
         },
-        {
-            id: "production:tracking",
-            kind: "tracking",
-            blendMode: "override",
-            weight: frame.active ? 1 : 0,
-            pose: {
-                spine: eulerQuaternion(frame.upperBody.spine),
-                chest: eulerQuaternion(frame.upperBody.chest),
-            },
-            ownedBones: ["spine", "chest"],
-        },
+        torso
+            ? { ...torso, blendMode: "override" }
+            : {
+                  id: "production:tracking",
+                  kind: "tracking",
+                  blendMode: "override",
+                  weight: frame.active ? 1 : 0,
+                  pose: {
+                      spine: eulerQuaternion(frame.upperBody.spine),
+                      chest: eulerQuaternion(frame.upperBody.chest),
+                  },
+                  ownedBones: ["spine", "chest"],
+              },
         ...(["left", "right"] as const).map((side) => {
             const bones = TRACKING_BONES.filter((bone) => bone.startsWith(side));
             const arm = side === "left" ? frame.leftArm : frame.rightArm;
@@ -94,6 +115,23 @@ function createBaseComposerLayers(frame: SincroPoseRetargetFrame): VrmPoseLayer[
                 kind: "tracking" as const,
                 blendMode: "override" as const,
                 weight: arm.active ? (arm.trackingWeight ?? 1) : 0,
+                // 予測の適用重みを観測信頼度と混ぜず、同じPose時計で実観測からの年齢を渡す。
+                metadata: {
+                    tracking: {
+                        confidence:
+                            semanticFinger?.temporal?.arms[side].confidence ??
+                            (arm.active ? frame.confidence : 0),
+                        observedAgeMs: semanticFinger?.temporal
+                            ? semanticFinger.temporal.arms[side].observedAgeMs +
+                              Math.max(
+                                  0,
+                                  (semanticFinger.poseMediaTimeMs ??
+                                      semanticFinger.temporal.timestamp.mediaTimeMs) -
+                                      semanticFinger.temporal.timestamp.mediaTimeMs,
+                              )
+                            : 0,
+                    },
+                },
                 ownedBones: bones,
                 pose: Object.fromEntries(bones.map((bone) => [bone, pose[bone]])),
             };

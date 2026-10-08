@@ -1,0 +1,223 @@
+{
+  "syntheticChecks": "PASS",
+  "results": [
+    {
+      "fixture": "hand-out-and-return",
+      "source": "保存済み全画面Handワールド座標・画像座標、Poseは前腕軸だけに使用",
+      "sha256": "5218ef059279bb2d8624ec5449ed175c2a0b14de500d2efe288f2027d5d09647",
+      "frames": 38,
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "rejected": 49,
+      "ambiguous": 0,
+      "sides": [
+        {
+          "side": "left",
+          "validSamples": 0,
+          "intervalsMs": [],
+          "currentCurlStepRms": null,
+          "candidateCurlStepRms": null,
+          "currentCurlRange": null,
+          "candidateCurlRange": null,
+          "currentWristStepRmsRad": null,
+          "candidateLowerTwistStepRmsRad": null,
+          "candidateHandTwistStepRmsRad": null,
+          "imageWorldNormalDisagreementRmsRad": null
+        },
+        {
+          "side": "right",
+          "validSamples": 27,
+          "intervalsMs": [
+            90.79199999999992,
+            166.9779999999996,
+            99.4340000000002,
+            134.163,
+            166.35300000000007,
+            99.71199999999953,
+            100.27500000000055,
+            166.72799999999916,
+            100.43900000000122,
+            100.06299999999919,
+            100.20100000000002,
+            166.5060000000003,
+            299.3580000000002,
+            103.195999999999,
+            95.81200000000081,
+            101.50799999999981,
+            165.7560000000003,
+            167.50900000000001,
+            98.53999999999996,
+            134.5689999999995,
+            102.32400000000052,
+            96.71000000000004,
+            1200.4229999999998,
+            100.72800000000007,
+            198.07499999999982,
+            335.3109999999997
+          ],
+          "currentCurlStepRms": 0.11059398317615039,
+          "candidateCurlStepRms": 0.15799862544553714,
+          "currentCurlRange": 0.5321197878461515,
+          "candidateCurlRange": 0.6754540029121405,
+          "currentWristStepRmsRad": 0.00845188779111277,
+          "candidateLowerTwistStepRmsRad": 0.5272512278765695,
+          "candidateHandTwistStepRmsRad": 0.28390450731815275,
+          "imageWorldNormalDisagreementRmsRad": 0.6093534818901186
+        }
+      ]
+    },
+    {
+      "fixture": "fast-wave",
+      "source": "保存済み全画面Handワールド座標・画像座標、Poseは前腕軸だけに使用",
+      "sha256": "ed7b08aefeef80c744c9e628091de8ee8a01f9129ee04d470fa6410498174451",
+      "frames": 35,
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "rejected": 49,
+      "ambiguous": 4,
+      "sides": [
+        {
+          "side": "left",
+          "validSamples": 2,
+          "intervalsMs": [
+            1192.2050000000008
+          ],
+          "currentCurlStepRms": null,
+          "candidateCurlStepRms": null,
+          "currentCurlRange": 0.4434527622794243,
+          "candidateCurlRange": 0.6826477038115988,
+          "currentWristStepRmsRad": null,
+          "candidateLowerTwistStepRmsRad": null,
+          "candidateHandTwistStepRmsRad": null,
+          "imageWorldNormalDisagreementRmsRad": 0.2339246215030135
+        },
+        {
+          "side": "right",
+          "validSamples": 15,
+          "intervalsMs": [
+            155.0029999999997,
+            156.20900000000074,
+            1186.052999999999,
+            90.6190000000006,
+            91.22900000000027,
+            155.23899999999958,
+            310.4279999999999,
+            154.98199999999997,
+            85.4980000000005,
+            276.09900000000016,
+            101.78899999999976,
+            158.14300000000003,
+            156.52499999999964,
+            343.433
+          ],
+          "currentCurlStepRms": 0.05270736634533548,
+          "candidateCurlStepRms": 0.04431526438314139,
+          "currentCurlRange": 0.16801181162770973,
+          "candidateCurlRange": 0.08996779566677254,
+          "currentWristStepRmsRad": 0.0025628422347369205,
+          "candidateLowerTwistStepRmsRad": 0.3223425552619804,
+          "candidateHandTwistStepRmsRad": 0.17356906821798943,
+          "imageWorldNormalDisagreementRmsRad": 0.4042810052171416
+        }
+      ]
+    },
+    {
+      "fixture": "neutral-10s",
+      "source": "保存済み全画面Handワールド座標・画像座標、Poseは前腕軸だけに使用",
+      "sha256": "ac42e4947c3297819db089b58261380e4d53eec206bc063b7625a0d3c61dcb5c",
+      "frames": 45,
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "rejected": 31,
+      "ambiguous": 5,
+      "sides": [
+        {
+          "side": "left",
+          "validSamples": 34,
+          "intervalsMs": [
+            167.3800000000001,
+            99.96199999999953,
+            99.02399999999989,
+            133.4000000000001,
+            133.94500000000062,
+            99.9399999999996,
+            266.27800000000025,
+            167.3139999999994,
+            99.97800000000007,
+            99.34900000000016,
+            100.40099999999984,
+            100.37600000000111,
+            99.01299999999901,
+            101.10900000000038,
+            99.17299999999977,
+            99.89699999999993,
+            134.20000000000073,
+            99.72599999999966,
+            99.39999999999964,
+            167.39000000000033,
+            99.55999999999949,
+            100.4970000000003,
+            166.41000000000076,
+            99.99499999999989,
+            100.47799999999916,
+            299.3110000000006,
+            367.5460000000003,
+            99.22899999999936,
+            100.49199999999928,
+            165.88500000000022,
+            166.46000000000004,
+            135.67399999999998,
+            98.41700000000037
+          ],
+          "currentCurlStepRms": 0.07185574987693195,
+          "candidateCurlStepRms": 0.05332749809269404,
+          "currentCurlRange": 0.5370502272218881,
+          "candidateCurlRange": 0.3820456021813754,
+          "currentWristStepRmsRad": 0.0001480728149009865,
+          "candidateLowerTwistStepRmsRad": 0,
+          "candidateHandTwistStepRmsRad": 0,
+          "imageWorldNormalDisagreementRmsRad": 0.36719376812602506
+        },
+        {
+          "side": "right",
+          "validSamples": 20,
+          "intervalsMs": [
+            95.8130000000001,
+            99.91700000000037,
+            100.98399999999992,
+            99.0909999999999,
+            167.3800000000001,
+            99.96199999999953,
+            99.02399999999989,
+            133.4000000000001,
+            133.94500000000062,
+            1232.9309999999996,
+            99.89699999999993,
+            134.20000000000073,
+            99.72599999999966,
+            99.39999999999964,
+            167.39000000000033,
+            99.55999999999949,
+            100.4970000000003,
+            166.41000000000076,
+            99.99499999999989
+          ],
+          "currentCurlStepRms": 0.03871438468502062,
+          "candidateCurlStepRms": 0.03307376031465903,
+          "currentCurlRange": 0.10112738644450081,
+          "candidateCurlRange": 0.07684969209174627,
+          "currentWristStepRmsRad": 0.003580613947476721,
+          "candidateLowerTwistStepRmsRad": 0,
+          "candidateHandTwistStepRmsRad": 0,
+          "imageWorldNormalDisagreementRmsRad": 0.7579590504143316
+        }
+      ]
+    }
+  ]
+}
