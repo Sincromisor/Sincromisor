@@ -34,13 +34,7 @@
 type CanonicalTuple3 = readonly [number, number, number];
 
 type CanonicalSource =
-    | "pose"
-    | "hand"
-    | "face"
-    | "previous"
-    | "predicted"
-    | "neutral"
-    | "mixed";
+    "pose" | "hand" | "face" | "previous" | "predicted" | "neutral" | "mixed";
 
 type CanonicalWarningCode =
     | "torso_frame_unreliable"
@@ -94,11 +88,7 @@ type CanonicalTorsoFrame = CanonicalPartMeta & {
 };
 
 type CanonicalArmClassification =
-    | "side"
-    | "front"
-    | "diagonal"
-    | "crossed"
-    | "unknown";
+    "side" | "front" | "diagonal" | "crossed" | "unknown";
 
 type CanonicalArmState = CanonicalPartMeta & {
     reach: number; // 0..1.15
@@ -138,9 +128,7 @@ parse result shape:
 
 ```ts
 type CanonicalUpperBodyStateParseErrorCode =
-    | "unknown_schema_version"
-    | "invalid_state"
-    | "out_of_range";
+    "unknown_schema_version" | "invalid_state" | "out_of_range";
 
 type CanonicalUpperBodyStateParseError = {
     code: CanonicalUpperBodyStateParseErrorCode;

@@ -38,11 +38,7 @@ export type InitialCalibrationStatus =
     | "failed";
 
 export type InitialCalibrationStepId =
-    | "precheck"
-    | "neutral"
-    | "a_pose"
-    | "hand_open"
-    | "face_yaw_optional";
+    "precheck" | "neutral" | "a_pose" | "hand_open" | "face_yaw_optional";
 
 export type InitialCalibrationStepResult = {
     id: InitialCalibrationStepId;

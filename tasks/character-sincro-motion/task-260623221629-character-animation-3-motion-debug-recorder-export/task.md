@@ -48,11 +48,7 @@ type MotionDebugRecorderState = {
     startedAtIso?: string;
     durationMs: number;
     stopReason?:
-        | "user"
-        | "max_duration"
-        | "max_frames"
-        | "source_stopped"
-        | "error";
+        "user" | "max_duration" | "max_frames" | "source_stopped" | "error";
     compression: "none" | "gzip" | "brotli";
     compressionFallbackReason?: string;
     lastError?: string;
@@ -100,10 +96,7 @@ type MotionDebugRecorderRecordFrameResult =
     | {
           ok: false;
           code:
-              | "not_recording"
-              | "invalid_frame"
-              | "max_duration"
-              | "max_frames";
+              "not_recording" | "invalid_frame" | "max_duration" | "max_frames";
           message: string;
           state: MotionDebugRecorderState;
       };

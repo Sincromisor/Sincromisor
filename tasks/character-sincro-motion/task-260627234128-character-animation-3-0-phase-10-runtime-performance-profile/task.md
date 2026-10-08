@@ -40,10 +40,7 @@
 
 ```ts
 export type TrackerRuntimePerformanceProfileId =
-    | "high-end-desktop"
-    | "standard-laptop"
-    | "mobile-safari"
-    | "debug";
+    "high-end-desktop" | "standard-laptop" | "mobile-safari" | "debug";
 
 export type TrackerRuntimePerformanceProfile = {
     schemaVersion: "sincro.tracker-performance-profile.v1";

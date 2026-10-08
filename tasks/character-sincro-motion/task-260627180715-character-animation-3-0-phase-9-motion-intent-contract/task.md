@@ -23,12 +23,7 @@ export type MotionIntentSideState = {
     stableDurationMs: number;
     cooldownRemainingMs: number;
     source:
-        | "temporal"
-        | "hand"
-        | "gesture"
-        | "reliability"
-        | "fallback"
-        | "mixed";
+        "temporal" | "hand" | "gesture" | "reliability" | "fallback" | "mixed";
     sourceGestureLabel?: string;
     warnings: MotionIntentWarningCode[];
 };

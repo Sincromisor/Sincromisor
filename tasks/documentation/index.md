@@ -4,9 +4,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 35 件）
+## タスク一覧（自動生成 / 全 36 件）
 
-### done（完了） — 35 件
+### done（完了） — 36 件
 
 | タスク                                                                                                                         | タイトル                                                            | 判定    | 依存                                     |
 | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- | ------- | ---------------------------------------- |
@@ -45,5 +45,6 @@
 | [task-261001222215-yomiyasu-89-code-structure](./task-261001222215-yomiyasu-89-code-structure/task.md)                         | 文書の日本語表現を整える（コード構造ルールほか）                    | ✅ PASS | —                                        |
 | [task-261001222215-yomiyasu-90-coding-md](./task-261001222215-yomiyasu-90-coding-md/task.md)                                   | 文書の日本語表現を整える（コーディング規約(Markdown)ほか）          | ✅ PASS | —                                        |
 | [task-261001222215-yomiyasu-91-coding-ts](./task-261001222215-yomiyasu-91-coding-ts/task.md)                                   | 文書の日本語表現を整える（コーディング規約(TypeScript)ほか）        | ✅ PASS | —                                        |
+| [task-261009014405-fix-existing-markdown-format](./task-261009014405-fix-existing-markdown-format/task.md)                     | 既存15文書のMarkdown整形不一致を解消する                            | ✅ PASS | —                                        |
 
 <!-- AUTOGEN:tasks END -->
