@@ -15,6 +15,7 @@ import {
 } from "../../behavior/characterBehaviorSnapshots";
 import type { CharacterBehaviorSnapshot } from "../../behavior/characterBehaviorTypes";
 import { NEUTRAL_POSE_FRAME } from "../../retargeting/sincroPoseRetargetTypes";
+import { SincroMotionClock } from "../../runtime/sincroMotionClock";
 import { createDefaultSincroMotionPipelineState } from "../../runtime/sincroMotionPipelineState";
 import type { SincroVrmPoseComposerResult } from "../../runtime/sincroVrmPoseComposer";
 import type { VrmPoseQuaternion } from "../../vrmPose/vrmPoseTypes";
@@ -356,14 +357,15 @@ function createUpdateManagerDouble(options: {
     Object.assign(manager, {
         timer: { update: vi.fn(), getDelta: () => 1 / 60 },
         motionElapsedSeconds: 0,
-        behaviorState: { update: () => options.snapshot },
+        behaviorState: { update: () => options.snapshot, motionClock: new SincroMotionClock() },
         latestBehaviorSnapshot: undefined,
         sincroFaceRetargeter: { retarget: vi.fn(() => ({})) },
         sincroPoseRetargeter: {
+            reset: vi.fn(),
             retarget: vi.fn(() => NEUTRAL_POSE_FRAME),
             getAvatarMotionProfile: vi.fn(() => undefined),
         },
-        poseComposer: { compose: vi.fn(() => options.composerResult) },
+        poseComposer: { reset: vi.fn(), compose: vi.fn(() => options.composerResult) },
         composerSemanticFingerApplicationMode: "composer",
         sincroMotionPipelineState: createDefaultSincroMotionPipelineState(),
         headBoneController: { update: vi.fn() },

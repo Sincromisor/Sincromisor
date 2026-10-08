@@ -38,6 +38,8 @@ export type ArmUpdateContext = {
     filters: ArmFilters;
     classificationHold: ClassificationHold | undefined;
     dtMs: number;
+    /** フィルター用dtを制限しても欠損年齢は実際の観測間隔で進める。 */
+    elapsedMs?: number;
     isInvalidDt: boolean;
     config: TemporalStateEstimatorConfig;
 };
@@ -73,7 +75,7 @@ export function updateTemporalArm(context: ArmUpdateContext): {
         warnings.push("classification_held");
     }
 
-    if (context.isInvalidDt) {
+    if (context.isInvalidDt && observedState !== "lost") {
         return {
             arm: createObservedArm(
                 context,
@@ -102,7 +104,8 @@ export function updateTemporalArm(context: ArmUpdateContext): {
     }
 
     if (observedState === "lost" && previousArm !== undefined) {
-        const observedAgeMs = (previousArm?.observedAgeMs ?? 0) + context.dtMs;
+        const observedAgeMs =
+            (previousArm?.observedAgeMs ?? 0) + (context.elapsedMs ?? context.dtMs);
         if (observedAgeMs <= context.config.predictionMaxMs) {
             return {
                 arm: createPredictedArm(
@@ -186,6 +189,10 @@ function createObservedArm(
     return {
         state,
         confidence: context.canonicalArm.confidence,
+        applicationWeight:
+            state === "lost"
+                ? 0
+                : context.canonicalArm.confidence * (state === "suspect" ? 0.55 : 1),
         source: shouldUseCanonical ? "canonical" : "neutral",
         stateAgeMs:
             context.previousArm !== undefined && context.previousArm.state === state

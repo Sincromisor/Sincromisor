@@ -46,6 +46,8 @@ export type SincroPoseArmIkMode = "feature_only" | "screen_space_ik" | "world_3d
 export type ComposerSemanticFingerApplicationMode = "off" | "composer";
 
 export type SincroPoseRetargetedArm = {
+    /** 欠損予測が期限へ近づく間、腕を下ろす代替層へ連続的に戻す重み。 */
+    trackingWeight?: number;
     active: boolean;
     ikActive: boolean;
     ikWeight: number;

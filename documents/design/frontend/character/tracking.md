@@ -71,6 +71,7 @@
     - `chat`モードの注視入力。
     - 入場・退場イベントとAutoMute連動。
 - `TrackerRuntime`
+    - PoseとHandの到着は、それぞれ `mediaTimeMs`と `receivedAtPerformanceMs`を表示時計へ渡す。受信時刻が無ければ受信境界で採時する。Face/Gestureはこの対応を上書きしない。ライブの時計変換は `VRMCharacterManager.update()`、再生の現在時刻は再生元が所有する。停止・ソース切替・非連続移動は系列を初期化する。詳細は[モーション設計](motion.md#欠損腕の表示時計と最終合成)を参照する。
     - カメラトラックの取得・差し替え・解放。
     - 映像フレームメタデータ基準の推論ループ。
     - `requestVideoFrameCallback()`対応環境では `mediaTime` / `presentationTime` / `expectedDisplayTime` / `presentedFrames`を `TrackerVideoFrameTiming`としてコールバック第2引数へ渡す。
@@ -153,6 +154,7 @@
     - 構造化動作ログ記録は追跡処理コールバックと同じ `mediaTimeMs`で、motion-debugページ側のデバッグ実行時スナップショットから `frame.solver.phase6`、`frame.solver.phase7`、`frame.solver.phase9`、`frame.finalPose`を保存する。追跡処理実行時 / Workerは段階6ソルバースナップショット、段階7プロファイル / 較正スナップショット、段階9意味に基づく動作 / 指診断用スナップショット、VrmPoseComposer結果、基準指標を所有しない。
     - 構造化動作ログ記録はMediaPipe未加工の結果直列化処理が通常のJSON化できた格納先だけを任意 `frame.mediapipe`に保存する。保存対象は `pose`、`hand`、`face`、`gesture`と `timing.mediaTimeMs/videoWidth/videoHeight`で、MPMask、ImageBitmap、VideoFrame、切り抜きcanvas、MediaPipeタスクインスタンス、ランドマークオブジェクトプロトタイプは保存しない。直列化処理未対応の格納先は省略し、空オブジェクトを記録済み未加工の結果として扱わない。
     - 構成情報 `build.packageVersions`は `sincromisor-frontend`と `@mediapipe/tasks-vision`の取得可能なバージョンを保持し、取得不能な値は `"unknown"`とする。`build.configHash`は性能プロファイルと動作の変換設定から作る決定的ハッシュで、固定値や空オブジェクトにはしない。
+    - 明示した `recompute: true`の再生は保存済み下流値を使わず入力観測から本番の共通計算を実行する。通常の保存値閲覧と区別し、条件の先頭で信頼性・共通表現・時系列・意図・表示履歴を初期化する。
     - 再生の欠損値補完は本番・ライブと同じ共通計算を参照するが、保存値の解析・採用は再生側に残す。再生専用の `SincroMotionComputation`が時系列と意図の履歴を持ち、隣接前進以外の移動・停止・読込・入力切替で初期化する。保存済み意図と同一フレームから再計算した意図は別々に扱う。
     - 構造化動作ログ再生は `MotionReplayPlayer`が非圧縮のNDJSONを解析し、`pose-snapshot`モードでは `frame.poseSnapshot`を後段の振る舞い / 動作の変換経路へ再投入する。`frame.canonical`がある場合は保存済みの標準化状態を閲覧画面 / スナップショットの正本にし、無い場合だけライブ代替処理の標準化状態を使う。無効な標準化状態は再生失敗にせず、標準化層の解析エラー要約として表示する。
     - 信頼性層はライブスナップショット、保存済み `frame.reliability`、旧ログの `frame.poseSnapshot`再計算の順に解決する。保存済み信頼性は `parseReliabilityMap()`で検証し、無効な場合も再生失敗にせず `parseStatus: "invalid"`、解析エラー、未加工値を `available`層値として表示する。`frame.reliability`と `frame.poseSnapshot`の両方が無い旧ログだけ `not_recorded`とする。

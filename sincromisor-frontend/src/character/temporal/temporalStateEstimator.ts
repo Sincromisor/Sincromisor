@@ -70,6 +70,10 @@ export class TemporalStateEstimator {
     }
 
     update(input: TemporalStateEstimatorInput): TemporalUpperBodyState {
+        if (this.#previous?.timestamp.mediaTimeMs === input.mediaTimeMs)
+            return structuredClone(this.#previous);
+        if (this.#previous && input.mediaTimeMs < this.#previous.timestamp.mediaTimeMs)
+            this.reset();
         const dtMs =
             this.#previous === undefined
                 ? 0
@@ -87,6 +91,7 @@ export class TemporalStateEstimator {
             filters: this.#leftFilters,
             classificationHold: this.#leftClassificationHold,
             dtMs: safeDtMs,
+            elapsedMs: Math.max(0, dtMs),
             isInvalidDt,
             config: this.#config,
         });
@@ -98,6 +103,7 @@ export class TemporalStateEstimator {
             filters: this.#rightFilters,
             classificationHold: this.#rightClassificationHold,
             dtMs: safeDtMs,
+            elapsedMs: Math.max(0, dtMs),
             isInvalidDt,
             config: this.#config,
         });

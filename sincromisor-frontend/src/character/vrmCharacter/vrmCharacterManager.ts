@@ -64,6 +64,8 @@ export type VRMCharacterManagerOptions = {
  */
 export class VRMCharacterManager {
     public vrm?: VRM;
+    private motionSeries?: number;
+    private lastMotionTimeMs?: number;
     private readonly timer = new Timer();
     private scene: Scene;
     private vrmCamera: VRMCamera;
@@ -212,7 +214,7 @@ export class VRMCharacterManager {
 
     private getVRMThumbnailImage(): HTMLImageElement | undefined {
         // VRM0.xはthumbnailImageではなくtexture運用のため、本実装では対象外とする。
-        if (!this.vrm || this.vrm.meta.metaVersion !== "1") {
+        if (this.vrm?.meta.metaVersion !== "1") {
             return undefined;
         }
         return this.vrm.meta.thumbnailImage ?? undefined;
@@ -220,6 +222,19 @@ export class VRMCharacterManager {
 
     /** 対話状態から姿勢を合成し、頭部・表情、最終姿勢、脚、VRM内部更新、腰の復元の順に反映する。 */
     update(nowMs: number = performance.now()): void {
+        const clock = this.behaviorState.motionClock.evaluate(nowMs);
+        if (clock.series !== this.motionSeries) {
+            this.sincroPoseRetargeter.reset();
+            this.poseComposer.reset();
+            this.lastMotionTimeMs = undefined;
+            this.motionSeries = clock.series;
+        }
+        const motionTimeMs = clock.poseTimeMs ?? nowMs;
+        const motionDeltaSeconds =
+            this.lastMotionTimeMs === undefined
+                ? 1 / 60
+                : Math.max(0, motionTimeMs - this.lastMotionTimeMs) / 1000;
+        this.lastMotionTimeMs = motionTimeMs;
         // Timerは読取りでは進まないため、同じフレーム時刻で一度更新して秒単位の差分を共有する。
         this.timer.update(nowMs);
         const deltaSeconds = this.timer.getDelta();
@@ -242,14 +257,14 @@ export class VRMCharacterManager {
         const minimalAvatarMotionProfile = avatarMotionProfile
             ? toMinimalAvatarMotionProfile(avatarMotionProfile)
             : undefined;
-        const sincroPose = this.sincroPoseRetargeter.retarget(
-            poseMotionForRetarget,
-            this.latestBehaviorSnapshot.nowMs,
-            {
-                temporal: this.latestBehaviorSnapshot.sincroMotionPipeline?.temporal,
-                profile: minimalAvatarMotionProfile,
-            },
-        );
+        const sincroPose = this.sincroPoseRetargeter.retarget(poseMotionForRetarget, motionTimeMs, {
+            mediaTimeMs: clock.poseTimeMs,
+            temporal:
+                clock.poseTimeMs === undefined
+                    ? undefined
+                    : this.latestBehaviorSnapshot.sincroMotionPipeline?.temporal,
+            profile: minimalAvatarMotionProfile,
+        });
         this.diagnostics?.onPoseRetargetFrame?.(sincroPose);
         const composerResult = this.poseComposer.compose({
             frame: sincroPose,
@@ -258,8 +273,10 @@ export class VRMCharacterManager {
                 mode: this.composerSemanticFingerApplicationMode,
                 intent: this.latestBehaviorSnapshot.sincroMotionPipeline?.intent,
                 hand: this.latestBehaviorSnapshot.sincroMotionPipeline?.hand,
+                mediaTimeMs: clock.handTimeMs,
             },
-            deltaSeconds,
+            deltaSeconds: motionDeltaSeconds,
+            mediaTimeMs: motionTimeMs,
         });
         this.headBoneController?.update(this.latestBehaviorSnapshot, sincroFace);
         this.eyeBehaviorController?.update(this.latestBehaviorSnapshot, sincroFace);

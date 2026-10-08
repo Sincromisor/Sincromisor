@@ -188,7 +188,7 @@ describe("createTemporalArmIkInput", () => {
         expect(result.debug.weightAfterStateScale).toBe(0);
     });
 
-    it("weights recovering arms by recovering blend progress", () => {
+    it("復帰姿勢に適用済みの補間係数をIK重みに二重乗算しない", () => {
         const temporal = createTemporal("right", {
             state: "recovering",
             confidence: 0.8,
@@ -207,8 +207,8 @@ describe("createTemporalArmIkInput", () => {
         });
 
         expect(result.debug.weightBeforeStateScale).toBeCloseTo(0.8, 6);
-        expect(result.debug.weightAfterStateScale).toBeCloseTo(0.2, 6);
-        expect(result.target?.weight).toBeCloseTo(0.2, 6);
+        expect(result.debug.weightAfterStateScale).toBeCloseTo(0.8, 6);
+        expect(result.target?.weight).toBeCloseTo(0.8, 6);
         expect(result.target?.recoveringBlendProgress).toBeCloseTo(0.25, 6);
     });
 

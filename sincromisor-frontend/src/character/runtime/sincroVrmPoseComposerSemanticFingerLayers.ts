@@ -19,6 +19,8 @@ import type { VrmPoseLayer } from "../vrmPose/vrmPoseTypes";
  */
 export type SincroVrmPoseComposerSemanticFingerInput = {
     mode: ComposerSemanticFingerApplicationMode;
+    /** 管理側でHandの観測時計へ写した時刻。指側で独自採時しない。 */
+    mediaTimeMs?: number;
     intent?: unknown;
     hand?: SincroHandMotionSnapshot;
 };
@@ -102,7 +104,7 @@ export function createSemanticFingerComposerLayers(
         hand: input.hand,
         intent: intent.state,
         profile,
-        mediaTimeMs: intent.state.timestamp.mediaTimeMs,
+        mediaTimeMs: input.mediaTimeMs ?? intent.state.timestamp.mediaTimeMs,
         previous: state.previousFinger,
     });
     const previousFinger = finger.debug.reduce<

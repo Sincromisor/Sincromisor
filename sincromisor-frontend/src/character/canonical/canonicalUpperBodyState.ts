@@ -76,6 +76,8 @@ export type CanonicalCalibrationSnapshot = {
 
 export type CanonicalTorsoFrame = CanonicalPartMeta & {
     coordinateSystem: "body_local";
+    /** 存在する場合、中心・長さは軸変換後のメートル。未指定は旧保存表現。 */
+    worldCoordinateSystem?: "vrm_axes_meters";
     shoulderCenter: CanonicalTuple3;
     hipCenter?: CanonicalTuple3;
     bodyRight: CanonicalTuple3;
@@ -195,6 +197,7 @@ const canonicalCalibrationSnapshotSchema: z.ZodType<CanonicalCalibrationSnapshot
 const canonicalTorsoFrameSchema: z.ZodType<CanonicalTorsoFrame> = z.strictObject({
     ...canonicalPartMetaShape,
     coordinateSystem: z.literal("body_local"),
+    worldCoordinateSystem: z.literal("vrm_axes_meters").optional(),
     shoulderCenter: canonicalTuple3Schema,
     hipCenter: canonicalTuple3Schema.optional(),
     bodyRight: canonicalTuple3Schema,

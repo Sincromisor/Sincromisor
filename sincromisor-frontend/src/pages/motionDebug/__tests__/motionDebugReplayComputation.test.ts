@@ -183,3 +183,24 @@ it("隣接前進だけ推定を継続し、移動・停止・読込では再生�
     expect(reset.mock.contexts).not.toContain(independent);
     expect(otherState.temporal.timestamp.mediaTimeMs).toBe(50);
 });
+
+it("再計算を明示した条件では保存された下流値を捨て、条件を再実行しても履歴を共有しない", async () => {
+    const { runtime } = createRuntime();
+    const saved = {
+        ...frame(0),
+        canonical: createCanonicalState(100),
+        temporal: createTemporalState(100),
+        reliability: createDefaultReliabilityMap(100),
+    };
+    saved.canonical.arms.left.reach = 1.1;
+    saved.temporal.arms.left.reach = 1.1;
+    await runtime.loadRecording(log([saved, frame(1)]));
+    runtime.startReplay({ mode: "pose-snapshot", recompute: false });
+    expect(runtime.snapshotState().temporal).toEqual(saved.temporal);
+    runtime.startReplay({ mode: "pose-snapshot", recompute: true });
+    const first = structuredClone(runtime.snapshotState());
+    expect(first.temporal).not.toEqual(saved.temporal);
+    runtime.stepReplay(1);
+    runtime.startReplay({ mode: "pose-snapshot", recompute: true });
+    expect(runtime.snapshotState()).toEqual(first);
+});

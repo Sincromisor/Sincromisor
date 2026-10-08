@@ -1,0 +1,313 @@
+{
+	"inspectedAt": "2026-10-09",
+	"origin": "user-provided existing recordings",
+	"note": "Slot presence does not prove valid detections. No per-frame observations are included.",
+	"recordings": [
+		{
+			"fixture": "arms-cross",
+			"videoPath": "work/private-artifacts.macbook/task-260705214026-canonical-temporal-arm-solver-production/video/arms-cross.browser.mp4",
+			"videoSha256": "21296ea0fbd2f8655d4c20bbffe67541457ed04ddef9468eacb7fa172cd1cf54",
+			"videoMetadata": {
+				"programs": [],
+				"streams": [
+					{
+						"width": 1280,
+						"height": 720,
+						"r_frame_rate": "10000/333"
+					}
+				],
+				"format": {
+					"duration": "13.185896"
+				}
+			},
+			"replayPath": "work/private-artifacts.macbook/task-260705214026-canonical-temporal-arm-solver-production/replay/arms-cross.temporal-primary.ndjson",
+			"replaySha256": "f86967866cf3bdccc801f5250dc038a6cbddda4b296925aa00b5dbe903282c73",
+			"frames": 134,
+			"mediapipeKeys": {
+				"face,pose,timing": 134
+			},
+			"handDetectedFrames": 0,
+			"canonicalTorsoSource": {
+				"mixed": 134
+			},
+			"temporalLeftStates": {
+				"suspect": 134
+			},
+			"temporalRightStates": {
+				"suspect": 134
+			},
+			"availableSlots": {
+				"poseSnapshot": 134,
+				"hand": 134,
+				"reliability": 134,
+				"canonical": 134,
+				"temporal": 134,
+				"intent": 134,
+				"finalPose": 134
+			},
+			"frameIntervalsMs": {
+				"median": 93.07899999999972,
+				"p95": 155.98900000000003,
+				"max": 171.6309999999994,
+				"nonPositiveCount": 0,
+				"above250MsCount": 0
+			},
+			"handTimestampErrorFrames": 134
+		},
+		{
+			"fixture": "both-arms-slow-raise",
+			"videoPath": "work/private-artifacts.macbook/task-260705214026-canonical-temporal-arm-solver-production/video/both-arms-slow-raise.browser.mp4",
+			"videoSha256": "1020dd63f78765ee83f28abc914ca0838f58db6ab3b6654a1119a429e44ab1cd",
+			"videoMetadata": {
+				"programs": [],
+				"streams": [
+					{
+						"width": 1280,
+						"height": 720,
+						"r_frame_rate": "30/1"
+					}
+				],
+				"format": {
+					"duration": "13.433333"
+				}
+			},
+			"replayPath": "work/private-artifacts.macbook/task-260705214026-canonical-temporal-arm-solver-production/replay/both-arms-slow-raise.temporal-primary.ndjson",
+			"replaySha256": "060e1879ed897396f83ee938ecfa6cdc1e797db4e5f511e0bb569d59bca7d589",
+			"frames": 101,
+			"mediapipeKeys": {
+				"face,pose,timing": 101
+			},
+			"handDetectedFrames": 0,
+			"canonicalTorsoSource": {
+				"mixed": 101
+			},
+			"temporalLeftStates": {
+				"suspect": 101
+			},
+			"temporalRightStates": {
+				"suspect": 101
+			},
+			"availableSlots": {
+				"poseSnapshot": 101,
+				"hand": 101,
+				"reliability": 101,
+				"canonical": 101,
+				"temporal": 101,
+				"intent": 101,
+				"finalPose": 101
+			},
+			"frameIntervalsMs": {
+				"median": 137.98949999999968,
+				"p95": 172.86999999999898,
+				"max": 174.34599999999955,
+				"nonPositiveCount": 0,
+				"above250MsCount": 0
+			},
+			"handTimestampErrorFrames": 101
+		},
+		{
+			"fixture": "fast-wave",
+			"videoPath": "work/private-artifacts.macbook/task-260705214026-canonical-temporal-arm-solver-production/video/fast-wave.browser.mp4",
+			"videoSha256": "4c7ed7b36b011d10e8034c2a20ec0d4cef61f7c0f3f4a29e5a17aa4258944a6e",
+			"videoMetadata": {
+				"programs": [],
+				"streams": [
+					{
+						"width": 1280,
+						"height": 720,
+						"r_frame_rate": "10000/333"
+					}
+				],
+				"format": {
+					"duration": "12.065490"
+				}
+			},
+			"replayPath": "work/private-artifacts.macbook/task-260705214026-canonical-temporal-arm-solver-production/replay/fast-wave.temporal-primary.ndjson",
+			"replaySha256": "9c5f5173e79874b668ebf05e789de0044e04ea008e612d5bc98618ca3256c1af",
+			"frames": 84,
+			"mediapipeKeys": {
+				"face,pose,timing": 84
+			},
+			"handDetectedFrames": 0,
+			"canonicalTorsoSource": {
+				"mixed": 84
+			},
+			"temporalLeftStates": {
+				"suspect": 84
+			},
+			"temporalRightStates": {
+				"suspect": 84
+			},
+			"availableSlots": {
+				"poseSnapshot": 84,
+				"hand": 84,
+				"reliability": 84,
+				"canonical": 84,
+				"temporal": 84,
+				"intent": 84,
+				"finalPose": 84
+			},
+			"frameIntervalsMs": {
+				"median": 154.92299999999886,
+				"p95": 158.54399999999987,
+				"max": 164.70100000000093,
+				"nonPositiveCount": 0,
+				"above250MsCount": 0
+			},
+			"handTimestampErrorFrames": 84
+		},
+		{
+			"fixture": "hand-out-and-return",
+			"videoPath": "work/private-artifacts.macbook/task-260705214026-canonical-temporal-arm-solver-production/video/hand-out-and-return.browser.mp4",
+			"videoSha256": "fbda14dcb1dd365f18ba352a5eaaf8fe842a2d9ce80524e40ff8f0db0adf58f4",
+			"videoMetadata": {
+				"programs": [],
+				"streams": [
+					{
+						"width": 1280,
+						"height": 720,
+						"r_frame_rate": "30/1"
+					}
+				],
+				"format": {
+					"duration": "11.100000"
+				}
+			},
+			"replayPath": "work/private-artifacts.macbook/task-260705214026-canonical-temporal-arm-solver-production/replay/hand-out-and-return.temporal-primary.ndjson",
+			"replaySha256": "48eae5a06e7d9d7974019dfd8ea895f3b71fd7bbf347f7915501d81099b7608b",
+			"frames": 89,
+			"mediapipeKeys": {
+				"face,pose,timing": 89
+			},
+			"handDetectedFrames": 0,
+			"canonicalTorsoSource": {
+				"mixed": 89
+			},
+			"temporalLeftStates": {
+				"suspect": 89
+			},
+			"temporalRightStates": {
+				"suspect": 89
+			},
+			"availableSlots": {
+				"poseSnapshot": 89,
+				"hand": 89,
+				"reliability": 89,
+				"canonical": 89,
+				"temporal": 89,
+				"intent": 89,
+				"finalPose": 89
+			},
+			"frameIntervalsMs": {
+				"median": 100.5909999999999,
+				"p95": 167.72199999999975,
+				"max": 299.3580000000002,
+				"nonPositiveCount": 0,
+				"above250MsCount": 1
+			},
+			"handTimestampErrorFrames": 89
+		},
+		{
+			"fixture": "neutral-10s",
+			"videoPath": "work/private-artifacts.macbook/task-260705214026-canonical-temporal-arm-solver-production/video/neutral-10s.browser.mp4",
+			"videoSha256": "47f79e6b939f53a2d42ef3bd7e69bea1e03d24efd9c52a78f6399e233dfb49d0",
+			"videoMetadata": {
+				"programs": [],
+				"streams": [
+					{
+						"width": 1280,
+						"height": 720,
+						"r_frame_rate": "30/1"
+					}
+				],
+				"format": {
+					"duration": "12.866667"
+				}
+			},
+			"replayPath": "work/private-artifacts.macbook/task-260705214026-canonical-temporal-arm-solver-production/replay/neutral-10s.temporal-primary.ndjson",
+			"replaySha256": "0772fbec79c3a7007fd7d11e8fa3d6e89429a857f3af3775298875bf4f29341a",
+			"frames": 110,
+			"mediapipeKeys": {
+				"face,pose,timing": 110
+			},
+			"handDetectedFrames": 0,
+			"canonicalTorsoSource": {
+				"mixed": 110
+			},
+			"temporalLeftStates": {
+				"suspect": 110
+			},
+			"temporalRightStates": {
+				"suspect": 110
+			},
+			"availableSlots": {
+				"poseSnapshot": 110,
+				"hand": 110,
+				"reliability": 110,
+				"canonical": 110,
+				"temporal": 110,
+				"intent": 110,
+				"finalPose": 110
+			},
+			"frameIntervalsMs": {
+				"median": 100.3479999999995,
+				"p95": 167.3800000000001,
+				"max": 167.8670000000002,
+				"nonPositiveCount": 0,
+				"above250MsCount": 0
+			},
+			"handTimestampErrorFrames": 110
+		},
+		{
+			"fixture": "single-arm-slow-raise",
+			"videoPath": "work/private-artifacts.macbook/task-260705214026-canonical-temporal-arm-solver-production/video/single-arm-slow-raise.browser.mp4",
+			"videoSha256": "887fbeb56cb69ee2f6e3749a616c20941f455bb0826f66a3f1946a1c0406a0b4",
+			"videoMetadata": {
+				"programs": [],
+				"streams": [
+					{
+						"width": 1280,
+						"height": 720,
+						"r_frame_rate": "30/1"
+					}
+				],
+				"format": {
+					"duration": "11.933333"
+				}
+			},
+			"replayPath": "work/private-artifacts.macbook/task-260705214026-canonical-temporal-arm-solver-production/replay/single-arm-slow-raise.temporal-primary.ndjson",
+			"replaySha256": "fa33d098b9725a1498e5adc3a57bdb9afe53e2240dd2b237a43aab09e9e2183b",
+			"frames": 92,
+			"mediapipeKeys": {
+				"face,pose,timing": 92
+			},
+			"handDetectedFrames": 0,
+			"canonicalTorsoSource": {
+				"mixed": 92
+			},
+			"temporalLeftStates": {
+				"suspect": 92
+			},
+			"temporalRightStates": {
+				"suspect": 92
+			},
+			"availableSlots": {
+				"poseSnapshot": 92,
+				"hand": 92,
+				"reliability": 92,
+				"canonical": 92,
+				"temporal": 92,
+				"intent": 92,
+				"finalPose": 92
+			},
+			"frameIntervalsMs": {
+				"median": 133.8120000000008,
+				"p95": 167.6810000000005,
+				"max": 233.52000000000044,
+				"nonPositiveCount": 0,
+				"above250MsCount": 0
+			},
+			"handTimestampErrorFrames": 92
+		}
+	]
+}

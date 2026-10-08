@@ -1,3 +1,4 @@
+// reason: structure-threshold-exception IK・前回フレーム・表示予測の破棄を一つの既存所有者で調停する。予測計算自体は専用モジュールへ分離済み。
 import type { VRM } from "@pixiv/three-vrm";
 import { MathUtils } from "three/src/math/MathUtils.js";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
@@ -12,6 +13,7 @@ import type { SincroArmSide } from "../ik/sincroArmIkTypes";
 import { runSincroCcdIkProbe, type SincroCcdIkProbeResult } from "../ik/sincroCcdIkProbe";
 import type { TemporalArmIkBridgeResult } from "../motionSolver/temporalArmSolverBridge";
 import type { TemporalUpperBodyState } from "../temporal/temporalUpperBodyState";
+import { SincroPoseArmDisplayState } from "./sincroPoseArmDisplayState";
 import { retargetPoseArm } from "./sincroPoseArmRetargeter";
 import {
     blendQuaternion,
@@ -46,6 +48,8 @@ import { createSincroPoseTemporalArmInput } from "./sincroPoseTemporalArmInput";
 export type SincroPoseRetargetRuntimeInput = {
     temporal?: TemporalUpperBodyState;
     profile?: MinimalAvatarMotionProfile;
+    /** 入力時計へ写した表示評価時刻。省略時は観測時刻そのものを使う。 */
+    mediaTimeMs?: number;
 };
 
 export type {
@@ -64,6 +68,7 @@ export { DEFAULT_SINCRO_POSE_RETARGET_CONFIG } from "./sincroPoseRetargetTypes";
 // 腕が画面外へ出た時は部位単位で neutral に戻し、face-only の同期を邪魔しない。
 export class SincroPoseRetargeter {
     private config: SincroPoseRetargetConfig;
+    private readonly displayState = new SincroPoseArmDisplayState();
     private lastUpdateAtMs?: number;
     private smoothedFrame: SincroPoseRetargetFrame = cloneFrame(NEUTRAL_POSE_FRAME);
     private armIkSolvers?: Record<"left" | "right", SincroArmIkSolver>;
@@ -132,6 +137,17 @@ export class SincroPoseRetargeter {
         nowMs: number,
         runtime?: SincroPoseRetargetRuntimeInput,
     ): SincroPoseRetargetFrame {
+        if (this.lastUpdateAtMs === nowMs) return cloneFrame(this.smoothedFrame);
+        if (this.lastUpdateAtMs !== undefined && nowMs < this.lastUpdateAtMs) this.reset();
+        if (!snapshot.trackingEnabled || snapshot.degradedToFaceOnly) this.displayState.reset();
+        else if (runtime?.temporal)
+            runtime = {
+                ...runtime,
+                temporal: this.displayState.evaluate(
+                    runtime.temporal,
+                    runtime.mediaTimeMs ?? runtime.temporal.timestamp.mediaTimeMs,
+                ),
+            };
         const deltaMs =
             this.lastUpdateAtMs === undefined
                 ? 1000 / 60
@@ -139,7 +155,10 @@ export class SincroPoseRetargeter {
         this.lastUpdateAtMs = nowMs;
 
         const snapshotFallbackReason = this.snapshotFallbackReason(snapshot);
-        if (snapshotFallbackReason) {
+        if (
+            snapshotFallbackReason &&
+            (!snapshot.trackingEnabled || snapshot.degradedToFaceOnly || !runtime?.temporal)
+        ) {
             return this.smoothFrame(
                 withSolverProbe(
                     withFallbackReason(NEUTRAL_POSE_FRAME, snapshotFallbackReason),
@@ -155,7 +174,7 @@ export class SincroPoseRetargeter {
         const leftArm = this.retargetArm({ snapshot, side: "left", runtime });
         const rightArm = this.retargetArm({ snapshot, side: "right", runtime });
         const frame: SincroPoseRetargetFrame = {
-            active: true,
+            active: snapshot.detected && snapshot.confidence >= this.config.minConfidence,
             confidence: snapshot.confidence,
             ikMode: ikModeForArms(leftArm, rightArm),
             fallbackReason: undefined,
@@ -174,6 +193,7 @@ export class SincroPoseRetargeter {
     }
 
     reset(): void {
+        this.displayState.reset();
         this.lastUpdateAtMs = undefined;
         this.smoothedFrame = cloneFrame(NEUTRAL_POSE_FRAME);
         this.armIkPrimarySources = {};
@@ -221,6 +241,11 @@ export class SincroPoseRetargeter {
             solver: this.armIkSolvers?.[side],
             side,
         });
+        if (runtime?.temporal?.arms[side].state === "lost")
+            return {
+                ...NEUTRAL_POSE_FRAME[side === "left" ? "leftArm" : "rightArm"],
+                solverSource: temporalInput.source,
+            };
         const solver = this.armIkSolvers?.[side];
         if (
             temporalInput.target !== undefined &&
@@ -234,8 +259,11 @@ export class SincroPoseRetargeter {
                 return {
                     ...this.createWorldIkArm({
                         featureArm: this.createFeatureArm(snapshot, side),
-                        ikResult: solved,
+                        // 時系列の適用重みは合成層が一度だけ適用する。制約による減衰も同じ重みに含める。
+                        ikResult: { ...solved, weight: 1 },
                     }),
+                    trackingWeight: solved.weight,
+                    ikWeight: solved.weight,
                     solverSource: temporalInput.source,
                     temporalBridge: temporalInput.bridge,
                     reach: createArmReachSnapshot(temporalInput.bridge, solved),

@@ -305,8 +305,8 @@
     - motion-debugの `frame.canonical`格納先にそのまま保存できる通常のオブジェクトとして扱い、再生 / 指標 / 時系列 / 意図 / IKが同じ名前・単位で読む。
     - 左右は `left` / `right`の解剖学的左右に固定し、カメラプレビューや画面鏡像の左右は表さない。
     - `torso.coordinateSystem`は `body_local`に固定し、`shoulderCenter`、`bodyRight`、`bodyUp`、`bodyFront`、`shoulderWidth`、`torsoScale`、`yawRad`を有限数値 / 3要素タプルで保存する。
-    - 体幹フレーム推定は `SincroPoseMotionSnapshot`の左右肩ワールド座標目標を最優先する。両肩の `world.hasWorldCoordinates`がtrueで、`normalizedX/Y/Z`が有限の場合だけ `shoulderCenter`、解剖学的右方向の `bodyRight`、`shoulderWidth`を姿勢由来として採用する。
-    - 左右腰ワールド座標目標が同じ条件で有効な場合だけ `hipCenter`と `bodyUp = normalize(shoulderCenter - hipCenter)`を姿勢由来で作る。腰ワールド座標目標欠損時は `previous.torso.hipCenter`がある場合だけ引き継ぎ、ない場合は `hipCenter`を省略する。`calibration.torsoScale`は `torsoScale`代替処理にだけ使い、人工的な腰中心は作らない。
+    - 肩・腰・肘・手首は有限な `world.rawX/Y/Z`を共通原点のメートルとして読み、`[-rawX, -rawY, -rawZ]`でVRMの軸へ変換する。部位ごとに原点が違う `normalized*`は混ぜない。新しい体幹は `worldCoordinateSystem: "vrm_axes_meters"`を持ち、中心・肩幅・体幹長の単位を明示する。印のない旧保存値は旧座標として閲覧できるが、生座標が無い旧観測から新座標を推測しない。
+    - 両腰が有効なら肩中心と腰中心の差から縦軸を作り、肩線への射影を除いて直交・正規化する。肩線の退化・腰欠損・前方反転の拒否時は基底全体を有効な履歴か中立へ戻す。腰中心が得られない場合は有効な履歴だけを使い、人工的な腰中心は作らない。
     - `bodyFront`は `normalize(cross(bodyRight, bodyUp))`を候補にする。前フレームの `bodyFront`と内積が負の場合は前フレームを維持し、`front_flip_rejected`警告を付ける。前フレームがない場合は有効なFaceヨーから `normalize([sin(yawRad), 0, cos(yawRad)])`を手掛かりにし、手掛かりと逆向きの候補を反転して同じ警告を残す。
     - Faceヨーは `SincroFaceMotionSnapshot.headPose.yawDeg`をラジアン化して `yawRad`に保存する。Face未検出、信頼度 `< 0.08`、またはFaceスナップショット欠損時はヨー手掛かりを使わず、`previous.torso.yawRad`、`calibration.neutralYawRad`の順に代替処理する。
     - 較正未指定時は `DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT`を使う。肩幅が姿勢由来で有効に取れたフレームでは、戻り値の `calibration.shoulderWidth`を同じ値へ更新し、再生 / 指標が同じスケールを参照できるようにする。
@@ -336,8 +336,8 @@
     - v1のフィルターは腕スカラー (`reach`、`elevationRad`、`openness`、`forwardness`、`elbowFlexionRad`) と `bodyLocalWrist`にOne Euro Filterを適用する。既定値は `minCutoff: 1.8`、`beta: 0.45`、`dCutoff: 1.0`で、`TemporalStateEstimatorConfig`から上書きできる。速度はフィルター後の値差分から計算する。
     - `TemporalPartMeta`の `confidence`はフィルター入力候補の標準化した腕信頼度、`source`は `tracked` / `suspect`で `canonical`、`lost`で `neutral`とする。`stateAgeMs`は同じ状態の継続時だけ `mediaTimeMs`差分で加算し、`observedAgeMs`は `tracked` / `suspect`で `0`、`lost`で前回値へ差分を加算する。警告は低信頼度で `low_confidence`、未検出で `dropout`、分類保持で `classification_held`、無効dtで `out_of_range`を重複なしで保存する。
     - 分類は候補が信頼度 `>= 0.35`で160ms以上連続した場合だけ更新する。保持中または信頼度 `< 0.35`では前回分類を維持し、初回 / 再初期化後は既定時系列腕の `side`を基点にする。
-    - `dtMs <= 0`、`dtMs > 250`、非有限dtのフレームはフィルター内部状態を更新せず、前回フィルター処理済み値を維持して速度を `0`にする。未検出フレームは標準状態の低信頼値をフィルターに投入せず、前回フィルター処理済み値、速度、状態・メタデータから一時欠損方針を適用する。
-    - 腕が `lost`になってから `observedAgeMs <= 700`の間は、前回フィルター後スカラー / 身体のローカル座標系の手首と速度から等速度予測を行い、`state: "predicted"`、`source: "predicted"`、警告 `prediction_active` / `velocity_damped`を保存する。予測速度は `predictionVelocityDampingPerSec: 0.55`をフレーム `dt`に応じて毎秒減衰する。
+    - 同一時刻の更新は前回結果の複製を返し、逆行は履歴を初期化する。`dtMs > 250`では観測フィルターを積分せず、欠損年齢には実際の経過時間を加算する。欠損観測はフィルターへ投入しない。
+    - 最後の有効観測から700ms以内は、速度を毎秒 `0.55`へ減衰させる解析積分で腕を予測する。観測信頼度は0のまま、任意の `applicationWeight`を最後の有効重みから経過時間に比例して0へ減衰させる。観測到着時と無到着描画時は同じ予測関数を使い、描画結果を予測基点へ戻さない。
     - `observedAgeMs > 700`で予測ウィンドウが終わった腕は、`state: "lost"`、`source: "comfortable"`として自然な姿勢へ退避する。自然な姿勢スカラーは `reach: 0.35`、`elevationRad: -0.25`、`openness: 0.15`、`forwardness: 0.15`、`elbowFlexionRad: 1.15`、`classification: "side"`に固定し、前回予測済み / フィルター処理済み値から `recoveringBlendMs`既定 `260ms`で近づける。`openness`は左右反転しない正規化スカラーとし、身体のローカル座標系の手首 / 肘タプルを補う場合だけx方向を腕左右に合わせる。
     - Tracker実行時の `comfortable-idle`段階は自然な姿勢を直接生成しない。追跡処理はカメラ / Face追跡を継続したままPose代替処理とHand未検出スナップショット、`degradationPolicy`理由を出すだけにし、自然な姿勢スカラーへの混合はTemporalStateEstimator、MotionSolver、VrmPoseComposerの責務に残す。
     - 未検出 / 予測済み / 自然な姿勢 / 復帰中後に腕信頼度が `>= 0.65`へ戻り、信頼性が追跡済みになった腕は `state: "recovering"`、`source: "mixed"`としてフィルター処理済み観測値へ復帰する。`recoveringBlend`は `from`、`progress`、`durationMs`を保存し、警告 `recovery_blend`を付ける。`recoveringBlendMs`は設定で上書きできるが `180..400`に制限する。
@@ -370,11 +370,11 @@
 - `TemporalUpperBodyState` → 腕IK橋渡し
     - 段階6本番腕入力は `src/character/retargeting/sincroPoseTemporalArmInput.ts`の `createSincroPoseTemporalArmInput()`を正本とし、`TemporalUpperBodyState`、`MinimalAvatarMotionProfile`、`SincroArmIkSolver`測定値から `createTemporalArmIkInput()`経由で肩ローカル目標を作る。`solveWorldArmIk()`のPoseスナップショット入力経路は廃止予定代替処理 / A/B比較用に残すが、時系列の主入力が有効なフレームでは本番主入力にしない。
     - 入力は `TemporalUpperBodyState`、腕左右、`MinimalAvatarMotionProfile`、`SincroArmIkSolver`と同等の `shoulderWidth` / `upperArmLength` / `lowerArmLength`測定値である。倍率スナップショットはプロファイル測定値を優先し、欠損時だけソルバー測定値に代替処理する。`maxReachRatio`は `0.985`に固定する。
-    - `bodyLocalWrist`がある場合は主入力とし、身体のローカル座標系の絶対タプルから `sideSign = left ? -1 : 1`、`shoulderLocal = [sideSign * shoulderWidth * 0.5, 0, 0]`を再構成し、`relative = bodyLocalWrist - shoulderLocal`を作る。身体のローカル座標系のタプルは追跡処理の体幹を基準に正規化した座標でアバターメートルではないため、`relative`に左右方向 / 上下方向 / 奥行き倍率を適用した方向を正規化し、長さは `reach * avatarArmLength * defaultReachScale`から与える。`bodyLocalElbow`がある場合の `elbowPole`は従来どおり肩相対方向へ変換する。
+    - `bodyLocalWrist`と `bodyLocalElbow`は肩中心原点・撮影者肩幅1の無次元座標である。同じ座標の肩 `[sideSign * 0.5, 0, 0]`を引き、手首方向と肘の曲がる方向を作った後に、VRMの腕長で距離を与える。要求・適用・超過到達率の分母は同じVRM腕長とし、既存の到達制限 `0.985`を維持する。
     - `bodyLocalWrist`がない場合はスカラー代替処理を使う。`rawReach = reach * (upperArmLength + lowerArmLength)`、`x = openness * sideSign * rawReach * lateralScale * defaultReachScale`、`y = sin(elevationRad) * rawReach * verticalScale * defaultReachScale`、`z = forwardness * rawReach * depthCompression * defaultReachScale`とし、ソルバー前目標長を腕長さ `* 0.985`以下に制限する。
-    - `weight`は時系列腕 `confidence`と `state`だけから決める。`tracked`は `confidence`、`suspect`は `confidence * 0.55`、`recovering`は `confidence * recoveringBlend.progress`、`predicted`は `confidence * 0.35`、`lost`は `0`とする。`lost`または非有限入力では `target`を返さず、`reasonCodes`とゼロ重みデバッグを返す。
+    - IKの適用重みは `applicationWeight`を優先する。旧ログで欠損する場合だけ `tracked/recovering: confidence`、`suspect: confidence * 0.55`、`predicted: confidence * 0.35`、`lost: 0`を使う。復帰補間済みの値へ進捗を再乗算しない。IKの制約による減衰を含む重みは最終合成で一度だけ使い、IK姿勢自体を待機姿勢へ二重に混合しない。
     - 段階6橋渡しはPose手首 / Hand手首の未加工のワールド座標のZ値を再読解しない。奥行きは時系列 `forwardness`と `profile.solverDefaults.depthCompression`、または保存済み `bodyLocalWrist`の身体のローカル座標系のzから決定し、Hand手首は手のひら / 指 / ジェスチャー補助の入力に留めて腕IK目標の主入力にしない。
-    - 本番代替処理は `temporal_input_missing`、`avatar_profile_missing`、`temporal_arm_lost`、`invalid_temporal_arm`、`ik_solver_missing`のいずれかを `frame.solver.phase6.arms.<side>.source.fallbackReason`と `bridgeReasonCodes`に保存して、既存 `SincroPoseMotionSnapshot.leftArm/rightArm.targets`経路へ戻す。`source`欠損の旧 `sincro.phase6-solver.v1`ログは再生閲覧画面で `primarySource: "pose-snapshot-fallback"`相当として扱う。
+    - 本番では `temporal_arm_lost`をその側の腕を下ろした代替姿勢へ接続し、古いPoseへ戻さない。時系列・プロファイル・ソルバーの不足や無効入力は理由を診断へ残して既存Pose経路を使う。旧 `sincro.phase6-solver.v1`ログの `source`欠損は `pose-snapshot-fallback`として閲覧する。
 - `MinimalAvatarMotionProfile`
     - `src/character/avatarProfile/minimalAvatarMotionProfile.ts`を正本とする、VRM読み込み時に測れる最小アバター固有のプロファイル契約。
     - スキーマバージョンは `sincro.minimal-avatar-motion-profile.v1`に固定し、`optionalBones`、`measurements`、`solverDefaults`、`warnings`だけを持つ通常のオブジェクトとして保存する。`THREE.Vector3`、`THREE.Quaternion`、`Object3D`、`VRM`インスタンスはプロファイルに保持しない。
@@ -590,4 +590,30 @@ Mouth / Emotion制御処理、`LegBoneController`、`vrm.update(deltaSeconds)`�
 保存したpostProcessingは表示だけに使い、欠損時に合成しない。
 
 隣接する前進だけ推定履歴を継続し、同じフレームへの移動・飛び越し・後退・停止・読み込み・
-入力切替では既存の初期化境界で時系列と意図を同時に初期化する。ログの版や保存項目は変更しない。
+入力切替では既存の初期化境界で時系列と意図を同時に初期化する。ログの外側の版は維持する。共通表現の座標識別と時系列腕の適用重みは任意項目として読み取り・複製・保存する。旧読取実装は追加項目を拒否する場合があるため、新しい記録には現行の読取実装を使う。
+
+### 欠損腕の表示時計と最終合成
+
+`SincroMotionClock`はPoseとHandそれぞれの観測時刻と受信時刻を実行中だけ保持する。
+`VRMCharacterManager.update(nowMs)`で `mediaTimeMs + max(0, nowMs - receivedAtPerformanceMs)`へ変換し、
+再生では明示した仮想時刻をそのまま使う。停止中の再生は進めない。FaceやGestureの到着では時計を上書きしない。
+
+観測フィルターはPose到着時だけ進める。リターゲットは左右の最後の有効観測を保持し、無到着時にはその基点から予測する。
+期限後は腕ごとの代替姿勢へ移る。追跡層は体幹・左腕・右腕に分け、`frame.active`で両腕を同時に無効化しない。
+復帰補間、IK、適用重み、最終角速度制限、一括書き込みの順を保ち、頭部・口形は独立して更新する。
+同じ仮想時刻の再描画ではリターゲットと合成の履歴を進めない。
+
+追跡停止、`chat`、顔のみへの切替、時刻逆行、入力ソース切替、非連続な再生移動は系列番号を更新する。
+描画側は次のPoseを待たずに腕と合成の履歴を捨てる。VRM交換でも腕・合成・指の履歴を破棄する。
+
+### 固定観測からの比較
+
+開発者向け再生APIの `startReplay({ mode, recompute: true })`は保存済み下流値を採用せず、選んだ入力から再計算する。
+通常再生は保存値優先を維持する。`recomputeMotionReplay()`は同じ再生パーサーと本番の共通計算・リターゲット・合成を使い、
+条件ごとに所有者を作り直して適用予定の `finalPose`を返す。開始点は生結果かPoseスナップショットとして出力に残す。
+動画から補うHand/Gestureは一度保存し、同じ観測列を両条件へ渡す。
+
+`calculateFinalPoseMetrics()`は対象ボーン・区間・元の不規則な時刻列から回転差RMS、角速度RMS、振幅、
+入力動作との相関による系列内の遅れ、復帰時の最大回転差と有効標本数を返す。クォータニオンの符号反転は同じ回転とする。
+遅れは撮影から表示までの絶対遅延でも人体の正解値でもない。入力特徴と出力回転の関係が弱い区間は相関値とともに扱い、
+振幅が消えた候補を揺れだけで採用しない。静止区間以外の回転差RMSを静止時の揺れと呼ばない。

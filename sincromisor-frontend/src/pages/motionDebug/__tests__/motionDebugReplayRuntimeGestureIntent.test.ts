@@ -130,7 +130,13 @@ describe("MotionDebugReplayRuntime raw gesture intent", () => {
             timer: {
                 value: { clear: vi.fn(), updateReplayStatus: vi.fn() },
             },
-            params: { value: { renderSnapshot: vi.fn() } },
+            params: {
+                value: {
+                    renderSnapshot: vi.fn(),
+                    tracker: { resetReliabilityState: vi.fn(), setHandSnapshot: vi.fn() },
+                    behaviorState: { motionClock: { reset: vi.fn() } },
+                },
+            },
             resetTemporalState: { value: reset },
         });
 

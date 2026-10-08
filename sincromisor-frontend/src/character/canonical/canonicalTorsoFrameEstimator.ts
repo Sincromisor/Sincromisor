@@ -3,12 +3,11 @@ import type {
     SincroPoseMotionSnapshot,
     SincroPoseTargetPointSnapshot,
 } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
+import { estimateBodyFront, estimateYawRad, previousBasis } from "./canonicalTorsoBasis";
 import {
     average,
     clampConfidence,
-    cross,
     dot,
-    isFiniteNumber,
     isFiniteTuple,
     length,
     MIN_CANONICAL_VECTOR_LENGTH,
@@ -16,7 +15,6 @@ import {
     normalizedOrNeutral,
     scale,
     subtract,
-    tuple3,
 } from "./canonicalTuple3Math";
 import {
     type CanonicalCalibrationSnapshot,
@@ -26,6 +24,7 @@ import {
     type CanonicalWarningCode,
     DEFAULT_CANONICAL_CALIBRATION_SNAPSHOT,
 } from "./canonicalUpperBodyState";
+import { readCanonicalWorldPoint } from "./canonicalWorldPoint";
 
 export type CanonicalTorsoFrameInput = {
     pose: SincroPoseMotionSnapshot;
@@ -40,12 +39,10 @@ export type CanonicalTorsoFrameResult = {
     calibration: CanonicalCalibrationSnapshot;
 };
 
-const FACE_YAW_CONFIDENCE_MIN = 0.08;
 const FALLBACK_CONFIDENCE_MAX = 0.45;
 
 const NEUTRAL_BODY_RIGHT: CanonicalTuple3 = [1, 0, 0];
 const NEUTRAL_BODY_UP: CanonicalTuple3 = [0, 1, 0];
-const NEUTRAL_BODY_FRONT: CanonicalTuple3 = [0, 0, 1];
 const NEUTRAL_SHOULDER_CENTER: CanonicalTuple3 = [0, 1, 0];
 
 type WorldPoint = {
@@ -70,20 +67,13 @@ type HipEstimate = {
 };
 
 function readWorldPoint(target: SincroPoseTargetPointSnapshot): WorldPoint | undefined {
-    const world = target.world;
-    if (
-        !world.hasWorldCoordinates ||
-        !isFiniteNumber(world.normalizedX) ||
-        !isFiniteNumber(world.normalizedY) ||
-        !isFiniteNumber(world.normalizedZ)
-    ) {
-        return undefined;
-    }
-
-    return {
-        position: tuple3(world.normalizedX, world.normalizedY, world.normalizedZ),
-        confidence: clampConfidence(world.worldConfidence),
-    };
+    const position = readCanonicalWorldPoint(target);
+    return position === undefined
+        ? undefined
+        : {
+              position,
+              confidence: clampConfidence(target.world.worldConfidence),
+          };
 }
 
 function cloneCalibration(calibration: CanonicalCalibrationSnapshot): CanonicalCalibrationSnapshot {
@@ -174,72 +164,13 @@ function estimateHips(
     };
 }
 
-function estimateYawRad(
-    face: Pick<SincroFaceMotionSnapshot, "detected" | "confidence" | "headPose"> | undefined,
-    previous: Pick<CanonicalUpperBodyState, "torso" | "calibration"> | undefined,
-    calibration: CanonicalCalibrationSnapshot,
-): { yawRad: number; faceHint?: CanonicalTuple3 } {
-    const faceYawRad =
-        face?.detected === true &&
-        face.confidence >= FACE_YAW_CONFIDENCE_MIN &&
-        Number.isFinite(face.headPose.yawDeg)
-            ? (face.headPose.yawDeg * Math.PI) / 180
-            : undefined;
-    const yawRad =
-        faceYawRad ??
-        previous?.torso.yawRad ??
-        previous?.calibration.neutralYawRad ??
-        calibration.neutralYawRad;
-    const finiteYawRad = Number.isFinite(yawRad) ? yawRad : 0;
-
-    if (faceYawRad === undefined || Math.abs(faceYawRad) > Math.PI / 2) {
-        return { yawRad: finiteYawRad };
-    }
-
-    return {
-        yawRad: finiteYawRad,
-        faceHint:
-            normalize(tuple3(Math.sin(faceYawRad), 0, Math.cos(faceYawRad))) ?? NEUTRAL_BODY_FRONT,
-    };
-}
-
-function estimateBodyFront(
-    bodyRight: CanonicalTuple3,
-    bodyUp: CanonicalTuple3,
-    yaw: { yawRad: number; faceHint?: CanonicalTuple3 },
-    previous: Pick<CanonicalUpperBodyState, "torso" | "calibration"> | undefined,
-): { bodyFront: CanonicalTuple3; rejectedFlip: boolean; usedFallback: boolean } {
-    const candidate = normalize(cross(bodyRight, bodyUp));
-    if (candidate === undefined) {
-        return {
-            bodyFront: normalizedOrNeutral(previous?.torso.bodyFront, NEUTRAL_BODY_FRONT),
-            rejectedFlip: false,
-            usedFallback: true,
-        };
-    }
-
-    const previousBodyFront = previous?.torso.bodyFront;
-    if (isFiniteTuple(previousBodyFront)) {
-        const normalizedPrevious = normalizedOrNeutral(previousBodyFront, NEUTRAL_BODY_FRONT);
-        if (dot(candidate, normalizedPrevious) < 0) {
-            return { bodyFront: normalizedPrevious, rejectedFlip: true, usedFallback: true };
-        }
-        return { bodyFront: candidate, rejectedFlip: false, usedFallback: false };
-    }
-
-    const faceForwardHint = yaw.faceHint ?? NEUTRAL_BODY_FRONT;
-    if (dot(candidate, faceForwardHint) < 0) {
-        return { bodyFront: scale(candidate, -1), rejectedFlip: true, usedFallback: false };
-    }
-    return { bodyFront: candidate, rejectedFlip: false, usedFallback: false };
-}
-
 function pushWarning(warnings: CanonicalWarningCode[], warning: CanonicalWarningCode): void {
     if (!warnings.includes(warning)) {
         warnings.push(warning);
     }
 }
 
+/** 肩と腰の共通生座標から直交基底を作り、退化した観測では基底全体を履歴か中立へ戻す。 */
 export function estimateCanonicalTorsoFrame(
     input: CanonicalTorsoFrameInput,
 ): CanonicalTorsoFrameResult {
@@ -249,7 +180,28 @@ export function estimateCanonicalTorsoFrame(
     const shoulders = estimateShoulders(input.pose, input.previous, calibration);
     const hips = estimateHips(input.pose, shoulders.shoulderCenter, input.previous, calibration);
     const yaw = estimateYawRad(input.face, input.previous, calibration);
-    const bodyFront = estimateBodyFront(shoulders.bodyRight, hips.bodyUp, yaw, input.previous);
+    // 肩線への縦軸の射影を除き、斜めの体幹でも直交基底を保つ。
+    const orthogonalUp = normalize(
+        subtract(hips.bodyUp, scale(shoulders.bodyRight, dot(hips.bodyUp, shoulders.bodyRight))),
+    );
+    const bodyFront = estimateBodyFront(
+        shoulders.bodyRight,
+        orthogonalUp ?? shoulders.bodyRight,
+        yaw,
+        input.previous,
+    );
+    const validBasis =
+        shoulders.fromPose &&
+        hips.fromPose &&
+        orthogonalUp !== undefined &&
+        !bodyFront.usedFallback;
+    const basis = validBasis
+        ? {
+              bodyRight: shoulders.bodyRight,
+              bodyUp: orthogonalUp,
+              bodyFront: bodyFront.bodyFront,
+          }
+        : previousBasis(input.previous);
     const warnings: CanonicalWarningCode[] = [];
 
     if (!shoulders.fromPose || !hips.fromPose || input.pose.upperBody.hipCenterTracked === false) {
@@ -288,11 +240,10 @@ export function estimateCanonicalTorsoFrame(
     return {
         torso: {
             coordinateSystem: "body_local",
+            worldCoordinateSystem: "vrm_axes_meters",
             shoulderCenter: shoulders.shoulderCenter,
             hipCenter: hips.hipCenter,
-            bodyRight: normalizedOrNeutral(shoulders.bodyRight, NEUTRAL_BODY_RIGHT),
-            bodyUp: normalizedOrNeutral(hips.bodyUp, NEUTRAL_BODY_UP),
-            bodyFront: normalizedOrNeutral(bodyFront.bodyFront, NEUTRAL_BODY_FRONT),
+            ...basis,
             shoulderWidth: shoulders.shoulderWidth,
             torsoScale: hips.torsoScale,
             yawRad: yaw.yawRad,
