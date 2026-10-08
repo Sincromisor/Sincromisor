@@ -33,11 +33,7 @@ character-animation-3.0 の Phase 4 は、MediaPipe confidence をそのまま I
 
 ```ts
 type ReliabilityPartState =
-    | "tracked"
-    | "suspect"
-    | "predicted"
-    | "lost"
-    | "recovering";
+    "tracked" | "suspect" | "predicted" | "lost" | "recovering";
 
 type ReliabilitySource =
     | "pose"
@@ -184,9 +180,7 @@ type ReliabilityMap = {
 
 ```ts
 type ReliabilityMapParseErrorCode =
-    | "unknown_schema_version"
-    | "invalid_state"
-    | "out_of_range";
+    "unknown_schema_version" | "invalid_state" | "out_of_range";
 
 type ReliabilityMapParseError = {
     code: ReliabilityMapParseErrorCode;

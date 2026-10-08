@@ -19,11 +19,7 @@
 
 ```ts
 type TemporalPartState =
-    | "tracked"
-    | "suspect"
-    | "predicted"
-    | "lost"
-    | "recovering";
+    "tracked" | "suspect" | "predicted" | "lost" | "recovering";
 type TemporalSource =
     | "canonical"
     | "previous"

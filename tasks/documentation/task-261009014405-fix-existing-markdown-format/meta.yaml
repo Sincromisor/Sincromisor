@@ -1,0 +1,13 @@
+id: task-261009014405-fix-existing-markdown-format
+title: 既存15文書のMarkdown整形不一致を解消する
+category: documentation
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-10-09
+closed_at: 2026-10-09
+legacy_ids: []

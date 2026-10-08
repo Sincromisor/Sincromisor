@@ -14,10 +14,7 @@ Phase 8 では、Pose wrist を起点に left / right hand crop を作り、Hand
 
 ```ts
 export type SincroHandSource =
-    | "roi"
-    | "full-frame-fallback"
-    | "previous"
-    | "lost";
+    "roi" | "full-frame-fallback" | "previous" | "lost";
 export type SincroHandWarningCode =
     | "roi_missing"
     | "roi_inconsistent"

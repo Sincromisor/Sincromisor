@@ -91,9 +91,7 @@ type VideoFrameTick = {
 };
 
 type FrameClockMode =
-    | "requestVideoFrameCallback"
-    | "raf-currentTime"
-    | "timer-fallback";
+    "requestVideoFrameCallback" | "raf-currentTime" | "timer-fallback";
 ```
 
 ```ts
@@ -466,9 +464,7 @@ type MotionRealtimeDebugFrame = {
 
     clock: {
         mode:
-            | "requestVideoFrameCallback"
-            | "raf-currentTime"
-            | "timer-fallback";
+            "requestVideoFrameCallback" | "raf-currentTime" | "timer-fallback";
         frameSeq: number;
         mediaTimeMs: number;
         nowMs: number;

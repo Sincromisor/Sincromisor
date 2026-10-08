@@ -41,10 +41,7 @@ Phase 10 は、固定テストモーション、主観評価フォーム、metri
 
 ```ts
 export type MotionQaSubjectiveChecklistItem =
-    | "natural"
-    | "stable"
-    | "intentReadable"
-    | "noBreakage";
+    "natural" | "stable" | "intentReadable" | "noBreakage";
 
 export type MotionQaFixtureManifest = {
     schemaVersion: "sincro.motion-qa-fixture-manifest.v1";

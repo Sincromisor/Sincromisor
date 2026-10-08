@@ -45,10 +45,7 @@ type MotionDebugLayerKey =
     | "metrics";
 
 type MotionDebugLayerStatus =
-    | "available"
-    | "not_recorded"
-    | "not_implemented"
-    | "not_calculated";
+    "available" | "not_recorded" | "not_implemented" | "not_calculated";
 
 type MotionDebugViewerSnapshot = {
     mode: MotionDebugViewerMode;

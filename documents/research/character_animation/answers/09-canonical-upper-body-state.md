@@ -362,12 +362,7 @@ export type CanonicalArmState = {
     velocityBody?: Vec3Like;
 
     classification:
-        | "rest"
-        | "side"
-        | "front"
-        | "diagonalFront"
-        | "crossBody"
-        | "unknown";
+        "rest" | "side" | "front" | "diagonalFront" | "crossBody" | "unknown";
 
     confidence: number;
     source: CanonicalSource;

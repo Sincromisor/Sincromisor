@@ -30,9 +30,7 @@
 
 ```ts
 export type TrackerVideoFrameClockSource =
-    | "request-video-frame-callback"
-    | "request-animation-frame"
-    | "timer";
+    "request-video-frame-callback" | "request-animation-frame" | "timer";
 
 export type TrackerVideoFrameTiming = {
     source: TrackerVideoFrameClockSource;
