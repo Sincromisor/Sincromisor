@@ -31,7 +31,8 @@ export function CameraTrackingFields({
                 <SettingsToggle
                     density={toggleDensity}
                     label="顔の向きを使う"
-                    help={settingHelp.enableCharacterGaze}
+                    disabledReason={uiHints.enableCharacterGazeReason}
+                    description={settingHelp.enableCharacterGaze}
                     checked={!!settings.enableCharacterGaze}
                     disabled={uiState.enableCharacterGazeDisabled}
                     onChange={(checked) => onApplySettings({ enableCharacterGaze: checked })}
@@ -39,7 +40,8 @@ export function CameraTrackingFields({
                 <SettingsToggle
                     density={toggleDensity}
                     label="姿勢を使う"
-                    help={settingHelp.enableSincroPoseTracking}
+                    disabledReason="先に3Dキャラクター表示と「顔の向きを使う」をオンにしてください。"
+                    description={settingHelp.enableSincroPoseTracking}
                     checked={!!settings.enableSincroPoseTracking}
                     disabled={!settings.enableCharacter || !settings.enableCharacterGaze}
                     onChange={(checked) => onApplySettings({ enableSincroPoseTracking: checked })}
@@ -47,7 +49,8 @@ export function CameraTrackingFields({
             </SettingsToggleGrid>
             <SettingsRange
                 label="姿勢同期"
-                help={settingHelp.sincroPoseRetargetScale}
+                disabledReason="3Dキャラクター表示・顔の向き・姿勢をオンにすると調整できます。"
+                description={settingHelp.sincroPoseRetargetScale}
                 {...sincroAppNumericSettingConstraints.sincroPoseRetargetScale}
                 step="any"
                 value={settings.sincroPoseRetargetScale}
@@ -61,7 +64,8 @@ export function CameraTrackingFields({
             />
             <SettingsRange
                 label="目線追跡"
-                help={settingHelp.characterEyeTrackingScale}
+                disabledReason="3Dキャラクター表示と「顔の向きを使う」をオンにすると調整できます。"
+                description={settingHelp.characterEyeTrackingScale}
                 {...sincroAppNumericSettingConstraints.characterEyeTrackingScale}
                 step="any"
                 value={settings.characterEyeTrackingScale}
@@ -69,10 +73,9 @@ export function CameraTrackingFields({
                 disabled={!settings.enableCharacter || !settings.enableCharacterGaze}
                 onChange={(value) => onApplySettings({ characterEyeTrackingScale: value })}
             />
-
-            {uiHints.enableCharacterGazeReason ? (
-                <SettingsHint>{uiHints.enableCharacterGazeReason}</SettingsHint>
-            ) : null}
+            {uiHints.enableCharacterGazeReason && !uiState.enableCharacterGazeDisabled && (
+                <SettingsHint tone="warning">{uiHints.enableCharacterGazeReason}</SettingsHint>
+            )}
         </SettingsFieldStack>
     );
 }

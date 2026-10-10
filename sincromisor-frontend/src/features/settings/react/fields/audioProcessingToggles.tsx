@@ -2,6 +2,7 @@ import { SettingsToggle, SettingsToggleGrid } from "../primitives/settingsPrimit
 import type { ToggleGroupProps } from "./settingsFieldTypes";
 import { settingHelp } from "./settingsHelp";
 
+/** 音声補正の用途を常時表示し、適用結果の判定は音声モデルへ委ねる。 */
 export function AudioProcessingToggles({
     settings,
     uiState,
@@ -14,7 +15,7 @@ export function AudioProcessingToggles({
             <SettingsToggle
                 density={toggleDensity}
                 label="ノイズを抑える"
-                help={settingHelp.enableNoiseSuppression}
+                description={settingHelp.enableNoiseSuppression}
                 checked={!!settings.enableNoiseSuppression}
                 disabled={uiState.enableNoiseSuppressionDisabled}
                 onChange={(checked) => onApplySettings({ enableNoiseSuppression: checked })}
@@ -22,7 +23,7 @@ export function AudioProcessingToggles({
             <SettingsToggle
                 density={toggleDensity}
                 label="音の回り込みを抑える"
-                help={settingHelp.enableEchoCancellation}
+                description={settingHelp.enableEchoCancellation}
                 checked={!!settings.enableEchoCancellation}
                 disabled={uiState.enableEchoCancellationDisabled}
                 onChange={(checked) => onApplySettings({ enableEchoCancellation: checked })}
@@ -30,7 +31,7 @@ export function AudioProcessingToggles({
             <SettingsToggle
                 density={toggleDensity}
                 label="音量を自動で整える"
-                help={settingHelp.enableAutoGainControl}
+                description={settingHelp.enableAutoGainControl}
                 checked={!!settings.enableAutoGainControl}
                 disabled={uiState.enableAutoGainControlDisabled}
                 onChange={(checked) => onApplySettings({ enableAutoGainControl: checked })}
@@ -38,7 +39,7 @@ export function AudioProcessingToggles({
             <SettingsToggle
                 density={toggleDensity}
                 label="無音時の送信を抑える"
-                help={settingHelp.enableVadGate}
+                description={settingHelp.enableVadGate}
                 checked={!!settings.enableVadGate}
                 disabled={uiState.enableVadGateDisabled}
                 onChange={(checked) => onApplySettings({ enableVadGate: checked })}
@@ -46,7 +47,7 @@ export function AudioProcessingToggles({
             <SettingsToggle
                 density={toggleDensity}
                 label="にぎやかな場所向けに調整"
-                help={settingHelp.enableVenueNoiseMode}
+                description={settingHelp.enableVenueNoiseMode}
                 checked={!!settings.enableVenueNoiseMode}
                 disabled={uiState.enableVenueNoiseModeDisabled}
                 onChange={(checked) => onApplySettings({ enableVenueNoiseMode: checked })}

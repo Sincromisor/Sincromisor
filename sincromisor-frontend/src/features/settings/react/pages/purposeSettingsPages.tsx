@@ -96,18 +96,11 @@ export function createPurposeSettingsPages({
 /** 内部のchat/sincro値を保ったまま、利用者向けの体験名と説明を表示する。 */
 export function ExperienceSettingsFields({ state }: { state: PurposeSettingsState }) {
     return (
-        <>
-            <TalkModeField
-                settings={state.settings}
-                uiState={state.settingsUiState}
-                onTalkModeChange={state.changeTalkMode}
-            />
-            <SettingsHint>
-                {state.settings.talkMode === "sincro"
-                    ? "カメラで顔や体の動きをキャラクターに重ねます。"
-                    : "マイクで話しかけると、キャラクターが声で答えます。"}
-            </SettingsHint>
-        </>
+        <TalkModeField
+            settings={state.settings}
+            uiState={state.settingsUiState}
+            onTalkModeChange={state.changeTalkMode}
+        />
     );
 }
 

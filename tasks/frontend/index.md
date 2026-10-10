@@ -2,9 +2,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 17 件）
+## タスク一覧（自動生成 / 全 18 件）
 
-### done（完了） — 17 件
+### done（完了） — 18 件
 
 | タスク                                                                                                             | タイトル                                                 | 判定    | 依存                                                 |
 | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- | ------- | ---------------------------------------------------- |
@@ -24,6 +24,7 @@
 | [task-260921175038-modernize-zod-objects](./task-260921175038-modernize-zod-objects/task.md)                       | Zodの非推奨な未知キー保持APIを更新                       | ✅ PASS | —                                                    |
 | [task-260921175828-modernize-vite-config](./task-260921175828-modernize-vite-config/task.md)                       | Viteの非推奨ビルド設定を更新                             | ✅ PASS | —                                                    |
 | [task-261010185542-fix-settings-layout-and-controls](./task-261010185542-fix-settings-layout-and-controls/task.md) | 設定UIのタブ配置・スクロール・入力操作の不具合を修正する | ✅ PASS | —                                                    |
+| [task-261010185549-refresh-settings-visual-design](./task-261010185549-refresh-settings-visual-design/task.md)     | 設定UIの装飾・説明・状態表示を統一する                   | ✅ PASS | `task-261010185549-reorganize-settings-and-startup`  |
 | [task-261010185549-reorganize-settings-and-startup](./task-261010185549-reorganize-settings-and-startup/task.md)   | 設定項目を利用目的別に再編し起動前の導線を整理する       | ✅ PASS | `task-261010185542-fix-settings-layout-and-controls` |
 
 <!-- AUTOGEN:tasks END -->

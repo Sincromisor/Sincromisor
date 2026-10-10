@@ -1,7 +1,63 @@
 @layer components {
+    .settingsPrimitiveField,
+    .settingsPrimitiveButton {
+        min-width: 0;
+        font: inherit;
+        overflow-wrap: anywhere;
+    }
+
+    .settingsPrimitiveButton.settingsPrimitiveButton--primary {
+        background: #a6d6ff;
+        border-color: #a6d6ff;
+        color: #142334;
+    }
+
+    .settingsPrimitiveButton.settingsPrimitiveButton--danger {
+        color: #ffc2be;
+        border-color: #b87977;
+        background: transparent;
+    }
+
+    .settingsPrimitiveButton:not(:disabled):hover {
+        filter: brightness(1.12);
+    }
+
+    .settingsShell :focus-visible,
+    .configurationDialogReactSettingsPanel :focus-visible,
+    .settingsPrimitiveButton:focus-visible,
+    .settingsPrimitiveHelpBadge:focus-visible {
+        outline: 2px solid #a6d6ff;
+        outline-offset: 3px;
+    }
+
+    .settingsPrimitiveFieldDescription {
+        display: block;
+        margin: 6px 0 0;
+        color: var(--sincro-color-overlay-text-muted);
+        font-size: var(--sincro-font-size-150);
+        line-height: var(--sincro-line-height-body);
+        overflow-wrap: anywhere;
+    }
+
+    .settingsPrimitiveDisabledReason {
+        display: block;
+        margin-top: 4px;
+        color: #ffd38a;
+    }
+
+    .settingsPrimitiveToggle__content {
+        min-width: 0;
+    }
+
+    .settingsPrimitiveConnectionStatus {
+        display: grid;
+        gap: 6px;
+        overflow-wrap: anywhere;
+    }
+
     .settingsPrimitiveField {
         width: 100%;
-        min-height: 36px;
+        min-height: 40px;
         border-radius: var(--sincro-radius-100);
         border: 1px solid rgba(255, 255, 255, 0.2);
         background: var(--sincro-color-surface-soft-stronger);
@@ -12,7 +68,7 @@
     }
 
     .settingsPrimitiveField:disabled {
-        opacity: 0.62;
+        opacity: 0.72;
         cursor: not-allowed;
     }
 
@@ -28,7 +84,7 @@
     }
 
     .settingsPrimitiveRange.is-disabled {
-        opacity: 0.62;
+        opacity: 0.72;
         cursor: not-allowed;
     }
 
@@ -57,7 +113,7 @@
     }
 
     .settingsPrimitiveButton {
-        min-height: 32px;
+        min-height: 40px;
         border-radius: var(--sincro-radius-100);
         border: 1px solid rgba(255, 255, 255, 0.2);
         background: var(--sincro-color-surface-soft-strong);
@@ -70,21 +126,13 @@
     }
 
     .settingsPrimitiveButton:disabled {
-        opacity: 0.6;
-        cursor: progress;
-    }
-
-    .settingsPrimitiveHelpTooltip {
-        position: relative;
-        display: inline-flex;
-        align-items: center;
+        opacity: 0.72;
+        cursor: not-allowed;
     }
 
     .settingsPrimitiveHelpTooltip__bubble {
-        position: absolute;
-        left: 0;
-        top: calc(100% + var(--sincro-space-150));
-        z-index: 20;
+        position: fixed;
+        z-index: 100;
         width: min(300px, calc(100vw - 72px));
         border-radius: var(--sincro-radius-100);
         border: 1px solid rgba(255, 255, 255, 0.18);
@@ -97,11 +145,8 @@
         white-space: normal;
         word-break: break-word;
         pointer-events: none;
-    }
-
-    .settingsPrimitiveHelpTooltip__bubble--right {
-        right: 0;
-        left: auto;
+        font-family: var(--sincro-font-family-base);
+        text-align: left;
     }
 
     .settingsPrimitiveHelpBadge {
@@ -125,11 +170,11 @@
         display: flex;
         align-items: center;
         margin-bottom: var(--sincro-space-100);
-        opacity: 0.75;
+        color: var(--sincro-color-overlay-text-primary);
     }
 
     .settingsPrimitiveHint {
-        line-height: 1.35;
+        line-height: var(--sincro-line-height-body);
         font-size: var(--sincro-font-size-150);
     }
 
@@ -154,7 +199,7 @@
     }
 
     .settingsPrimitiveHint--soft {
-        opacity: 0.6;
+        color: var(--sincro-color-overlay-text-muted);
     }
 
     .settingsPrimitiveHintList {
@@ -167,10 +212,8 @@
         display: grid;
         gap: var(--sincro-space-250);
         margin-bottom: var(--sincro-space-450);
-        padding: var(--sincro-space-400) var(--sincro-space-450);
-        border-radius: var(--sincro-radius-500);
-        border: 1px solid rgba(157, 176, 204, 0.12);
-        background: var(--sincro-surface-card);
+        padding: var(--sincro-space-300) 0;
+        border-top: 1px solid var(--sincro-color-border-subtle);
     }
 
     .settingsPrimitiveSectionCard:last-child {
@@ -241,7 +284,7 @@
 
     .settingsPrimitiveToggleGrid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
         gap: var(--sincro-space-150);
     }
 
@@ -257,8 +300,8 @@
         min-height: 56px;
         padding: var(--sincro-space-250) var(--sincro-space-300);
         border-radius: var(--sincro-radius-100);
-        border: 1px solid rgba(130, 188, 255, 0.14);
-        background: var(--sincro-color-surface-soft-strong);
+        border: 1px solid transparent;
+        background: var(--sincro-color-surface-soft);
         cursor: pointer;
         box-sizing: border-box;
     }
@@ -273,7 +316,7 @@
     }
 
     .settingsPrimitiveToggle.is-disabled {
-        opacity: 0.6;
+        opacity: 0.72;
         cursor: not-allowed;
     }
 
@@ -290,7 +333,7 @@
         display: inline-flex;
         align-items: center;
         flex-wrap: wrap;
-        line-height: 1.35;
+        line-height: var(--sincro-line-height-body);
     }
 
     .settingsPrimitiveFieldStack {

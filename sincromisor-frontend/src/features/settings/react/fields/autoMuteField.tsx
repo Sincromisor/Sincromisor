@@ -29,6 +29,7 @@ export function AutoMuteField({
                 <SettingsToggle
                     density={toggleDensity}
                     label="自動でミュートする"
+                    disabledReason={uiHints.enableAutoMuteReason}
                     help={settingHelp.enableAutoMute}
                     checked={!!settings.enableAutoMute}
                     disabled={uiState.enableAutoMuteDisabled}
@@ -36,7 +37,7 @@ export function AutoMuteField({
                 />
             </SettingsToggleGrid>
 
-            {uiHints.enableAutoMuteReason ? (
+            {uiHints.enableAutoMuteReason && !uiState.enableAutoMuteDisabled ? (
                 <SettingsHint>{uiHints.enableAutoMuteReason}</SettingsHint>
             ) : null}
         </SettingsFieldStack>

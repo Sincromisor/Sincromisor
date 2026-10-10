@@ -143,7 +143,7 @@ it("視線と自動ミュートを順序に依存せず確定し、通知時に�
         expect(read()).toEqual({ gaze: true, mute: true, disabled: false, hint: undefined });
         settings.updateSettings({ enableCharacterGaze: false, enableAutoMute: true });
         expect(read()).toMatchObject({ gaze: false, mute: false, disabled: true });
-        expect(read().hint).toContain("Gaze");
+        expect(read().hint).toContain("顔の向きの追跡");
     }
     settings.updateSettings({ enableCharacterGaze: true });
     expect(read()).toMatchObject({ gaze: true, mute: false, disabled: false });

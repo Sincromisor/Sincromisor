@@ -12,6 +12,7 @@ export function ResetSettingsButton() {
         try {
             await resetSincroAppSettings();
         } catch {
+            // 削除処理が記録した失敗を、部分削除と再実行の案内へ切り替える。
             setFailed(true);
         } finally {
             setPending(false);
@@ -19,7 +20,12 @@ export function ResetSettingsButton() {
     };
     return (
         <div>
-            <SettingsButton type="button" disabled={pending} onClick={() => void reset()}>
+            <SettingsButton
+                tone="danger"
+                type="button"
+                disabled={pending}
+                onClick={() => void reset()}
+            >
                 {pending ? "初期設定に戻しています…" : "全て初期設定に戻す"}
             </SettingsButton>
             {failed && (

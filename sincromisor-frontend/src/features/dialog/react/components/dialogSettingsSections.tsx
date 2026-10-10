@@ -1,4 +1,5 @@
 import type { SincroAppDialogVrmUiState } from "../../../../app/controller";
+import { SettingsButton } from "../../../settings/react/primitives/settingsActionControls";
 
 // 起動前 dialog の VRM 置き換え導線（ファイル選択 / D&D状態表示）をまとめる。
 type VrmModelSectionProps = {
@@ -10,13 +11,9 @@ export function VrmModelSection({ onOpenFilePicker }: VrmModelSectionProps) {
     return (
         <div className="configurationDialogReactSettingsPanel__vrmSection">
             <div className="configurationDialogReactSettingsPanel__subTitle">VRM-1.0 モデル</div>
-            <button
-                type="button"
-                onClick={onOpenFilePicker}
-                className="configurationDialogReactSettingsPanel__button"
-            >
+            <SettingsButton type="button" onClick={onOpenFilePicker}>
                 VRM ファイルを選択
-            </button>
+            </SettingsButton>
         </div>
     );
 }

@@ -1,9 +1,9 @@
+import { SettingsButton } from "../../../features/settings/react/primitives/settingsActionControls";
 import {
     SettingsStatusCard,
     SettingsSummaryGrid,
 } from "../../../features/settings/react/shell/settingsShell";
 import { LookingGlassSettingsSection } from "./components/lookingGlassSettingsSection";
-import { panelStyles } from "./panelStyles";
 import type { SincroControlPanelPageProps, SincroPanelState } from "./sincroControlPanelTypes";
 
 /** Looking Glassの実行状態・開始停止・次回設定を専用カテゴリへまとめる。 */
@@ -23,20 +23,26 @@ export function LookingGlassControlPage({ panelState }: SincroControlPanelPagePr
     );
 }
 
+/** 適用待ちは既存追跡状態だけから表示し、設定保存を描画への適用と混同しない。 */
 function LookingGlassStatusSummary({ panelState }: SincroControlPanelPageProps) {
     const { lookingGlass, lookingGlassConfigStatus } = panelState;
-    const lookingGlassStatusText = lookingGlass.code
-        ? `${lookingGlass.state} [${lookingGlass.code}]`
-        : lookingGlass.state;
+    const stateLabels = {
+        idle: "停止中",
+        starting: "開始中",
+        recovering: "復旧中",
+        active: "表示中",
+        error: "開始・表示に失敗",
+    };
+    const lookingGlassStatusText = stateLabels[lookingGlass.state];
     const applyLabel = lookingGlassConfigStatus.reloadRecommended
-        ? "停止後に反映"
+        ? "停止・再開始が必要"
         : lookingGlassConfigStatus.pendingForNextSession
           ? "次回起動で反映"
-          : "最新状態";
+          : "変更の反映待ちなし";
     const applyDetail = lookingGlassConfigStatus.reloadRecommended
         ? "停止してから Looking Glass をもう一度開始すると反映されます。"
         : lookingGlassConfigStatus.changedKeys.length > 0
-          ? lookingGlassConfigStatus.changedKeys.join(", ")
+          ? "変更した表示設定は、次回のLooking Glass開始時に反映されます。"
           : undefined;
 
     return (
@@ -44,7 +50,7 @@ function LookingGlassStatusSummary({ panelState }: SincroControlPanelPageProps) 
             <SettingsStatusCard
                 label="表示状態"
                 value={lookingGlassStatusText}
-                detail={lookingGlass.message}
+                detail={[lookingGlass.message, lookingGlass.code].filter(Boolean).join(" / ")}
                 tone={getLookingGlassStatusTone(panelState)}
             />
             <SettingsStatusCard
@@ -71,23 +77,18 @@ function LookingGlassActionButtons({ panelState }: SincroControlPanelPageProps) 
         panelState.lookingGlass.state === "active" || panelState.lookingGlass.state === "starting";
 
     return (
-        <div style={{ display: "flex", gap: "8px", marginBottom: "14px" }}>
-            <button
+        <div className="settingsPrimitiveButtonRow">
+            <SettingsButton
                 type="button"
+                tone="primary"
                 onClick={requestLookingGlassStart}
                 disabled={!canStart}
-                style={panelStyles.button}
             >
                 Looking Glass 開始
-            </button>
-            <button
-                type="button"
-                onClick={requestLookingGlassStop}
-                disabled={!canStop}
-                style={panelStyles.button}
-            >
+            </SettingsButton>
+            <SettingsButton type="button" onClick={requestLookingGlassStop} disabled={!canStop}>
                 Looking Glass 停止
-            </button>
+            </SettingsButton>
         </div>
     );
 }

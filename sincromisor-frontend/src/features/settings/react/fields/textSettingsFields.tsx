@@ -40,6 +40,7 @@ export function TalkModeField({
             <SettingsHelpLabel htmlFor={inputId} text="体験を選ぶ" help={settingHelp.talkMode} />
             <SettingsSelect
                 id={inputId}
+                aria-describedby={`${inputId}-description`}
                 value={settings.talkMode}
                 onChange={(event) => onTalkModeChange(event.target.value)}
                 disabled={uiState.talkModeDisabled}
@@ -47,6 +48,11 @@ export function TalkModeField({
                 <option value="chat">キャラクターと話す</option>
                 <option value="sincro">キャラクターになる</option>
             </SettingsSelect>
+            <p id={`${inputId}-description`} className="settingsPrimitiveFieldDescription">
+                {settings.talkMode === "sincro"
+                    ? "カメラで顔や体の動きをキャラクターに重ねます。"
+                    : "マイクで話しかけると、キャラクターが声で答えます。"}
+            </p>
         </div>
     );
 }

@@ -1,6 +1,6 @@
 import type { ReactNode, RefObject } from "react";
-import { useEffect, useRef, useState } from "react";
-import { joinClassNames } from "./settingsClassNames";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 type HelpTooltipProps = {
     label: string;
@@ -19,92 +19,112 @@ type SettingsHelpLabelProps = {
     help?: string;
 };
 
-/** 対象項目が分かる名前で説明を開き、外側操作やフォーカス離脱で閉じる。 */
+/** 対象項目が分かる名前で補足を開く。スクロール枠の外へ描画して長文を切らない。 */
 export function SettingsHelpTooltip({ label, help, children }: HelpTooltipProps) {
+    const tooltipId = useId();
     const containerRef = useRef<HTMLButtonElement | null>(null);
-    const [visible, setVisible] = useState<boolean>(false);
-    const [align, setAlign] = useState<"left" | "right">("left");
-
-    useDismissTooltipOnOutsidePointer(visible, containerRef, setVisible);
-    useTooltipViewportAlignment(visible, containerRef, setAlign);
-
-    if (!help) {
-        return <>{children}</>;
-    }
-
+    const bubbleRef = useRef<HTMLSpanElement | null>(null);
+    const [visible, setVisible] = useState(false);
+    const position = useTooltipPosition(visible, containerRef, bubbleRef);
+    useDismissTooltip(visible, containerRef, setVisible);
+    if (!help) return <>{children}</>;
+    // modal dialogの外へ出すとブラウザーに隠されるため、起動前はdialog直下へ置く。
+    const portalRoot = visible ? (containerRef.current?.closest("dialog") ?? document.body) : null;
     return (
-        <button
-            ref={containerRef}
-            type="button"
-            className="settingsPrimitiveHelpTooltip settingsPrimitiveHelpBadge"
-            aria-label={`${label}の説明を表示`}
-            aria-haspopup="true"
-            onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                setVisible((prev) => !prev);
-            }}
-            onMouseEnter={() => setVisible(true)}
-            onMouseLeave={() => setVisible(false)}
-            onFocus={() => setVisible(true)}
-            onBlur={() => setVisible(false)}
-        >
-            {children}
-            {visible ? (
-                <span
-                    role="tooltip"
-                    className={joinClassNames(
-                        "settingsPrimitiveHelpTooltip__bubble",
-                        align === "right" && "settingsPrimitiveHelpTooltip__bubble--right",
-                    )}
-                >
-                    {help}
-                </span>
-            ) : null}
-        </button>
+        <>
+            <button
+                ref={containerRef}
+                type="button"
+                className="settingsPrimitiveHelpBadge"
+                aria-label={`${label}の説明を表示`}
+                aria-describedby={visible ? tooltipId : undefined}
+                onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                        event.stopPropagation();
+                        setVisible(false);
+                    }
+                }}
+                onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setVisible((prev) => !prev);
+                }}
+                onMouseEnter={() => setVisible(true)}
+                onMouseLeave={() => setVisible(false)}
+                onFocus={() => setVisible(true)}
+                onBlur={() => setVisible(false)}
+            >
+                {children}
+            </button>
+            {portalRoot &&
+                createPortal(
+                    <span
+                        ref={bubbleRef}
+                        id={tooltipId}
+                        role="tooltip"
+                        className="settingsPrimitiveHelpTooltip__bubble"
+                        style={position}
+                    >
+                        {help}
+                    </span>,
+                    portalRoot,
+                )}
+        </>
     );
 }
 
-function useDismissTooltipOnOutsidePointer(
+/** 画面内で左右を制限し、下に収まらない説明はボタンの上へ置く。 */
+function useTooltipPosition(
+    visible: boolean,
+    anchorRef: RefObject<HTMLButtonElement | null>,
+    bubbleRef: RefObject<HTMLSpanElement | null>,
+) {
+    const [position, setPosition] = useState({ left: 0, top: 0 });
+    useLayoutEffect(() => {
+        const anchor = anchorRef.current;
+        const bubble = bubbleRef.current;
+        if (!visible || !anchor || !bubble) return;
+        const update = () => {
+            const rect = anchor.getBoundingClientRect();
+            const { width, height } = bubble.getBoundingClientRect();
+            setPosition({
+                left: Math.max(12, Math.min(rect.left, window.innerWidth - width - 12)),
+                top: Math.max(
+                    12,
+                    rect.bottom + height + 8 > window.innerHeight
+                        ? rect.top - height - 8
+                        : rect.bottom + 8,
+                ),
+            });
+        };
+        update();
+        // Tab移動による自動スクロールでも補足を閉じず、移動先の位置へ追従する。
+        document.addEventListener("scroll", update, true);
+        return () => document.removeEventListener("scroll", update, true);
+    }, [visible, anchorRef, bubbleRef]);
+    return position;
+}
+
+/** アンカー移動後に古い位置の説明を残さず、外側操作とリサイズで閉じる。 */
+function useDismissTooltip(
     visible: boolean,
     containerRef: RefObject<HTMLButtonElement | null>,
     setVisible: (visible: boolean) => void,
 ): void {
     useEffect(() => {
-        if (!visible) {
-            return;
-        }
+        if (!visible) return;
+        const dismiss = () => setVisible(false);
         const handlePointerDown = (event: PointerEvent) => {
-            const root = containerRef.current;
-            if (!root) {
-                return;
-            }
-            if (event.target instanceof Node && !root.contains(event.target)) {
-                setVisible(false);
-            }
+            if (event.target instanceof Node && !containerRef.current?.contains(event.target))
+                dismiss();
         };
         document.addEventListener("pointerdown", handlePointerDown);
-        return () => document.removeEventListener("pointerdown", handlePointerDown);
+        window.addEventListener("resize", dismiss);
+        return () => {
+            document.removeEventListener("pointerdown", handlePointerDown);
+            window.removeEventListener("resize", dismiss);
+        };
     }, [visible, containerRef, setVisible]);
-}
-
-function useTooltipViewportAlignment(
-    visible: boolean,
-    containerRef: RefObject<HTMLButtonElement | null>,
-    setAlign: (align: "left" | "right") => void,
-): void {
-    useEffect(() => {
-        if (!visible) {
-            return;
-        }
-        const root = containerRef.current;
-        if (!root) {
-            return;
-        }
-        // 狭い dialog / side panel 内でも説明 bubble が viewport 外へ出にくい向きを選ぶ。
-        const rect = root.getBoundingClientRect();
-        setAlign(rect.left < window.innerWidth / 2 ? "left" : "right");
-    }, [visible, containerRef, setAlign]);
 }
 
 /** 項目名を保持する共通の説明ボタン。 */

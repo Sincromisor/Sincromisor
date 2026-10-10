@@ -30,7 +30,7 @@
         --settings-shell-tab-active-border-color: transparent;
         --settings-shell-tab-active-border-right-color: transparent;
         --settings-shell-tab-active-border-bottom-color: transparent;
-        --settings-shell-tab-active-shadow: inset 3px 0 0 var(--sincro-overlay-tab-accent, rgba(159, 210, 255, 0.72)), var(--sincro-shadow-panel-soft);
+        --settings-shell-tab-active-shadow: inset 3px 0 0 var(--sincro-overlay-tab-accent, rgba(159, 210, 255, 0.72));
         --settings-shell-detail-max-width: 840px;
         --settings-shell-page-gap: var(--sincro-space-450);
         --settings-shell-page-padding: var(--sincro-space-550) var(--sincro-space-600);
@@ -44,6 +44,8 @@
         grid-template-rows: auto minmax(0, 1fr) auto;
         gap: var(--settings-shell-gap);
         color: var(--sincro-color-overlay-text-primary);
+        font: 14px/1.55 var(--sincro-font-family-base);
+        overflow-wrap: anywhere;
     }
 
     .settingsShell.is-containerResponsive {
@@ -78,7 +80,7 @@
         --settings-shell-tab-text-align: center;
         --settings-shell-tab-hover-border-right-color: rgba(130, 188, 255, 0.14);
         --settings-shell-tab-hover-border-bottom-color: transparent;
-        --settings-shell-tab-active-shadow: inset 0 3px 0 var(--sincro-overlay-tab-accent, rgba(159, 210, 255, 0.72)), var(--sincro-shadow-panel-soft);
+        --settings-shell-tab-active-shadow: inset 0 3px 0 var(--sincro-overlay-tab-accent, rgba(159, 210, 255, 0.72));
     }
 
     .settingsShell__header {
@@ -176,6 +178,7 @@
         border-right-color: var(--settings-shell-tab-active-border-right-color);
         border-bottom-color: var(--settings-shell-tab-active-border-bottom-color);
         box-shadow: var(--settings-shell-tab-active-shadow);
+        background: var(--settings-shell-nav-active);
     }
 
     /* タブは常に一列の自然幅で測定する。収まらない場合の非表示は測定幅を変えない。 */
@@ -254,7 +257,7 @@
         border-left-color: var(--settings-shell-page-border-left-color);
         border-radius: var(--settings-shell-page-radius);
         background: var(--settings-shell-surface);
-        box-shadow: var(--sincro-shadow-panel-soft);
+        box-shadow: none;
     }
 
     .settingsShell__pageHeader {
@@ -354,13 +357,13 @@
             --settings-shell-tab-text-align: center;
             --settings-shell-tab-hover-border-right-color: rgba(130, 188, 255, 0.14);
             --settings-shell-tab-hover-border-bottom-color: transparent;
-            --settings-shell-tab-active-shadow: inset 0 3px 0 var(--sincro-overlay-tab-accent, rgba(159, 210, 255, 0.72)), var(--sincro-shadow-panel-soft);
+            --settings-shell-tab-active-shadow: inset 0 3px 0 var(--sincro-overlay-tab-accent, rgba(159, 210, 255, 0.72));
         }
 
         .settingsShell.is-containerResponsive.settingsShell--compactNavigation .settingsShell__layout {
             --settings-shell-nav-padding: 0 var(--sincro-space-200);
             --settings-shell-tab-section-title-margin-top: var(--sincro-space-050);
-            --settings-shell-tab-active-shadow: inset 0 3px 0 var(--sincro-overlay-tab-accent, rgba(159, 210, 255, 0.76)), var(--sincro-shadow-panel-soft);
+            --settings-shell-tab-active-shadow: inset 0 3px 0 var(--sincro-overlay-tab-accent, rgba(159, 210, 255, 0.76));
             --settings-shell-page-gap: var(--sincro-space-350);
             --settings-shell-page-padding: var(--sincro-space-450);
             --settings-shell-page-header-padding-bottom: var(--sincro-space-300);

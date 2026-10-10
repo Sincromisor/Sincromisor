@@ -20,10 +20,12 @@ type DeviceSelectionHintProps = {
     kindLabel: string;
 };
 
+/** 空の選択値を、既定機器へ戻す設定APIの値へ変換する。 */
 export function normalizeSelectedDeviceId(value: string): string | undefined {
     return value.trim().length > 0 ? value : undefined;
 }
 
+/** 機器列挙と選択状態のスナップショットから、入力直下の利用案内を作る。 */
 export function DeviceSelectionHint({
     emptyMessage,
     snapshot,
@@ -123,7 +125,7 @@ export function VideoInputDeviceField({
         <div className={className} style={style}>
             <SettingsHelpLabel
                 htmlFor={inputId}
-                text="視線用カメラ"
+                text="追跡用カメラ"
                 help={settingHelp.videoInputDeviceId}
             />
             <SettingsSelect
