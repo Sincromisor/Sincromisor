@@ -178,7 +178,10 @@
     .rightToolFrame--settings .rightToolFrame__scroll {
         /* 設定パネル自体が surface を描くため、外枠ではなく中身の表示面を共通基準まで下げる。 */
         padding-top: var(--right-tool-frame-visual-offset-top);
-        overflow: visible;
+        height: calc(100dvh - var(--right-tool-frame-top) - var(--right-tool-frame-side));
+        overflow: hidden;
+        display: grid;
+        grid-template-rows: minmax(0, 1fr);
     }
 
     dialog#configurationDialog {
@@ -263,22 +266,8 @@
     }
 
     @media (max-width: 1100px) {
-        dialog#configurationDialog {
-            min-height: 0;
-            height: auto;
-            max-height: calc(100dvh - 24px);
-            overflow-y: auto;
-        }
-
-        .startupDialogFrame,
-        .startupDialogFrame__settingsRoot {
-            height: auto;
-            min-height: 100%;
-        }
-
         .startupDialogFrame__settingsRoot {
             --startup-dialog-frame-padding: var(--sincro-space-600) var(--sincro-space-550) var(--sincro-space-550);
-            overflow: visible;
         }
     }
 

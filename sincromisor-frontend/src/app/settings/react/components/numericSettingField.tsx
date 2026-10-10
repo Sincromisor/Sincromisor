@@ -28,7 +28,7 @@ export function NumericSettingField({
         <div style={{ display: "grid", gap: "4px" }}>
             <span style={{ opacity: 0.8, display: "flex", alignItems: "center" }}>
                 {label}
-                {help ? <SettingsHelpBadge help={help} /> : null}
+                {help ? <SettingsHelpBadge label={label} help={help} /> : null}
             </span>
             <SettingsInput
                 type="number"

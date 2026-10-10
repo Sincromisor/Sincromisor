@@ -13,12 +13,12 @@
 
 ## 右側ツールの共通規則
 
-| 所有者                                                                                            | 状態・責務                                                                                   |
-| ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `SincroAppRightToolPanelService`                                                                  | メニューの開閉、選択中パネル `none` / `settings` / `debug`、状態購読                         |
-| [RightToolMenu](../../../../sincromisor-frontend/src/features/debug/react/rightToolMenu.tsx)      | 歯車ボタン、基本設定・開発者ツールの選択、メニュー外側クリック、ショートカット               |
-| [RightToolFrame](../../../../sincromisor-frontend/src/app/shell/react/overlay/rightToolFrame.tsx) | 固定位置、画面幅に応じた幅、重なり順、スクロール、閉じるボタン、外側クリックによる閉じる操作 |
-| `SettingsShell` / `DebugConsole`                                                                  | 外枠内部の情報構成と表示                                                                     |
+| 所有者                                                                                            | 状態・責務                                                                                         |
+| ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `SincroAppRightToolPanelService`                                                                  | メニューの開閉、選択中パネル `none` / `settings` / `debug`、状態購読                               |
+| [RightToolMenu](../../../../sincromisor-frontend/src/features/debug/react/rightToolMenu.tsx)      | 歯車ボタン、基本設定・開発者ツールの選択、メニュー外側クリック、ショートカット                     |
+| [RightToolFrame](../../../../sincromisor-frontend/src/app/shell/react/overlay/rightToolFrame.tsx) | 固定位置、画面幅に応じた幅、重なり順、診断のスクロール、閉じるボタン、外側クリックによる閉じる操作 |
+| `SettingsShell` / `DebugConsole`                                                                  | 外枠内部の情報構成と表示                                                                           |
 
 Reactはアプリ制御の `debug`操作窓口を使い、窓口の組み立て時に状態取得や購読登録を実行しない。設定と診断コンソールを同時に大きく重ねない。
 

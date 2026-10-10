@@ -3,20 +3,24 @@ import { useEffect, useRef, useState } from "react";
 import { joinClassNames } from "./settingsClassNames";
 
 type HelpTooltipProps = {
+    label: string;
     help?: string;
     children: ReactNode;
 };
 
 type HelpBadgeProps = {
+    label: string;
     help: string;
 };
 
 type SettingsHelpLabelProps = {
+    htmlFor?: string;
     text: string;
     help?: string;
 };
 
-export function SettingsHelpTooltip({ help, children }: HelpTooltipProps) {
+/** 対象項目が分かる名前で説明を開き、外側操作やフォーカス離脱で閉じる。 */
+export function SettingsHelpTooltip({ label, help, children }: HelpTooltipProps) {
     const containerRef = useRef<HTMLButtonElement | null>(null);
     const [visible, setVisible] = useState<boolean>(false);
     const [align, setAlign] = useState<"left" | "right">("left");
@@ -33,7 +37,7 @@ export function SettingsHelpTooltip({ help, children }: HelpTooltipProps) {
             ref={containerRef}
             type="button"
             className="settingsPrimitiveHelpTooltip settingsPrimitiveHelpBadge"
-            aria-label="設定説明を表示"
+            aria-label={`${label}の説明を表示`}
             aria-haspopup="true"
             onClick={(event) => {
                 event.preventDefault();
@@ -103,15 +107,21 @@ function useTooltipViewportAlignment(
     }, [visible, containerRef, setAlign]);
 }
 
-export function SettingsHelpBadge({ help }: HelpBadgeProps) {
-    return <SettingsHelpTooltip help={help}>?</SettingsHelpTooltip>;
+/** 項目名を保持する共通の説明ボタン。 */
+export function SettingsHelpBadge({ label, help }: HelpBadgeProps) {
+    return (
+        <SettingsHelpTooltip label={label} help={help}>
+            ?
+        </SettingsHelpTooltip>
+    );
 }
 
-export function SettingsHelpLabel({ text, help }: SettingsHelpLabelProps) {
+/** 見えるラベルと入力を結び、説明ボタンはラベルの外へ置く。 */
+export function SettingsHelpLabel({ text, help, htmlFor }: SettingsHelpLabelProps) {
     return (
         <div className="settingsPrimitiveHelpLabel">
-            <span>{text}</span>
-            {help ? <SettingsHelpBadge help={help} /> : null}
+            {htmlFor ? <label htmlFor={htmlFor}>{text}</label> : <span>{text}</span>}
+            {help ? <SettingsHelpBadge label={text} help={help} /> : null}
         </div>
     );
 }

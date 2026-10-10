@@ -16,7 +16,6 @@ export const panelStyles: PanelStyles = {
                 borderRadius: `${tuning.rootBorderRadiusPx}px`,
                 padding: `${tuning.rootPaddingPx}px`,
                 fontSize: `${tuning.rootFontSizePx}px`,
-                maxHeight: `calc(100dvh - ${tuning.rootMaxHeightOffsetPx}px)`,
             };
         })(),
         // Debug Menu から開く専用コンテナ内に描画するため、fixed ではなく relative で組む。
@@ -29,9 +28,10 @@ export const panelStyles: PanelStyles = {
         boxShadow: "0 14px 44px rgba(0, 0, 0, 0.34)",
         backdropFilter: "blur(8px)",
         fontFamily: '"IBM Plex Sans", "BIZ UDPGothic", "UDPGothic", sans-serif',
-        overflowX: "hidden",
-        overflowY: "auto",
-        scrollbarGutter: "stable",
+        display: "grid",
+        gridTemplateRows: "minmax(0, 1fr)",
+        minHeight: 0,
+        overflow: "hidden",
         scrollbarWidth: "thin",
         scrollbarColor: "rgba(130, 188, 255, 0.65) rgba(255,255,255,0.08)",
     },

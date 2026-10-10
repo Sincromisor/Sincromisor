@@ -1,12 +1,10 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useId, useMemo, useState } from "react";
-import {
-    getIntegratedTabId,
-    IntegratedTabs,
-} from "../../../../app/shell/react/integratedTabs/integratedTabs";
 import { joinClassNames } from "../primitives/settingsClassNames";
+import { SettingsNavigation } from "./settingsNavigation";
 import "./settingsShell.css";
 
+/** カテゴリ本文とその末尾に置く補助操作。全体の主要操作はShellのfooterへ渡す。 */
 export type SettingsShellPage = {
     id: string;
     label: string;
@@ -25,6 +23,8 @@ type SettingsShellProps = {
     pages: SettingsShellPage[];
     initialPageId?: string;
     footer?: ReactNode;
+    /** 初期化など全カテゴリに共通する末尾操作。本文と同じ領域でスクロールする。 */
+    scrollEnd?: ReactNode;
     className?: string;
     responsiveMode?: "viewport" | "container";
     navigationDensity?: "regular" | "compact";
@@ -33,6 +33,7 @@ type SettingsShellProps = {
 
 type SettingsShellHeaderProps = Pick<SettingsShellProps, "badge" | "title" | "description">;
 
+/** 起動前後の設定を、固定の見出し・分類・操作とスクロール本文へ分ける。 */
 export function SettingsShell({
     ariaLabel,
     badge,
@@ -41,6 +42,7 @@ export function SettingsShell({
     pages,
     initialPageId,
     footer,
+    scrollEnd,
     className,
     responsiveMode = "viewport",
     navigationDensity = "regular",
@@ -74,6 +76,7 @@ export function SettingsShell({
         <section className={shellClassName} aria-label={ariaLabel}>
             <SettingsShellHeader badge={badge} title={title} description={description} />
             <SettingsShellBody
+                scrollEnd={scrollEnd}
                 title={title}
                 tabIdPrefix={tabIdPrefix}
                 primaryPages={primaryPages}
@@ -107,6 +110,7 @@ function settingsShellClassName({
 }
 
 type SettingsShellBodyProps = {
+    scrollEnd?: ReactNode;
     title: string;
     tabIdPrefix: string;
     primaryPages: SettingsShellPage[];
@@ -116,6 +120,7 @@ type SettingsShellBodyProps = {
 };
 
 function SettingsShellBody({
+    scrollEnd,
     title,
     tabIdPrefix,
     primaryPages,
@@ -125,28 +130,18 @@ function SettingsShellBody({
 }: SettingsShellBodyProps) {
     return (
         <div className="settingsShell__layout">
-            <SettingsShellNavSelect
+            <SettingsNavigation
                 title={title}
-                primaryPages={primaryPages}
-                developerPages={developerPages}
-                activePageId={activePage.id}
-                onSelectPage={onSelectPage}
-            />
-            <IntegratedTabs
-                className="settingsShell__nav"
-                ariaLabel={`${title} カテゴリ`}
-                groups={[
-                    { items: primaryPages },
-                    ...(developerPages.length > 0
-                        ? [{ heading: "開発者向け", items: developerPages }]
-                        : []),
-                ]}
+                pages={[...primaryPages, ...developerPages]}
                 activeId={activePage.id}
-                onSelect={onSelectPage}
                 idPrefix={tabIdPrefix}
-                getPanelId={getSettingsShellPanelId}
+                onSelect={onSelectPage}
             />
-            <SettingsShellPageDetail activePage={activePage} tabIdPrefix={tabIdPrefix} />
+            <SettingsShellPageDetail
+                activePage={activePage}
+                tabIdPrefix={tabIdPrefix}
+                scrollEnd={scrollEnd}
+            />
         </div>
     );
 }
@@ -154,7 +149,9 @@ function SettingsShellBody({
 function SettingsShellPageDetail({
     activePage,
     tabIdPrefix,
+    scrollEnd,
 }: {
+    scrollEnd?: ReactNode;
     activePage: SettingsShellPage;
     tabIdPrefix: string;
 }) {
@@ -165,10 +162,14 @@ function SettingsShellPageDetail({
                     id={getSettingsShellPanelId(tabIdPrefix, activePage.id)}
                     className="settingsShell__pageSurface"
                     role="tabpanel"
-                    aria-labelledby={getIntegratedTabId(tabIdPrefix, activePage.id)}
+                    aria-labelledby={`${tabIdPrefix}-page-title`}
+                    // biome-ignore lint/a11y/noNoninteractiveTabindex: Tabキーで操作のないカテゴリの本文にも進めるようにする。
+                    tabIndex={0}
                 >
                     <header className="settingsShell__pageHeader">
-                        <h2 className="settingsShell__pageTitle">{activePage.title}</h2>
+                        <h2 id={`${tabIdPrefix}-page-title`} className="settingsShell__pageTitle">
+                            {activePage.title}
+                        </h2>
                         {activePage.description ? (
                             <p className="settingsShell__pageDescription">
                                 {activePage.description}
@@ -180,53 +181,9 @@ function SettingsShellPageDetail({
                 {activePage.footer ? (
                     <div className="settingsShell__pageFooter">{activePage.footer}</div>
                 ) : null}
+                {scrollEnd}
             </div>
         </div>
-    );
-}
-
-type SettingsShellNavSelectProps = {
-    title: string;
-    primaryPages: SettingsShellPage[];
-    developerPages: SettingsShellPage[];
-    activePageId: string;
-    onSelectPage: (pageId: string) => void;
-};
-
-function SettingsShellNavSelect({
-    title,
-    primaryPages,
-    developerPages,
-    activePageId,
-    onSelectPage,
-}: SettingsShellNavSelectProps) {
-    const hasDeveloperPages = developerPages.length > 0;
-
-    return (
-        <label className="settingsShell__navSelectLabel">
-            <span className="settingsShell__navSelectText">カテゴリ</span>
-            <select
-                className="settingsShell__navSelect"
-                aria-label={`${title} カテゴリ`}
-                value={activePageId}
-                onChange={(event) => onSelectPage(event.currentTarget.value)}
-            >
-                {primaryPages.map((page) => (
-                    <option key={page.id} value={page.id}>
-                        {page.label}
-                    </option>
-                ))}
-                {hasDeveloperPages ? (
-                    <optgroup label="開発者向け">
-                        {developerPages.map((page) => (
-                            <option key={page.id} value={page.id}>
-                                {page.label}
-                            </option>
-                        ))}
-                    </optgroup>
-                ) : null}
-            </select>
-        </label>
     );
 }
 

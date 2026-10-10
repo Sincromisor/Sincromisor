@@ -2,12 +2,14 @@ import type { KeyboardEvent } from "react";
 import { useId } from "react";
 import "./integratedTabs.css";
 
+/** タブの識別子と表示名。内容の描画は呼び出し元が所有する。 */
 export type IntegratedTabItem = {
     id: string;
     label: string;
     tone?: "default" | "developer";
 };
 
+/** 見出し付きのタブ分類。キー移動は分類をまたいで循環する。 */
 export type IntegratedTabGroup = {
     heading?: string;
     items: IntegratedTabItem[];
@@ -27,10 +29,12 @@ function defaultPanelId(idPrefix: string, itemId: string): string {
     return `${idPrefix}-tabpanel-${itemId}`;
 }
 
+/** タブと対応する内容を結ぶ一意なDOM識別子を作る。 */
 export function getIntegratedTabId(idPrefix: string, itemId: string): string {
     return `${idPrefix}-tab-${itemId}`;
 }
 
+/** 選択とフォーカスを連動させる、設定・診断共通のタブ一覧。 */
 export function IntegratedTabs({
     ariaLabel,
     groups,
@@ -48,7 +52,14 @@ export function IntegratedTabs({
     if (items.length === 0) {
         return null;
     }
-    const handleKeyDown = createIntegratedTabKeyHandler({ activeId, items, onSelect });
+    const handleKeyDown = createIntegratedTabKeyHandler({
+        activeId,
+        items,
+        onSelect: (id) => {
+            onSelect(id);
+            document.getElementById(getIntegratedTabId(resolvedIdPrefix, id))?.focus();
+        },
+    });
 
     return (
         <div

@@ -32,8 +32,8 @@ export function SincroControlPanel({
                 navigationPlacement="top"
                 initialPageId={isLookingGlassFocused ? "looking-glass" : "conversation"}
                 pages={pages}
+                scrollEnd={<ResetSettingsButton />}
             />
-            <ResetSettingsButton />
         </section>
     );
 }

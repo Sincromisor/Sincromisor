@@ -1,7 +1,9 @@
+import { useId } from "react";
 import { SettingsHelpLabel, SettingsInput, SettingsSelect } from "../primitives/settingsPrimitives";
 import type { SettingsFieldProps } from "./settingsFieldTypes";
 import { settingHelp } from "./settingsHelp";
 
+/** 項目名を入力へ関連付け、変更を共通設定の適用窓口へ渡す。 */
 export function TitleTextField({
     settings,
     uiState,
@@ -9,10 +11,12 @@ export function TitleTextField({
     className,
     style,
 }: SettingsFieldProps & { onTitleChange: (titleText: string) => void }) {
+    const inputId = useId();
     return (
         <div className={className} style={style}>
-            <SettingsHelpLabel text="タイトル" help={settingHelp.titleText} />
+            <SettingsHelpLabel htmlFor={inputId} text="タイトル" help={settingHelp.titleText} />
             <SettingsInput
+                id={inputId}
                 type="text"
                 value={settings.titleText ?? ""}
                 onChange={(event) => onTitleChange(event.target.value)}
@@ -22,6 +26,7 @@ export function TitleTextField({
     );
 }
 
+/** 項目名を入力へ関連付け、変更を共通設定の適用窓口へ渡す。 */
 export function TalkModeField({
     settings,
     uiState,
@@ -29,10 +34,16 @@ export function TalkModeField({
     className,
     style,
 }: SettingsFieldProps & { onTalkModeChange: (talkMode: string) => void }) {
+    const inputId = useId();
     return (
         <div className={className} style={style}>
-            <SettingsHelpLabel text="トークモード (talk mode)" help={settingHelp.talkMode} />
+            <SettingsHelpLabel
+                htmlFor={inputId}
+                text="トークモード (talk mode)"
+                help={settingHelp.talkMode}
+            />
             <SettingsSelect
+                id={inputId}
                 value={settings.talkMode}
                 onChange={(event) => onTalkModeChange(event.target.value)}
                 disabled={uiState.talkModeDisabled}

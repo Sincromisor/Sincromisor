@@ -29,6 +29,7 @@ export function SettingsToggleGrid({ children, density = "regular" }: SettingsTo
     );
 }
 
+/** 設定の有効状態と操作可否を表示し、項目別の説明を添える。 */
 export function SettingsToggle({
     label,
     help,
@@ -54,7 +55,7 @@ export function SettingsToggle({
             />
             <span className="settingsPrimitiveToggle__label">
                 {label}
-                {help ? <SettingsHelpBadge help={help} /> : null}
+                {help ? <SettingsHelpBadge label={label} help={help} /> : null}
             </span>
         </label>
     );

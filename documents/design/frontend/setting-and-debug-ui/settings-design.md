@@ -23,22 +23,28 @@
 
 起動前後で項目を一致させること自体を目的にせず、VRM選択、初期調整、Looking Glassのように利用場面が異なる操作は各画面が所有する。Looking Glass用の先頭分類はトークモードを含み、タイトル入力は表示しない。起動前には通常の「会話」がある。
 
+起動前・開始後とも、カテゴリは一列に表示する。`SettingsNavigation`が表示領域とタブの自然幅を `ResizeObserver`で測定し、収まらないときは名前付きのカテゴリ選択欄へ切り替える。ラベルやカテゴリ数が変わっても複数段へ折り返さない。矢印キーとHome/Endは選択とフォーカスを同時に移し、Tabで現在の本文へ進む。選択欄の `aria-controls`と本文の見出しで、分類と内容を関連付ける。
+
+外枠は画面内の高さを確保し、見出し・カテゴリ操作・起動前の開始操作を固定する。スクロールは `SettingsShell`の本文領域が所有し、分類ごとの補助操作と全設定の初期化も同じ領域の末尾へ置く。狭幅でも外枠全体のスクロールへ切り替えない。開始後の閉じる操作は外枠が固定表示する。
+
+タイトル・トークモード・機器選択・動作量には見えるラベルを関連付け、説明ボタンにも対象項目名を付ける。動作量は保存値をそのまま表示するためHTMLのrangeを `step="any"`とし、利用者入力の正規化だけを設定モデルの0.01刻みで行う。百分率も保存値の小数部分を保持する。
+
 ## 責務
 
 以下の実装パスは `sincromisor-frontend/`を基準とする。
 
-| 所有者                                                                                                        | 責務                                                                                         |
-| ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| [共通設定部品](../../../../sincromisor-frontend/src/features/settings/react/)                                 | `fields`が入力、`primitives`が表示部品、`shell`が分類と本文、`pages`が分類順を持つ           |
-| [既定値](../../../../sincromisor-frontend/src/app/settings/sincroAppSettingsDefaults.ts)                      | 設定スナップショット、UI代替値、数値範囲、Looking Glass既定値の正本                          |
-| [設定ストア](../../../../sincromisor-frontend/src/app/settings/sincroAppSettingsStore.ts)                     | 値・操作可否・案内・開始設定の状態と購読通知                                                 |
-| [設定適用](../../../../sincromisor-frontend/src/app/settings/sincroAppSettingsApplyFlow.ts)                   | 数値正規化、一括反映、関連状態の再構築、完了後の通知                                         |
-| [DialogManager](../../../../sincromisor-frontend/src/features/dialog/model/dialogManager.ts)                  | 開閉・開始案内・VRM操作。通常設定の状態と適用規則は持たない                                  |
-| [設定モデル](../../../../sincromisor-frontend/src/app/settings/sincroAppSettingsModel.ts)                     | 通常設定の値・適用・通知、操作可否、利用不可の理由、開始条件                                 |
-| [起動前画面](../../../../sincromisor-frontend/src/features/dialog/react/configurationDialogSettingsPages.tsx) | ダイアログ固有の状態、通知、VRM選択の手順                                                    |
-| [開始後画面](../../../../sincromisor-frontend/src/app/settings/react/sincroControlPanelPages.tsx)             | ページ種別に応じた設定分類と状態表示の組み立て                                               |
-| [StartupDialogFrame](../../../../sincromisor-frontend/src/app/shell/react/overlay/startupDialogFrame.tsx)     | 起動前ダイアログ内側の表示面、通知層、余白とスクロール用の構造                               |
-| [RightToolFrame](../../../../sincromisor-frontend/src/app/shell/react/overlay/rightToolFrame.tsx)             | 開始後の右側領域の位置、幅、重なり順、スクロール、閉じるボタン、外側クリックによる閉じる操作 |
+| 所有者                                                                                                        | 責務                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| [共通設定部品](../../../../sincromisor-frontend/src/features/settings/react/)                                 | `fields`が入力、`primitives`が表示部品、`shell`が分類と本文、`pages`が分類順を持つ                       |
+| [既定値](../../../../sincromisor-frontend/src/app/settings/sincroAppSettingsDefaults.ts)                      | 設定スナップショット、UI代替値、数値範囲、Looking Glass既定値の正本                                      |
+| [設定ストア](../../../../sincromisor-frontend/src/app/settings/sincroAppSettingsStore.ts)                     | 値・操作可否・案内・開始設定の状態と購読通知                                                             |
+| [設定適用](../../../../sincromisor-frontend/src/app/settings/sincroAppSettingsApplyFlow.ts)                   | 数値正規化、一括反映、関連状態の再構築、完了後の通知                                                     |
+| [DialogManager](../../../../sincromisor-frontend/src/features/dialog/model/dialogManager.ts)                  | 開閉・開始案内・VRM操作。通常設定の状態と適用規則は持たない                                              |
+| [設定モデル](../../../../sincromisor-frontend/src/app/settings/sincroAppSettingsModel.ts)                     | 通常設定の値・適用・通知、操作可否、利用不可の理由、開始条件                                             |
+| [起動前画面](../../../../sincromisor-frontend/src/features/dialog/react/configurationDialogSettingsPages.tsx) | ダイアログ固有の状態、通知、VRM選択の手順                                                                |
+| [開始後画面](../../../../sincromisor-frontend/src/app/settings/react/sincroControlPanelPages.tsx)             | ページ種別に応じた設定分類と状態表示の組み立て                                                           |
+| [StartupDialogFrame](../../../../sincromisor-frontend/src/app/shell/react/overlay/startupDialogFrame.tsx)     | 起動前ダイアログ内側の表示面、通知層、余白とスクロール用の構造                                           |
+| [RightToolFrame](../../../../sincromisor-frontend/src/app/shell/react/overlay/rightToolFrame.tsx)             | 開始後の右側領域の位置、幅、高さ、重なり順、診断のスクロール、閉じるボタン、外側クリックによる閉じる操作 |
 
 `SettingsShell`は分類の選択と本文構造を持ち、画面上の固定位置や重ね表示の装飾は持たない。外枠と排他表示の共通規則は[デバッグUIの設計](debug-design.md#右側ツールの共通規則)を参照する。
 

@@ -7,6 +7,8 @@
         max-width: 100%;
         padding: 0;
         display: grid;
+        grid-template-rows: minmax(0, 1fr);
+        min-width: 0;
         font-size: var(--sincro-font-size-200);
         line-height: var(--sincro-line-height-normal);
         color: var(--sincro-color-overlay-text-primary);
@@ -306,39 +308,6 @@
     }
 
     @media (max-width: 1100px) {
-        .configurationDialogReactSettingsPanel {
-            height: auto;
-            min-height: 100%;
-        }
-
-        .configurationDialogReactSettingsPanel .settingsShell--startupDialog {
-            height: auto;
-            min-height: 0;
-            grid-template-rows: none;
-        }
-
-        .configurationDialogReactSettingsPanel .settingsShell--startupDialog .settingsShell__layout {
-            width: 100%;
-            max-width: none;
-            margin-inline: 0;
-        }
-
-        .configurationDialogReactSettingsPanel .settingsShell--startupDialog .settingsShell__nav {
-            width: 100%;
-            justify-self: stretch;
-        }
-
-        .configurationDialogReactSettingsPanel .settingsShell--startupDialog .settingsShell__detail {
-            height: auto;
-            overflow: visible;
-        }
-
-        .configurationDialogReactSettingsPanel .settingsShell--startupDialog .settingsShell__detailScroll {
-            height: auto;
-            overflow: visible;
-            scrollbar-gutter: auto;
-        }
-
         .configurationDialogReactSettingsPanel__footer {
             grid-template-columns: 1fr;
             align-items: start;
