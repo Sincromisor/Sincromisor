@@ -1,3 +1,4 @@
+import { SettingsButton } from "../../settings/react/primitives/settingsActionControls";
 import type { useConfigurationDialogSettingsState } from "./useConfigurationDialogSettingsState";
 
 type ConfigurationDialogSettingsState = ReturnType<typeof useConfigurationDialogSettingsState>;
@@ -24,26 +25,23 @@ export function ConfigurationDialogSettingsFooter({
     return (
         <div className="configurationDialogReactSettingsPanel__footer">
             <div className="configurationDialogReactSettingsPanel__footerLead">
-                <button
-                    type="button"
-                    className="configurationDialogReactSettingsPanel__button"
-                    onClick={onToggleDetails}
-                >
+                <SettingsButton type="button" onClick={onToggleDetails}>
                     {showDetails ? "開始画面へ戻る" : "詳しい設定"}
-                </button>
+                </SettingsButton>
                 <a className="configurationDialogReactSettingsPanel__backLink" href="/">
                     トップへ戻る
                 </a>
             </div>
             <div className="configurationDialogReactSettingsPanel__primaryAction">
-                <button
+                <SettingsButton
                     type="button"
+                    tone="primary"
                     className="configurationDialogReactSettingsPanel__startButton"
                     onClick={startApp}
                     disabled={!currentController || dialogUiState.startButtonDisabled}
                 >
                     {startButtonLabel}
-                </button>
+                </SettingsButton>
                 {startButtonHint ? (
                     <div className="configurationDialogReactSettingsPanel__hintText">
                         {startButtonHint}

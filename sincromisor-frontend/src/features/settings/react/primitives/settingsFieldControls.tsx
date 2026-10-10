@@ -6,6 +6,8 @@ import { SettingsHelpLabel } from "./settingsHelp";
 type SettingsRangeProps = {
     label: string;
     help?: string;
+    description?: string;
+    disabledReason?: string;
     value: number;
     valueLabel: string;
     min: number;
@@ -33,6 +35,8 @@ export function SettingsSelect(props: SelectHTMLAttributes<HTMLSelectElement>) {
 export function SettingsRange({
     label,
     help,
+    description,
+    disabledReason,
     value,
     valueLabel,
     min,
@@ -42,6 +46,7 @@ export function SettingsRange({
     onChange,
 }: SettingsRangeProps) {
     const inputId = useId();
+    const descriptionId = useId();
     return (
         <div className={joinClassNames("settingsPrimitiveRange", disabled && "is-disabled")}>
             <span className="settingsPrimitiveRange__header">
@@ -56,9 +61,20 @@ export function SettingsRange({
                 step={step}
                 value={value}
                 disabled={disabled}
+                aria-describedby={description || disabled ? descriptionId : undefined}
                 className="settingsPrimitiveRange__input"
                 onChange={(event) => onChange(Number.parseFloat(event.currentTarget.value))}
             />
+            {(description || disabled) && (
+                <span id={descriptionId} className="settingsPrimitiveFieldDescription">
+                    {description}
+                    {disabled && (
+                        <span className="settingsPrimitiveDisabledReason">
+                            {disabledReason ?? "現在の構成では変更できません。"}
+                        </span>
+                    )}
+                </span>
+            )}
         </div>
     );
 }

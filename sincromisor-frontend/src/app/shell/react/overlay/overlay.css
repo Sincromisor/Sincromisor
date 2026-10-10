@@ -1,4 +1,17 @@
 @layer components {
+    dialog#configurationDialog,
+    .rightToolFrame--settings {
+        --sincro-surface-overlay-frame: #171e28;
+        --sincro-surface-overlay-panel: #1c2531;
+        --sincro-surface-overlay-panel-soft: #1c2531;
+        --sincro-surface-dialog: #171e28;
+        --sincro-surface-nav-active: #293b50;
+        --sincro-shadow-panel-soft: none;
+        --sincro-color-border-subtle: #354151;
+        --sincro-radius-600: 12px;
+        --sincro-radius-500: 8px;
+    }
+
     :root {
         --overlay-close-button-size: 38px;
         --overlay-close-button-size-compact: 36px;

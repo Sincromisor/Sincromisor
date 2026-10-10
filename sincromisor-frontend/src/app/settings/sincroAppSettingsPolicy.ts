@@ -85,7 +85,7 @@ export class SincroAppSettingsPolicy {
 
         let enableCharacterReason: string | undefined;
         if (characterDisabled) {
-            enableCharacterReason = "このページまたは端末では Character 表示を利用できません。";
+            enableCharacterReason = "このページまたは端末では3Dキャラクター表示を利用できません。";
         }
         const { audioInputDeviceReason, videoInputDeviceReason, selectedVideoUnavailable } =
             this.buildMediaDeviceHints(context, characterGazeEnabled);
@@ -144,14 +144,14 @@ export class SincroAppSettingsPolicy {
     }): string | undefined {
         if (options.gazeDisabled) {
             if (options.startUnavailable) {
-                return "開始条件を満たしていないため、Gaze を有効化できません。";
+                return "開始条件を満たしていないため、顔の向きの追跡を有効化できません。";
             }
             return options.characterDisabled
-                ? "先に Character を有効にしてください。"
-                : "現在の構成では Gaze を利用できません。";
+                ? "先に3Dキャラクター表示を有効にしてください。"
+                : "現在の構成では顔の向きの追跡を利用できません。";
         }
         if (options.characterGazeEnabled && options.selectedVideoUnavailable) {
-            return "選択中の視線用カメラが見つからないため、このままでは Gaze を開始できません。";
+            return "選択中の追跡用カメラが見つからないため、このままでは顔の向きの追跡を開始できません。";
         }
         return undefined;
     }
@@ -164,8 +164,8 @@ export class SincroAppSettingsPolicy {
             return undefined;
         }
         return characterGazeEnabled
-            ? "現在の構成では AutoMute を利用できません。"
-            : "AutoMute を使うには Gaze を有効にしてください。";
+            ? "現在の構成では自動ミュートを利用できません。"
+            : "自動ミュートを使うには顔の向きの追跡を有効にしてください。";
     }
 
     /** マイク利用不可と明示選択した必須機器の不在だけを開始拒否にする。 */
@@ -198,7 +198,7 @@ export class SincroAppSettingsPolicy {
             !context.videoInputSelection.isAvailable
         ) {
             blockedReasons.push(
-                "Gaze が有効なため、有効な視線用カメラが必要です。別のカメラかブラウザ既定へ切り替えてください。",
+                "顔の向きの追跡が有効なため、有効な追跡用カメラが必要です。別のカメラかブラウザ既定へ切り替えてください。",
             );
         }
 
@@ -266,6 +266,6 @@ function buildVideoInputDeviceHint(
         return undefined;
     }
     return characterGazeEnabled
-        ? "選択中の視線用カメラが見つからないため、Gaze を使う前に別のカメラかブラウザ既定へ切り替えてください。"
-        : "選択中の視線用カメラは現在見つかりません。Gaze を使うときは別のカメラかブラウザ既定へ切り替えてください。";
+        ? "選択中の追跡用カメラが見つからないため、顔の向きの追跡を使う前に別のカメラかブラウザ既定へ切り替えてください。"
+        : "選択中の追跡用カメラは現在見つかりません。顔の向きの追跡を使うときは別のカメラかブラウザ既定へ切り替えてください。";
 }

@@ -1,4 +1,4 @@
-/** 入力の用途と反映先を起動前・常設設定の説明ボタンで共有する。 */
+/** 入力の用途と反映先を起動前・常設設定の常時説明と補足で共有する。 */
 export const settingHelp = {
     titleText:
         "会話UIなどに表示されるタイトル文字列です。配信名・キャラクター名を表示したい時に設定します。",
@@ -7,7 +7,7 @@ export const settingHelp = {
     audioInputDeviceId:
         "使うマイクを選びます。未選択ならブラウザで既定になっているマイクを使います。",
     videoInputDeviceId:
-        "顔の向きや視線の検出に使うカメラを選びます。未選択ならブラウザで既定になっているカメラを使います。",
+        "顔の向き・視線・姿勢の追跡に使うカメラを選びます。未選択ならブラウザで既定になっているカメラを使います。",
     enableNoiseSuppression:
         "周囲のザーッというノイズを抑えます。部屋の空調音やPCファン音が入りやすい時に向いています。",
     enableEchoCancellation:
@@ -23,7 +23,7 @@ export const settingHelp = {
     enableCharacterGaze:
         "カメラから顔の向きや視線を読み取ります。顔の向きに合わせた演出や自動ミュートを使いたい時にオンにします。",
     enableSincroPoseTracking:
-        "sincro で肩・上半身・腕の動きを低振幅で反映します。重い時や姿勢検出が不安定な時はオフにできます。",
+        "「キャラクターになる」で肩・上半身・腕の動きを低振幅で反映します。重い時や姿勢検出が不安定な時はオフにできます。",
     forceSincroPoseTracking:
         "低性能端末でのデバッグ用です。姿勢推論が遅くても face-only へ自動降格せず、PoseLandmarker の出力を観測し続けます。",
     enableAutoMute:
@@ -31,9 +31,9 @@ export const settingHelp = {
     characterMotionScale:
         "呼吸、聞き姿勢、AI発話中の上半身モーションの強さです。前後の揺れが大きい時は下げます。",
     sincroPoseRetargetScale:
-        "sincro の姿勢同期をキャラクターへ反映する強さです。腕や肩が動きすぎる時は下げます。",
+        "「キャラクターになる」で姿勢をキャラクターへ反映する強さです。腕や肩が動きすぎる時は下げます。",
     characterEyeTrackingScale:
-        "顔位置に追従する eyeball の動きの強さです。視線が動きすぎる時は下げます。",
+        "顔位置に追従する目線の動きの強さです。視線が動きすぎる時は下げます。",
     enableVR: "VR で開くための準備を行います。VR 対応ページを使う時だけオンにします。",
     lgTileHeight:
         "Looking Glass のタイル解像度の高さです。高いほど精細になりますが負荷が増えます。まずは既定値から調整してください。",

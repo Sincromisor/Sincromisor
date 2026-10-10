@@ -1,10 +1,13 @@
 import type { ReactNode } from "react";
+import { useId } from "react";
 import { joinClassNames } from "./settingsClassNames";
 import { SettingsHelpBadge } from "./settingsHelp";
 
 type SettingsToggleProps = {
     label: string;
     help?: string;
+    description?: string;
+    disabledReason?: string;
     checked: boolean;
     disabled?: boolean;
     density?: "compact" | "regular";
@@ -16,6 +19,7 @@ type SettingsToggleGridProps = {
     density?: "compact" | "regular";
 };
 
+/** 設定のまとまりを幅に応じて配置する。 */
 export function SettingsToggleGrid({ children, density = "regular" }: SettingsToggleGridProps) {
     return (
         <div
@@ -33,11 +37,15 @@ export function SettingsToggleGrid({ children, density = "regular" }: SettingsTo
 export function SettingsToggle({
     label,
     help,
+    description,
+    disabledReason,
     checked,
     disabled = false,
     density = "regular",
     onChange,
 }: SettingsToggleProps) {
+    const descriptionId = useId();
+    const labelId = useId();
     return (
         <label
             className={joinClassNames(
@@ -48,14 +56,28 @@ export function SettingsToggle({
         >
             <input
                 type="checkbox"
+                aria-labelledby={labelId}
                 checked={checked}
                 disabled={disabled}
+                aria-describedby={description || disabled ? descriptionId : undefined}
                 className="settingsPrimitiveToggle__input"
                 onChange={(event) => onChange(event.target.checked)}
             />
-            <span className="settingsPrimitiveToggle__label">
-                {label}
-                {help ? <SettingsHelpBadge label={label} help={help} /> : null}
+            <span className="settingsPrimitiveToggle__content">
+                <span className="settingsPrimitiveToggle__label">
+                    <span id={labelId}>{label}</span>
+                    {help ? <SettingsHelpBadge label={label} help={help} /> : null}
+                </span>
+                {(description || disabled) && (
+                    <span id={descriptionId} className="settingsPrimitiveFieldDescription">
+                        {description}
+                        {disabled && (
+                            <span className="settingsPrimitiveDisabledReason">
+                                {disabledReason ?? "現在の構成では変更できません。"}
+                            </span>
+                        )}
+                    </span>
+                )}
             </span>
         </label>
     );

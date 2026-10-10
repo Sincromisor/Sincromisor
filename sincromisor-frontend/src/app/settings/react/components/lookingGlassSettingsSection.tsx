@@ -19,7 +19,7 @@ const LOOKING_GLASS_PRESETS: Array<{
     values: Partial<SincroAppSettingsSnapshot>;
 }> = [
     {
-        label: "標準 (Default)",
+        label: "標準",
         // アプリ全体の Looking Glass 既定値と同じ値へ戻すための preset。
         values: {
             lgTileHeight: defaultSincroAppSettingsSnapshot.lgTileHeight,
@@ -32,7 +32,7 @@ const LOOKING_GLASS_PRESETS: Array<{
         },
     },
     {
-        label: "縦長 (Portrait)",
+        label: "縦長",
         values: {
             lgTileHeight: 640,
             lgNumViews: 45,
@@ -44,7 +44,7 @@ const LOOKING_GLASS_PRESETS: Array<{
         },
     },
     {
-        label: "広角 (Wide)",
+        label: "広角",
         values: {
             lgTileHeight: 512,
             lgNumViews: 48,
@@ -56,7 +56,7 @@ const LOOKING_GLASS_PRESETS: Array<{
         },
     },
     {
-        label: "焦点調整用 (Focus)",
+        label: "焦点調整用",
         values: {
             lgTileHeight: 512,
             lgNumViews: 45,
@@ -95,7 +95,7 @@ function LookingGlassSectionHeader({ showSectionTitle }: { showSectionTitle: boo
                 これらの値は、次回の Looking Glass 起動時に適用されます。
             </SettingsHint>
             <SettingsHint className="settingsPrimitiveHint--bottomGap">
-                ピンボケ気味の場合は、まず <code>Target Z</code> と <code>Target Diam</code>{" "}
+                ピンボケ気味の場合は、まず「注視する奥行き」と「注視する範囲」
                 を少しずつ調整してください。
             </SettingsHint>
         </>
@@ -145,7 +145,7 @@ function LookingGlassDisplaySettingsFields({
     return (
         <>
             <NumericSettingField
-                label="タイル高さ (Tile Height)"
+                label="タイルの高さ"
                 help={settingHelp.lgTileHeight}
                 value={settings.lgTileHeight}
                 min={256}
@@ -154,7 +154,7 @@ function LookingGlassDisplaySettingsFields({
                 onChange={(value) => onApplySettings({ lgTileHeight: value })}
             />
             <NumericSettingField
-                label="視差ビュー数 (Views)"
+                label="視差ビュー数"
                 help={settingHelp.lgNumViews}
                 value={settings.lgNumViews}
                 min={8}
@@ -163,7 +163,7 @@ function LookingGlassDisplaySettingsFields({
                 onChange={(value) => onApplySettings({ lgNumViews: value })}
             />
             <NumericSettingField
-                label="奥行き強調 (Depthiness)"
+                label="奥行きの強調"
                 help={settingHelp.lgDepthiness}
                 value={settings.lgDepthiness}
                 min={0}
@@ -172,7 +172,7 @@ function LookingGlassDisplaySettingsFields({
                 onChange={(value) => onApplySettings({ lgDepthiness: value })}
             />
             <NumericSettingField
-                label="縦FOV (FOV Y, deg)"
+                label="縦方向の視野角（度）"
                 help={settingHelp.lgFovyDeg}
                 value={settings.lgFovyDeg}
                 min={5}
@@ -191,7 +191,7 @@ function LookingGlassTargetSettingsFields({
     return (
         <>
             <NumericSettingField
-                label="注視高さ (Target Y)"
+                label="注視する高さ"
                 help={settingHelp.lgTargetY}
                 value={settings.lgTargetY}
                 min={-2}
@@ -200,7 +200,7 @@ function LookingGlassTargetSettingsFields({
                 onChange={(value) => onApplySettings({ lgTargetY: value })}
             />
             <NumericSettingField
-                label="注視奥行き (Target Z)"
+                label="注視する奥行き"
                 help={settingHelp.lgTargetZ}
                 value={settings.lgTargetZ}
                 min={-1}
@@ -209,7 +209,7 @@ function LookingGlassTargetSettingsFields({
                 onChange={(value) => onApplySettings({ lgTargetZ: value })}
             />
             <NumericSettingField
-                label="注視範囲 (Target Diam)"
+                label="注視する範囲"
                 help={settingHelp.lgTargetDiam}
                 value={settings.lgTargetDiam}
                 min={0.1}
