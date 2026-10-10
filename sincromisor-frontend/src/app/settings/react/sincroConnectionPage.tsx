@@ -2,65 +2,20 @@ import {
     connectionStatusLabel,
     createStartupOptionHint,
 } from "../../../features/settings/react/sections/settingsConnectionText";
-import { settingsPageCopy } from "../../../features/settings/react/shell/settingsPageCopy";
-import { DiagnosticsStatusCards } from "./components/diagnosticsStatusCards";
-import { SettingsCategorySection, StartupSettingsSection } from "./components/settingsSections";
 import { panelStyles } from "./panelStyles";
 import type { SincroControlPanelPageProps } from "./sincroControlPanelTypes";
 
-/** 開始時の設定と接続状態・操作を共通パネルの接続カテゴリへまとめる。 */
+/** 診断値を含めず、全分類から見える共通領域に接続状態と操作を置く。 */
 export function ConnectionSettingsPage({ panelState }: SincroControlPanelPageProps) {
-    const hasStartupOptions = panelState.startupSettingsCapabilities.enableVR;
-
     return (
-        <>
-            {hasStartupOptions ? <StartupSettingsCategory panelState={panelState} /> : null}
-            <ConnectionStatusCategory panelState={panelState} />
-        </>
-    );
-}
-
-function StartupSettingsCategory({ panelState }: SincroControlPanelPageProps) {
-    return (
-        <SettingsCategorySection title={settingsPageCopy.connection.startupSectionTitle}>
-            <StartupSettingsSection
-                settings={panelState.settings}
-                uiState={panelState.settingsUiState}
-                onApplySettings={panelState.applySettings}
-                isRunning={panelState.lifecycleState === "running"}
-                startupStatus={panelState.startupSettingsStatus}
-                startupCapabilities={panelState.startupSettingsCapabilities}
-                showSectionTitle={false}
+        <div className="settingsPrimitiveFieldStack">
+            <ConnectionStatusCard
+                value={panelState.connectionState.value}
+                detail={panelState.connectionState.detail ?? ""}
+                startupOptionHint={createStartupOptionHint(panelState.startupSettingsStatus)}
             />
-        </SettingsCategorySection>
-    );
-}
-
-function ConnectionStatusCategory({ panelState }: SincroControlPanelPageProps) {
-    const detail =
-        panelState.connectionState.detail ??
-        (panelState.hasActiveController ? "接続済みです。" : "");
-    const startupOptionHint = createStartupOptionHint(panelState.startupSettingsStatus);
-
-    return (
-        <SettingsCategorySection title={settingsPageCopy.connection.statusSectionTitle}>
-            <div style={{ display: "grid", gap: "14px" }}>
-                <ConnectionStatusCard
-                    value={panelState.connectionState.value}
-                    detail={detail}
-                    startupOptionHint={startupOptionHint}
-                />
-                <DiagnosticsStatusCards
-                    vadState={panelState.vadState}
-                    gaze={panelState.gaze}
-                    rtcState={panelState.rtcState}
-                    learnedVad={panelState.learnedVad}
-                    lookingGlass={panelState.lookingGlass}
-                    cameraGuide={panelState.cameraGuide}
-                />
-                <ConnectionActionButtons panelState={panelState} />
-            </div>
-        </SettingsCategorySection>
+            <ConnectionActionButtons panelState={panelState} />
+        </div>
     );
 }
 

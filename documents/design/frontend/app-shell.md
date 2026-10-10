@@ -52,7 +52,7 @@
     - 管理処理は口形同期と最新6発話・合計240文字以内の文字列履歴を保持し、Reactが初期履歴と受信後の更新を描画する。空文字は空白として連結する。
     - 横幅を超えた表示はReact側で最新文字へスクロールし、旧DOM描画への切替は行わない。
 - 設定の外枠
-    - `StartupDialogFrame`と設定用の `RightToolFrame`は画面内の高さを確保し、設定全体をスクロールさせない。`SettingsShell`が見出し・カテゴリ・主要操作を固定し、本文と末尾の初期化操作をスクロールする。診断用の外枠は従来どおり診断全体のスクロールを所有する。
+    - `StartupDialogFrame`と設定用の `RightToolFrame`は画面内の高さを確保し、設定全体をスクロールさせない。`SettingsShell`が見出し・カテゴリ・主要操作を固定し、本文をスクロールする。初期化操作は「画面・保存」に置く。診断用の外枠は従来どおり診断全体のスクロールを所有する。
 - React設定 / デバッグ構成要素
     - 表示と操作に専念し、WebRTCやMediaPipeの制御処理を直接持たない。
 
@@ -97,7 +97,7 @@
     - 視線 / 追跡診断情報
     - `sincro`追跡中のカメラ品質案内。`SincroAppEvent`の
       `camera-quality-changed` / `camera-quality-reset`をパネル内の `PanelCameraGuideState`へ還元し、
-      接続ページの診断情報一覧直前に先頭案内文言一件だけを表示する。`chat`モード、カメラ停止、
+      「カメラ・動き」に先頭案内文言一件だけを表示する。`chat`モード、カメラ停止、
       追跡再初期化、有効制御処理解除では古くなった案内を残さない。
 - UI状態
     - 起動前ダイアログ開閉状態
@@ -154,6 +154,10 @@
 - `documents/design/frontend/setting-and-debug-ui/README.md`
 - `documents/design/archive/legacy-flat/frontend_ui.md`
 - `documents/design/archive/legacy-flat/frontend_migration_react.md`
+
+## 起動前と常設設定の役割
+
+起動前は体験・現在モデル・必要な入力機器を選ぶ概要と、共通5分類の詳細を切り替える。開始操作は両表示で固定する。常設側も「体験」「キャラクター」「マイク・音声」「カメラ・動き」「画面・保存」の5分類を使い、接続状態と開始停止を本文から独立した固定領域に置く。診断値は開発者ツールへ集約し、カメラ品質案内と初期調整は通常設定に残す。
 
 ## 通常設定の保存と起動順序
 

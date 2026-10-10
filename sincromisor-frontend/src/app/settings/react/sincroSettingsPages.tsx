@@ -1,105 +1,51 @@
-import { createCoreSettingsPages } from "../../../features/settings/react/pages/coreSettingsPages";
-import { SettingsCategorySection } from "../../../features/settings/react/sections/settingsCategorySection";
-import { settingsPageCopy } from "../../../features/settings/react/shell/settingsPageCopy";
-import type { SettingsShellPage } from "../../../features/settings/react/shell/settingsShell";
+import { useConfigurationDialogSettingsState } from "../../../features/dialog/react/useConfigurationDialogSettingsState";
+import { createPurposeSettingsPages } from "../../../features/settings/react/pages/purposeSettingsPages";
 import {
-    BasicSettingsSection,
-    CharacterSettingsSection,
-    MicSettingsSection,
-} from "./components/settingsSections";
-import type { SincroControlPanelPageProps, SincroPanelState } from "./sincroControlPanelTypes";
+    SettingsButton,
+    SettingsHint,
+} from "../../../features/settings/react/primitives/settingsPrimitives";
+import { CameraQualityGuideCard } from "./components/diagnosticsStatusCards";
+import { InitialCalibrationRetryCard } from "./components/initialCalibrationRetryCard";
+import type { SincroPanelState } from "./sincroControlPanelTypes";
 
-/** アプリの設定・操作を共通入力部品へ接続し、会話・機器・音声・表示を組み立てる。 */
-export function createSincroSettingsPages(panelState: SincroPanelState): SettingsShellPage[] {
-    return createCoreSettingsPages({
-        conversation: <ConversationSettingsPage panelState={panelState} />,
-        devices: <DeviceSettingsPage panelState={panelState} />,
-        audio: <AudioSettingsPage panelState={panelState} />,
-        display: <DisplaySettingsPage panelState={panelState} />,
+/** 常設側の共通分類へ、現在のVRMとカメラの改善案内・較正操作を加える。 */
+export function createSincroSettingsPages(state: SincroPanelState) {
+    return createPurposeSettingsPages({
+        state,
+        experience: (
+            <SettingsHint>
+                体験を変えたときは、接続を停止してからもう一度開始すると会話に反映されます。
+            </SettingsHint>
+        ),
+        character: <CurrentCharacter />,
+        camera: (
+            <>
+                <CameraQualityGuideCard state={state.cameraGuide} />
+                <InitialCalibrationRetryCard
+                    state={state.calibrationState}
+                    onRetry={state.retryCalibration}
+                />
+            </>
+        ),
     });
 }
 
-function ConversationSettingsPage({ panelState }: SincroControlPanelPageProps) {
+/** VRMの状態はダイアログ所有者から購読し、交換は既存の起動前設定へ戻す。 */
+function CurrentCharacter() {
+    const { currentController, dialogVrmUiState } = useConfigurationDialogSettingsState();
     return (
-        <SettingsCategorySection title={settingsPageCopy.conversation.sectionTitle}>
-            <BasicSettingsSection
-                settings={panelState.settings}
-                uiState={panelState.settingsUiState}
-                onTitleChange={(titleText) => panelState.applySettings({ titleText })}
-                onTalkModeChange={panelState.changeTalkMode}
-                showTitle={true}
-                showTalkMode={true}
-                showSectionTitle={false}
-            />
-        </SettingsCategorySection>
-    );
-}
-
-function DeviceSettingsPage({ panelState }: SincroControlPanelPageProps) {
-    return (
-        <SettingsCategorySection title={settingsPageCopy.devices.sectionTitle}>
-            <MicSettingsSection
-                settings={panelState.settings}
-                uiState={panelState.settingsUiState}
-                uiHints={panelState.settingsUiHints}
-                mediaDeviceSnapshot={panelState.mediaDeviceSnapshot}
-                audioInputSelection={panelState.audioInputSelection}
-                onApplySettings={panelState.applySettings}
-                onRefreshDevices={panelState.refreshDevices}
-                showSectionTitle={false}
-                mode="device"
-            />
-            <CharacterSettingsSection
-                settings={panelState.settings}
-                uiState={panelState.settingsUiState}
-                uiHints={panelState.settingsUiHints}
-                mediaDeviceSnapshot={panelState.mediaDeviceSnapshot}
-                audioInputSelection={panelState.audioInputSelection}
-                videoInputSelection={panelState.videoInputSelection}
-                onApplySettings={panelState.applySettings}
-                onRefreshDevices={panelState.refreshDevices}
-                showSectionTitle={false}
-                mode="camera"
-                calibrationState={panelState.calibrationState}
-                onRetryCalibration={panelState.retryCalibration}
-            />
-        </SettingsCategorySection>
-    );
-}
-
-function AudioSettingsPage({ panelState }: SincroControlPanelPageProps) {
-    return (
-        <SettingsCategorySection title={settingsPageCopy.audio.sectionTitle}>
-            <MicSettingsSection
-                settings={panelState.settings}
-                uiState={panelState.settingsUiState}
-                uiHints={panelState.settingsUiHints}
-                mediaDeviceSnapshot={panelState.mediaDeviceSnapshot}
-                audioInputSelection={panelState.audioInputSelection}
-                onApplySettings={panelState.applySettings}
-                onRefreshDevices={panelState.refreshDevices}
-                showSectionTitle={false}
-                mode="processing"
-            />
-        </SettingsCategorySection>
-    );
-}
-
-function DisplaySettingsPage({ panelState }: SincroControlPanelPageProps) {
-    return (
-        <SettingsCategorySection title={settingsPageCopy.display.sectionTitle}>
-            <CharacterSettingsSection
-                settings={panelState.settings}
-                uiState={panelState.settingsUiState}
-                uiHints={panelState.settingsUiHints}
-                mediaDeviceSnapshot={panelState.mediaDeviceSnapshot}
-                audioInputSelection={panelState.audioInputSelection}
-                videoInputSelection={panelState.videoInputSelection}
-                onApplySettings={panelState.applySettings}
-                onRefreshDevices={panelState.refreshDevices}
-                showSectionTitle={false}
-                mode="display"
-            />
-        </SettingsCategorySection>
+        <>
+            <SettingsHint>{dialogVrmUiState.vrmStatusText}</SettingsHint>
+            <SettingsButton
+                type="button"
+                disabled={!currentController}
+                onClick={() => {
+                    currentController?.stop();
+                    currentController?.dialog.open();
+                }}
+            >
+                キャラクターを選び直す
+            </SettingsButton>
+        </>
     );
 }

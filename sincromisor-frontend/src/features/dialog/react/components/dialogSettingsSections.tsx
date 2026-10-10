@@ -5,6 +5,7 @@ type VrmModelSectionProps = {
     onOpenFilePicker: () => void;
 };
 
+/** 概要・詳細から同じファイル選択窓口を開く。読込と保存はダイアログ所有者に委ねる。 */
 export function VrmModelSection({ onOpenFilePicker }: VrmModelSectionProps) {
     return (
         <div className="configurationDialogReactSettingsPanel__vrmSection">
@@ -24,6 +25,7 @@ type DialogVrmDropStatusCardProps = {
     uiState: SincroAppDialogVrmUiState;
 };
 
+/** 選択中のモデルと拒否理由を所有者の状態文で表示し、ドラッグ中だけ操作案内を切り替える。 */
 export function DialogVrmDropStatusCard({ uiState }: DialogVrmDropStatusCardProps) {
     // dragover 中は「ここへドロップ」へ切り替え、平常時は導線説明を短く表示する。
     return (

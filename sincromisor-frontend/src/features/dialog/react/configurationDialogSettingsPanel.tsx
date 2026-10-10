@@ -1,5 +1,6 @@
-import { ResetSettingsButton } from "../../settings/react/actions/resetSettingsButton";
+import { useState } from "react";
 import { SettingsShell } from "../../settings/react/shell/settingsShell";
+import { ConfigurationDialogOverview } from "./configurationDialogOverview";
 import "./configurationDialogSettings.css";
 import { ConfigurationDialogSettingsFooter } from "./configurationDialogSettingsFooter";
 import { createConfigurationDialogSettingsPages } from "./configurationDialogSettingsPages";
@@ -7,9 +8,9 @@ import { useConfigurationDialogVrmDragDrop } from "./configurationDialogVrmDragD
 import { useConfigurationDialogVrmFilePicker } from "./configurationDialogVrmFilePicker";
 import { useConfigurationDialogSettingsState } from "./useConfigurationDialogSettingsState";
 
-// 起動前 dialog の見た目/操作を React 側で主導する設定パネル。
-// HTMLDialogElement 以外の visible UI と VRM file 操作は React 正規経路に寄せる。
+/** 概要と詳細の表示だけを切り替え、設定・VRM操作・開始条件は同じ所有者を使う。 */
 export function ConfigurationDialogSettingsPanel() {
+    const [showDetails, setShowDetails] = useState(false);
     const state = useConfigurationDialogSettingsState();
     const { currentController, dialogUiState, dialogVrmUiState, startApp } = state;
     const { vrmFileInputRef, handleOpenVrmFilePicker, handleVrmFileInputChange } =
@@ -45,23 +46,44 @@ export function ConfigurationDialogSettingsPanel() {
                 tabIndex={-1}
                 onChange={handleVrmFileInputChange}
             />
-            <SettingsShell
-                ariaLabel="初回セットアップウィザード"
-                title="初回セットアップ"
-                className="settingsShell--startupDialog"
-                navigationPlacement="top"
-                responsiveMode="container"
-                initialPageId="conversation"
-                pages={pages}
-                scrollEnd={<ResetSettingsButton />}
-                footer={
+            {showDetails ? (
+                <SettingsShell
+                    ariaLabel="起動前の詳しい設定"
+                    title="詳しい設定"
+                    className="settingsShell--startupDialog"
+                    navigationPlacement="top"
+                    responsiveMode="container"
+                    initialPageId="experience"
+                    pages={pages}
+                    footer={
+                        <ConfigurationDialogSettingsFooter
+                            currentController={currentController}
+                            dialogUiState={dialogUiState}
+                            startApp={startApp}
+                            showDetails={showDetails}
+                            onToggleDetails={() => setShowDetails(!showDetails)}
+                        />
+                    }
+                />
+            ) : (
+                <section
+                    className="configurationDialogReactSettingsPanel__summary"
+                    aria-label="開始前の確認"
+                >
+                    <h1>開始前の確認</h1>
+                    <ConfigurationDialogOverview
+                        state={state}
+                        onOpenFilePicker={handleOpenVrmFilePicker}
+                    />
                     <ConfigurationDialogSettingsFooter
                         currentController={currentController}
                         dialogUiState={dialogUiState}
                         startApp={startApp}
+                        showDetails={showDetails}
+                        onToggleDetails={() => setShowDetails(true)}
                     />
-                }
-            />
+                </section>
+            )}
         </fieldset>
     );
 }

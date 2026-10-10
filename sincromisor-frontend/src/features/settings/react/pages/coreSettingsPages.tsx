@@ -2,63 +2,25 @@ import type { ReactNode } from "react";
 import { settingsPageCopy } from "../shell/settingsPageCopy";
 import type { SettingsShellPage } from "../shell/settingsShell";
 
-export type CoreSettingsPageId = "conversation" | "devices" | "audio" | "display" | "connection";
-
+/** 通常設定の分類。画面の選択状態だけに使い、保存形式には含めない。 */
+export type CoreSettingsPageId = "experience" | "character" | "audio" | "camera" | "screen";
+/** 起動前後で同じ順序に並べる本文。未提供の分類は表示しない。 */
 export type CoreSettingsPageContent = Partial<Record<CoreSettingsPageId, ReactNode>>;
 
-type CoreSettingsPageDefinition = Omit<SettingsShellPage, "content">;
-
 const CORE_SETTINGS_PAGE_ORDER: CoreSettingsPageId[] = [
-    "conversation",
-    "devices",
+    "experience",
+    "character",
     "audio",
-    "display",
-    "connection",
+    "camera",
+    "screen",
 ];
 
-const CORE_SETTINGS_PAGE_DEFINITIONS: Record<CoreSettingsPageId, CoreSettingsPageDefinition> = {
-    conversation: {
-        id: "conversation",
-        label: settingsPageCopy.conversation.label,
-        title: settingsPageCopy.conversation.title,
-    },
-    devices: {
-        id: "devices",
-        label: settingsPageCopy.devices.label,
-        title: settingsPageCopy.devices.title,
-    },
-    audio: {
-        id: "audio",
-        label: settingsPageCopy.audio.label,
-        title: settingsPageCopy.audio.title,
-        description: settingsPageCopy.audio.description,
-    },
-    display: {
-        id: "display",
-        label: settingsPageCopy.display.label,
-        title: settingsPageCopy.display.title,
-    },
-    connection: {
-        id: "connection",
-        label: settingsPageCopy.connection.label,
-        title: settingsPageCopy.connection.title,
-        description: settingsPageCopy.connection.description,
-    },
-};
-
+/** 画面固有の操作を含む本文を、共通の名称・順序へ組み立てる。 */
 export function createCoreSettingsPages(content: CoreSettingsPageContent): SettingsShellPage[] {
     return CORE_SETTINGS_PAGE_ORDER.flatMap((pageId) => {
         const pageContent = content[pageId];
-        return pageContent === undefined ? [] : [createCoreSettingsPage(pageId, pageContent)];
+        return pageContent === undefined
+            ? []
+            : [{ id: pageId, ...settingsPageCopy[pageId], content: pageContent }];
     });
-}
-
-export function createCoreSettingsPage(
-    pageId: CoreSettingsPageId,
-    content: ReactNode,
-): SettingsShellPage {
-    return {
-        ...CORE_SETTINGS_PAGE_DEFINITIONS[pageId],
-        content,
-    };
 }

@@ -37,19 +37,15 @@ export function TalkModeField({
     const inputId = useId();
     return (
         <div className={className} style={style}>
-            <SettingsHelpLabel
-                htmlFor={inputId}
-                text="トークモード (talk mode)"
-                help={settingHelp.talkMode}
-            />
+            <SettingsHelpLabel htmlFor={inputId} text="体験を選ぶ" help={settingHelp.talkMode} />
             <SettingsSelect
                 id={inputId}
                 value={settings.talkMode}
                 onChange={(event) => onTalkModeChange(event.target.value)}
                 disabled={uiState.talkModeDisabled}
             >
-                <option value="chat">chat</option>
-                <option value="sincro">sincro</option>
+                <option value="chat">キャラクターと話す</option>
+                <option value="sincro">キャラクターになる</option>
             </SettingsSelect>
         </div>
     );

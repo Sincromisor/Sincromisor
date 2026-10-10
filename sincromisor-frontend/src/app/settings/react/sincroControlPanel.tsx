@@ -1,6 +1,6 @@
-import { ResetSettingsButton } from "../../../features/settings/react/actions/resetSettingsButton";
 import { SettingsShell } from "../../../features/settings/react/shell/settingsShell";
 import { panelStyles } from "./panelStyles";
+import { ConnectionSettingsPage } from "./sincroConnectionPage";
 import { createSincroControlPanelPages } from "./sincroControlPanelPages";
 import { useSincroPanelState } from "./useSincroPanelState";
 
@@ -9,8 +9,7 @@ type SincroControlPanelProps = {
     variant?: "default" | "vrm360" | "looking-glass-vrm";
 };
 
-// simple-vrm / vrm360 / looking-glass-vrm 共通の常設設定パネル。
-// カテゴリナビで「探す場所」と「操作する場所」を揃え、接続操作は接続ページへ集約する。
+/** 3ページ共通の常設設定。接続状態と開始・停止は分類本文から独立して固定表示する。 */
 export function SincroControlPanel({
     title = "基本設定",
     variant = "default",
@@ -30,9 +29,9 @@ export function SincroControlPanel({
                 responsiveMode="container"
                 navigationDensity="compact"
                 navigationPlacement="top"
-                initialPageId={isLookingGlassFocused ? "looking-glass" : "conversation"}
+                initialPageId="experience"
                 pages={pages}
-                scrollEnd={<ResetSettingsButton />}
+                footer={<ConnectionSettingsPage panelState={panelState} />}
             />
         </section>
     );

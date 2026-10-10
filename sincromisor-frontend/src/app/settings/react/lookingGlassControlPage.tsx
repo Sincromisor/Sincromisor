@@ -2,27 +2,18 @@ import {
     SettingsStatusCard,
     SettingsSummaryGrid,
 } from "../../../features/settings/react/shell/settingsShell";
-import { BasicSettingsSection, LookingGlassSettingsSection } from "./components/settingsSections";
+import { LookingGlassSettingsSection } from "./components/lookingGlassSettingsSection";
 import { panelStyles } from "./panelStyles";
 import type { SincroControlPanelPageProps, SincroPanelState } from "./sincroControlPanelTypes";
 
-/** Looking Glassの実行状態・開始停止・次回設定を専用の先頭カテゴリへまとめる。 */
+/** Looking Glassの実行状態・開始停止・次回設定を専用カテゴリへまとめる。 */
 export function LookingGlassControlPage({ panelState }: SincroControlPanelPageProps) {
-    const { settings, settingsUiState } = panelState;
+    const { settings } = panelState;
 
     return (
         <>
             <LookingGlassStatusSummary panelState={panelState} />
             <LookingGlassActionButtons panelState={panelState} />
-            <BasicSettingsSection
-                settings={settings}
-                uiState={settingsUiState}
-                onTitleChange={(titleText) => panelState.applySettings({ titleText })}
-                onTalkModeChange={panelState.changeTalkMode}
-                showTitle={false}
-                showTalkMode={true}
-                showSectionTitle={false}
-            />
             <LookingGlassSettingsSection
                 settings={settings}
                 onApplySettings={panelState.applySettings}

@@ -1,4 +1,5 @@
 import type { DebugConsoleManager, DebugConsoleSnapshot } from "../../model/debugConsoleManager";
+import { ForcePoseTrackingControl } from "./forcePoseTrackingControl";
 import {
     formatAnchorRuntime,
     formatArm,
@@ -28,6 +29,7 @@ type SincroMotionPoseSectionProps = {
     manager: DebugConsoleManager;
 };
 
+/** 姿勢の観測値と診断用操作を開発者ツール内にまとめる。 */
 export function SincroMotionPoseSection({
     pose,
     observeOnly,
@@ -38,6 +40,7 @@ export function SincroMotionPoseSection({
     return (
         <article className="sincroMotionSection">
             <h4>Pose</h4>
+            <ForcePoseTrackingControl />
             <dl className="gazeTable">
                 <dt>Status</dt>
                 <dd>{formatPoseStatus(pose)}</dd>
