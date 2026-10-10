@@ -3,12 +3,17 @@ import type { useConfigurationDialogSettingsState } from "./useConfigurationDial
 type ConfigurationDialogSettingsState = ReturnType<typeof useConfigurationDialogSettingsState>;
 
 type ConfigurationDialogSettingsFooterProps = {
+    showDetails: boolean;
+    onToggleDetails: () => void;
     currentController: ConfigurationDialogSettingsState["currentController"];
     dialogUiState: ConfigurationDialogSettingsState["dialogUiState"];
     startApp: ConfigurationDialogSettingsState["startApp"];
 };
 
+/** 概要・詳細のどちらでも開始条件と表示切り替えを固定領域から操作する。 */
 export function ConfigurationDialogSettingsFooter({
+    showDetails,
+    onToggleDetails,
     currentController,
     dialogUiState,
     startApp,
@@ -19,6 +24,13 @@ export function ConfigurationDialogSettingsFooter({
     return (
         <div className="configurationDialogReactSettingsPanel__footer">
             <div className="configurationDialogReactSettingsPanel__footerLead">
+                <button
+                    type="button"
+                    className="configurationDialogReactSettingsPanel__button"
+                    onClick={onToggleDetails}
+                >
+                    {showDetails ? "開始画面へ戻る" : "詳しい設定"}
+                </button>
                 <a className="configurationDialogReactSettingsPanel__backLink" href="/">
                     トップへ戻る
                 </a>

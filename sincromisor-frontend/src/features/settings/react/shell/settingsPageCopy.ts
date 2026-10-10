@@ -1,35 +1,9 @@
+/** 起動前の詳細と常設設定で共有する分類名。設定の保存キーとは独立する。 */
 export const settingsPageCopy = {
-    conversation: {
-        label: "会話",
-        title: "会話",
-        sectionTitle: "会話",
-    },
-    devices: {
-        label: "デバイス",
-        title: "デバイス",
-        sectionTitle: "マイクとカメラ",
-    },
-    audio: {
-        label: "音声",
-        title: "音声",
-        description: "ノイズや反響に合わせて声の拾い方を調整します。",
-        sectionTitle: "マイク補正",
-    },
-    display: {
-        label: "表示",
-        title: "表示",
-        sectionTitle: "キャラクター表示",
-        vrmSectionTitle: "VRM モデル",
-    },
-    connection: {
-        label: "接続",
-        title: "接続",
-        description: "接続状態の確認と開始・停止",
-        startupSectionTitle: "開始時の設定",
-        statusSectionTitle: "接続状態",
-    },
-    lookingGlass: {
-        label: "Looking Glass",
-        title: "Looking Glass",
-    },
+    experience: { label: "体験", title: "体験" },
+    character: { label: "キャラクター", title: "キャラクター" },
+    audio: { label: "マイク・音声", title: "マイク・音声" },
+    camera: { label: "カメラ・動き", title: "カメラ・動き" },
+    screen: { label: "画面・保存", title: "画面・保存" },
+    lookingGlass: { label: "Looking Glass", title: "Looking Glass" },
 } as const;

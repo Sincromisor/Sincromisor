@@ -90,11 +90,7 @@ export function LookingGlassSettingsSection({
 function LookingGlassSectionHeader({ showSectionTitle }: { showSectionTitle: boolean }) {
     return (
         <>
-            {showSectionTitle ? (
-                <SettingsHelpLabel text="Looking Glass 設定" />
-            ) : (
-                <div className="settingsPrimitiveSectionLead">Looking Glass 表示</div>
-            )}
+            {showSectionTitle ? <SettingsHelpLabel text="Looking Glass 設定" /> : null}
             <SettingsHint className="settingsPrimitiveHint--bottomGap settingsPrimitiveHint--soft">
                 これらの値は、次回の Looking Glass 起動時に適用されます。
             </SettingsHint>
