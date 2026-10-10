@@ -56,7 +56,8 @@ it("3ページの診断引数と独立ページの診断保存先を接続する
     const params: ConstructorParameters<typeof MotionDebugSceneRuntime>[0] = Object.create(null);
     params.initialRetargetConfig = debug.getSnapshot().sincroMotion.poseRetarget;
     new MotionDebugSceneRuntime(params);
-    const options = vi.mocked(VRMScene).mock.calls.at(-1)?.[0];
+    const calls = vi.mocked(VRMScene).mock.calls;
+    const options = calls[calls.length - 1]?.[0];
     const logSpy = vi.spyOn(debug, "addTextChannelLog");
     options?.diagnostics?.onEmotionLog?.("[emotion] independent page\n");
     expect(logSpy).toHaveBeenCalledWith("[emotion] independent page\n");

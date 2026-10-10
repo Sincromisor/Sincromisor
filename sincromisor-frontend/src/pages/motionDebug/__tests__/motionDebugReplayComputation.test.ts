@@ -39,7 +39,8 @@ function createRuntime() {
             throw error;
         },
     });
-    const runtime = new MotionDebugReplayRuntime({
+    // コールバックは生成後に呼ばれる。具象型を明示して自己参照の型推論を終端させる。
+    const runtime: MotionDebugReplayRuntime = new MotionDebugReplayRuntime({
         tracker,
         behaviorState,
         debugConsole,

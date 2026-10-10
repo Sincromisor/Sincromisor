@@ -67,7 +67,7 @@ it("起動前後で設定を共有し、操作制限・補正・機器表示と�
         titleText: "Sincromisor",
         talkMode: "sincro",
         characterMotionScale: 1.2,
-        sincroPoseRetargetScale: 0.7,
+        sincroPoseRetargetScale: 0.68,
         characterEyeTrackingScale: 0,
     });
     expect(effects.talkMode).toHaveBeenLastCalledWith("sincro");

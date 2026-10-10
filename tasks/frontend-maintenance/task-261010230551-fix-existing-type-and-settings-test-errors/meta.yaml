@@ -1,0 +1,13 @@
+id: task-261010230551-fix-existing-type-and-settings-test-errors
+title: 既存の型エラーと設定テストの期待値不整合を修正する
+category: frontend-maintenance
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-10-10
+closed_at: 2026-10-10
+legacy_ids: []
