@@ -14,7 +14,6 @@
         --settings-shell-nav-gap: var(--sincro-space-350);
         --settings-shell-nav-padding: var(--sincro-space-350) 0;
         --settings-shell-nav-align-self: start;
-        --settings-shell-tab-grid-columns: none;
         --settings-shell-tab-grid-gap: var(--sincro-space-150);
         --settings-shell-tab-section-title-grid-column: auto;
         --settings-shell-tab-section-title-padding-inline: 10px;
@@ -40,6 +39,9 @@
         --settings-shell-page-border-left-color: transparent;
         --settings-shell-page-header-padding-bottom: var(--sincro-space-350);
         display: grid;
+        min-height: 0;
+        min-width: 0;
+        grid-template-rows: auto minmax(0, 1fr) auto;
         gap: var(--settings-shell-gap);
         color: var(--sincro-color-overlay-text-primary);
     }
@@ -65,7 +67,6 @@
         --settings-shell-detail-max-width: none;
         --settings-shell-page-border-top-color: transparent;
         --settings-shell-page-border-left-color: var(--settings-shell-border);
-        --settings-shell-tab-grid-columns: repeat(auto-fit, minmax(var(--settings-shell-top-tab-min-width, var(--sincro-overlay-tab-min-width, 88px)), 1fr));
         --settings-shell-tab-grid-gap: var(--sincro-overlay-tab-gap, var(--sincro-space-100));
         --settings-shell-tab-section-title-grid-column: 1 / -1;
         --settings-shell-tab-section-title-padding-inline: 4px;
@@ -114,6 +115,8 @@
     }
 
     .settingsShell__layout {
+        min-height: 0;
+        min-width: 0;
         display: grid;
         grid-template-columns: var(--settings-shell-layout-columns);
         grid-template-rows: var(--settings-shell-layout-rows);
@@ -140,7 +143,9 @@
     }
 
     .settingsShell__nav .integratedTabs__section {
-        grid-template-columns: var(--settings-shell-tab-grid-columns);
+        grid-template-columns: none;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(88px, max-content);
         gap: var(--settings-shell-tab-grid-gap);
     }
 
@@ -173,11 +178,55 @@
         box-shadow: var(--settings-shell-tab-active-shadow);
     }
 
+    /* タブは常に一列の自然幅で測定する。収まらない場合の非表示は測定幅を変えない。 */
+    .settingsShell__navigation {
+        position: relative;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .settingsShell__measuredTabs {
+        width: max-content;
+        min-width: 100%;
+    }
+
+    .settingsShell__navigation.is-compact .settingsShell__measuredTabs {
+        position: absolute;
+        visibility: hidden;
+        pointer-events: none;
+    }
+
+    .settingsShell__nav .integratedTabs__tabLabel {
+        white-space: nowrap;
+    }
+
     .settingsShell__navSelectLabel {
-        display: none;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        gap: var(--sincro-space-250);
+        padding: var(--sincro-space-250);
+    }
+
+    .settingsShell__navSelect {
+        width: 100%;
+        min-height: 38px;
+        padding: 7px 10px;
+        border: 1px solid var(--settings-shell-border-strong);
+        border-radius: var(--sincro-radius-100);
+        background: var(--settings-shell-surface);
+        color: inherit;
+        font: inherit;
+    }
+
+    .settingsShell__navSelect option {
+        background: var(--sincro-color-select-option-background);
     }
 
     .settingsShell__detail {
+        height: 100%;
+        min-height: 0;
+        overflow: hidden;
         position: relative;
         z-index: 1;
         min-width: 0;
@@ -187,6 +236,11 @@
     }
 
     .settingsShell__detailScroll {
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-gutter: stable;
+        align-content: start;
         display: grid;
         gap: var(--sincro-space-400);
     }
@@ -289,7 +343,6 @@
             --settings-shell-detail-max-width: none;
             --settings-shell-page-border-top-color: transparent;
             --settings-shell-page-border-left-color: var(--settings-shell-border);
-            --settings-shell-tab-grid-columns: repeat(auto-fit, minmax(var(--settings-shell-top-tab-min-width, var(--sincro-overlay-tab-min-width, 88px)), 1fr));
             --settings-shell-tab-grid-gap: var(--sincro-overlay-tab-gap, var(--sincro-space-100));
             --settings-shell-tab-section-title-grid-column: 1 / -1;
             --settings-shell-tab-section-title-padding-inline: 4px;
@@ -306,7 +359,6 @@
 
         .settingsShell.is-containerResponsive.settingsShell--compactNavigation .settingsShell__layout {
             --settings-shell-nav-padding: 0 var(--sincro-space-200);
-            --settings-shell-tab-grid-columns: repeat(auto-fit, minmax(var(--settings-shell-compact-nav-min-width), 1fr));
             --settings-shell-tab-section-title-margin-top: var(--sincro-space-050);
             --settings-shell-tab-active-shadow: inset 0 3px 0 var(--sincro-overlay-tab-accent, rgba(159, 210, 255, 0.76)), var(--sincro-shadow-panel-soft);
             --settings-shell-page-gap: var(--sincro-space-350);
@@ -324,7 +376,6 @@
         .settingsShell.is-containerResponsive .settingsShell__layout {
             --settings-shell-page-padding: var(--sincro-space-400);
             --settings-shell-page-radius: var(--sincro-radius-500);
-            --settings-shell-tab-grid-columns: 1fr;
         }
 
         .settingsShell.is-containerResponsive .settingsShell__pageHeader,
@@ -338,105 +389,7 @@
 
         .settingsShell.is-containerResponsive.settingsShell--compactNavigation .settingsShell__layout {
             --settings-shell-nav-padding: 0 var(--sincro-space-150);
-            --settings-shell-tab-grid-columns: repeat(auto-fit, minmax(var(--sincro-overlay-tab-min-width, 88px), 1fr));
             --settings-shell-page-padding: var(--sincro-space-350);
-        }
-    }
-
-    @container settings-shell (max-width: 440px) {
-        .settingsShell.is-containerResponsive.settingsShell--compactNavigation .settingsShell__layout {
-            gap: var(--sincro-space-300);
-        }
-
-        .settingsShell.is-containerResponsive.settingsShell--compactNavigation .settingsShell__nav {
-            display: none;
-        }
-
-        .settingsShell.is-containerResponsive.settingsShell--compactNavigation .settingsShell__navSelectLabel {
-            display: grid;
-            gap: var(--sincro-space-150);
-            padding: var(--sincro-space-250);
-            border: 1px solid var(--settings-shell-border);
-            border-radius: var(--sincro-radius-300);
-            background: var(--settings-shell-surface);
-        }
-
-        .settingsShell.is-containerResponsive.settingsShell--compactNavigation .settingsShell__navSelectText {
-            color: var(--sincro-color-overlay-text-subtle);
-            font-size: var(--sincro-font-size-100);
-            font-weight: 700;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-        }
-
-        .settingsShell.is-containerResponsive.settingsShell--compactNavigation .settingsShell__navSelect {
-            width: 100%;
-            min-height: 36px;
-            border: 1px solid var(--settings-shell-border-strong);
-            border-radius: var(--sincro-radius-100);
-            background: rgba(255, 255, 255, 0.06);
-            color: inherit;
-            padding: 7px 10px;
-            font: inherit;
-        }
-
-        .settingsShell.is-containerResponsive.settingsShell--compactNavigation .settingsShell__navSelect option,
-        .settingsShell.is-containerResponsive.settingsShell--compactNavigation .settingsShell__navSelect optgroup {
-            background: var(--sincro-color-select-option-background);
-            color: var(--sincro-color-overlay-text-primary);
-        }
-
-        .settingsShell.is-containerResponsive.settingsShell--compactNavigation .settingsShell__layout {
-            --settings-shell-page-padding: var(--sincro-space-300);
-            --settings-shell-page-border-top-color: var(--settings-shell-border);
-        }
-
-        .settingsShell.is-containerResponsive.settingsShell--compactNavigation .settingsShell__pageTitle {
-            font-size: 1.16rem;
-        }
-    }
-
-    @media (max-width: 960px) {
-        .settingsShell:not(.is-containerResponsive) {
-            --settings-shell-layout-columns: 1fr;
-            --settings-shell-nav-position: static;
-            --settings-shell-nav-gap: var(--sincro-space-250);
-            --settings-shell-nav-padding: 0 var(--sincro-space-250);
-            --settings-shell-nav-align-self: end;
-            --settings-shell-detail-max-width: none;
-            --settings-shell-page-border-top-color: transparent;
-            --settings-shell-page-border-left-color: var(--settings-shell-border);
-            --settings-shell-tab-grid-columns: repeat(auto-fit, minmax(var(--settings-shell-top-tab-min-width, var(--sincro-overlay-tab-min-width, 88px)), 1fr));
-            --settings-shell-tab-grid-gap: var(--sincro-overlay-tab-gap, var(--sincro-space-100));
-            --settings-shell-tab-section-title-grid-column: 1 / -1;
-            --settings-shell-tab-section-title-padding-inline: 4px;
-            --settings-shell-tab-min-height: var(--sincro-overlay-tab-min-height, 38px);
-            --settings-shell-tab-margin-right: 0;
-            --settings-shell-tab-margin-bottom: calc(-1 * var(--settings-shell-tab-overlap));
-            --settings-shell-tab-padding: var(--sincro-overlay-tab-padding-block, var(--sincro-space-250)) var(--sincro-overlay-tab-padding-inline, var(--sincro-space-200));
-            --settings-shell-tab-radius: var(--sincro-radius-300) var(--sincro-radius-300) 0 0;
-            --settings-shell-tab-text-align: center;
-            --settings-shell-tab-hover-border-right-color: rgba(130, 188, 255, 0.14);
-            --settings-shell-tab-hover-border-bottom-color: transparent;
-            --settings-shell-tab-active-shadow: inset 0 3px 0 var(--sincro-overlay-tab-accent, rgba(159, 210, 255, 0.72)), var(--sincro-shadow-panel-soft);
-        }
-    }
-
-    @media (max-width: 640px) {
-        .settingsShell:not(.is-containerResponsive) {
-            --settings-shell-gap: var(--sincro-space-400);
-            --settings-shell-page-padding: var(--sincro-space-400);
-            --settings-shell-page-radius: var(--sincro-radius-500);
-            --settings-shell-tab-grid-columns: 1fr;
-        }
-
-        .settingsShell:not(.is-containerResponsive) .settingsShell__pageHeader,
-        .settingsShell:not(.is-containerResponsive) .settingsShell__content {
-            padding: 0;
-        }
-
-        .settingsShell:not(.is-containerResponsive) .settingsShell__summaryGrid {
-            grid-template-columns: 1fr;
         }
     }
 }

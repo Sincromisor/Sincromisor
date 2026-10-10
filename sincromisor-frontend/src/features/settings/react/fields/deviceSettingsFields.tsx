@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type {
     SincroMediaDeviceSelectionState,
     SincroMediaDeviceSnapshot,
@@ -58,6 +59,7 @@ export function DeviceSelectionHint({
     return <SettingsHintList messages={messages} />;
 }
 
+/** 項目名を入力へ関連付け、変更を共通設定の適用窓口へ渡す。 */
 export function AudioInputDeviceField({
     settings,
     uiState,
@@ -68,10 +70,16 @@ export function AudioInputDeviceField({
     className,
     style,
 }: DeviceFieldBaseProps) {
+    const inputId = useId();
     return (
         <div className={className} style={style}>
-            <SettingsHelpLabel text="マイク入力" help={settingHelp.audioInputDeviceId} />
+            <SettingsHelpLabel
+                htmlFor={inputId}
+                text="マイク入力"
+                help={settingHelp.audioInputDeviceId}
+            />
             <SettingsSelect
+                id={inputId}
                 value={settings.audioInputDeviceId ?? ""}
                 onChange={(event) =>
                     onApplySettings({
@@ -99,6 +107,7 @@ export function AudioInputDeviceField({
     );
 }
 
+/** 項目名を入力へ関連付け、変更を共通設定の適用窓口へ渡す。 */
 export function VideoInputDeviceField({
     settings,
     uiState,
@@ -109,10 +118,16 @@ export function VideoInputDeviceField({
     className,
     style,
 }: DeviceFieldBaseProps) {
+    const inputId = useId();
     return (
         <div className={className} style={style}>
-            <SettingsHelpLabel text="視線用カメラ" help={settingHelp.videoInputDeviceId} />
+            <SettingsHelpLabel
+                htmlFor={inputId}
+                text="視線用カメラ"
+                help={settingHelp.videoInputDeviceId}
+            />
             <SettingsSelect
+                id={inputId}
                 value={settings.videoInputDeviceId ?? ""}
                 onChange={(event) =>
                     onApplySettings({

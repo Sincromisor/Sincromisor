@@ -50,8 +50,10 @@ export function ConfigurationDialogSettingsPanel() {
                 title="初回セットアップ"
                 className="settingsShell--startupDialog"
                 navigationPlacement="top"
+                responsiveMode="container"
                 initialPageId="conversation"
                 pages={pages}
+                scrollEnd={<ResetSettingsButton />}
                 footer={
                     <ConfigurationDialogSettingsFooter
                         currentController={currentController}
@@ -60,7 +62,6 @@ export function ConfigurationDialogSettingsPanel() {
                     />
                 }
             />
-            <ResetSettingsButton />
         </fieldset>
     );
 }

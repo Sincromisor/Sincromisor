@@ -1,0 +1,13 @@
+id: task-261010185542-fix-settings-layout-and-controls
+title: 設定UIのタブ配置・スクロール・入力操作の不具合を修正する
+category: frontend
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-10-10
+closed_at: 2026-10-10
+legacy_ids: []

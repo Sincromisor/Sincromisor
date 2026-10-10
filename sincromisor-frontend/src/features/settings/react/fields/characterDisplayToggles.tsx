@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode } from "react";
+import { sincroAppNumericSettingConstraints } from "../../../../app/settings/sincroAppSettingsDefaults";
 import {
     SettingsFieldStack,
     SettingsHint,
@@ -113,6 +114,7 @@ function CharacterDisplayToggleGrid({
     );
 }
 
+/** 復元値をrangeが丸めないよう任意刻みで表示し、操作の正規化は設定モデルへ委ねる。 */
 function CharacterMotionRangeControls({
     settings,
     onApplySettings,
@@ -122,22 +124,20 @@ function CharacterMotionRangeControls({
             <SettingsRange
                 label="上半身モーション"
                 help={settingHelp.characterMotionScale}
-                min={0}
-                max={1.2}
-                step={0.05}
+                {...sincroAppNumericSettingConstraints.characterMotionScale}
+                step="any"
                 value={settings.characterMotionScale}
-                valueLabel={`${Math.round(settings.characterMotionScale * 100)}%`}
+                valueLabel={`${Number((settings.characterMotionScale * 100).toFixed(10))}%`}
                 disabled={!settings.enableCharacter}
                 onChange={(value) => onApplySettings({ characterMotionScale: value })}
             />
             <SettingsRange
                 label="姿勢同期"
                 help={settingHelp.sincroPoseRetargetScale}
-                min={0}
-                max={1.2}
-                step={0.05}
+                {...sincroAppNumericSettingConstraints.sincroPoseRetargetScale}
+                step="any"
                 value={settings.sincroPoseRetargetScale}
-                valueLabel={`${Math.round(settings.sincroPoseRetargetScale * 100)}%`}
+                valueLabel={`${Number((settings.sincroPoseRetargetScale * 100).toFixed(10))}%`}
                 disabled={
                     !settings.enableCharacter ||
                     !settings.enableCharacterGaze ||
@@ -148,11 +148,10 @@ function CharacterMotionRangeControls({
             <SettingsRange
                 label="目線追跡"
                 help={settingHelp.characterEyeTrackingScale}
-                min={0}
-                max={1.2}
-                step={0.05}
+                {...sincroAppNumericSettingConstraints.characterEyeTrackingScale}
+                step="any"
                 value={settings.characterEyeTrackingScale}
-                valueLabel={`${Math.round(settings.characterEyeTrackingScale * 100)}%`}
+                valueLabel={`${Number((settings.characterEyeTrackingScale * 100).toFixed(10))}%`}
                 disabled={!settings.enableCharacter || !settings.enableCharacterGaze}
                 onChange={(value) => onApplySettings({ characterEyeTrackingScale: value })}
             />

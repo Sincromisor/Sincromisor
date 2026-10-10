@@ -170,13 +170,14 @@ export const defaultSincroAppSettingsDisabledState: Record<SincroAppSettingKey, 
     characterEyeTrackingScale: false,
 };
 
+/** 利用者入力の範囲と刻み。動作量は1%単位で正規化し、検証済み保存値の復元には丸めを適用しない。 */
 export const sincroAppNumericSettingConstraints: Record<
     SincroAppNumericSettingKey,
     SincroAppNumericSettingConstraints
 > = {
-    characterMotionScale: { min: 0, max: 1.2, step: 0.05 },
-    sincroPoseRetargetScale: { min: 0, max: 1.2, step: 0.05 },
-    characterEyeTrackingScale: { min: 0, max: 1.2, step: 0.05 },
+    characterMotionScale: { min: 0, max: 1.2, step: 0.01 },
+    sincroPoseRetargetScale: { min: 0, max: 1.2, step: 0.01 },
+    characterEyeTrackingScale: { min: 0, max: 1.2, step: 0.01 },
     lgTileHeight: { min: 256, max: 2048, step: 1 },
     lgNumViews: { min: 8, max: 64, step: 1 },
     lgTargetY: { min: -2, max: 4, step: 0.05 },
