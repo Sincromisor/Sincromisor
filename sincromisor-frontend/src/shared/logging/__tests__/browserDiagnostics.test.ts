@@ -25,7 +25,7 @@ it("送信停止・再開、上限、本文非送信、会話前後の識別を�
     diagnostics.record("rtc", "connected");
     diagnostics.record("model", "private-token");
     await vi.advanceTimersByTimeAsync(1000);
-    const sent = JSON.parse(fetcher.mock.calls.at(-1)?.[1].body);
+    const sent = JSON.parse(fetcher.mock.calls[fetcher.mock.calls.length - 1]?.[1].body);
     expect(sent.events[0].session_id).toBeUndefined();
     expect(sent.events[1].session_id).toBe("01K1AF2Y0H0000000000000001");
     expect(sent.events[2].reason).toBe("unknown");

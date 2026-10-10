@@ -69,7 +69,7 @@ it.skipIf(process.env.SINCRO_RECORDED_COMPARISON !== "1")(
                         : undefined;
                     const times = data.samples.map((s) => s.mediaTimeMs);
                     const start = times[0] + 2000,
-                        end = times.at(-1)!,
+                        end = times[times.length - 1],
                         middle = (start + end) / 2;
                     return {
                         label,
@@ -162,7 +162,9 @@ it.skipIf(process.env.SINCRO_RECORDED_COMPARISON !== "1")(
                                           {
                                               name: "Hand再推論",
                                               startMs: handData.observations[0].mediaTimeMs,
-                                              endMs: handData.observations.at(-1)!.mediaTimeMs,
+                                              endMs: handData.observations[
+                                                  handData.observations.length - 1
+                                              ].mediaTimeMs,
                                           },
                                       ]
                                     : []),

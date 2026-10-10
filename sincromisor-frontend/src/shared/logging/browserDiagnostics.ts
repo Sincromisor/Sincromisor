@@ -109,10 +109,10 @@ export class BrowserDiagnostics {
         this.record(event, reason);
     }
 
-    /** 診断を追加するだけで、本体の非同期操作や応答を待たせない。 */
+    /** 直前と同じ診断は回数へ集約し、空の待ち行列には新規追加する。本体の応答は待たせない。 */
     record(event: DiagnosticEvent, reason: string): void {
         const safeReason = REASONS.has(reason) ? reason : "unknown";
-        const last = this.queue.at(-1);
+        const last = this.queue[this.queue.length - 1];
         if (
             last?.event === event &&
             last.reason === safeReason &&
