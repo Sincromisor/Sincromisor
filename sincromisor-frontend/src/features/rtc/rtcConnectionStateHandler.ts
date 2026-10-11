@@ -19,7 +19,12 @@ type RtcConnectionStateHandlerParams = {
  * RTCTalkClientへ委ね、このboundaryはfailedだけを即時recoveryとして通知する。
  */
 export function handleRtcIceConnectionState(params: RtcConnectionStateHandlerParams): void {
-    const target = params.talkMode === "echo" ? "入力音声の折り返し診断" : "音声認識・合成システム";
+    const target =
+        params.talkMode === "echo"
+            ? "入力音声の折り返し診断"
+            : params.talkMode === "playback"
+              ? "サンプル音声の繰り返し再生"
+              : "音声認識・合成システム";
     switch (params.state) {
         case "new":
             params.chatMessageService.writeSystemMessage(`${target}に接続します。`);

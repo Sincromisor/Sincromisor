@@ -29,7 +29,7 @@ function numeric(key: SincroAppNumericSettingKey) {
     return (step === 1 ? schema.int() : schema).optional().catch(undefined);
 }
 const settingsSchema = z.object({
-    talkMode: z.enum(["chat", "sincro", "echo"]).optional().catch(undefined),
+    talkMode: z.enum(["chat", "sincro", "echo", "playback"]).optional().catch(undefined),
     titleText: z.string().optional().catch(undefined),
     audioInputDeviceId: z.string().nullable().optional().catch(undefined),
     videoInputDeviceId: z.string().nullable().optional().catch(undefined),

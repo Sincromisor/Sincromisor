@@ -35,18 +35,16 @@ func newSession(
 	logger *slog.Logger,
 	onClosed func(string),
 	api *webrtc.API,
-	args ...any,
+	options ...sessionOptions,
 ) (*Session, error) {
-	var playbackMaterial *playback.Material
-	var recorders []observability.Recorder
-	for _, arg := range args {
-		switch value := arg.(type) {
-		case *playback.Material:
-			playbackMaterial = value
-		case observability.Recorder:
-			recorders = append(recorders, value)
-		}
+	option := sessionOptions{}
+	if len(options) > 1 {
+		return nil, errors.New("rtc session accepts one options value")
 	}
+	if len(options) == 1 {
+		option = options[0]
+	}
+	playbackMaterial := option.playback
 	if id == "" || (talkMode != "chat" && talkMode != "sincro" && talkMode != "echo" && talkMode != "playback") {
 		return nil, errors.New("rtc session identity or talk mode is invalid")
 	}
@@ -54,8 +52,8 @@ func newSession(
 		return nil, errors.New("rtc session dependencies must not be nil")
 	}
 	recorder := observability.Discard()
-	if len(recorders) > 0 && recorders[0] != nil {
-		recorder = recorders[0]
+	if option.recorder != nil {
+		recorder = option.recorder
 	}
 	input, err := inputmedia.New(inputObserver)
 	if err != nil {
@@ -142,6 +140,13 @@ func newSession(
 	session.installCallbacks()
 	logger.Info("rtc session created", "session_id", id)
 	return session, nil
+}
+
+// sessionOptions は診断素材と任意の観測先を型付きで渡す。ゼロ値は通常会話と破棄用観測先を使う。
+// 素材はSessionが非所有参照し、PCMの内容は変更しない。
+type sessionOptions struct {
+	playback *playback.Material
+	recorder observability.Recorder
 }
 
 func closeCoordinator(coordinator *pipeline.Coordinator) func() error {

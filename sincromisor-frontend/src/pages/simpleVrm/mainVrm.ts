@@ -6,6 +6,11 @@ export function initializeSimpleVrmPage(roots: SincroVRMRoots): void {
     const talkMode = new URLSearchParams(window.location.search).get("talkMode");
     SincroVRMInitializer.bootstrap(
         roots,
-        talkMode === "chat" || talkMode === "sincro" || talkMode === "echo" ? { talkMode } : {},
+        talkMode === "chat" ||
+            talkMode === "sincro" ||
+            talkMode === "echo" ||
+            talkMode === "playback"
+            ? { talkMode }
+            : {},
     );
 }
