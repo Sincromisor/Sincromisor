@@ -34,9 +34,11 @@ type fakeSessions struct {
 	reservations       atomic.Int32
 	resourceBuildCalls atomic.Int32
 	lastOffer          rtc.Offer
+	lastUpdate         rtc.UpdateOffer
 }
 
-func (f *fakeSessions) Update(_ context.Context, _ rtc.UpdateOffer) (rtc.Answer, error) {
+func (f *fakeSessions) Update(_ context.Context, update rtc.UpdateOffer) (rtc.Answer, error) {
+	f.lastUpdate = update
 	return f.updateAnswer, f.updateErr
 }
 

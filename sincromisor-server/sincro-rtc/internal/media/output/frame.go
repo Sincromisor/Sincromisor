@@ -52,7 +52,10 @@ func (p *Processor) writeFrame() error {
 	return nil
 }
 
-// nextFrameはqueue itemの48 kHz sample位置をaudio frameとtelopの共通tickとして進める。
+// nextFrameは48 kHzの音声を20 msずつ消費する。診断PCMがあれば先に返し、テロップは生成しない。
+// セッション構築時に入力経路を一つに固定するため、通常発話と診断PCMが同時に追加されることはない。
+// 診断PCMの不足分、両キューが空の期間は無音で埋め、入力の有無によらず出力時計を維持する。
+// 通常経路では発話のサンプル位置を音声とテロップの共通基準として進める。
 //
 // frame内で始まるmoraは次frameまで切り替えず、frame開始sampleを含むactive moraだけを返す。
 // 最終audio frameはsilence paddingするが、itemのsample accountingは実PCM分だけを消費する。
