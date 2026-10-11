@@ -1,289 +1,117 @@
-// log-observerはDockerとConsulの有限な状態履歴を、安全なJSONLへ変換する。
-// 本体の起動条件にはせず、API障害も自身の診断としてVectorへ渡す。
+// log-observerはVectorの収集状態と配送指標を中央ログ用の有限なJSONLへ変換する。
+// journalの読取はVector、配送累計はdelivery.goが所有し、Docker・Consulの状態は観測しない。
 package main
 
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"regexp"
-	"strconv"
-	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
 )
 
-const projectLabel = "com.docker.compose.project"
-const serviceLabel = "com.docker.compose.service"
-const diagnosticLimit = 2048
+// healthcheckは最大10秒のjournal読取を伴うため、次の10秒周期まで最大20秒空く。
+// 2回連続の実行遅延と5秒のobserver周期を許しつつ、古い成功状態を失効させる45秒にする。
+const collectorStateTTL = 45 * time.Second
 
-// checkLogはコマンドや環境を復号せず、必要な実行結果だけを受け取る。
-type checkLog struct {
-	Start, End string
-	ExitCode   int
-	Output     string
-}
-type health struct {
-	Status string
-	Log    []checkLog
-}
-type container struct {
-	ID     string
-	Config struct{ Labels map[string]string }
-	State  struct {
-		Running   bool
-		StartedAt string
-		Health    *health
-	}
-}
-type dockerEvent struct {
-	Action   string
-	TimeNano int64 `json:"timeNano"`
-	Actor    struct {
-		ID         string
-		Attributes map[string]string
-	}
+var (
+	collectorStatePath       = "/var/lib/vector/collector-health.json"
+	deliveryStatePath        = "/var/lib/log-observer/delivery.json"
+	journalGapPath           = "/var/lib/vector/journal-gap.json"
+	observerNow              = time.Now
+	errCollectorStateMissing = errors.New("collector_state_missing")
+	errCollectorStateInvalid = errors.New("collector_state_invalid")
+	errCollectorStateStale   = errors.New("collector_state_stale")
+	errCollectorUnavailable  = errors.New("collector_unavailable")
+	startIDPattern           = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+)
+
+// collectorStateはVector healthcheckが原子的に書く、ログ本文を含まない収集状態である。
+// start_idが変わると前回の配送累計を比較できないため、delivery.goは不明区間として再初期化する。
+type collectorState struct {
+	StartID   string `json:"start_id"`
+	CheckedAt string `json:"checked_at"`
+	Healthy   bool   `json:"healthy"`
+	Reason    string `json:"reason"`
 }
 
-// observerの比較状態はプロセス内だけに保持する。再起動時は初回として出力する。
+// observerは状態ファイルとVector metricsを読むだけで、Docker APIやConsul APIの権限を持たない。
 type observer struct {
-	docker, consul     *http.Client
-	consulURL, project string
-	emit               func(map[string]any)
-	previous           map[string]string
-	localAgents        map[string]bool
-	inputs             map[string][32]byte
-	seen               map[string]bool
-	ready              atomic.Bool
-	collectorReady     atomic.Bool
-	vectorStarted      string
-	deliveryState      deliveryState
+	vector         *http.Client
+	emit           func(map[string]any)
+	previous       map[string]string
+	ready          atomic.Bool
+	collectorReady atomic.Bool
+	vectorStarted  string
+	deliveryState  deliveryState
 }
 
-var httpStatus = regexp.MustCompile(`(?i)(?:HTTP/[0-9.]+\s+|HTTP\s+|status(?: code)?[=: ]+|:\s+)([1-5][0-9]{2})\b`)
-
-// diagnosisは任意の本文を再出力せず、既知の原因だけを有限な文字列へ分類する。
-// URL・ヘッダー・応答本文・コマンドに秘密が混在しても原文を代替属性へ保存しない。
-func diagnosis(output string) (string, bool) {
-	truncated := len(output) > diagnosticLimit
-	if truncated {
-		output = output[:diagnosticLimit]
-	}
-	lower := strings.ToLower(output)
-	parts := []string{}
-	if match := httpStatus.FindStringSubmatch(output); match != nil {
-		parts = append(parts, "http_status="+match[1])
-	}
-	for _, item := range []struct{ needle, code string }{
-		{"connection refused", "connection_refused"}, {"connection_refused", "connection_refused"},
-		{"timed out", "timeout"}, {"timeout", "timeout"}, {"no such host", "dns_failed"},
-		{"permission denied", "permission_denied"}, {"no space left", "disk_full"},
-		{"journal_unreadable_or_missing", "journal_unreadable_or_missing"},
-		{"journal_input_unavailable", "journal_input_unavailable"},
-		{"vector_unavailable", "vector_unavailable"},
-		{"connection_failed", "connection_failed"}, {"connection reset", "connection_reset"},
-	} {
-		if strings.Contains(lower, item.needle) && !strings.Contains(strings.Join(parts, " "), item.code) {
-			parts = append(parts, item.code)
-		}
-	}
-	if len(parts) == 0 {
-		if output == "" {
-			return "empty_output", truncated
-		}
-		return "output_redacted", truncated
-	}
-	return strings.Join(parts, " "), truncated
-}
-
-// getは有限サイズ・時間でJSONを取得し、失敗理由に相手の応答やURLを含めない。
-func get(ctx context.Context, client *http.Client, url string, target any) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return fmt.Errorf("request_invalid")
-	}
-	res, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("connection_failed")
-	}
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("http_status=%d", res.StatusCode)
-	}
-	if err = json.NewDecoder(io.LimitReader(res.Body, 8<<20)).Decode(target); err != nil {
-		return fmt.Errorf("response_invalid")
-	}
-	return nil
-}
-
-// changedは状態・診断の同一出力を抑止する。時刻はイベント作成後に付ける。
+// changedは同じ状態の連続出力を抑止する。比較値はプロセス内だけに保持する。
 func (o *observer) changed(key string, value map[string]any) {
-	o.seen[key] = true
 	encoded, err := json.Marshal(value)
-	if err != nil {
-		return
-	}
-	if o.previous[key] == string(encoded) {
+	if err != nil || o.previous[key] == string(encoded) {
 		return
 	}
 	o.previous[key] = string(encoded)
 	o.emit(value)
 }
 
-// failureは対象の障害と取得処理の障害を分け、復旧も同じキーで通知する。
-func (o *observer) failure(source string, err error) {
-	status, reason := "passing", "available"
-	if err != nil {
-		status = "critical"
-		reason = err.Error()
-	}
-	o.changed("query:"+source, map[string]any{"event": "observer_query", "source": source, "status": status, "reason": reason})
-}
-
-// eventsは対象プロジェクトの状態変化だけを選び、任意のActor属性を複製しない。
-func (o *observer) events(ctx context.Context, since, until int64) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://docker/events?since=%d&until=%d", since, until), nil)
-	if err != nil {
-		return fmt.Errorf("request_invalid")
-	}
-	res, err := o.docker.Do(req)
-	if err != nil {
-		return fmt.Errorf("connection_failed")
-	}
-	defer res.Body.Close()
-	if res.StatusCode != 200 {
-		return fmt.Errorf("http_status=%d", res.StatusCode)
-	}
-	decoder := json.NewDecoder(io.LimitReader(res.Body, 8<<20))
-	for {
-		var e dockerEvent
-		if err = decoder.Decode(&e); err == io.EOF {
-			return nil
-		} else if err != nil {
-			return fmt.Errorf("response_invalid")
-		}
-		o.event(e)
-	}
-}
-
-// eventは補助処理自身も実際のサービス名で記録し、業務サービスへ読み替えない。
-func (o *observer) event(e dockerEvent) {
-	attrs := e.Actor.Attributes
-	if attrs[projectLabel] != o.project || attrs[serviceLabel] == "" {
-		return
-	}
-	if e.Action != "start" && e.Action != "die" && e.Action != "oom" && !strings.HasPrefix(e.Action, "health_status:") {
-		return
-	}
-	row := map[string]any{"event": "docker_lifecycle", "action": e.Action, "target_container_id": e.Actor.ID, "target_service": attrs[serviceLabel], "timestamp": time.Unix(0, e.TimeNano).UTC().Format(time.RFC3339Nano)}
-	if code, err := strconv.Atoi(attrs["exitCode"]); err == nil {
-		row["exit_code"] = code
-	}
-	o.emit(row)
-}
-
-// dockerHealthは初回異常と同一状態の新しい実行結果を取得し、履歴欠落も明示する。
-// 収集役は稼働中かつ実journal検査が正常な個体だけをreadyとし、停止個体の過去結果を使わない。
-func (o *observer) dockerHealth(ctx context.Context) error {
-	o.collectorReady.Store(false)
+// collectorHealthは起動直後、壊れた値、期限切れ、未来時刻をすべて異常として扱う。
+// HTTP公開状態は更新せず、runが配送判定まで完了してから一括で公開する。
+// Vector停止・再作成後に古い成功結果を使わないため、状態ファイルのmtimeではなくchecked_atを検証する。
+func (o *observer) collectorHealth(now time.Time) error {
 	o.vectorStarted = ""
-	var list []struct {
-		ID     string
-		Labels map[string]string
+	data, err := os.ReadFile(collectorStatePath)
+	if err != nil || len(data) > 1024 {
+		return errCollectorStateMissing
 	}
-	if err := get(ctx, o.docker, "http://docker/containers/json?all=1", &list); err != nil {
-		return err
+	var state collectorState
+	if json.Unmarshal(data, &state) != nil || !startIDPattern.MatchString(state.StartID) || !validCollectorReason(state.Reason) {
+		return errCollectorStateInvalid
 	}
-	o.localAgents = map[string]bool{}
-	var inspectErr error
-	for _, item := range list {
-		if item.Labels[projectLabel] != o.project {
-			continue
-		}
-		service := item.Labels[serviceLabel]
-		if strings.HasPrefix(service, "consul-agent-") || service == "sincro-consul-server" {
-			o.localAgents[service] = true
-		}
-		var c container
-		err := get(ctx, o.docker, "http://docker/containers/"+item.ID+"/json", &c)
-		if err != nil {
-			inspectErr = err
-			o.changed("health:"+item.ID, map[string]any{"event": "docker_health_query_failed", "target_container_id": item.ID, "target_service": item.Labels[serviceLabel], "reason": err.Error()})
-			continue
-		}
-		if c.State.Health == nil {
-			if _, known := o.previous["health:"+item.ID]; known {
-				o.changed("health:"+item.ID, map[string]any{"event": "docker_health", "target_container_id": item.ID, "target_service": item.Labels[serviceLabel], "history_missing": true, "status": "unavailable"})
-			}
-			continue
-		}
-		o.health(c)
-		if service == "vector" && c.State.Running {
-			o.vectorStarted = c.State.StartedAt
-			if c.State.Health.Status == "healthy" {
-				o.collectorReady.Store(true)
-			}
-		}
+	checked, err := time.Parse(time.RFC3339, state.CheckedAt)
+	if err != nil || checked.After(now) || now.Sub(checked) > collectorStateTTL {
+		return errCollectorStateStale
 	}
-	return inspectErr
+	if !state.Healthy {
+		return errCollectorUnavailable
+	}
+	o.vectorStarted = state.StartID
+	return nil
 }
 
-// healthは直近の実行時刻・終了値と安全な診断を関連付ける。Dockerが捨てた過去は復元しない。
-func (o *observer) health(c container) {
-	h := c.State.Health
-	row := map[string]any{"event": "docker_health", "target_container_id": c.ID, "target_service": c.Config.Labels[serviceLabel], "status": h.Status}
-	if len(h.Log) == 0 {
-		row["history_missing"] = true
-	} else {
-		latest := h.Log[len(h.Log)-1]
-		diagnostic, truncated := diagnosis(latest.Output)
-		row["check_start"] = latest.Start
-		row["check_end"] = latest.End
-		row["exit_code"] = latest.ExitCode
-		row["diagnostic"] = diagnostic
-		row["diagnostic_truncated"] = truncated
+// validCollectorReasonはhealthcheckが書く固定語彙だけを受け入れ、共有ボリュームへ混入した任意本文を出力しない。
+func validCollectorReason(reason string) bool {
+	switch reason {
+	case "starting", "state_invalid", "vector_unavailable", "journal_unreadable_or_missing", "journal_cursor_missing", "journal_input_unavailable", "available":
+		return true
 	}
-	o.changed("health:"+c.ID, row)
+	return false
 }
 
-// runは各APIの失敗を独立して記録する。イベントの窓は成功時だけ進める。
+// runは状態ファイル、配送指標、原本消失markerを同じ周期で判定する。
+// HTTP生存だけで正常にせず、いずれかの異常が /collector と /health を503へ遷移させる。
 func (o *observer) run(ctx context.Context) {
-	since := time.Now().Unix()
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 	for {
-		o.seen = map[string]bool{}
-		until := time.Now().Unix()
-		err := o.events(ctx, since, until)
-		o.failure("docker_events", err)
-		if err == nil {
-			since = until
-		}
-		healthErr := o.dockerHealth(ctx)
-		o.failure("docker_health", healthErr)
-		consulErr := o.consulChecks(ctx)
-		o.failure("consul_checks", consulErr)
+		collectorErr := o.collectorHealth(observerNow().UTC())
+		o.failure("collector_state", collectorErr)
 		deliveryErr := o.delivery(ctx)
 		o.failure("logging_delivery", deliveryErr)
-		if deliveryErr != nil && strings.HasPrefix(deliveryErr.Error(), "collector_metrics") {
-			o.changed("delivery:unavailable", map[string]any{"event": "logging_loss_unknown", "reason": "collector_unavailable", "from": o.deliveryState.LastObserved, "to": time.Now().UTC().Format(time.RFC3339Nano), "loss_count": nil})
+		if deliveryErr != nil && deliveryErr.Error() == "collector_metrics_unavailable" {
+			o.changed("delivery:unavailable", map[string]any{"event": "logging_loss_unknown", "reason": "collector_unavailable", "from": o.deliveryState.LastObserved, "to": observerNow().UTC().Format(time.RFC3339Nano), "loss_count": nil})
 		}
-		// journalが読めても配送・欠落診断が異常なら収集チェックを正常にしない。
-		o.collectorReady.Store(o.collectorReady.Load() && deliveryErr == nil)
-		o.ready.Store(err == nil && healthErr == nil && consulErr == nil && o.collectorReady.Load())
-		// 削除済みコンテナやチェックの比較値を永久に保持しない。
-		for key := range o.previous {
-			if !o.seen[key] {
-				delete(o.previous, key)
-				delete(o.inputs, key)
-			}
-		}
+		// 収集状態だけでは公開しない。配送まで通った同一周期の結果だけをHTTPとConsulへ公開する。
+		ready := collectorErr == nil && deliveryErr == nil
+		o.collectorReady.Store(ready)
+		o.ready.Store(ready)
 		select {
 		case <-ctx.Done():
 			return
@@ -292,7 +120,16 @@ func (o *observer) run(ctx context.Context) {
 	}
 }
 
-// mainだけが設定・シグナル・ソケットとHTTPサーバーの寿命を所有する。
+// failureは状態の悪化と復旧を同じキーで出力し、相手の本文やURLは保存しない。
+func (o *observer) failure(source string, err error) {
+	status, reason := "passing", "available"
+	if err != nil {
+		status, reason = "critical", err.Error()
+	}
+	o.changed("query:"+source, map[string]any{"event": "observer_query", "source": source, "status": status, "reason": reason})
+}
+
+// mainだけが状態ファイル、HTTPサーバー、終了シグナルの寿命を所有する。
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
@@ -301,36 +138,25 @@ func main() {
 		if _, ok := row["timestamp"]; !ok {
 			row["timestamp"] = time.Now().UTC().Format(time.RFC3339Nano)
 		}
-		row["level"] = "info"
-		row["message"] = row["event"]
-		if err := encoder.Encode(row); err != nil {
+		row["level"], row["message"] = "info", row["event"]
+		if encoder.Encode(row) != nil {
 			stop()
 		}
 	}
-	project := os.Getenv("SINCRO_LOG_PROJECT")
-	if project == "" {
-		emit(map[string]any{"event": "observer_startup_failed", "reason": "SINCRO_LOG_PROJECT"})
-		return
-	}
-	transport := &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-		return (&net.Dialer{}).DialContext(ctx, "unix", "/var/run/docker.sock")
-	}}
-	defer transport.CloseIdleConnections()
-	o := observer{docker: &http.Client{Transport: transport, Timeout: 5 * time.Second}, consul: &http.Client{Timeout: 5 * time.Second}, consulURL: "http://consul-agent-logging:8500", project: project, emit: emit, previous: map[string]string{}, inputs: map[string][32]byte{}, seen: map[string]bool{}}
-	// 再作成直前の観測を復元する。読めない状態は初回として不明範囲を残す。
-	if data, err := os.ReadFile("/var/lib/log-observer/delivery.json"); err == nil && len(data) <= 4096 {
+	o := observer{vector: &http.Client{Timeout: 5 * time.Second}, emit: emit, previous: map[string]string{}}
+	// 旧形式にはDockerのStartedAtが含まれる。起動識別子がなければ累計を引き継がず不明区間として扱う。
+	if data, err := os.ReadFile(deliveryStatePath); err == nil && len(data) <= 4096 {
 		if json.Unmarshal(data, &o.deliveryState) != nil {
 			emit(map[string]any{"event": "observer_startup_failed", "reason": "delivery_state_invalid"})
 		}
 	}
-	// 収集の実読取状態を別経路でConsulへ渡し、Vector自身のHTTP生存だけで正常としない。
 	server := &http.Server{Addr: ":8687", ReadHeaderTimeout: 3 * time.Second, Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ready := o.ready.Load()
 		if r.URL.Path == "/collector" {
 			ready = o.collectorReady.Load()
 		}
 		if !ready {
-			w.WriteHeader(503)
+			w.WriteHeader(http.StatusServiceUnavailable)
 		}
 		_, _ = io.WriteString(w, "observer\n")
 	})}
@@ -340,7 +166,7 @@ func main() {
 		}
 	}()
 	o.run(ctx)
-	if err := server.Close(); err != nil {
+	if server.Close() != nil {
 		emit(map[string]any{"event": "observer_shutdown_failed"})
 	}
 }

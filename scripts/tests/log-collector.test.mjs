@@ -1,4 +1,4 @@
-/** 人工ログだけのComposeで、Docker収集・Consul転送・停止中の保持を確認する。 */
+/** 人工ログだけのComposeで、ソケットなしのjournal収集・転送・停止中の保持を確認する。 */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { setTimeout } from "node:timers/promises";
+import { scopeJournalFixture } from "./log-journal-fixture.mjs";
 
 const docker = (...args) =>
 	execFileSync("docker", args, { encoding: "utf8", timeout: 120000 }).trim();
@@ -32,6 +33,13 @@ test("収集対象の分離、本文解析、Consul経由の送信と障害復�
 	);
 	for (const service of Object.values(cfg.services))
 		assert.equal(service.logging.driver, "journald");
+	for (const service of [cfg.services.vector, cfg.services["log-observer"]])
+		assert.ok(
+			!(service.volumes ?? []).some((volume) =>
+				String(volume.source).includes("docker.sock"),
+			),
+			"Dockerソケットを共有しない",
+		);
 	const names = [
 		"victoria-logs",
 		"consul-agent-logs",
@@ -72,6 +80,7 @@ test("収集対象の分離、本文解析、Consul経由の送信と障害復�
 		...services.fixture,
 		command: ["echo", "短時間コンテナ"],
 	};
+	const restoreJournal = scopeJournalFixture(services.vector, dir);
 	const save = () => writeFileSync(file, JSON.stringify(isolated));
 	const compose = (...args) =>
 		docker("compose", "-p", project, "-f", file, ...args);
@@ -209,6 +218,10 @@ test("収集対象の分離、本文解析、Consul経由の送信と障害復�
 			"com.docker.compose.project=other-fixture",
 			"--label",
 			"com.docker.compose.service=fixture",
+			"--log-driver",
+			"journald",
+			"--log-opt",
+			"labels=com.docker.compose.project,com.docker.compose.service",
 			"busybox:latest",
 			"echo",
 			"対象外プロジェクト",
@@ -243,15 +256,69 @@ test("収集対象の分離、本文解析、Consul経由の送信と障害復�
 		save();
 		compose("up", "-d", "--no-deps", "--force-recreate", "victoria-logs");
 		await wait(() => rows().some((r) => r._msg === "中央停止中の保持"));
+		// 初回走査だけを絞った設定を戻し、再開は本番と同じ永続cursorから行う。
+		restoreJournal();
+		save();
 		// 収集停止中にも業務側は書け、Docker原本から読める。
 		compose("stop", "vector");
 		emit("収集停止中の原本");
+		docker(
+			"run",
+			"--rm",
+			"--label",
+			`com.docker.compose.project=${project}`,
+			"--label",
+			"com.docker.compose.service=short-lived",
+			"--log-driver",
+			"journald",
+			"--log-opt",
+			"labels=com.docker.compose.project,com.docker.compose.service",
+			"busybox:latest",
+			"echo",
+			"短命削除済みコンテナの原本",
+		);
 		assert.match(
 			compose("logs", "--no-log-prefix", "fixture"),
 			/収集停止中の原本/,
 		);
-		compose("start", "vector");
+		compose("up", "-d", "--no-deps", "--force-recreate", "vector");
 		await wait(() => rows().some((r) => r._msg === "収集停止中の原本"));
+		await wait(() =>
+			http(
+				"http://victoria-logs:9428/select/logsql/query?query=service%3Ashort-lived",
+			).includes("短命削除済みコンテナの原本"),
+		);
+		await wait(
+			() => api("health/service/SincroLogCollector?passing=true").length === 1,
+		);
+		// Vector再作成後は起動ごとの状態ファイルが古い正常結果を無効にし、新しい検査後にだけ復旧する。
+		const beforeRecreate = JSON.parse(
+			compose(
+				"exec",
+				"-T",
+				"vector",
+				"cat",
+				"/var/lib/vector/collector-health.json",
+			),
+		);
+		compose("stop", "vector");
+		await wait(() =>
+			api("health/checks/SincroLogCollector").some(
+				(check) => check.Status === "critical",
+			),
+		);
+		compose("up", "-d", "--no-deps", "--force-recreate", "vector");
+		const afterRecreate = JSON.parse(
+			compose(
+				"exec",
+				"-T",
+				"vector",
+				"cat",
+				"/var/lib/vector/collector-health.json",
+			),
+		);
+		assert.notEqual(afterRecreate.start_id, beforeRecreate.start_id);
+		assert.equal(afterRecreate.healthy, false);
 		await wait(
 			() => api("health/service/SincroLogCollector?passing=true").length === 1,
 		);
