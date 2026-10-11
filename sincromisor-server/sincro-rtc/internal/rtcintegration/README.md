@@ -34,6 +34,20 @@ Pionは試験ごとの一時ディレクトリへビルドする。Playwrightは
 この試験は通常の`go test ./...`と`npm run gate`には含まれない。
 `npm run browser:test`だけでは専用設定の選択やGo側のサービス起動を行わないため、上記のGoコマンドを入口とする。
 
+## エディターでの読み込みと型確認
+
+ルートの`tsconfig.json`はPlaywright設定と試験用環境変数の検証を対象とし、Node型を明示する。
+リポジトリのルートで`node_modules/.bin/tsc --project tsconfig.json`を実行して型を確認できる。
+
+VSCodeでの設定読み込みとテスト一覧取得には環境変数を必要としない。リポジトリのルートで次を実行する。
+
+```sh
+npm run browser:test -- --config playwright.rtc-integration.config.ts --list
+```
+
+必須入力の検査はPlaywrightの`globalSetup`で行い、実行環境が不足する場合はブラウザー起動前に停止する。
+VSCodeから試験を直接実行してもPionやConsulは起動しないため、実際の結合試験には上記のGoコマンドを使う。
+
 ## 子プロセス
 
 `process.Owner`は`new → running → exited`の単調状態を持つ。`Close`はSIGTERM後も終了しなければ
