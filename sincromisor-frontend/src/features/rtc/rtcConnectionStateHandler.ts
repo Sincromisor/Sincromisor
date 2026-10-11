@@ -9,6 +9,7 @@ type RtcConnectionStateHandlerParams = {
     onRecovered: () => void;
     rtcHealthCallback: (message?: string) => void;
     state: RTCIceConnectionState;
+    talkMode?: string;
 };
 
 /**
@@ -18,39 +19,34 @@ type RtcConnectionStateHandlerParams = {
  * RTCTalkClientへ委ね、このboundaryはfailedだけを即時recoveryとして通知する。
  */
 export function handleRtcIceConnectionState(params: RtcConnectionStateHandlerParams): void {
+    const target = params.talkMode === "echo" ? "入力音声の折り返し診断" : "音声認識・合成システム";
     switch (params.state) {
         case "new":
-            params.chatMessageService.writeSystemMessage("音声認識・合成システムに接続します。");
+            params.chatMessageService.writeSystemMessage(`${target}に接続します。`);
             break;
         case "checking":
-            params.chatMessageService.writeSystemMessage(
-                "音声認識・合成システムへの接続を確認しています。",
-            );
+            params.chatMessageService.writeSystemMessage(`${target}への接続を確認しています。`);
             break;
         case "connected":
             params.onRecovered();
             params.rtcHealthCallback();
-            params.chatMessageService.writeSystemMessage("音声認識・合成システムに接続しました。");
+            params.chatMessageService.writeSystemMessage(`${target}に接続しました。`);
             break;
         case "completed":
             params.onRecovered();
             params.rtcHealthCallback();
             params.chatMessageService.writeSystemMessage(
-                "音声認識・合成システムとのセッションの確立に成功しました。",
+                `${target}とのセッションの確立に成功しました。`,
             );
             break;
         case "disconnected":
-            params.rtcHealthCallback("音声認識・合成システムから切断されました。");
-            params.chatMessageService.writeErrorMessage(
-                "音声認識・合成システムから切断されました。",
-            );
+            params.rtcHealthCallback(`${target}から切断されました。`);
+            params.chatMessageService.writeErrorMessage(`${target}から切断されました。`);
             params.onDisconnected();
             break;
         case "failed":
-            params.rtcHealthCallback("音声認識・合成システムへの接続に失敗しました。");
-            params.chatMessageService.writeErrorMessage(
-                "音声認識・合成システムへの接続に失敗しました。",
-            );
+            params.rtcHealthCallback(`${target}への接続に失敗しました。`);
+            params.chatMessageService.writeErrorMessage(`${target}への接続に失敗しました。`);
             params.captureIceFailureDiagnostics("iceConnectionState=failed");
             params.onFailed();
             break;

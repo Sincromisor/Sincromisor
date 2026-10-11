@@ -106,7 +106,11 @@ func ntpMiddle32(value time.Time) uint32 {
 // media_errorとして同じclose-onceへ戻す。
 func (s *Session) startInbound(reader inputmedia.RTPReader) {
 	s.goReserved("inbound_processor", func(context.Context) {
-		err := s.input.Run(s.ctx, reader, s.pipeline.SubmitPCM)
+		submit := s.pipelineSubmit
+		if s.echo {
+			submit = s.submitEchoPCM
+		}
+		err := s.input.Run(s.ctx, reader, submit)
 		switch {
 		case errors.Is(err, io.EOF):
 			_ = s.Close("normal")
@@ -115,6 +119,22 @@ func (s *Session) startInbound(reader inputmedia.RTPReader) {
 			_ = s.Close("media_error")
 		}
 	})
+}
+
+func (s *Session) pipelineSubmit(pcm []byte) error { return s.pipeline.SubmitPCM(pcm) }
+
+// submitEchoPCM は入力Processorが出力する16 kHz s16leを48 kHz monoへ整数比で拡張する。
+// Opus出力は48 kHzを要求し、echoでは音質変換より短い診断経路を優先するため各sampleを3回複製する。
+func (s *Session) submitEchoPCM(pcm []byte) error {
+	if len(pcm)%2 != 0 {
+		return errors.New("echo pcm must contain int16 samples")
+	}
+	upsampled := make([]int16, 0, len(pcm)*3/2)
+	for offset := 0; offset < len(pcm); offset += 2 {
+		sample := int16(pcm[offset]) | int16(pcm[offset+1])<<8
+		upsampled = append(upsampled, sample, sample, sample)
+	}
+	return s.output.EnqueueEchoPCM(upsampled)
 }
 
 // rtpReader はPion TrackRemoteをinput.RTPReader境界へ適合させる。

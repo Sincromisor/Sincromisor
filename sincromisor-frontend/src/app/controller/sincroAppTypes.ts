@@ -23,6 +23,8 @@ export type SincroAppSettingsSnapshot = {
     videoInputDeviceId: string | undefined;
     enableCharacter: boolean;
     enableTalk: boolean;
+    /** ページ内だけで保持する手動の送信ミュート。 */
+    muteMicrophone: boolean;
     enableCharacterGaze: boolean;
     enableSincroPoseTracking: boolean;
     forceSincroPoseTracking: boolean;

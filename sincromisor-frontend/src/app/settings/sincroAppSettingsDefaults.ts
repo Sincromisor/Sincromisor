@@ -17,6 +17,7 @@ export type SincroAppSettingKey =
     | "videoInputDeviceId"
     | "enableCharacter"
     | "enableTalk"
+    | "muteMicrophone"
     | "enableCharacterGaze"
     | "enableSincroPoseTracking"
     | "forceSincroPoseTracking"
@@ -73,6 +74,7 @@ export const defaultSincroAppSettings: SincroAppSettings = {
     videoInputDeviceId: undefined,
     enableCharacter: true,
     enableTalk: true,
+    muteMicrophone: false,
     enableCharacterGaze: true,
     enableSincroPoseTracking: true,
     forceSincroPoseTracking: false,
@@ -154,6 +156,7 @@ export const defaultSincroAppSettingsDisabledState: Record<SincroAppSettingKey, 
     // Character/Gaze/AutoMute は runtime controller から利用可否が届くまで無効として扱う。
     enableCharacter: true,
     enableTalk: false,
+    muteMicrophone: false,
     enableCharacterGaze: true,
     enableSincroPoseTracking: false,
     forceSincroPoseTracking: false,

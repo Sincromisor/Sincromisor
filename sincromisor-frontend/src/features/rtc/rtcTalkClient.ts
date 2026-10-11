@@ -75,7 +75,11 @@ export class RTCTalkClient {
             return this.negotiationFlight;
         }
         this.diagnostics.start();
-        this.chatMessageService.writeSystemMessage("音声認識・合成システムに接続します。");
+        this.chatMessageService.writeSystemMessage(
+            this.talkMode === "echo"
+                ? "入力音声の折り返し診断に接続します。認識・合成には接続しません。"
+                : "音声認識・合成システムに接続します。",
+        );
         return this.runInitialNegotiation();
     }
 
@@ -274,6 +278,7 @@ export class RTCTalkClient {
             },
             rtcHealthCallback: this.rtcHealthCallback,
             state,
+            talkMode: this.talkMode,
         });
     }
 
@@ -354,7 +359,8 @@ export class RTCTalkClient {
         this.generationAbortController.abort();
         this.bundleGeneration += 1;
         closeRtcPeerConnection(this.bundle);
-        const message = `RTCサーバーへの接続に失敗しました。${String(error)}`;
+        const target = this.talkMode === "echo" ? "入力音声の折り返し診断" : "RTCサーバー";
+        const message = `${target}への接続に失敗しました。${String(error)}`;
         this.chatMessageService.writeErrorMessage(message, true);
         this.rtcHealthCallback(message);
         frontendLogger.error("RTC generation failed terminally.", { error });

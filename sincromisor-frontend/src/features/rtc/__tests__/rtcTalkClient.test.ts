@@ -128,7 +128,7 @@ async function settle(): Promise<void> {
     await Promise.resolve();
 }
 
-function createClient(track = createAudioTrack()): RTCTalkClient {
+function createClient(track = createAudioTrack(), mode = "chat"): RTCTalkClient {
     const client = new RTCTalkClient(
         {
             candidateURL: "/candidate",
@@ -136,7 +136,7 @@ function createClient(track = createAudioTrack()): RTCTalkClient {
             offerURL: "/offer",
         },
         track,
-        "chat",
+        mode,
     );
     client.rtcHealthCallback = (message) => mocks.healthMessages.push(message);
     return client;
@@ -473,4 +473,23 @@ describe("RTCTalkClient owner state machine", () => {
         expect(mocks.createBundle.mock.calls[1]?.[0].audioTrack).toBe(replacementTrack);
         expect(replacementTrack.readyState).toBe("live");
     });
+});
+
+it("echoの初回OfferとICE再接続で同じモードを維持する", async () => {
+    mocks.negotiation.mockResolvedValueOnce(answer("session-echo", 1));
+    const client = createClient(createAudioTrack(), "echo");
+    await client.start();
+    expect(mocks.negotiation).toHaveBeenLastCalledWith(
+        expect.objectContaining({ talkMode: "echo" }),
+    );
+    mocks.negotiation.mockResolvedValueOnce(answer("session-echo", 2));
+    mocks.callbacks[0]?.onIceConnectionStateChange("failed");
+    await settle();
+    expect(mocks.negotiation).toHaveBeenCalledTimes(2);
+    expect(mocks.negotiation).toHaveBeenLastCalledWith(
+        expect.objectContaining({ talkMode: "echo" }),
+    );
+    expect(mocks.systemErrors.some((message) => message.includes("折り返し診断"))).toBe(true);
+    expect(mocks.systemErrors.some((message) => message.includes("音声認識・合成"))).toBe(false);
+    client.stop();
 });

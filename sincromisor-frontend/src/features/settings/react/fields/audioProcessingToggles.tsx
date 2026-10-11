@@ -14,6 +14,13 @@ export function AudioProcessingToggles({
         <SettingsToggleGrid density={gridDensity}>
             <SettingsToggle
                 density={toggleDensity}
+                label="マイクをミュートする"
+                description="送信音声を止めます。接続と返却音声は維持します。"
+                checked={settings.muteMicrophone}
+                onChange={(checked) => onApplySettings({ muteMicrophone: checked })}
+            />
+            <SettingsToggle
+                density={toggleDensity}
                 label="ノイズを抑える"
                 description={settingHelp.enableNoiseSuppression}
                 checked={!!settings.enableNoiseSuppression}

@@ -59,6 +59,14 @@ func (p *Processor) writeFrame() error {
 func (p *Processor) nextFrame() ([]int16, *TelopPayload) {
 	p.mu.Lock()
 	frame := make([]int16, frameSamples)
+	if len(p.echoPCM) > 0 {
+		consumed := min(frameSamples, len(p.echoPCM))
+		copy(frame, p.echoPCM[:consumed])
+		copy(p.echoPCM, p.echoPCM[consumed:])
+		p.echoPCM = p.echoPCM[:len(p.echoPCM)-consumed]
+		p.mu.Unlock()
+		return frame, nil
+	}
 	if len(p.queue) == 0 {
 		p.mu.Unlock()
 		return frame, nil

@@ -188,6 +188,12 @@ func newBrowserPeer(t *testing.T) *webrtc.PeerConnection {
 
 func negotiatePair(t *testing.T, manager *Manager, client *webrtc.PeerConnection) Answer {
 	t.Helper()
+	return negotiatePairWithMode(t, manager, client, "chat")
+}
+
+// negotiatePairWithMode は通常経路と診断経路で同じPion接続手順を共有する。
+func negotiatePairWithMode(t *testing.T, manager *Manager, client *webrtc.PeerConnection, talkMode string) Answer {
+	t.Helper()
 	offer, err := client.CreateOffer(nil)
 	if err != nil {
 		t.Fatalf("CreateOffer() error = %v", err)
@@ -208,7 +214,7 @@ func negotiatePair(t *testing.T, manager *Manager, client *webrtc.PeerConnection
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	answer, err := manager.Create(ctx, Offer{
-		SDP: offerSDP, Type: "offer", TalkMode: "chat",
+		SDP: offerSDP, Type: "offer", TalkMode: talkMode,
 		OfferRequestID: rtcTestOfferRequestID,
 	})
 	if err != nil {

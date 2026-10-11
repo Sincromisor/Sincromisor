@@ -15,6 +15,9 @@ import (
 // 各処理はセッションの中断で停止し、終了処理が完了を待つ。
 func (s *Session) startOutbound() {
 	s.goReserved("outbound_clock", func(context.Context) { s.outputLoop() })
+	if s.echo {
+		return
+	}
 	s.goReserved("pipeline_generation", func(context.Context) { s.generationLoop() })
 	s.goReserved("pipeline_text", func(context.Context) { s.textOutputLoop() })
 	s.goReserved("pipeline_synth", func(context.Context) { s.synthOutputLoop() })

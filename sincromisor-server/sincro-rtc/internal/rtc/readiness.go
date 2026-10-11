@@ -73,7 +73,12 @@ func (s *Session) transportReady() {
 			// connected後にだけRTCP Readを開始する。transport未始動のgather timeoutでは
 			// PionがReadを解除しない経路があるため、output clock、単一generation consumer、
 			// text/synth consumer、RTCP drainを同じeventで予約する。
-			s.wg.Add(5)
+			workers := 5
+			if s.echo {
+				// echoは送信時計とRTCP drainだけを使い、下流出力の3 workerを開始しない。
+				workers = 2
+			}
+			s.wg.Add(workers)
 		}
 		startPipeline = s.promoteMediaReadyLocked("peer_connected")
 	case stateTransportReady, stateMediaReady, stateRunning, stateClosing, stateClosed:
@@ -220,6 +225,19 @@ func (s *Session) promoteMediaReadyLocked(event string) bool {
 // Close は session context と Coordinator.Close の両方で接続中処理を中断する。Start failure が
 // closing より先なら同じ close-onceへ通知し、成功時だけ running を公開する。
 func (s *Session) launchPipeline() {
+	if s.echo {
+		// promoteMediaReadyLockedが予約したWaitGroupを消費し、診断経路も通常経路と同じ終了待機へ載せる。
+		s.goReserved("echo_start", func(context.Context) {
+			s.lifecycle.mu.Lock()
+			if s.lifecycle.state == stateMediaReady {
+				if transitionErr := s.lifecycle.transitionLocked(stateRunning, "echo_started"); transitionErr != nil {
+					s.logTransitionError(transitionErr)
+				}
+			}
+			s.lifecycle.mu.Unlock()
+		})
+		return
+	}
 	s.goReserved("pipeline_start", func(context.Context) {
 		err := s.pipeline.Start(s.ctx, s.id, s.talkMode)
 		if err != nil {

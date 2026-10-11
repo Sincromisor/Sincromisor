@@ -36,13 +36,14 @@ type queuedSpeech struct {
 
 // Stats はpayloadを保持しないoutbound queue/clockのsession累積観測値である。
 type Stats struct {
-	QueueRejected    uint64 // QueueRejectedは上限超過で拒否した発話数である。
-	SilenceDropped   uint64 // SilenceDroppedは遅延により書かなかった無音枠数である。
-	SpeechAborted    uint64 // SpeechAbortedは遅延により中断した発話数である。
-	GenerationPurged uint64 // GenerationPurgedは世代更新により破棄した発話数である。
-	QueuedSpeeches   int    // QueuedSpeechesは未送信発話数である。
-	QueuedSamples    int    // QueuedSamplesは未送信PCMサンプル数である。
-	Closed           bool   // Closedは追加と送信を終了済みかを表す。
+	QueueRejected     uint64 // QueueRejectedは上限超過で拒否した発話数である。
+	SilenceDropped    uint64 // SilenceDroppedは遅延により書かなかった無音枠数である。
+	SpeechAborted     uint64 // SpeechAbortedは遅延により中断した発話数である。
+	GenerationPurged  uint64 // GenerationPurgedは世代更新により破棄した発話数である。
+	QueuedSpeeches    int    // QueuedSpeechesは未送信発話数である。
+	QueuedSamples     int    // QueuedSamplesは未送信PCMサンプル数である。
+	EchoQueuedSamples int    // EchoQueuedSamplesは未送信の診断PCMサンプル数である。
+	Closed            bool   // Closedは追加と送信を終了済みかを表す。
 }
 
 // Processor は合成発話queue、Opus encoder、20 ms絶対deadline clockを所有する。
@@ -56,6 +57,7 @@ type Processor struct {
 	sendMu         sync.Mutex
 	queue          []*queuedSpeech
 	queuedSamples  int
+	echoPCM        []int16
 	encoder        outputEncoder
 	track          SampleWriter
 	telop          TelopSink
@@ -70,6 +72,27 @@ type Processor struct {
 	silenceDropped   atomic.Uint64
 	speechAborted    atomic.Uint64
 	generationPurged atomic.Uint64
+}
+
+// EnqueueEchoPCM は16 kHz入力を3倍にした48 kHz mono PCMを、診断用の連続音声として追加する。
+//
+// echoは会話発話と異なり遅延を積み上げないことを優先する。1秒を超えた未送信PCMは先頭から捨て、
+// 常に最新の入力を返す。通常の発話キューやテロップには入れない。
+func (p *Processor) EnqueueEchoPCM(pcm []int16) error {
+	if len(pcm) == 0 {
+		return nil
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.closed {
+		return ErrOutputClosed
+	}
+	p.echoPCM = append(p.echoPCM, pcm...)
+	if excess := len(p.echoPCM) - SampleRate; excess > 0 {
+		copy(p.echoPCM, p.echoPCM[excess:])
+		p.echoPCM = p.echoPCM[:len(p.echoPCM)-excess]
+	}
+	return nil
 }
 
 // New はcodec、track、telop境界を検証してidle Processorを返す。
@@ -171,6 +194,7 @@ func (p *Processor) Purge() {
 	count := len(p.queue)
 	p.queue = nil
 	p.queuedSamples = 0
+	p.echoPCM = nil
 	p.mu.Unlock()
 	if count > 0 {
 		p.observer.QueueDepthDelta("speech", -float64(count))
@@ -185,16 +209,17 @@ func (p *Processor) Purge() {
 // Stats はoutbound processorのpayload非保持counter snapshotを返す。
 func (p *Processor) Stats() Stats {
 	p.mu.Lock()
-	queuedSpeeches, queuedSamples, closed := len(p.queue), p.queuedSamples, p.closed
+	queuedSpeeches, queuedSamples, echoQueuedSamples, closed := len(p.queue), p.queuedSamples, len(p.echoPCM), p.closed
 	p.mu.Unlock()
 	return Stats{
-		QueueRejected:    p.queueRejected.Load(),
-		SilenceDropped:   p.silenceDropped.Load(),
-		SpeechAborted:    p.speechAborted.Load(),
-		GenerationPurged: p.generationPurged.Load(),
-		QueuedSpeeches:   queuedSpeeches,
-		QueuedSamples:    queuedSamples,
-		Closed:           closed,
+		QueueRejected:     p.queueRejected.Load(),
+		SilenceDropped:    p.silenceDropped.Load(),
+		SpeechAborted:     p.speechAborted.Load(),
+		GenerationPurged:  p.generationPurged.Load(),
+		QueuedSpeeches:    queuedSpeeches,
+		QueuedSamples:     queuedSamples,
+		EchoQueuedSamples: echoQueuedSamples,
+		Closed:            closed,
 	}
 }
 
@@ -207,6 +232,7 @@ func (p *Processor) Close() error {
 	p.closed = true
 	p.queue = nil
 	p.queuedSamples = 0
+	p.echoPCM = nil
 	p.mu.Unlock()
 	if count > 0 {
 		p.observer.QueueDepthDelta("speech", -float64(count))

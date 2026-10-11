@@ -151,3 +151,14 @@ it("視線・姿勢の不正項目と観測値を除外し、通常強度とラ�
     expect(restored.getPoseTuning()).toEqual(saved.getPoseTuning());
     expect(restored.getGazeTuning()).toEqual(saved.getGazeTuning());
 });
+
+it("echoを保存・復元し、明示したURL設定を優先する", () => {
+    storage();
+    new SincroAppSettingsPersistence("simple-vrm").save({ talkMode: "echo" });
+    expect(new SincroAppSettingsPersistence("simple-vrm").load()).toEqual({ talkMode: "echo" });
+    const app = new SincroAppController();
+    app.restoreSettings("simple-vrm", { talkMode: "chat" }, {});
+    expect(app.getSettingsSnapshot().talkMode).toBe("echo");
+    app.restoreSettings("simple-vrm", { talkMode: "chat" }, { talkMode: "sincro" });
+    expect(app.getSettingsSnapshot().talkMode).toBe("sincro");
+});
