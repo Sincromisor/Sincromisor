@@ -23,13 +23,13 @@ var (
 
 const (
 	// ExtractorServiceID は harness が所有する固定登録 ID である。
-	ExtractorServiceID = "gate3-speech-extractor"
+	ExtractorServiceID = "rtc-integration-speech-extractor"
 	// RecognizerServiceID は harness が所有する固定登録 ID である。
-	RecognizerServiceID = "gate3-speech-recognizer"
+	RecognizerServiceID = "rtc-integration-speech-recognizer"
 	// ProcessorServiceID は harness が所有する固定登録 ID である。
-	ProcessorServiceID = "gate3-text-processor"
+	ProcessorServiceID = "rtc-integration-text-processor"
 	// SynthesizerServiceID は harness が所有する固定登録 ID である。
-	SynthesizerServiceID = "gate3-voice-synthesizer"
+	SynthesizerServiceID = "rtc-integration-voice-synthesizer"
 )
 
 // Config は1つの Consul executable、working directory、登録する4 service endpoint を指定する。

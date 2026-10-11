@@ -83,7 +83,7 @@ func TestLoadRejectsInvalidBoundaryInputs(t *testing.T) {
 			name: "owned symlink outside repository",
 			mutate: func(t *testing.T, moduleRoot string, _ map[string]string) {
 				t.Helper()
-				audio := filepath.Join(moduleRoot, "internal", "gate3", "testdata", "gate3-input.wav")
+				audio := filepath.Join(moduleRoot, "internal", "rtcintegration", "testdata", "rtc-integration-input.wav")
 				if err := os.Remove(audio); err != nil {
 					t.Fatal(err)
 				}
@@ -129,7 +129,7 @@ func TestValidatedGoPathBuildsAndRerunsEvidence(t *testing.T) {
 	moduleRoot, environment := makeEnvironmentFixture(t)
 	record := filepath.Join(t.TempDir(), "argv")
 	goPath := environment[goBinaryEnv]
-	script := "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$GATE3_ARGV_RECORD\"\n"
+	script := "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$RTC_INTEGRATION_ARGV_RECORD\"\n"
 	if err := os.WriteFile(goPath, []byte(script), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +137,7 @@ func TestValidatedGoPathBuildsAndRerunsEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("GATE3_ARGV_RECORD", record)
+	t.Setenv("RTC_INTEGRATION_ARGV_RECORD", record)
 	output := filepath.Join(t.TempDir(), "sincro-rtc")
 	if _, err := loaded.BuildPion(context.Background(), output); err != nil {
 		t.Fatalf("BuildPion() error = %v", err)
@@ -163,7 +163,7 @@ func TestValidatedGoPathBuildsAndRerunsEvidence(t *testing.T) {
 
 func TestDiscoverModuleRootWalksFromGoTestPackageDirectory(t *testing.T) {
 	moduleRoot, _ := makeEnvironmentFixture(t)
-	nested := filepath.Join(moduleRoot, "internal", "gate3", "harnessenv")
+	nested := filepath.Join(moduleRoot, "internal", "rtcintegration", "harnessenv")
 	if err := os.MkdirAll(nested, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +183,7 @@ func makeEnvironmentFixture(t *testing.T) (string, map[string]string) {
 	moduleRoot := filepath.Join(repository, "sincromisor-server", "sincro-rtc")
 	for _, directory := range []string{
 		filepath.Join(repository, "sincromisor-frontend", "dist"),
-		filepath.Join(moduleRoot, "internal", "gate3", "testdata"),
+		filepath.Join(moduleRoot, "internal", "rtcintegration", "testdata"),
 		filepath.Join(repository, "bin"),
 	} {
 		if err := os.MkdirAll(directory, 0o700); err != nil {
@@ -194,7 +194,7 @@ func makeEnvironmentFixture(t *testing.T) (string, map[string]string) {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(
-		filepath.Join(moduleRoot, "internal", "gate3", "testdata", "gate3-input.wav"),
+		filepath.Join(moduleRoot, "internal", "rtcintegration", "testdata", "rtc-integration-input.wav"),
 		[]byte("audio"),
 		0o600,
 	); err != nil {

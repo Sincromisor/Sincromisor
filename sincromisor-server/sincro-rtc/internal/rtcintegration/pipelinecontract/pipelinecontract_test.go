@@ -1,4 +1,4 @@
-//go:build gate3
+//go:build rtcintegration
 
 package pipelinecontract
 
@@ -57,7 +57,7 @@ func TestContractServicesDriveProductionPipeline(t *testing.T) {
 		}
 	})
 	coordinator := newCoordinator(t, set.Addresses())
-	if err := coordinator.Start(context.Background(), "gate3-direct-session", "sincro"); err != nil {
+	if err := coordinator.Start(context.Background(), "rtc-integration-direct-session", "sincro"); err != nil {
 		t.Fatalf("Start() error = %v", err)
 	}
 	runTurn(t, coordinator)

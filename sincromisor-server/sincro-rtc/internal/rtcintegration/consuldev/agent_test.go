@@ -1,4 +1,4 @@
-//go:build gate3
+//go:build rtcintegration
 
 package consuldev
 

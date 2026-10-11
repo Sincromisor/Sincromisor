@@ -1,4 +1,4 @@
-//go:build gate3
+//go:build rtcintegration
 
 // Package browser は現行Frontend、4契約service、Consul、Pion、Playwrightを1つの試験生存期間で調停する。
 package browser
@@ -17,11 +17,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/gate3/consuldev"
-	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/gate3/harnessenv"
-	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/gate3/pipelinecontract"
-	gateprocess "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/gate3/process"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/discovery"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/rtcintegration/consuldev"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/rtcintegration/harnessenv"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/rtcintegration/pipelinecontract"
+	testprocess "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/rtcintegration/process"
 )
 
 const (
@@ -43,7 +43,7 @@ func TestFrontendBrowserHarness(t *testing.T) {
 	defer cancelLoad()
 	environment, err := harnessenv.Load(loadCtx)
 	if err != nil {
-		t.Fatalf("load Gate 3 environment: %v", err)
+		t.Fatalf("load RTC integration environment: %v", err)
 	}
 	contracts := startContracts(t, environment)
 	startConsul(t, environment, contracts.Addresses())
@@ -82,7 +82,7 @@ func startConsul(t *testing.T, environment harnessenv.Environment, services map[
 }
 
 // startPion は検査済みbinaryをbuildし、same-origin HTTPのreadiness後にbase URLを返す。
-func startPion(t *testing.T, environment harnessenv.Environment) (string, *gateprocess.Owner) {
+func startPion(t *testing.T, environment harnessenv.Environment) (string, *testprocess.Owner) {
 	t.Helper()
 	pionBinary := filepath.Join(t.TempDir(), "sincro-rtc")
 	buildCtx, cancelBuild := context.WithTimeout(context.Background(), buildTimeout)
@@ -92,7 +92,7 @@ func startPion(t *testing.T, environment harnessenv.Environment) (string, *gatep
 		t.Fatalf("build Pion: %v: %s", err, output)
 	}
 	baseURL, address := unusedLoopbackURL(t)
-	pion := gateprocess.New(gateprocess.Command{
+	pion := testprocess.New(testprocess.Command{
 		Path: pionBinary,
 		Args: []string{"--http", address, "--frontend-dir", environment.FrontendDist, "--ffmpeg", environment.FFmpeg.Path},
 		Env:  os.Environ(), Dir: environment.ModuleRoot,
@@ -110,17 +110,17 @@ func runPlaywright(
 	t *testing.T,
 	environment harnessenv.Environment,
 	baseURL string,
-	pion *gateprocess.Owner,
+	pion *testprocess.Owner,
 	contracts *pipelinecontract.Set,
 ) {
 	t.Helper()
-	playwright := gateprocess.New(gateprocess.Command{
+	playwright := testprocess.New(testprocess.Command{
 		Path: environment.Node.Path,
-		Args: []string{filepath.Join(environment.RepositoryRoot, "node_modules", "@playwright", "test", "cli.js"), "test", "--config", filepath.Join(environment.RepositoryRoot, "playwright.gate3.config.ts")},
+		Args: []string{filepath.Join(environment.RepositoryRoot, "node_modules", "@playwright", "test", "cli.js"), "test", "--config", filepath.Join(environment.RepositoryRoot, "playwright.rtc-integration.config.ts")},
 		Env: append(os.Environ(),
-			"SINCRO_GATE3_BASE_URL="+baseURL,
-			"SINCRO_GATE3_CHROMIUM_BINARY="+environment.Chromium.Path,
-			"SINCRO_GATE3_AUDIO_FIXTURE="+environment.AudioFixture,
+			"SINCRO_RTC_INTEGRATION_BASE_URL="+baseURL,
+			"SINCRO_RTC_INTEGRATION_CHROMIUM_BINARY="+environment.Chromium.Path,
+			"SINCRO_RTC_INTEGRATION_AUDIO_FIXTURE="+environment.AudioFixture,
 		),
 		Dir: environment.RepositoryRoot,
 	})
@@ -155,12 +155,12 @@ func unusedLoopbackURL(t *testing.T) (string, string) {
 	return "http://" + address, address
 }
 
-func waitPionReady(t *testing.T, baseURL string, owner *gateprocess.Owner) {
+func waitPionReady(t *testing.T, baseURL string, owner *testprocess.Owner) {
 	t.Helper()
 	client := &http.Client{Timeout: time.Second}
 	deadline := time.Now().Add(readinessTimeout)
 	for time.Now().Before(deadline) {
-		if owner.State() == gateprocess.StateExited {
+		if owner.State() == testprocess.StateExited {
 			result, err := owner.Wait(context.Background())
 			t.Fatalf("Pion exited before readiness: %v; stderr=%s", err, result.Stderr.Data)
 		}
@@ -207,7 +207,7 @@ func verifyTranscript(t *testing.T, transcript pipelinecontract.Transcript) {
 	}
 }
 
-func closeProcess(t *testing.T, name string, owner *gateprocess.Owner) {
+func closeProcess(t *testing.T, name string, owner *testprocess.Owner) {
 	t.Helper()
 	result, err := owner.Close()
 	if err != nil {
@@ -217,7 +217,7 @@ func closeProcess(t *testing.T, name string, owner *gateprocess.Owner) {
 
 // closePion はproductionの1秒admission windowを短縮せずSIGTERM後最大10秒joinする。
 // 期限切れ時だけOwner.CloseのSIGKILL fallbackへ進み、子processを残さない。
-func closePion(t *testing.T, owner *gateprocess.Owner) {
+func closePion(t *testing.T, owner *testprocess.Owner) {
 	t.Helper()
 	result, err := stopPion(owner)
 	if err != nil || result.ExitCode != 0 {
@@ -226,9 +226,9 @@ func closePion(t *testing.T, owner *gateprocess.Owner) {
 }
 
 // stopPion は診断が必要な失敗経路でも同じgraceful joinと最終fallbackを使う。
-func stopPion(owner *gateprocess.Owner) (gateprocess.Result, error) {
+func stopPion(owner *testprocess.Owner) (testprocess.Result, error) {
 	var signalErr error
-	if owner.State() == gateprocess.StateRunning {
+	if owner.State() == testprocess.StateRunning {
 		if err := owner.Signal(syscall.SIGTERM); err != nil {
 			signalErr = fmt.Errorf("signal Pion: %w", err)
 		}
@@ -239,7 +239,7 @@ func stopPion(owner *gateprocess.Owner) (gateprocess.Result, error) {
 	if err == nil && result.ExitCode == 0 {
 		return result, signalErr
 	}
-	if !errors.Is(err, gateprocess.ErrWaitTimeout) {
+	if !errors.Is(err, testprocess.ErrWaitTimeout) {
 		return result, errors.Join(signalErr, err)
 	}
 	result, closeErr := owner.Close()

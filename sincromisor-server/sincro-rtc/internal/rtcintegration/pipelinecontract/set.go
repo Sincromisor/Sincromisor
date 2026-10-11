@@ -149,7 +149,7 @@ func (s *Set) Transcript() Transcript {
 
 // Verify は1 turnの観測済み wire、identity、操作順違反をすべて返す。
 //
-// Gate 3 smoke は最初の非無音PCMだけを入力として固定する。不完全または余分な操作列は
+// RTC統合試験は最初の非無音PCMだけを入力として固定する。不完全または余分な操作列は
 // protocol error になる。
 func (s *Set) Verify() error {
 	s.mu.Lock()

@@ -190,7 +190,7 @@ func TestCloseBeforeStartPreventsLaterStart(t *testing.T) {
 }
 
 func TestOwnerHelperProcess(t *testing.T) {
-	mode := os.Getenv("GATE3_PROCESS_HELPER")
+	mode := os.Getenv("RTC_INTEGRATION_PROCESS_HELPER")
 	if mode == "" {
 		return
 	}
@@ -204,7 +204,7 @@ func TestOwnerHelperProcess(t *testing.T) {
 		}
 	case "ignore-term":
 		signal.Ignore(syscall.SIGTERM)
-		if err := os.WriteFile(os.Getenv("GATE3_PROCESS_READY"), []byte("ready"), 0o600); err != nil {
+		if err := os.WriteFile(os.Getenv("RTC_INTEGRATION_PROCESS_READY"), []byte("ready"), 0o600); err != nil {
 			os.Exit(3)
 		}
 		for {
@@ -237,7 +237,7 @@ func newHelperOwnerWithGrace(t *testing.T, mode string, grace time.Duration) *Ow
 	command := Command{
 		Path: executable,
 		Args: []string{"-test.run=^TestOwnerHelperProcess$"},
-		Env:  []string{"GATE3_PROCESS_HELPER=" + mode},
+		Env:  []string{"RTC_INTEGRATION_PROCESS_HELPER=" + mode},
 		Dir:  t.TempDir(),
 	}
 	return newWithGrace(command, grace)
@@ -258,8 +258,8 @@ func newReadyHelperOwner(t *testing.T, mode string, grace time.Duration) (*Owner
 		Path: executable,
 		Args: []string{"-test.run=^TestOwnerHelperProcess$"},
 		Env: []string{
-			"GATE3_PROCESS_HELPER=" + mode,
-			"GATE3_PROCESS_READY=" + ready,
+			"RTC_INTEGRATION_PROCESS_HELPER=" + mode,
+			"RTC_INTEGRATION_PROCESS_READY=" + ready,
 		},
 		Dir: t.TempDir(),
 	}

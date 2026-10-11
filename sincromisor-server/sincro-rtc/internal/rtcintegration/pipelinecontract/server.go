@@ -34,7 +34,7 @@ func (s *Set) serve(service discovery.Service, response http.ResponseWriter, req
 }
 
 // Extractor は接続 preface を固定 schema で検査し、最初の非無音PCMだけへ固定 fixture を返す。
-// Gate 3は1 turn smokeであり、発話境界やPCM品質をここで再実装しない。
+// RTC統合試験は会話1往復の動作確認であり、発話境界やPCM品質をここで再実装しない。
 func (s *Set) serveExtractor(ctx context.Context, conn *websocket.Conn) {
 	_, initialize, err := conn.Read(ctx)
 	if err != nil {
