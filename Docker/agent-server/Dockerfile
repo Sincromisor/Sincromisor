@@ -5,6 +5,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY tsconfig.json ./
 COPY src ./src
+COPY preserve-dependency-overrides.mjs ./
 RUN npm run build
 
 FROM node:24.18.1-bookworm-slim

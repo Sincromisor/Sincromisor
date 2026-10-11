@@ -42,6 +42,7 @@ AgentServer・llama-server・専用Consulエージェントは `restart: unless-
 - [application.ts](../../../../sincromisor-server/agent-server/src/mastra/application.ts): 接続先、保存領域、認証、MCP、Editorを組み立て、エージェントを登録する。別の定義へ差し替えるときは生成関数のimportと呼出しを変更する。
 
 コード変更はビルドとサービス再作成で反映する。Studioの公開済み指示がある場合はそちらが優先されるため、稼働中の指示変更はEditorで編集・公開する。
+`npm run build`の後処理は、`package.json`の依存上書きをMastraの配布用の依存定義ファイルへ引き継ぎ、配布側のロックと導入済みパッケージを更新する。Mastra単体のビルドではこの指定が失われるため、コンテナも同じnpmスクリプトを使う。
 Pythonの呼出先と保存済み設定を引き継ぐ場合、登録キーとエージェントIDの `sincromisor-character`を維持する。
 
 ## 管理者認証とEditor

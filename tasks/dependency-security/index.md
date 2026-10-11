@@ -2,9 +2,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 6 件）
+## タスク一覧（自動生成 / 全 7 件）
 
-### done（完了） — 6 件
+### done（完了） — 7 件
 
 | タスク                                                                                                                                 | タイトル                                   | 判定    | 依存 |
 | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ------- | ---- |
@@ -13,6 +13,7 @@
 | [task-260819030329-dependabot-server-dependency-remediation](./task-260819030329-dependabot-server-dependency-remediation/task.md)     | Dependabot server dependency remediation   | ✅ PASS | —    |
 | [task-260819061853-dependabot-frontend-dependency-remediation](./task-260819061853-dependabot-frontend-dependency-remediation/task.md) | Dependabot frontend dependency remediation | ✅ PASS | —    |
 | [task-260907004846-dependabot-compatible-updates](./task-260907004846-dependabot-compatible-updates/task.md)                           | Dependabot警告の依存更新とNeMo制約の確認   | ✅ PASS | —    |
+| [task-261011143119-dependabot-remediation](./task-261011143119-dependabot-remediation/task.md)                                         | Dependabot警告の修正と更新制約の確認       | ✅ PASS | —    |
 | [task-4000-uv-audit-remediation](./task-4000-uv-audit-remediation/task.md)                                                             | uv audit remediation                       | ✅ PASS | —    |
 
 <!-- AUTOGEN:tasks END -->
