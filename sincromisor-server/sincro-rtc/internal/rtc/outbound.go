@@ -3,6 +3,7 @@ package rtc
 import (
 	"context"
 	"errors"
+	"time"
 
 	outputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/output"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/synthdecode"
@@ -18,9 +19,43 @@ func (s *Session) startOutbound() {
 	if s.echo {
 		return
 	}
+	if s.playback != nil {
+		s.goReserved("playback_loop", func(context.Context) { s.playbackLoop() })
+		return
+	}
 	s.goReserved("pipeline_generation", func(context.Context) { s.generationLoop() })
 	s.goReserved("pipeline_text", func(context.Context) { s.textOutputLoop() })
 	s.goReserved("pipeline_synth", func(context.Context) { s.synthOutputLoop() })
+}
+
+// playbackLoop は開始時の本文を1回だけ送り、空になった有限音声キューへ次周回を追加する。
+// Output Processorの連続時計を止めず、SpeechIDを周回ごとに変えることで旧telopを次周回と混同しない。
+func (s *Session) playbackLoop() {
+	if err := s.dispatcher.EnqueueText(protocol.ChatMessage{Message: s.playback.Message}); err != nil {
+		_ = s.Close("output_backpressure")
+		return
+	}
+	var speechID int64 = 1
+	ticker := time.NewTicker(20 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		if s.output.Stats().QueuedSpeeches == 0 {
+			speech := s.playback.Speech
+			speech.SpeechID = speechID
+			if err := s.output.Enqueue(s.playback.Message, speech); err != nil {
+				if !errors.Is(err, outputmedia.ErrOutputClosed) {
+					_ = s.Close("output_backpressure")
+				}
+				return
+			}
+			speechID++
+		}
+		select {
+		case <-s.ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
 }
 
 // outputLoop は音声の送信時計を動かし、送信失敗をセッションの終了へ集約する。

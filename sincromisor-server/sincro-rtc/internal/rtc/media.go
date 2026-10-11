@@ -109,6 +109,9 @@ func (s *Session) startInbound(reader inputmedia.RTPReader) {
 		submit := s.pipelineSubmit
 		if s.echo {
 			submit = s.submitEchoPCM
+		} else if s.playback != nil {
+			// playbackは入力を再生へ混入させず、RTP readerを継続消費して送信側の詰まりを防ぐ。
+			submit = discardPlaybackPCM
 		}
 		err := s.input.Run(s.ctx, reader, submit)
 		switch {
@@ -120,6 +123,8 @@ func (s *Session) startInbound(reader inputmedia.RTPReader) {
 		}
 	})
 }
+
+func discardPlaybackPCM([]byte) error { return nil }
 
 func (s *Session) pipelineSubmit(pcm []byte) error { return s.pipeline.SubmitPCM(pcm) }
 

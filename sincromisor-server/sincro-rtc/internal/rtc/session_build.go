@@ -11,6 +11,7 @@ import (
 
 	inputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/input"
 	outputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/output"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/playback"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/observability"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline"
@@ -34,12 +35,22 @@ func newSession(
 	logger *slog.Logger,
 	onClosed func(string),
 	api *webrtc.API,
-	recorders ...observability.Recorder,
+	args ...any,
 ) (*Session, error) {
-	if id == "" || (talkMode != "chat" && talkMode != "sincro" && talkMode != "echo") {
+	var playbackMaterial *playback.Material
+	var recorders []observability.Recorder
+	for _, arg := range args {
+		switch value := arg.(type) {
+		case *playback.Material:
+			playbackMaterial = value
+		case observability.Recorder:
+			recorders = append(recorders, value)
+		}
+	}
+	if id == "" || (talkMode != "chat" && talkMode != "sincro" && talkMode != "echo" && talkMode != "playback") {
 		return nil, errors.New("rtc session identity or talk mode is invalid")
 	}
-	if synthDecoder == nil || inputObserver == nil || clock == nil || logger == nil || onClosed == nil || (talkMode != "echo" && coordinator == nil) {
+	if synthDecoder == nil || inputObserver == nil || clock == nil || logger == nil || onClosed == nil || (talkMode != "echo" && talkMode != "playback" && coordinator == nil) || (talkMode == "playback" && playbackMaterial == nil) {
 		return nil, errors.New("rtc session dependencies must not be nil")
 	}
 	recorder := observability.Discard()
@@ -65,7 +76,7 @@ func newSession(
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	session := &Session{
-		id: id, talkMode: talkMode, echo: talkMode == "echo", pc: pc, pipeline: coordinator, synthDecoder: synthDecoder, input: input, logger: logger,
+		id: id, talkMode: talkMode, echo: talkMode == "echo", playback: playbackMaterial, pc: pc, pipeline: coordinator, synthDecoder: synthDecoder, input: input, logger: logger,
 		onClosed: onClosed, lifecycle: lifecycle, ctx: ctx, cancel: cancel,
 		encoder: encoder, done: make(chan struct{}), recorder: recorder,
 	}

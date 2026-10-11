@@ -7,9 +7,11 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/config"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/playback"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/observability"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline"
@@ -56,6 +58,10 @@ func runWithBoundaries(
 	if err != nil {
 		return err
 	}
+	playbackSource, err := playback.NewLoader(filepath.Join("assets", "playback", "default"), synthDecoder)
+	if err != nil {
+		return fmt.Errorf("create playback material loader: %w", err)
+	}
 	mediaSocket, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.ParseIP(cfg.MediaIPv4), Port: int(cfg.MediaUDPPort)})
 	if err != nil {
 		return fmt.Errorf("bind media udp socket: %w", err)
@@ -79,6 +85,7 @@ func runWithBoundaries(
 		MaxSessions:     cfg.MaxSessions,
 		API:             processNetwork.API,
 		SynthDecoder:    synthDecoder,
+		Playback:        playbackSource,
 		Recorder:        metrics,
 	})
 	if err != nil {

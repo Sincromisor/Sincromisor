@@ -75,6 +75,9 @@ RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
 COPY --from=pion-builder --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     /out/sincro-rtc \
     ${SINCRO_USER_DIR}/sincro-rtc
+COPY --from=pion-builder --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    /src/sincromisor-server/sincro-rtc/assets \
+    ${SINCRO_USER_DIR}/assets
 COPY --from=frontend-builder --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     /opt/sincromisor/sincromisor-frontend/dist \
     ${SINCRO_USER_DIR}/frontend
