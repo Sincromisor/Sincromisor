@@ -23,11 +23,6 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.npm,uid=1001,gid=1001 \
     chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR} && \
     npm ci
 
-RUN \
-    mkdir -p ${SINCRO_USER_DIR}/sincromisor-frontend/public/mediapipe-wasm && \
-    cp -r ${SINCRO_USER_DIR}/sincromisor-frontend/node_modules/@mediapipe/tasks-vision/wasm/* \
-    ${SINCRO_USER_DIR}/sincromisor-frontend/public/mediapipe-wasm
-
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./sincromisor-frontend/tsconfig.json \
     ./sincromisor-frontend/tsconfig.modern.json \
@@ -42,6 +37,10 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./sincromisor-frontend/public \
     ${SINCRO_USER_DIR}/sincromisor-frontend/public
+
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-frontend/scripts \
+    ${SINCRO_USER_DIR}/sincromisor-frontend/scripts
 
 RUN npm run build
 

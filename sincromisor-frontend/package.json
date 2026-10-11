@@ -4,8 +4,9 @@
     "version": "0.0.0",
     "type": "module",
     "scripts": {
-        "dev": "vite",
-        "build": "tsc -p tsconfig.modern.json && vite build",
+        "assets:prepare": "node scripts/prepare-mediapipe-assets.js",
+        "dev": "npm run assets:prepare && vite",
+        "build": "npm run assets:prepare && tsc -p tsconfig.modern.json && vite build",
         "test": "vitest run",
         "generate:temporal-recovery-fixtures": "SINCRO_WRITE_RECOVERY_FIXTURES=1 vitest run src/character/motionEvaluation/fixtures/temporalArmRecoveryFixture.generate.test.ts",
         "check": "npm run check:biome && npm run check:md",

@@ -36,7 +36,7 @@ export PATH="$HOME/.local/bin:$PATH"
 
 Ubuntu 標準の Node.js / npm、Go、C/C++ ビルドツール、FFmpeg、Opus、音声処理ライブラリ、Git、ripgrep、ShellCheck を導入する。Python は uv で `.python-version` の 3.14 を用意し、`uv sync --locked --group dev --group full` を実行する。Go の必要バージョンは `go.mod` と標準の自動ツールチェーン取得に従う。
 
-ルートとフロントエンドで `npm ci` を実行し、MediaPipe の WASM を配置する。`.env` とモデルキャッシュ用ディレクトリは存在しない場合だけ作る。再実行できるが、`node_modules` と Python 仮想環境はロックに同期され、Docker の GPU 設定時はデーモンを再起動する。APT リポジトリは `sincromisor-*` 名で登録する。既存環境への移植・他方式との混在は対象外とする。
+ルートとフロントエンドで `npm ci` を実行し、共通の `assets:prepare`でMediaPipeのWASMをインストール済みパッケージへ同期する。生成先の古い素材とリンクは交換する。`.env` とモデルキャッシュ用ディレクトリは存在しない場合だけ作る。再実行できるが、`node_modules` と Python 仮想環境はロックに同期され、Docker の GPU 設定時はデーモンを再起動する。APT リポジトリは `sincromisor-*` 名で登録する。既存環境への移植・他方式との混在は対象外とする。
 
 Docker グループへの自動追加は行わない。以降の Docker 操作には `sudo docker` を使う。Compose のサービス、認識モデル、AgentServer、LLM、VRM 素材はこのスクリプトでは起動・取得しない。
 
