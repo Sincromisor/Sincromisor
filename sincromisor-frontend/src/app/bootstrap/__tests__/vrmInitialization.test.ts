@@ -55,6 +55,7 @@ it("実際の3ページ入口で設定確定後に手動・OBS開始し、再開
         for (const page of [
             "simple",
             "simple-chat",
+            "simple-echo",
             "simple-invalid",
             "360",
             "lookingGlass",
@@ -77,7 +78,7 @@ it("実際の3ページ入口で設定確定後に手動・OBS開始し、再開
                     }),
                 },
                 location: {
-                    search: `?talkMode=${page === "simple-chat" ? "chat" : page === "simple-invalid" ? "invalid" : "sincro"}`,
+                    search: `?talkMode=${page === "simple-echo" ? "echo" : page === "simple-chat" ? "chat" : page === "simple-invalid" ? "invalid" : "sincro"}`,
                 },
                 ...(obs ? { obsstudio: {} } : {}),
             });
@@ -111,7 +112,14 @@ it("実際の3ページ入口で設定確定後に手動・OBS開始し、再開
                     enableCharacterGaze: page !== "360",
                     enableAutoMute: false,
                     ...(page.startsWith("simple")
-                        ? { talkMode: page === "simple-chat" ? "chat" : "sincro" }
+                        ? {
+                              talkMode:
+                                  page === "simple-echo"
+                                      ? "echo"
+                                      : page === "simple-chat"
+                                        ? "chat"
+                                        : "sincro",
+                          }
                         : {}),
                 });
                 const calibration = app?.calibration.getState();
@@ -153,7 +161,7 @@ it("実際の3ページ入口で設定確定後に手動・OBS開始し、再開
             expect(motionTuning).toHaveBeenLastCalledWith(
                 expect.objectContaining({ motionScale: 0.72 }),
             );
-            expect(greeting).toHaveBeenCalledTimes(2);
+            expect(greeting).toHaveBeenCalledTimes(page === "simple-echo" ? 0 : 2);
             await vi.waitFor(() =>
                 expect(cachedWarning).toHaveBeenCalledWith(
                     "Failed to load cached VRM thumbnail.",

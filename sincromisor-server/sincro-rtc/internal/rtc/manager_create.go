@@ -24,8 +24,8 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (result Answer, retur
 	if strings.TrimSpace(offer.SDP) == "" {
 		return Answer{}, errors.New("offer sdp is required")
 	}
-	if offer.TalkMode != "chat" && offer.TalkMode != "sincro" {
-		return Answer{}, errors.New("talk mode must be chat or sincro")
+	if offer.TalkMode != "chat" && offer.TalkMode != "sincro" && offer.TalkMode != "echo" {
+		return Answer{}, errors.New("talk mode must be chat, sincro, or echo")
 	}
 	requestID, err := uuid.Parse(offer.OfferRequestID)
 	if err != nil {
@@ -54,9 +54,11 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (result Answer, retur
 			m.releaseReservation()
 		}
 	}()
-	coordinator, err = pipeline.NewCoordinator(m.config.PipelineFactory, m.config.Logger)
-	if err != nil {
-		return Answer{}, err
+	if offer.TalkMode != "echo" {
+		coordinator, err = pipeline.NewCoordinator(m.config.PipelineFactory, m.config.Logger)
+		if err != nil {
+			return Answer{}, err
+		}
 	}
 	sessionID := ulid.Make().String()
 	gatherTimeout := time.Duration(0)

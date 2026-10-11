@@ -24,6 +24,7 @@ export class SincroController {
     private readonly rtcConfigManager: SincroRTCConfigManager;
     private readonly audioInputController: SincroAudioInputController;
     private readonly rtcSessionController: SincroRtcSessionController;
+    private readonly unsubscribeMuteSettings: () => void;
     private readonly characterGazeController: SincroCharacterGazeController;
 
     constructor(options: SincroControllerOptions) {
@@ -53,6 +54,14 @@ export class SincroController {
             talkManager,
             this.rtcConfigManager,
         );
+        // 手動ミュートは接続中にも反映し、診断時の自動ミュート抑止とは独立して保持する。
+        this.unsubscribeMuteSettings = this.settingsModel.subscribeSettingsChange(() => {
+            this.rtcSessionController.setManualMute(
+                this.settingsModel.getSetting("muteMicrophone"),
+            );
+            if (!this.settingsModel.getSetting("enableAutoMute"))
+                this.rtcSessionController.setAutoMute(false);
+        });
     }
 
     /** 通常設定確定後、音声取得を開始する前に保存された診断調整を適用する。 */
@@ -75,6 +84,7 @@ export class SincroController {
 
     /** 生成済み音声トラックと接続開始時点の会話モードでWebRTC接続を開始する。 */
     startRTC(audioTrack: MediaStreamTrack): void {
+        this.rtcSessionController.setManualMute(this.settingsModel.getSetting("muteMicrophone"));
         this.rtcSessionController.start(audioTrack, this.settingsModel.getSetting("talkMode"));
     }
 
@@ -86,12 +96,13 @@ export class SincroController {
     // 顔認識を開始し、視線・AutoMute状態をデバッグUIとRTC mute制御へ反映する。
     private startCharacterGaze(onTrackingStopped: (reason: string) => void): void {
         this.characterGazeController.start((mute) => {
-            this.rtcSessionController.setMute(mute);
+            this.rtcSessionController.setAutoMute(mute);
         }, onTrackingStopped);
     }
 
     /** アプリ差し替えで古い追跡通知を無効化する。RTC停止のリソース範囲は変えない。 */
     releaseTrackingSubscriptions(): void {
+        this.unsubscribeMuteSettings();
         this.characterGazeController.releaseSubscriptions();
     }
 }

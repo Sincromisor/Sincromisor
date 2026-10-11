@@ -69,7 +69,7 @@ func (p *Processor) Run(ctx context.Context) error {
 func (p *Processor) hasActiveSpeech() bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	return len(p.queue) > 0
+	return len(p.queue) > 0 || len(p.echoPCM) > 0
 }
 
 // skipSamplePositionsは送らない20 ms slotをlogical clockと次Pion sampleのdrop metadataへ累積する。

@@ -56,7 +56,7 @@ func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) 
 		return
 	}
 	if payload.SDP == "" || payload.Type != "offer" ||
-		(payload.TalkMode != "chat" && payload.TalkMode != "sincro") {
+		(payload.TalkMode != "chat" && payload.TalkMode != "sincro" && payload.TalkMode != "echo") {
 		writeError(writer, http.StatusBadRequest, "Invalid offer fields.")
 		return
 	}

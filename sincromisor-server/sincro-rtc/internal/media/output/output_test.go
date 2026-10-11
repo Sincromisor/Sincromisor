@@ -51,6 +51,23 @@ func TestOutputSpeechQueueBoundaries(t *testing.T) {
 	}
 }
 
+func TestEnqueueEchoPCMKeepsNewestSecond(t *testing.T) {
+	processor := newProcessorForTest(t)
+	if err := processor.EnqueueEchoPCM(make([]int16, SampleRate*3/4)); err != nil {
+		t.Fatalf("first EnqueueEchoPCM() error = %v", err)
+	}
+	if err := processor.EnqueueEchoPCM(make([]int16, SampleRate*3/4)); err != nil {
+		t.Fatalf("second EnqueueEchoPCM() error = %v", err)
+	}
+	stats := processor.Stats()
+	if stats.EchoQueuedSamples != SampleRate || stats.QueuedSpeeches != 0 {
+		t.Fatalf("echo queue samples/speeches = %d/%d, want %d/0", stats.EchoQueuedSamples, stats.QueuedSpeeches, SampleRate)
+	}
+	if len(processor.echoPCM) != SampleRate {
+		t.Fatalf("echo PCM length = %d, want %d", len(processor.echoPCM), SampleRate)
+	}
+}
+
 func TestOutputTelopUsesAudioFrameSampleTick(t *testing.T) {
 	processor := newProcessorForTest(t)
 	empty := ""

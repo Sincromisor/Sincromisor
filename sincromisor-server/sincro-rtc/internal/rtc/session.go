@@ -37,6 +37,8 @@ type Session struct {
 	talkMode string
 	pc       *webrtc.PeerConnection
 	pipeline *pipeline.Coordinator
+	// echoは下流サービスを使わず、入力PCMをoutputへ直接渡す診断経路である。
+	echo bool
 	// synthDecoderはprocess-wide immutable dependencyへの非所有参照である。Session cleanupは
 	// processを保持しないDecoderをcloseせず、別Sessionの同一参照を継続利用可能に保つ。
 	synthDecoder synthSpeechDecoder

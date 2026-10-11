@@ -122,8 +122,9 @@ export class SincroVRMInitializer {
             });
     }
 
+    /** 診断では会話例や合成音声の案内を作らず、RTCの実際の接続状態だけを表示する。 */
     private writeWelcomeMessagesOnce(): void {
-        if (this.appUiStarted) {
+        if (this.appUiStarted || this.appController.getSettingsSnapshot().talkMode === "echo") {
             return;
         }
         this.appController.chat.writeUnknownUserMessage("こんにちは!");

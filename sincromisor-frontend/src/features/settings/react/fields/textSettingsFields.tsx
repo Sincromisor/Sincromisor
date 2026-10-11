@@ -47,11 +47,17 @@ export function TalkModeField({
             >
                 <option value="chat">キャラクターと話す</option>
                 <option value="sincro">キャラクターになる</option>
+                <option value="echo">入力音声を折り返す</option>
             </SettingsSelect>
             <p id={`${inputId}-description`} className="settingsPrimitiveFieldDescription">
                 {settings.talkMode === "sincro"
                     ? "カメラで顔や体の動きをキャラクターに重ねます。"
-                    : "マイクで話しかけると、キャラクターが声で答えます。"}
+                    : settings.talkMode === "echo"
+                      ? "音声診断：フィルターとVADを通った入力を返します。ヘッドホンをご使用ください。自動ミュートは適用しません。"
+                      : "マイクで話しかけると、キャラクターが声で答えます。"}
+            </p>
+            <p className="settingsPrimitiveFieldDescription">
+                モードの変更は停止後の再接続で反映します。
             </p>
         </div>
     );

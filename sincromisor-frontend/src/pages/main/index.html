@@ -33,7 +33,7 @@
 
                     <form id="experience-form" action="/simple-vrm/" method="get">
                         <fieldset class="mode-picker">
-                            <legend>今日は、どっちの気分？</legend>
+                            <legend>体験を選ぶ</legend>
                             <label class="mode-choice">
                                 <input type="radio" name="talkMode" value="chat" checked />
                                 <span class="mode-icon" aria-hidden="true">☏</span>
@@ -44,6 +44,12 @@
                                 <input type="radio" name="talkMode" value="sincro" />
                                 <span class="mode-icon" aria-hidden="true">✳</span>
                                 <span><strong>キャラクターになる</strong><small>声も、しぐさも、もうひとりの自分</small></span>
+                                <span class="radio-mark" aria-hidden="true"></span>
+                            </label>
+                            <label class="mode-choice">
+                                <input type="radio" name="talkMode" value="echo" />
+                                <span class="mode-icon" aria-hidden="true">↩</span>
+                                <span><strong>入力音声を折り返す</strong><small>音声診断・ヘッドホンをご使用ください</small></span>
                                 <span class="radio-mark" aria-hidden="true"></span>
                             </label>
                         </fieldset>

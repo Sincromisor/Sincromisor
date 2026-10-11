@@ -36,10 +36,10 @@ func newSession(
 	api *webrtc.API,
 	recorders ...observability.Recorder,
 ) (*Session, error) {
-	if id == "" || (talkMode != "chat" && talkMode != "sincro") {
+	if id == "" || (talkMode != "chat" && talkMode != "sincro" && talkMode != "echo") {
 		return nil, errors.New("rtc session identity or talk mode is invalid")
 	}
-	if coordinator == nil || synthDecoder == nil || inputObserver == nil || clock == nil || logger == nil || onClosed == nil {
+	if synthDecoder == nil || inputObserver == nil || clock == nil || logger == nil || onClosed == nil || (talkMode != "echo" && coordinator == nil) {
 		return nil, errors.New("rtc session dependencies must not be nil")
 	}
 	recorder := observability.Discard()
@@ -65,18 +65,20 @@ func newSession(
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	session := &Session{
-		id: id, talkMode: talkMode, pc: pc, pipeline: coordinator, synthDecoder: synthDecoder, input: input, logger: logger,
+		id: id, talkMode: talkMode, echo: talkMode == "echo", pc: pc, pipeline: coordinator, synthDecoder: synthDecoder, input: input, logger: logger,
 		onClosed: onClosed, lifecycle: lifecycle, ctx: ctx, cancel: cancel,
 		encoder: encoder, done: make(chan struct{}), recorder: recorder,
 	}
-	if err := coordinator.ConfigureRuntime(recorder, func(stage string) {
-		logger.Error("pipeline worker panic", "session_id", id, "stage", stage, "reason", "panic")
-		_ = session.Close("panic")
-	}); err != nil {
-		_ = pc.Close()
-		_ = encoder.Close()
-		cancel()
-		return nil, err
+	if coordinator != nil {
+		if err := coordinator.ConfigureRuntime(recorder, func(stage string) {
+			logger.Error("pipeline worker panic", "session_id", id, "stage", stage, "reason", "panic")
+			_ = session.Close("panic")
+		}); err != nil {
+			_ = pc.Close()
+			_ = encoder.Close()
+			cancel()
+			return nil, err
+		}
 	}
 	dispatcher, err := datachannel.New(ctx, logger, func(err error) {
 		logger.Error("data channel dispatcher stopped", "session_id", id, "reason", "data_channel_error", "error", err)
@@ -124,11 +126,18 @@ func newSession(
 		codec:      encoder.Close,
 		output:     output.Close,
 		dispatcher: dispatcher.Close,
-		pipeline:   coordinator.Close,
+		pipeline:   closeCoordinator(coordinator),
 	}
 	session.installCallbacks()
 	logger.Info("rtc session created", "session_id", id)
 	return session, nil
+}
+
+func closeCoordinator(coordinator *pipeline.Coordinator) func() error {
+	if coordinator == nil {
+		return nil
+	}
+	return coordinator.Close
 }
 
 // newPeerConnection はHTTP Answer生成deadlineをPion内部のSTUN transaction上限へ伝播する。
