@@ -37,3 +37,7 @@
 
 - `documents/design/contracts/audio-pipeline-websocket.md`
 - `documents/design/archive/legacy-flat/backend_speech_extractor.md`
+
+## 依存の再現性
+
+MediaPipeは`mediapipe>=1.1.0`の範囲指定とし、実際の採用版1.1.0はルートの`uv.lock`で固定する。Python 3.14と`uv sync --locked --group speech-extractor`を使い、起動時に依存を自動更新しない。

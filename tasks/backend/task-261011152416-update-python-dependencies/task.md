@@ -36,10 +36,10 @@
 ## 完了条件（受け入れ条件）
 
 - [ ] 候補を[ルートの依存定義](../../../pyproject.toml)、各サービスの`pyproject.toml`、[uv.lock](../../../uv.lock)へ整合する形で反映し、各サービスの依存を`--locked`で導入できる。
-- [ ] [SpeechExtractorの依存定義](../../../sincromisor-server/speech-extractor/pyproject.toml)の`mediapipe==1.0.1`を、採用版を下限とする範囲指定へ変更する。1.1.0採用時は`mediapipe>=1.1.0`を基本とし、上限は具体的な非互換根拠がある場合だけ設ける。実際の採用版は`uv.lock`で固定する。
+- [x] [SpeechExtractorの依存定義](../../../sincromisor-server/speech-extractor/pyproject.toml)の`mediapipe==1.0.1`を、採用版を下限とする範囲指定へ変更する。1.1.0採用時は`mediapipe>=1.1.0`を基本とし、上限は具体的な非互換根拠がある場合だけ設ける。実際の採用版は`uv.lock`で固定する。
 - [ ] SpeechExtractorの実際のAudioClassifierが起動し、既存の音声素材を処理できる。Python 3.14と既存Linuxコンテナで必要な配布物・ネイティブ依存が揃う。
 - [ ] 共通モデルのシリアライズ、音声認識の後処理、Mastraストリームの変換、音声合成の既存確認が通り、通信契約を維持する。
-- [ ] 更新した直接・推移依存の採用版、解決上の制約、見送った候補を記録する。
+- [x] 更新した直接・推移依存の採用版、解決上の制約、見送った候補を記録する。
 
 ## 設計判断と変更範囲
 
@@ -61,3 +61,11 @@ Dockerfileの変更は今回の依存導入に必要な互換修正に限定す�
 ## 文書同期
 
 [SpeechExtractor設計](../../../documents/design/backend/services/speech-extractor.md)と各サービスのREADMEのうち、採用版・導入条件が変わる箇所を同期する。[音声パイプライン契約](../../../documents/design/contracts/audio-pipeline-websocket.md)は変更しない。
+
+## 実装・確認結果
+
+候補表の全版とTorch 2.14.1、Transformers 5.19.0を採用した。追従した推移依存はbotocore 1.43.111、httpcore2 2.13.1、pydantic-core 2.50.0、yarl 1.25.1。NeMo 3.0.0とReazonSpeechの固定コミットは維持した。MediaPipeは`>=1.1.0`へ変更し、上限は追加していない。
+
+`uv lock --check`、GPU不要の3サービスと開発グループの`uv sync --locked`、Ruff、導入済み5パッケージのty、共通設定・モデル・Mastraストリーム変換・音声合成の59テストが成功した。実SpeechExtractorWorkerのYAMNet AudioClassifierが既存Gate3音声を処理し、5分類結果を返した。Linux x86_64向け`uv sync --locked --group dev --group full --python-platform x86_64-unknown-linux-gnu --dry-run`も成功した。
+
+CUDA対応LinuxコンテナでのNeMo導入・実音声認識と全体型検査は未確認のため、タスクは完了にしていない。[実装記録](impl.md)に再開条件を残す。
