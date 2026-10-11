@@ -9,6 +9,7 @@ import (
 	"github.com/pion/webrtc/v4"
 
 	inputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/input"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/playback"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/observability"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline"
@@ -31,6 +32,8 @@ type ManagerConfig struct {
 	API *webrtc.API
 	// SynthDecoderは全Sessionが同一pointerを非所有参照するimmutable dependencyである。
 	SynthDecoder *synthdecode.Decoder
+	// Playbackは成功済み既定素材を全sessionで共有する遅延読み込み境界である。
+	Playback playback.Source
 	// Recorderは有限種類の生存期間イベントを受け取る。nilの場合は何もしない実装を使い、
 	// 下位試験がPrometheusレジストリを用意せずに済むようにする。
 	Recorder observability.Recorder
@@ -45,6 +48,7 @@ type sessionBuildRequest struct {
 	gatherTimeout time.Duration
 	coordinator   *pipeline.Coordinator
 	synthDecoder  *synthdecode.Decoder
+	playback      *playback.Material
 	onClosed      func(string)
 	recorder      observability.Recorder
 }
@@ -113,6 +117,7 @@ func NewManager(stunURL string, config ManagerConfig) (*Manager, error) {
 			manager.config.Logger,
 			request.onClosed,
 			config.API,
+			request.playback,
 			request.recorder,
 		)
 	}

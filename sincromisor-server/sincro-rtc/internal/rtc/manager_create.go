@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
 
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/playback"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline"
 )
 
@@ -24,8 +25,8 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (result Answer, retur
 	if strings.TrimSpace(offer.SDP) == "" {
 		return Answer{}, errors.New("offer sdp is required")
 	}
-	if offer.TalkMode != "chat" && offer.TalkMode != "sincro" && offer.TalkMode != "echo" {
-		return Answer{}, errors.New("talk mode must be chat, sincro, or echo")
+	if offer.TalkMode != "chat" && offer.TalkMode != "sincro" && offer.TalkMode != "echo" && offer.TalkMode != "playback" {
+		return Answer{}, errors.New("talk mode must be chat, sincro, echo, or playback")
 	}
 	requestID, err := uuid.Parse(offer.OfferRequestID)
 	if err != nil {
@@ -38,6 +39,7 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (result Answer, retur
 	}
 	reserved := true
 	var coordinator *pipeline.Coordinator
+	var playbackMaterial *playback.Material
 	var session *Session
 	defer func() {
 		if recover() != nil {
@@ -54,7 +56,16 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (result Answer, retur
 			m.releaseReservation()
 		}
 	}()
-	if offer.TalkMode != "echo" {
+	if offer.TalkMode == "playback" {
+		if m.config.Playback == nil {
+			return Answer{}, playback.ErrUnavailable
+		}
+		material, loadErr := m.config.Playback.Load(ctx)
+		if loadErr != nil {
+			return Answer{}, loadErr
+		}
+		playbackMaterial = &material
+	} else if offer.TalkMode != "echo" {
 		coordinator, err = pipeline.NewCoordinator(m.config.PipelineFactory, m.config.Logger)
 		if err != nil {
 			return Answer{}, err
@@ -75,6 +86,7 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (result Answer, retur
 		gatherTimeout: gatherTimeout,
 		coordinator:   coordinator,
 		synthDecoder:  m.config.SynthDecoder,
+		playback:      playbackMaterial,
 		onClosed: func(closedID string) {
 			m.remove(closedID)
 			if offer.OnClosed != nil {

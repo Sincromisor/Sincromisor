@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
 
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/playback"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/rtc"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/signaling/offer"
 )
@@ -56,7 +57,7 @@ func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) 
 		return
 	}
 	if payload.SDP == "" || payload.Type != "offer" ||
-		(payload.TalkMode != "chat" && payload.TalkMode != "sincro" && payload.TalkMode != "echo") {
+		(payload.TalkMode != "chat" && payload.TalkMode != "sincro" && payload.TalkMode != "echo" && payload.TalkMode != "playback") {
 		writeError(writer, http.StatusBadRequest, "Invalid offer fields.")
 		return
 	}
@@ -108,6 +109,9 @@ func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) 
 			return
 		case errors.Is(err, rtc.ErrSessionPanic):
 			writeError(writer, http.StatusInternalServerError, "Internal server error.")
+			return
+		case errors.Is(err, playback.ErrUnavailable):
+			writeError(writer, http.StatusUnprocessableEntity, "Playback material is unavailable.")
 			return
 		}
 		s.logger.Warn("offer rejected", "reason", "offer_error")

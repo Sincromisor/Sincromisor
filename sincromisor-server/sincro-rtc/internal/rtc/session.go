@@ -10,6 +10,7 @@ import (
 
 	inputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/input"
 	outputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/output"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/playback"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/observability"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline"
@@ -39,6 +40,8 @@ type Session struct {
 	pipeline *pipeline.Coordinator
 	// echoは下流サービスを使わず、入力PCMをoutputへ直接渡す診断経路である。
 	echo bool
+	// playbackは下流を使わず、process共有の不変素材をsession単位で周回する診断経路である。
+	playback *playback.Material
 	// synthDecoderはprocess-wide immutable dependencyへの非所有参照である。Session cleanupは
 	// processを保持しないDecoderをcloseせず、別Sessionの同一参照を継続利用可能に保つ。
 	synthDecoder synthSpeechDecoder

@@ -77,6 +77,9 @@ func (s *Session) transportReady() {
 			if s.echo {
 				// echoは送信時計とRTCP drainだけを使い、下流出力の3 workerを開始しない。
 				workers = 2
+			} else if s.playback != nil {
+				// playbackは送信時計、RTCP drain、素材周回だけを使い、下流出力workerを開始しない。
+				workers = 3
 			}
 			s.wg.Add(workers)
 		}
@@ -225,9 +228,9 @@ func (s *Session) promoteMediaReadyLocked(event string) bool {
 // Close は session context と Coordinator.Close の両方で接続中処理を中断する。Start failure が
 // closing より先なら同じ close-onceへ通知し、成功時だけ running を公開する。
 func (s *Session) launchPipeline() {
-	if s.echo {
+	if s.echo || s.playback != nil {
 		// promoteMediaReadyLockedが予約したWaitGroupを消費し、診断経路も通常経路と同じ終了待機へ載せる。
-		s.goReserved("echo_start", func(context.Context) {
+		s.goReserved("diagnostic_start", func(context.Context) {
 			s.lifecycle.mu.Lock()
 			if s.lifecycle.state == stateMediaReady {
 				if transitionErr := s.lifecycle.transitionLocked(stateRunning, "echo_started"); transitionErr != nil {

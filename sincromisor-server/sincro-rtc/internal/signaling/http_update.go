@@ -23,7 +23,7 @@ func (s *Server) handleUpdateOffer(
 		return
 	}
 	if payload.SDP == "" || payload.Type != "offer" ||
-		(payload.TalkMode != "chat" && payload.TalkMode != "sincro" && payload.TalkMode != "echo") ||
+		(payload.TalkMode != "chat" && payload.TalkMode != "sincro" && payload.TalkMode != "echo" && payload.TalkMode != "playback") ||
 		payload.OfferRequestID == nil || payload.OfferRevision == nil ||
 		!validUUID(*payload.OfferRequestID) || *payload.OfferRevision == 0 {
 		writeError(writer, http.StatusBadRequest, "Invalid update offer fields.")

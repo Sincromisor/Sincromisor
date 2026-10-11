@@ -110,7 +110,7 @@
 }
 ```
 
-初回Offerでは`session_id`を送らず、`talk_mode`は`chat`、`sincro`、または診断用の`echo`、
+初回Offerでは`session_id`を送らず、`talk_mode`は`chat`、`sincro`、診断用の`echo`、または既定素材を再生する`playback`、
 `offer_request_id`はフロントエンド発行UUID、`offer_revision`は`1`を必須とする。
 ただしPionは互換性のため、`session_id`、`offer_request_id`、`offer_revision`をすべて省略した
 旧形式の初回Offerだけを受理し、サーバー側でUUIDと改訂番号 `1`を生成する。旧形式は要求IDを
@@ -118,6 +118,11 @@
 `previous_session_id`は任意のULIDで、旧セッションとの相関ログだけに使う。
 `session_id`の省略と`null`/空文字は同一視せず、初回Offerに後者があればHTTP 400とする。
 `previous_session_id`も省略または厳格な形式のULID文字列だけを許可し、`null`や文字列以外はHTTP 400とする。
+
+`playback`は下流サービスへ接続せず、起動ディレクトリの`assets/playback/default/`にある検証済み素材を
+セッション単位で繰り返す。素材の欠落・破損・時刻不整合は初回OfferをHTTP 422で拒否し、既存セッションや
+`chat`、`sincro`、`echo`へ波及させない。素材のPCMとモーラはプロセス内で共有するが、再生位置、`speech_id`、
+送信待機は各セッションが所有する。`text_ch`は開始時に本文を1回だけ送り、周回ごとの同期は`telop_ch`だけで扱う。
 同じ要求IDを再試行するときは同じSDPバイト列を送り、SDPを再生成した場合は新しいUUIDを発行する。
 
 更新Offerでは初回と同じ`offer_request_id`、既存の厳格な形式のULID `session_id`、
