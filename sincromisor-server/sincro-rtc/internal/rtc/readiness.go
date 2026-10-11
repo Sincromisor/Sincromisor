@@ -223,9 +223,9 @@ func (s *Session) promoteMediaReadyLocked(event string) bool {
 	return true
 }
 
-// launchPipeline は readiness lock が予約した1つの goroutine から4 clientの遅延接続を開始する。
+// launchPipeline は予約済みの処理枠で診断経路を開始し、通常モードでは4 clientへ遅延接続する。
 //
-// Close は session context と Coordinator.Close の両方で接続中処理を中断する。Start failure が
+// 診断経路は下流へ接続せずrunningへ進む。通常経路のCloseはsession contextとCoordinator.Closeで接続を中断する。Start failureが
 // closing より先なら同じ close-onceへ通知し、成功時だけ running を公開する。
 func (s *Session) launchPipeline() {
 	if s.echo || s.playback != nil {
@@ -233,7 +233,7 @@ func (s *Session) launchPipeline() {
 		s.goReserved("diagnostic_start", func(context.Context) {
 			s.lifecycle.mu.Lock()
 			if s.lifecycle.state == stateMediaReady {
-				if transitionErr := s.lifecycle.transitionLocked(stateRunning, "echo_started"); transitionErr != nil {
+				if transitionErr := s.lifecycle.transitionLocked(stateRunning, "diagnostic_started"); transitionErr != nil {
 					s.logTransitionError(transitionErr)
 				}
 			}

@@ -110,6 +110,8 @@
 }
 ```
 
+`talk_mode`への`playback`追加は公開通信契約の破壊的変更であり、対応するフロントとRTCサーバーを同時に更新する。
+
 初回Offerでは`session_id`を送らず、`talk_mode`は`chat`、`sincro`、診断用の`echo`、または既定素材を再生する`playback`、
 `offer_request_id`はフロントエンド発行UUID、`offer_revision`は`1`を必須とする。
 ただしPionは互換性のため、`session_id`、`offer_request_id`、`offer_revision`をすべて省略した
@@ -161,7 +163,7 @@
 同じ改訂番号と同じSDPの完了後再試行には保存済みAnswerを返す。同じ改訂番号の異なるSDP、
 旧改訂番号、現在値から2以上進んだ改訂番号、初回と異なる要求ID、並行更新はHTTP 409とする。
 成功時は既存`session_id`、`RTCPeerConnection`、DataChannel、処理工程と同じ改訂番号のAnswerを返す。
-保存済み`talk_mode`と異なる有効値もHTTP 409とし、処理工程のモードは変更しない。`echo`は入力を
+保存済み`talk_mode`と異なる有効値もHTTP 409とし、処理工程のモードは変更しない。`playback`も同じモードを維持し、下流へ接続しない。`echo`は入力を
 返却音声トラックへ折り返すだけで、`text_ch`と`telop_ch`へ認識文・モーラを送らず、下流サービスへ接続しない。
 
 相手側の接続情報適用前の更新失敗は現在の改訂番号を維持して再試行可能とする。
