@@ -77,10 +77,10 @@
         "yaml": "^2.5.0"
     },
     "devDependencies": {
+        "@biomejs/biome": "^2.5.15",
+        "@playwright/cli": "0.1.22",
         "@playwright/test": "1.63.0",
-        "@biomejs/biome": "^2.5.13",
-        "prettier": "^3.9.6",
-        "@playwright/cli": "0.1.22"
+        "prettier": "^3.9.9"
     },
     "workspaces": [
         "sincromisor-frontend"
