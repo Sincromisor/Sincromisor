@@ -40,7 +40,7 @@ playwright-cli -s=sincromisor snapshot
 playwright-cli -s=sincromisor close
 ```
 
-入力には `fill <参照> <値>`、キー操作には `press Enter` を使う。画面遷移などで要素の参照が変わった場合は `snapshot` を取得し直す。見た目の確認には `screenshot`、エラーや通信の調査には `console` / `network` を使う。
+入力には `fill <参照> <値>`、キー操作には `press Enter` を使う。画面遷移などで要素の参照が変わった場合は `snapshot` を取得し直す。見た目の確認には `screenshot`、エラーや通信の調査には `console` / `requests` を使う。
 
 終了時は自分のセッションだけを閉じる。他の作業に影響する `close-all` / `kill-all` や、プロファイルを消去する `delete-data` を通常の後片付けに使わない。
 
@@ -53,6 +53,10 @@ playwright-cli -s=sincromisor close
 ## Playwrightテスト
 
 既存テストの実行・修正が目的なら、ブラウザー操作から始めず [テストの実行と調査](../../.agents/skills/playwright-cli/references/playwright-tests.md) を読む。新しいテストは要求結果の確認に必要な場合だけ作る。
+
+## 公式スキルの更新
+
+`playwright-cli install --skills=agents` で導入する公式スキルと `references/` は、上流の原文資料としてGit管理する。プロジェクト固有の運用は本書に置き、公式スキルの汎用例より本書を優先する。更新時はスキル本文と参照資料をまとめて確認し、リンク先の欠落と利用コマンドの変更を確認する。公式資料の英語表記は原文として保持する。
 
 ## 参照
 
