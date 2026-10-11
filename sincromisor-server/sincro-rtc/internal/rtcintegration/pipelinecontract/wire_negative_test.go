@@ -1,4 +1,4 @@
-//go:build gate3
+//go:build rtcintegration
 
 package pipelinecontract
 
@@ -55,7 +55,7 @@ func produceExtraction(t *testing.T, set *Set) (string, int64, int64) {
 	t.Helper()
 	conn := dialContract(t, set, discovery.ServiceExtractor, "/api/v1/SpeechExtractor/extract")
 	defer conn.CloseNow()
-	sessionID := "gate3-wire-negative-session"
+	sessionID := "rtc-integration-wire-negative-session"
 	writeFixture(t, conn, fixturePath(t, "extractor_initialize.msgpack"), func(value map[string]any) {
 		value["session_id"] = sessionID
 	})

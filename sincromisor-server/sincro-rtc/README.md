@@ -25,7 +25,7 @@
 | [`internal/media`](internal/media)                                               | [`input`](internal/media/input)の受信音声変換、[`output`](internal/media/output)の送信音声制御、[`synthdecode`](internal/media/synthdecode)の合成音声復号 |
 | [`internal/pipeline`](internal/pipeline)                                         | 4つの下流サービスを世代単位で接続し、再初期化、履歴、キューを調停                                                                                         |
 | [`internal/observability`](internal/observability)                               | プロセス固有のPrometheus 登録簿と、種類数を固定した表示名語彙                                                                                             |
-| [`internal/gate3`](internal/gate3)                                               | 公開境界から実プロセス、Consul、下流固定サービス、ブラウザーを検証するGate 3試験基盤                                                                      |
+| [`internal/rtcintegration`](internal/rtcintegration)                             | 公開境界から実プロセス、Consul、下流固定サービス、ブラウザーを検証するRTC統合試験基盤                                                                     |
 
 代表的な処理は次の順に読む。
 

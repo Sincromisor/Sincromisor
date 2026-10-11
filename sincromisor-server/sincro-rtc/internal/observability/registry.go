@@ -34,7 +34,7 @@ type Registry struct {
 	closeDuration    *prometheus.HistogramVec
 }
 
-// NewRegistry はGate 3のmetric familyだけを持つ独立registryを構築する。
+// NewRegistry はRTCサーバーの指標だけを持つ独立したPrometheusレジストリを構築する。
 // I/Oを行わず、Prometheusの大域registryを変更しない。
 func NewRegistry() *Registry {
 	r := &Registry{registry: prometheus.NewRegistry()}

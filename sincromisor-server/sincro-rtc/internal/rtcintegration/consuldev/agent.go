@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/gate3/process"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/discovery"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/rtcintegration/process"
 )
 
 const (

@@ -8,14 +8,14 @@ import (
 )
 
 const (
-	goBinaryEnv       = "SINCRO_GATE3_GO_BINARY"
-	nodeBinaryEnv     = "SINCRO_GATE3_NODE_BINARY"
-	chromiumBinaryEnv = "SINCRO_GATE3_CHROMIUM_BINARY"
-	consulBinaryEnv   = "SINCRO_GATE3_CONSUL_BINARY"
-	ffmpegBinaryEnv   = "SINCRO_GATE3_FFMPEG_BINARY"
+	goBinaryEnv       = "SINCRO_RTC_INTEGRATION_GO_BINARY"
+	nodeBinaryEnv     = "SINCRO_RTC_INTEGRATION_NODE_BINARY"
+	chromiumBinaryEnv = "SINCRO_RTC_INTEGRATION_CHROMIUM_BINARY"
+	consulBinaryEnv   = "SINCRO_RTC_INTEGRATION_CONSUL_BINARY"
+	ffmpegBinaryEnv   = "SINCRO_RTC_INTEGRATION_FFMPEG_BINARY"
 )
 
-// Input は検査済みの Gate 3 入力を成果物へ転記するための値である。
+// Input はRTC統合試験の検査済み入力を成果物へ転記するための値である。
 //
 // Path は symlink 解決後の絶対 path、Version は probe の完全な先頭行である。
 // repository 所有 file だけ SHA256 が設定され、実行 file と directory では nil になる。
@@ -34,7 +34,7 @@ type Tool struct {
 	Version string
 }
 
-// Environment は Gate 3 全体で共有する検査済み入力である。
+// Environment はRTC統合試験全体で共有する検査済み入力である。
 //
 // 値は immutable として扱う。後続処理は各 Tool.Path をprocessへ直接指定し、
 // PATHによる再解決を行わない。
@@ -53,7 +53,7 @@ type Environment struct {
 
 type commandRunner func(context.Context, string, ...string) ([]byte, error)
 
-// Load は module の配置と5つの環境変数から Gate 3 の全入力を一括検査する。
+// Load はモジュールの配置と5つの環境変数からRTC統合試験の全入力を一括検査する。
 //
 // 一件でも未設定、相対 path、欠落、権限不備、version 不整合があれば部分的な
 // Environment を返さない。外部 process は version probe の間だけ起動する。
@@ -95,7 +95,7 @@ func load(
 	}
 	audioFixture, err := validateOwnedPath(
 		"audio fixture",
-		filepath.Join(moduleRoot, "internal", "gate3", "testdata", "gate3-input.wav"),
+		filepath.Join(moduleRoot, "internal", "rtcintegration", "testdata", "rtc-integration-input.wav"),
 		repositoryRoot,
 		false,
 	)

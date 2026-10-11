@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-const CONTROL_EVENT = "sincro-gate3-control";
-const OBSERVATION_EVENT = "sincro-gate3-observation";
+const CONTROL_EVENT = "sincro-rtc-integration-control";
+const OBSERVATION_EVENT = "sincro-rtc-integration-observation";
 
 type BrowserSnapshot = {
     audioPeak: number;

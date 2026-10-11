@@ -33,7 +33,7 @@
 - [Biome設定](../../../sincromisor-frontend/biome.json)のスキーマ参照を更新する。フロント固有の設定は対象の近くに残し、今回の整理を理由に検査範囲を拡大しない。
 - [フロントのDockerfile](../../../Docker/sincro-frontend/Dockerfile)をルートのロックファイルとworkspace定義から導入する構成にする。ビルド後の配信構成は維持する。
 - [WSL用セットアップ](../../../utils/setup-devenv/setup.sh)、[セットアップのテスト](../../../utils/setup-devenv/test.sh)、[旧フロントセットアップ](../../../utils/setup/frontend.sh)を新しい入口へ揃える。Node/npmのバージョン指定を読み取って検査し、不一致時の手順を示す。
-- [Gate3設定](../../../playwright.gate3.config.ts)と[Go側の起動処理](../../../sincromisor-server/sincro-rtc/internal/gate3/browser/browser_test.go)を確認する。既存の`SINCRO_GATE3_CHROMIUM_BINARY`などの明示指定は保持し、配置変更に必要な箇所だけ修正する。
+- [Gate3設定](../../../playwright.rtc-integration.config.ts)と[Go側の起動処理](../../../sincromisor-server/sincro-rtc/internal/rtcintegration/browser/browser_test.go)を確認する。既存の`SINCRO_GATE3_CHROMIUM_BINARY`などの明示指定は保持し、配置変更に必要な箇所だけ修正する。
 - グローバルツールのアンインストール、個人環境の自動書き換え、Python・Go・AgentServerの依存再編、アプリ機能変更は行わない。過去タスクの記録や上流スキルの汎用例を一括置換しない。
 
 ## 確認方法
