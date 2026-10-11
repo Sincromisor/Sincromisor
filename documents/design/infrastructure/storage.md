@@ -125,7 +125,7 @@ UID 1000のnodeユーザーが権限700の領域に単一libSQL `mastra.db`を�
 
 中央の保存・公開先・Consul登録は[ログの保存と検索](logging.md)を参照する。
 
-`victoria-logs-data`は中央保存、`vector-data`は送信待ち・確定cursor・原本消失marker、`observer-data`は配送の前回観測を保持する。Dockerログ原本はホストの永続journalであり、Composeのボリュームではない。各ホストの管理者がjournal容量・空き容量・レート制限を管理する。原本とバッファを同時に失う物理故障には別ホスト保管が必要になる。
+`victoria-logs-data`は中央保存、`vector-data`は送信待ち・確定cursor・原本消失marker・Vectorの収集状態、`observer-data`は配送の前回観測を保持する。Dockerログ原本はホストの永続journalであり、Composeのボリュームではない。各ホストの管理者がjournal容量・空き容量・レート制限を管理する。原本とバッファを同時に失う物理故障には別ホスト保管が必要になる。
 
 中央は停止中にファイル一式を保存する。次のコマンドは既存ファイルを上書きせず、失敗時も実行前に稼働していた中央を再起動する。停止中のサービス出力は各ホストのjournalとVectorバッファが保持する。
 

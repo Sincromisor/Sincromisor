@@ -1,4 +1,4 @@
-# Docker・ホスト原本とVector内部ログを取り込み、中央停止中は専用ディスクへ保持する。
+# 管理対象Composeのjournal原本とVector内部ログを取り込み、中央停止中は専用ディスクへ保持する。
 data_dir = "/var/lib/vector"
 
 [api]
@@ -8,18 +8,13 @@ address = "0.0.0.0:8686"
 # 両journalをnativeの既定探索で読む。入力名を維持しvector-data内のcursorを再利用する。
 [sources.host_journal]
 type = "journald"
-# コンテナとは異なるmachine-idのホスト原本も対象にする。
 extra_args = ["--merge"]
 current_boot_only = false
 since_now = false
 emit_cursor = true
-# Dockerのstdout/stderr判定とホスト重大度には数値のPRIORITYを使う。
 remap_priority = false
 [sources.host_journal.include_matches]
 COM_DOCKER_COMPOSE_PROJECT = ["${SINCRO_LOG_PROJECT}"]
-_SYSTEMD_UNIT = ["docker.service", "containerd.service"]
-_TRANSPORT = ["kernel"]
-SYSLOG_IDENTIFIER = ["systemd", "systemd-journald", "sincromisor-log-test"]
 
 [sources.metrics]
 type = "internal_metrics"
@@ -76,12 +71,6 @@ if .service == "sincro-voicevox" && (get_env_var("SINCRO_LOG_SYNTHESIS_ENABLED")
          "event": "voicevox_diagnostic", "message": "VOICEVOX event"}
     if http_error == null { .http_method = http.method; .http_status = to_int!(http.status) }
 }
-# 管理下の補助収集だけはDocker API由来の対象IDを共通項目へ対応付ける。
-if original.label."com.docker.compose.service" == "log-observer" && starts_with(string!(.event), "docker_") {
-    .collector_container_id = .container_id
-    .container_id = .target_container_id
-    .service = .target_service
-}
 # Vector自身も同じ原本から一度だけ回収する。診断が原本を含んでも固定語彙以外を送らない。
 if original.label."com.docker.compose.service" == "vector" {
     prefix, prefix_error = parse_regex(string!(original.message), r'^\S+\s+(?P<level>TRACE|DEBUG|INFO|WARN|ERROR)\b')
@@ -114,7 +103,7 @@ del(.source_type)
 
 [sinks.central]
 type = "http"
-inputs = ["normalize", "host_diagnostics"]
+inputs = ["normalize"]
 uri = "http://log-router:8080/insert/jsonline?_time_field=timestamp&_msg_field=message&_stream_fields=host,project,service"
 method = "post"
 encoding.codec = "json"
@@ -134,52 +123,3 @@ request.headers.Content-Type = "application/stream+json"
 type = "prometheus_exporter"
 inputs = ["metrics"]
 address = "0.0.0.0:9598"
-
-# ホストの任意本文を捨て、既知の障害分類と発生元だけを新しいイベントへ組み直す。
-[transforms.host_diagnostics]
-type = "remap"
-inputs = ["host_journal"]
-drop_on_abort = true
-source = '''
-if exists(.CONTAINER_ID_FULL) { abort }
-raw = string(.message) ?? ""
-message = downcase(slice!(raw, 0, 4096))
-unit = string(._SYSTEMD_UNIT) ?? ""
-identifier = string(.SYSLOG_IDENTIFIER) ?? ""
-transport = string(._TRANSPORT) ?? ""
-origin = ""
-reason = ""
-probe_id = ""
-if transport == "kernel" {
-    origin = "kernel"
-    if match(message, r'out of memory|oom-kill|killed process') { reason = "oom" }
-    else if match(message, r'nvrm.*xid|gpu.*(fault|error|hang)|amdgpu.*(failed|timeout|reset)') { reason = "gpu_failure" }
-    else if match(message, r'i/o error|buffer i/o|ext4-fs error|no space left|nvme.*(timeout|failed)|read-only file system') { reason = "disk_failure" }
-    else if match(message, r'netdev watchdog|link is down|network.*(unreachable|failed)|tx timeout') { reason = "network_failure" }
-    else if match(message, r'device.*(failed|error)|usb.*(error|disconnect)') { reason = "device_failure" }
-} else if unit == "docker.service" || unit == "containerd.service" {
-    origin = if unit == "docker.service" { "docker" } else { "containerd" }
-    if match(message, r'error|failed|fatal|panic|timeout|timed out') { reason = "runtime_failure" }
-    else if match(message, r'start|initializ|shutdown|stopp|terminat') { reason = "runtime_state" }
-} else if identifier == "systemd-journald" {
-    origin = "journald"
-    if match(message, r'suppressed [0-9]+ messages|missed [0-9]+.*messages') { reason = "logging_rate_limited" }
-    else if match(message, r'failed|no space|read-only|corrupt') { reason = "journal_failure" }
-} else if identifier == "systemd" {
-    origin = "systemd"
-    if match(message, r'failed|failure|timed out|core.dump|oom') { reason = "service_manager_failure" }
-} else if identifier == "sincromisor-log-test" {
-    probe, err = parse_regex(raw, r'^sincromisor-host-probe (?P<id>[0-9a-f-]{36})$')
-    if err == null { origin = "probe"; reason = "read_path_probe"; probe_id = string!(probe.id) }
-}
-if reason == "" { abort }
-priority = to_int(.PRIORITY) ?? 6
-level = if priority <= 3 { "error" } else if priority == 4 { "warn" } else { "info" }
-boot = string(._BOOT_ID) ?? ""
-. = {"timestamp": .timestamp, "observed_at": now(), "host": get_env_var!("SINCRO_LOG_HOST"),
-     "event": "host_diagnostic", "message": reason, "reason": reason, "origin": origin,
-     "level": level, "priority": priority, "diagnostic_truncated": length(raw) > 4096}
-if match(boot, r'^[0-9a-f]{32}$') { .boot_id = boot }
-if match(unit, r'^[a-zA-Z0-9_.@:-]{1,128}$') { .unit = unit }
-if probe_id != "" { .probe_id = probe_id }
-'''

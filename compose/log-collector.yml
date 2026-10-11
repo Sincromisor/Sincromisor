@@ -26,9 +26,9 @@ services:
             - ${SINCRO_LOG_RUNTIME_JOURNAL_DIR:-/run/log/journal}:/run/log/journal:ro
         networks: [sincromisor-net]
         healthcheck:
-            test: [CMD, timeout, "4", bash, /check-vector.sh]
+            test: [CMD, timeout, "10", bash, /check-vector.sh]
             interval: 10s
-            timeout: 5s
+            timeout: 12s
             retries: 3
 
     log-observer:
@@ -37,11 +37,7 @@ services:
         build: ../Docker/logging/observer
         image: ${SINCRO_REGISTRY_NAME}/log-observer:latest
         restart: unless-stopped
-        environment:
-            SINCRO_LOG_PROJECT: ${COMPOSE_PROJECT_NAME}
         volumes:
-            # Docker管理権限を持つソケット。APIをホストへ公開しない。
-            - /var/run/docker.sock:/var/run/docker.sock:ro
             - vector-data:/var/lib/vector:ro
             - observer-data:/var/lib/log-observer
         networks: [sincromisor-net]

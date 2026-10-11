@@ -237,25 +237,11 @@ Dockerのローカル原本には要求URLが残り、ホストjournalの保持�
 
 ## コンテナ状態とチェック診断
 
-標準の各プロファイルは`log-observer`も起動する。Go標準ライブラリだけの補助処理が、5秒ごとにDocker Events、対象Composeのコンテナinspect、Consulの各ローカルエージェントの`/v1/agent/checks`と全体の`/v1/health/state/any`を読む。
-Dockerソケット権限はVectorと同じで、ホストへのAPI公開や業務サービスの起動依存は追加しない。
-`start`・`die`・`oom`・`health_status`はDockerの発生時刻、実コンテナID、Composeサービス名で記録する。
-Vectorは管理下の`log-observer`から来る`docker_*`イベントだけを対象の共通項目へ対応付け、収集コンテナIDを`collector_container_id`へ分離する。
+標準の各プロファイルは`log-observer`も起動する。補助処理は5秒ごとに、Vectorが`vector-data`へ原子的に書く収集状態とVectorの配送指標を確認する。Dockerソケット、Docker API、ConsulのチェックAPIには接続しない。`docker_lifecycle`、`docker_health`、`docker_health_query_failed`、`consul_check`は中央ログに生成しない破壊的変更であり、コンテナとConsulサービスの状態は各サービスのhealthcheckとConsul自身で確認する。
 
-Docker healthcheckは直近の開始・終了時刻、終了コード、安全な診断を記録する。
-初回の異常、新しいチェック結果、履歴なし（`history_missing`）、inspect取得失敗（`docker_health_query_failed`）を区別する。
-Consulは実際の`target_node`、`service_id`、`check_id`、状態と診断を残し、同じ状態でも出力が変われば再記録する。
-同じ状態でのOutput変更はクラスタへの同期が遅れるため、各ホストはローカルagentの結果を優先する。
-Consulの全チェックも各収集ホストが観測するため、同じ対象の記録が複数ホストから届くことがある。
+Vectorは起動ごとにUUIDの`start_id`、確認時刻、正常性、固定理由だけを状態ファイルへ書く。起動直後は前回の正常結果を無効にし、healthcheckがHTTP、実journal、追尾プロセスを確認するまで正常にしない。実journal読取は最大10秒かかるため、healthcheckは10秒周期・12秒時間切れで実行する。`log-observer`は次回実行までの最大20秒、2回連続の遅延、5秒の観測周期を考慮して45秒で状態を失効させる。欠落・不正・期限切れ・未来時刻・異常状態を収集異常とし、配送指標の取得後に同じ`start_id`を再確認する。確認中の再作成で旧状態と新しい累計を混同しないためである。
 
-チェックの任意出力は保存しない。最大2048バイトを検査してHTTP状態、接続拒否、時間切れ、DNS、権限、空き容量など既知の原因へ分類する。
-未知の本文は`output_redacted`、空は`empty_output`とし、上限超過は`diagnostic_truncated=true`で示す。URL、コマンド、環境、応答本文、原文のハッシュを代替項目へ残さない。
-S3のwgetチェックとAgentServerの認証付きfetchは、出力元でもHTTP状態または`connection_failed`だけを出す。
-
-取得失敗・復旧は`observer_query`に照会種別と安全な理由を記録する。
-全照会が成功した場合だけ8687の死活確認が200となり、`SincroLogObserver_<host>`としてConsulへ登録する。
-Docker Eventsは直近256件まで、health履歴も有限で、補助処理の停止中や大量発生時の全履歴は保証しない。秒単位の取得境界には重複があり得る。
-再起動時の初回観測を出し直す。自動回収・欠落区間の扱いは回収タスクで補う。
+配送の成功、滞留、破棄、原本cursor消失、不明区間は従来どおり記録する。再起動時は配送累計を再初期化し、旧`observer-data`のDocker起動時刻は新しいUUIDと一致しないため安全側で不明区間として扱う。収集状態または配送が異常なら8687の`/collector`と`/health`は503となり、`SincroLogCollector_<host>`と`SincroLogObserver_<host>`のConsulチェックがcriticalになる。業務サービスはログ基盤の状態を起動条件にしない。
 
 bandogは従来の全サービス必須DNS判定と`/services.status`を維持し、ログ基盤に`SincroLogObserver`を加える。
 初回とサービスごとの異常・復旧だけを`bandog_dns`へ出し、同じ状態は再出力しない。
@@ -288,6 +274,4 @@ Linuxの永続journal `/var/log/journal`と実行中journal `/run/log/journal`�
 
 収集イメージはVector 0.58.0の公式バイナリとUbuntu 26.04のjournalctlを使う。公式VectorのDebianイメージに含まれるjournalctl 257では過去bootの追尾をVectorが拒否するため、258以降が必要である。nativeの `journald`入力で `current_boot_only=false`、`--merge`を指定し、ホストとコンテナのmachine-idの違いを吸収する。読取位置は `host_journal`入力名で `vector-data`に保持する。入力名やボリュームを変更・削除すると再読取や欠落の原因になる。[Vectorのjournal入力仕様](https://vector.dev/docs/reference/configuration/sources/journald/)を参照する。
 
-journaldの抑制・保存失敗、Docker/containerdの状態・失敗、systemdの失敗、カーネルのOOM・GPU/デバイス・ディスク・ネットワーク障害だけを `host_diagnostic`へ変換する。先頭4096バイトを既知語で分類し、任意の `MESSAGE`、コマンドライン、環境、プロセス名は複製しない。固定の `reason`、`origin`、重大度、時刻、ホスト、妥当なboot識別子とunitを残し、サービス・会話IDを推測しない。未知・無関係な行は除外する。実際の障害を起こさず読取経路を確認する場合は、`logger -t sincromisor-log-test -- "sincromisor-host-probe <UUID>"`の固定形式を使い、`probe_id`を検索する。
-
-VectorのDocker healthcheckはHTTP生存に加え、実journalのカーソルを読めることとnativeの追尾プロセスを確認する。`log-observer`は稼働中Vectorのこの結果を `/collector`と自身の `/health`へ反映し、Consulの `SincroLogCollector`と `SincroLogObserver`がcriticalになる。原本本文をhealthcheck出力へ流さず、`journal_unreadable_or_missing` / `journal_input_unavailable`等の固定理由だけを残す。再作成直後は新しい検査が通るまで正常としない。
+VectorのhealthcheckはHTTP生存に加え、実journalのカーソルを読めることとnativeの追尾プロセスを確認する。原本本文をhealthcheck出力へ流さず、`journal_unreadable_or_missing` / `journal_input_unavailable`等の固定理由だけを状態ファイルへ残す。Vectorは共有journalを読む権限を持つため、Composeラベルによる対象選別は読取権限の分離ではない。ホスト・kernel・systemd・Docker daemonの診断変換は提供しない。

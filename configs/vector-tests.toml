@@ -46,6 +46,45 @@ assert_eq!(.level, "unknown")
 assert_eq!(.stream, "stderr")
 '''
 
+# journal入力のComposeラベルだけを正規化境界へ渡す。本文に含まれる識別子は採用しない。
+[[tests]]
+name = "対象Composeのjournal属性を採用する"
+[[tests.inputs]]
+insert_at = "container_journal"
+type = "log"
+[tests.inputs.log_fields]
+message = '{"service":"forged"}'
+timestamp = "2026-09-22T00:00:00Z"
+COM_DOCKER_COMPOSE_PROJECT = "fixture"
+COM_DOCKER_COMPOSE_SERVICE = "fixture"
+CONTAINER_ID_FULL = "trusted-container"
+PRIORITY = "3"
+__CURSOR = "trusted-cursor"
+_BOOT_ID = "0123456789abcdef0123456789abcdef"
+[[tests.outputs]]
+extract_from = "normalize"
+[[tests.outputs.conditions]]
+type = "vrl"
+source = '''
+assert_eq!(.project, "fixture")
+assert_eq!(.service, "fixture")
+assert_eq!(.container_id, "trusted-container")
+assert_eq!(.stream, "stderr")
+assert_eq!(.journal_cursor, "trusted-cursor")
+'''
+
+[[tests]]
+name = "対象外Composeのjournal属性を除外する"
+no_outputs_from = ["container_journal"]
+[[tests.inputs]]
+insert_at = "container_journal"
+type = "log"
+[tests.inputs.log_fields]
+message = "対象外"
+COM_DOCKER_COMPOSE_PROJECT = "other-project"
+COM_DOCKER_COMPOSE_SERVICE = "fixture"
+CONTAINER_ID_FULL = "other-container"
+
 [[tests]]
 name = "構造付きテキストの本文・重大度・発生時刻を取り出す"
 [[tests.inputs]]

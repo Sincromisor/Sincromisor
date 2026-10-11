@@ -134,7 +134,7 @@ docker compose --profile full exec sincro-consul-server consul operator raft lis
 
 ## 状態ログ
 
-`log-observer`が実際のチェックAPIからノード・サービスID・チェックID・状態・安全な診断を収集する。
+`log-observer`はVectorの収集状態と配送指標を確認し、収集・配送の異常と復旧だけをJSONLへ記録する。
 DNSを使うbandogはサービス単位の初回と異常・復旧だけをJSONLへ出し、既存の失敗件数による判定を維持する。
-補助収集自身は`SincroLogObserver_<host>`で登録し、API取得失敗はcriticalにする。
-診断の除去規則、履歴の限界、各ホストの対象は[ログ設計](logging.md#コンテナ状態とチェック診断)を参照する。
+補助収集自身は`SincroLogObserver_<host>`で登録し、収集状態または配送の異常時はcriticalにする。
+診断の除去規則、配送の限界、各ホストの対象は[ログ設計](logging.md#コンテナ状態とチェック診断)を参照する。

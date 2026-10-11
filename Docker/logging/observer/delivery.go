@@ -70,12 +70,16 @@ func deliveryMetrics(reader io.Reader) (map[string]float64, error) {
 
 // deliveryは中央受理・滞留・破棄と観測不在を記録し、不明な欠落を0と推測しない。
 func (o *observer) delivery(ctx context.Context) error {
-	now := time.Now().UTC().Format(time.RFC3339Nano)
+	now := observerNow().UTC().Format(time.RFC3339Nano)
+	startID := o.vectorStarted
+	if startID == "" {
+		return fmt.Errorf("collector_unavailable")
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://vector:9598/metrics", nil)
 	if err != nil {
 		return fmt.Errorf("metrics_request_invalid")
 	}
-	response, err := o.consul.Do(req)
+	response, err := o.vector.Do(req)
 	if err != nil {
 		return fmt.Errorf("collector_metrics_unavailable")
 	}
@@ -87,7 +91,12 @@ func (o *observer) delivery(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	// metrics取得中のVector再作成を検出する。先に読んだ旧start_idへ新プロセスの累計を保存しない。
+	if err := o.collectorHealth(observerNow().UTC()); err != nil || o.vectorStarted != startID {
+		return fmt.Errorf("collector_restarted_during_metrics")
+	}
 	prior := o.deliveryState
+	// 保存済みStartedAtはRFC3339、現在の起動識別子はUUIDである。旧形式も安全側で再起動扱いにする。
 	if prior.VectorStarted != "" && prior.VectorStarted != o.vectorStarted {
 		o.changed("delivery:restart", map[string]any{"event": "logging_recovery", "reason": "collector_restarted", "from": prior.LastObserved, "to": now, "loss_count": nil, "replay_possible": true})
 		prior.Sent = 0
@@ -114,7 +123,7 @@ func (o *observer) delivery(ctx context.Context) error {
 		return err
 	}
 	// cursor消失は再読取開始前またはhealthcheckで残す。確認後の手動解除まで異常を維持する。
-	gap, err := os.ReadFile("/var/lib/vector/journal-gap.json")
+	gap, err := os.ReadFile(journalGapPath)
 	if err == nil {
 		var interval struct{ From, To string }
 		if len(gap) > 1024 || json.Unmarshal(gap, &interval) != nil {
@@ -143,7 +152,7 @@ func (o *observer) delivery(ctx context.Context) error {
 
 // saveDeliveryは最終観測を同じボリューム内で原子的に更新する。書込不能も監視異常とする。
 func (o *observer) saveDelivery() error {
-	path := "/var/lib/log-observer/delivery.json"
+	path := deliveryStatePath
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		return fmt.Errorf("delivery_state_unwritable")
 	}
