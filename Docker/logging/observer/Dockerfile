@@ -1,4 +1,4 @@
-FROM golang:1.26.8-bookworm AS build
+FROM golang:1.26.9-bookworm AS build
 WORKDIR /src
 COPY main.go consul.go delivery.go ./
 RUN CGO_ENABLED=0 go build -o /log-observer main.go consul.go delivery.go
