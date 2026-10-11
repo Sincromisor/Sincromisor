@@ -16,10 +16,9 @@ WebRTCプロセスと各ワーカーを接続するGo pipeline coordinatorのロ
 音声抽出ワーカーのログです。
 MediaPipeのAudioClassifierのログがここに出力されます。
 
-## SpeechRecognizerWorker.log
+## 音声認識のログ
 
-音声認識ワーカーのログです。
-Nue-ASRのログがここに出力されます。
+NeMoの運用ログは標準出力へ出力されます。記録内容は[音声認識サービスの運用ログ](../../documents/design/backend/services/speech-recognizer.md#運用ログ)を参照してください。
 
 ## VoiceSynthesizerWorker.log
 
@@ -38,4 +37,4 @@ SessionIDはULIDとなっており、時系列順でソートできます。
 ## voice/$SessionID/$SpeechID\_$DATE\_$TIME.json
 
 音声認識結果です。
-[SpeechRecognizerResult](../sincroLib/models/SpeechRecognizerResult.py)の中身がJSON形式で出力されます。
+[SpeechRecognizerResult](../sincro-models/src/sincro_models/SpeechRecognizerResult.py)の中身がJSON形式で出力されます。

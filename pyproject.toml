@@ -98,9 +98,7 @@ include = [
     "utils",
 ]
 exclude = [
-    "sincromisor-server/speech-recognizer/**",
     "sincromisor-server/**/tests/**",
-    "utils/test-nue/**",
 ]
 
 [tool.hatch.build.targets.wheel]
