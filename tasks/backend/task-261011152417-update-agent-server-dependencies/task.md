@@ -25,12 +25,12 @@ npmの各パッケージの`latest`メタデータを参照した。Nodeは24.18
 
 ## 完了条件（受け入れ条件）
 
-- [ ] [依存定義](../../../sincromisor-server/agent-server/package.json)とロックファイルを更新し、Mastraの相互依存条件を満たす。採用版と見送り理由を記録する。
-- [ ] `@mastra/mcp`の2系移行に必要な互換修正を行い、core・editor・libsql・memory・CLIと一緒に検証する。候補のMCP 2.2.0にはcore 1.75以上、libsql 1.25.1にはcore 1.68以上が必要。
-- [ ] MCP SDKのoverrideが必要かを新しい依存構成で判断する。脆弱性対策を後退させず、開発用と`.mastra/output`の配布用の両方で実際に解決された版を確認する。
-- [ ] Node 24系の保守版をDockerのビルド段・実行段へ反映し、型定義も同系列へ揃える。TypeScript 7への移行に必要な設定・型修正を行う。
+- [x] [依存定義](../../../sincromisor-server/agent-server/package.json)とロックファイルを更新し、Mastraの相互依存条件を満たす。採用版と見送り理由を記録する。
+- [x] `@mastra/mcp`の2系移行に必要な互換修正を行い、core・editor・libsql・memory・CLIと一緒に検証する。候補のMCP 2.2.0にはcore 1.75以上、libsql 1.25.1にはcore 1.68以上が必要。
+- [x] MCP SDKのoverrideが必要かを新しい依存構成で判断する。脆弱性対策を後退させず、開発用と`.mastra/output`の配布用の両方で実際に解決された版を確認する。
+- [x] Node 24系の保守版をDockerのビルド段・実行段へ反映し、型定義も同系列へ揃える。TypeScript 7への移行に必要な設定・型修正を行う。
 - [ ] 本番用ビルドの起動、認証、Studioの指示編集・公開、同一threadの履歴継続と別threadの隔離、MCP接続・呼出し・終了、Pythonへの応答ストリームが維持される。
-- [ ] 既存の保存済み指示と会話履歴を引き継げる。共有データを削除して更新を成立させない。
+- [x] 既存の保存済み指示と会話履歴を引き継げる。共有データを削除して更新を成立させない。
 
 ## 設計判断と変更範囲
 
@@ -51,3 +51,15 @@ npmの各パッケージの`latest`メタデータを参照した。Nodeは24.18
 ## 文書同期
 
 [AgentServer設計](../../../documents/design/backend/services/agent-server.md)の採用版・配布手順・回避策を実装に同期する。設定や保存手順を変える必要がある場合は、[Compose設計](../../../documents/design/infrastructure/compose.md)、[保存領域設計](../../../documents/design/infrastructure/storage.md)、設定例も同時に確認する。
+
+## 実装・確認結果
+
+専用ワークツリーのコミット`ea988231`で実装した。環境の`min-release-age=5`を維持し、core 1.74.0、editor 0.15.6、libsql 1.25.0、loggers 1.3.4、mcp 2.1.2、memory 1.35.0、CLI 1.32.1、Zod 4.6.5、Node型定義24.19.1、tsx 4.23.15、TypeScript 7.0.2を採用した。候補表のより新しい版は公開後5日未満のため見送った。Node実行環境は24.21.0へ揃えた。MCPはSDK 2.0.0を要求するためoverrideを維持し、開発・配布ともclient 2.3.1の実解決を確認した。
+
+公式Node 24.21.0を一時領域へ展開し、`npm ci`、型検査、9件の既存試験、Studio付き本番ビルドが成功した。旧版でダミーの公開済み指示と会話履歴を作成したDBをコピーし、新版での読出しと履歴追記を確認した。共有DBは変更していない。
+
+本番起動で未認証・不正認証401、正当認証200を確認し、専用ChromeのStudioで指示編集・保存・公開・再読込みを確認した。Pythonの既存Mastraストリーム試験を含む59試験が成功した。固定応答のローカルLLM代替サーバーから本番Mastraを経由し、Python MastraClientで実HTTPの本文・正常終端を確認した。ただし代替応答は実LLMによる生成の検証とは扱わない。
+
+実LLMの会話確認とDocker実行は環境不足で残っている。独立評価は未達項目によりFAILで、実装コミットは専用ワークツリーに保持しmainへ未統合。[実装記録](impl.md)と[評価](eval.md)を参照する。
+
+専用ワークツリーの`npm run gate`も静的検査・ビルド・677件の単体テストがすべて成功した。実LLMとDockerの未確認はこの結果で代替しない。
