@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/oklog/ulid/v2"
+
 	outputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/output"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/synthdecode"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline"
@@ -31,12 +33,17 @@ func (s *Session) startOutbound() {
 // playbackLoop は開始時の本文を1回だけ送り、空になった有限音声キューへ次周回を追加する。
 // Output Processorの連続時計を止めず、SpeechIDを周回ごとに変えることで旧telopを次周回と混同しない。
 func (s *Session) playbackLoop() {
-	if err := s.dispatcher.EnqueueText(protocol.ChatMessage{Message: s.playback.Message}); err != nil {
+	if err := s.dispatcher.EnqueueText(protocol.ChatMessage{
+		SpeechID: 1, MessageID: ulid.Make().String(), MessageType: "system",
+		SpeakerID: "playback", SpeakerName: "再生サンプル", Message: s.playback.Message,
+		CreatedAt: float64(time.Now().UnixMilli()) / 1000,
+	}); err != nil {
 		_ = s.Close("output_backpressure")
 		return
 	}
 	var speechID int64 = 1
-	ticker := time.NewTicker(20 * time.Millisecond)
+	// 音声枠と同じ間隔で消費完了を確認し、未送信の周回は最大1つに保つ。
+	ticker := time.NewTicker(outputmedia.FrameDuration)
 	defer ticker.Stop()
 	for {
 		if s.output.Stats().QueuedSpeeches == 0 {

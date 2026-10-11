@@ -8,9 +8,12 @@ import type { SincroRTCConfigManager } from "../../features/rtc/sincroRtcConfigM
 // SincroController から分離した「RTC セッション開始/停止 + channel callback 配線」担当。
 // WebRTC本体(RTCTalkClient)と UI/表示系(TalkManager, DebugConsoleManager)の結線を担当する。
 export class SincroRtcSessionController {
-    private readonly debugConsoleManager: DebugConsoleManager;
-    private readonly talkManager: TalkManager;
-    private readonly rtcConfigManager: SincroRTCConfigManager;
+    private readonly debugConsoleManager: Pick<DebugConsoleManager, "setLocalAudioTrack">;
+    private readonly talkManager: Pick<
+        TalkManager,
+        "addTextChannelMessage" | "addTelopChannelMessage"
+    >;
+    private readonly rtcConfigManager: Pick<SincroRTCConfigManager, "config">;
     private readonly characterBehaviorState: CharacterBehaviorState;
     private rtcc?: RTCTalkClient;
     private activeTalkMode = "chat";
@@ -18,9 +21,9 @@ export class SincroRtcSessionController {
     private automaticallyMuted = false;
 
     constructor(
-        debugConsoleManager: DebugConsoleManager,
-        talkManager: TalkManager,
-        rtcConfigManager: SincroRTCConfigManager,
+        debugConsoleManager: Pick<DebugConsoleManager, "setLocalAudioTrack">,
+        talkManager: Pick<TalkManager, "addTextChannelMessage" | "addTelopChannelMessage">,
+        rtcConfigManager: Pick<SincroRTCConfigManager, "config">,
     ) {
         this.debugConsoleManager = debugConsoleManager;
         this.talkManager = talkManager;
@@ -41,7 +44,9 @@ export class SincroRtcSessionController {
         this.activeTalkMode = talkMode;
         this.automaticallyMuted = false;
         // 診断は通信モードであり、キャラクターの動作分類はchatとして扱う。
-        this.characterBehaviorState.setTalkMode(talkMode === "echo" ? "chat" : talkMode);
+        this.characterBehaviorState.setTalkMode(
+            talkMode === "echo" || talkMode === "playback" ? "chat" : talkMode,
+        );
         this.characterBehaviorState.clearErrorSource("rtc");
 
         const rtcc = new RTCTalkClient(config, audioTrack, talkMode);
@@ -73,13 +78,16 @@ export class SincroRtcSessionController {
             "rtc",
             this.activeTalkMode === "echo"
                 ? "入力音声の折り返し診断を停止しました。"
-                : "音声認識・合成システムとの接続を停止しました。",
+                : this.activeTalkMode === "playback"
+                  ? "サンプル音声の繰り返し再生を停止しました。"
+                  : "音声認識・合成システムとの接続を停止しました。",
         );
     }
 
-    /** 視線による自動ミュートを適用する。接続中のechoでは無視し、設定変更だけでは判定を切り替えない。 */
+    /** 視線による自動ミュートは診断中に無視する。接続開始時のモードを使い、設定変更だけでは切り替えない。 */
     setAutoMute(mute: boolean): void {
-        this.automaticallyMuted = this.activeTalkMode !== "echo" && mute;
+        this.automaticallyMuted =
+            this.activeTalkMode !== "echo" && this.activeTalkMode !== "playback" && mute;
         this.applyMute();
     }
 
@@ -102,7 +110,21 @@ export class SincroRtcSessionController {
 
     // telopチャネル受信メッセージをTalkManagerへ連携する。
     private setTelopChannelCallback(rtcc: RTCTalkClient): void {
+        // telop_chは順不同で届く。playbackの周回IDは単調増加するため、遅れて届いた
+        // 旧周回や同一周回の過去時刻を捨てる。判定は接続ごとに作り直す。
+        let speechID = -1;
+        let timestamp = -1;
         rtcc.telopChannelCallback = (vcMsg: TelopChannelMessage) => {
+            if (this.activeTalkMode === "playback") {
+                if (
+                    vcMsg.speech_id < speechID ||
+                    (vcMsg.speech_id === speechID && vcMsg.timestamp < timestamp)
+                ) {
+                    return;
+                }
+                speechID = vcMsg.speech_id;
+                timestamp = vcMsg.timestamp;
+            }
             this.talkManager.addTelopChannelMessage(vcMsg);
         };
     }

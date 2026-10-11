@@ -78,7 +78,9 @@ export class RTCTalkClient {
         this.chatMessageService.writeSystemMessage(
             this.talkMode === "echo"
                 ? "入力音声の折り返し診断に接続します。認識・合成には接続しません。"
-                : "音声認識・合成システムに接続します。",
+                : this.talkMode === "playback"
+                  ? "サンプル音声を繰り返します。既定音声: VOICEVOX:ずんだもん。"
+                  : "音声認識・合成システムに接続します。",
         );
         return this.runInitialNegotiation();
     }
@@ -360,7 +362,12 @@ export class RTCTalkClient {
         this.bundleGeneration += 1;
         closeRtcPeerConnection(this.bundle);
         const target = this.talkMode === "echo" ? "入力音声の折り返し診断" : "RTCサーバー";
-        const message = `${target}への接続に失敗しました。${String(error)}`;
+        // 素材不良は再接続で復旧しない。HTTP境界の固定状態を日本語の案内へ変換し、
+        // サーバー内部のファイルパスや合成情報をUIへ公開しない。
+        const message =
+            this.talkMode === "playback"
+                ? "サンプル音声の再生を開始できませんでした。RTCサーバーの接続と再生素材（voice.opus・synthesis.json）を確認してください。"
+                : `${target}への接続に失敗しました。${String(error)}`;
         this.chatMessageService.writeErrorMessage(message, true);
         this.rtcHealthCallback(message);
         frontendLogger.error("RTC generation failed terminally.", { error });

@@ -162,3 +162,14 @@ it("echoを保存・復元し、明示したURL設定を優先する", () => {
     app.restoreSettings("simple-vrm", { talkMode: "chat" }, { talkMode: "sincro" });
     expect(app.getSettingsSnapshot().talkMode).toBe("sincro");
 });
+
+it("playbackを保存・復元する", () => {
+    storage();
+    new SincroAppSettingsPersistence("simple-vrm").save({ talkMode: "playback" });
+    expect(new SincroAppSettingsPersistence("simple-vrm").load()).toEqual({ talkMode: "playback" });
+    const app = new SincroAppController();
+    app.restoreSettings("simple-vrm", { talkMode: "chat" }, {});
+    expect(app.getSettingsSnapshot().talkMode).toBe("playback");
+    app.restoreSettings("simple-vrm", { talkMode: "chat" }, { talkMode: "echo" });
+    expect(app.getSettingsSnapshot().talkMode).toBe("echo");
+});

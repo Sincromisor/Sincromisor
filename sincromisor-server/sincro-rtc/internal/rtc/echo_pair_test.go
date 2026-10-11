@@ -55,7 +55,7 @@ func TestEchoSessionsReturnAudioAndRemainIsolated(t *testing.T) {
 	}
 }
 
-func newEchoBrowserPeer(t *testing.T) (*webrtc.PeerConnection, *webrtc.TrackLocalStaticSample, <-chan *webrtc.TrackRemote) {
+func newEchoBrowserPeer(t *testing.T, handlers ...func(*webrtc.DataChannel)) (*webrtc.PeerConnection, *webrtc.TrackLocalStaticSample, <-chan *webrtc.TrackRemote) {
 	t.Helper()
 	client, err := webrtc.NewPeerConnection(webrtc.Configuration{})
 	if err != nil {
@@ -74,13 +74,19 @@ func newEchoBrowserPeer(t *testing.T) (*webrtc.PeerConnection, *webrtc.TrackLoca
 	if _, err := client.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly}); err != nil {
 		t.Fatalf("AddTransceiverFromKind() error = %v", err)
 	}
-	if _, err := client.CreateDataChannel(textChannelLabel, &webrtc.DataChannelInit{Ordered: boolPointer(true)}); err != nil {
+	textChannel, err := client.CreateDataChannel(textChannelLabel, &webrtc.DataChannelInit{Ordered: boolPointer(true)})
+	if err != nil {
 		t.Fatalf("CreateDataChannel(text) error = %v", err)
 	}
 	ordered := false
 	retransmits := uint16(0)
-	if _, err := client.CreateDataChannel(telopChannelLabel, &webrtc.DataChannelInit{Ordered: &ordered, MaxRetransmits: &retransmits}); err != nil {
+	telopChannel, err := client.CreateDataChannel(telopChannelLabel, &webrtc.DataChannelInit{Ordered: &ordered, MaxRetransmits: &retransmits})
+	if err != nil {
 		t.Fatalf("CreateDataChannel(telop) error = %v", err)
+	}
+	for _, handler := range handlers {
+		handler(textChannel)
+		handler(telopChannel)
 	}
 	remote := make(chan *webrtc.TrackRemote, 1)
 	client.OnTrack(func(track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) { remote <- track })

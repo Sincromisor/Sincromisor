@@ -117,8 +117,7 @@ func NewManager(stunURL string, config ManagerConfig) (*Manager, error) {
 			manager.config.Logger,
 			request.onClosed,
 			config.API,
-			request.playback,
-			request.recorder,
+			sessionOptions{playback: request.playback, recorder: request.recorder},
 		)
 	}
 	return manager, nil

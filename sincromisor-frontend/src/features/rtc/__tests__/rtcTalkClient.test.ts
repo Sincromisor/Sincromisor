@@ -475,21 +475,37 @@ describe("RTCTalkClient owner state machine", () => {
     });
 });
 
-it("echoの初回OfferとICE再接続で同じモードを維持する", async () => {
+it.each([
+    ["echo", "折り返し診断"],
+    ["playback", "繰り返し再生"],
+])("%sの初回OfferとICE再接続で同じモードを維持する", async (mode, label) => {
     mocks.negotiation.mockResolvedValueOnce(answer("session-echo", 1));
-    const client = createClient(createAudioTrack(), "echo");
+    const client = createClient(createAudioTrack(), mode);
     await client.start();
-    expect(mocks.negotiation).toHaveBeenLastCalledWith(
-        expect.objectContaining({ talkMode: "echo" }),
-    );
+    expect(mocks.negotiation).toHaveBeenLastCalledWith(expect.objectContaining({ talkMode: mode }));
     mocks.negotiation.mockResolvedValueOnce(answer("session-echo", 2));
     mocks.callbacks[0]?.onIceConnectionStateChange("failed");
     await settle();
     expect(mocks.negotiation).toHaveBeenCalledTimes(2);
-    expect(mocks.negotiation).toHaveBeenLastCalledWith(
-        expect.objectContaining({ talkMode: "echo" }),
-    );
-    expect(mocks.systemErrors.some((message) => message.includes("折り返し診断"))).toBe(true);
+    expect(mocks.negotiation).toHaveBeenLastCalledWith(expect.objectContaining({ talkMode: mode }));
+    expect(mocks.systemErrors.some((message) => message.includes(label))).toBe(true);
     expect(mocks.systemErrors.some((message) => message.includes("音声認識・合成"))).toBe(false);
     client.stop();
+});
+
+it("playback素材不良では再生素材を案内して終了する", async () => {
+    mocks.negotiation.mockRejectedValueOnce(
+        new RtcSignalingHttpError("unavailable", {
+            operation: "initial-offer",
+            status: 422,
+        }),
+    );
+    const client = createClient(createAudioTrack(), "playback");
+    await client.start();
+    expect(mocks.negotiation).toHaveBeenCalledTimes(1);
+    expect(mocks.closeBundle).toHaveBeenCalledOnce();
+    expect(mocks.healthMessages[mocks.healthMessages.length - 1]).toContain("再生素材");
+    expect(mocks.systemErrors[mocks.systemErrors.length - 1]).toContain(
+        "voice.opus・synthesis.json",
+    );
 });
