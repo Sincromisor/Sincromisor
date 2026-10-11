@@ -30,6 +30,8 @@ work/private-artifacts/
 !.agents/skills/playwright-cli/
 .agents/skills/playwright-cli/*
 !.agents/skills/playwright-cli/SKILL.md
+!.agents/skills/playwright-cli/references/
+!.agents/skills/playwright-cli/references/**
 .claude/metrics/
 samples
 volumes/consul-data
@@ -48,6 +50,7 @@ sincromisor-frontend/public/characters/*.json
 sincromisor-frontend/public/characters/*.glb
 sincromisor-frontend/public/characters/*.png
 SincromisorCLI
-.playwright-cli
+# Playwright CLIの出力には認証情報が含まれ得る。
+.playwright-cli/
 
 sincromisor-server/agent-server/.mastra
