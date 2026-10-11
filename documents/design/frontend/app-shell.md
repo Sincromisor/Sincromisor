@@ -122,9 +122,9 @@
 ## 設定・配備
 
 - 通常確認
-    - `cd sincromisor-frontend && npm run build`
+    - `npm run build`
 - devサーバー
-    - `cd sincromisor-frontend && npm run dev`
+    - `npm run dev`
 - Viteビルド入力
     - `main`
     - `simple-vrm`

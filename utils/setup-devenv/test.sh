@@ -36,3 +36,13 @@ for assignment in test_version=24.04 test_arch=aarch64 test_kernel=linux test_in
     fi
 done
 echo 'PASS: ヘルプ、不明な引数、対象環境、OS・CPU・WSL・systemd・競合パッケージの拒否'
+
+# 実行環境の検査失敗時は依存導入へ進まない。
+if ! command grep -q 'node scripts/check-node-version.mjs' setup.sh; then
+    echo 'Node.js/npmの検査がありません。' >&2
+    exit 1
+fi
+if command grep -Eq 'npm --prefix sincromisor-frontend ci|npm install --global|npm exec --yes' setup.sh; then
+    echo '重複導入またはロック外のツール取得が残っています。' >&2
+    exit 1
+fi

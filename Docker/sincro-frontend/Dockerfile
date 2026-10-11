@@ -1,6 +1,6 @@
 FROM hashicorp/consul:latest AS consul
 
-FROM node:22 AS builder
+FROM node:26.11.1 AS builder
 
 ARG SINCRO_USER_ID=sincromisor
 ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
@@ -14,10 +14,13 @@ RUN useradd -u 1001 -s /bin/bash -d ${SINCRO_USER_DIR} ${SINCRO_USER_ID} && \
     chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR}
 
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./sincromisor-frontend/package.json ./sincromisor-frontend/package-lock.json \
+    ./sincromisor-frontend/package.json \
     ${SINCRO_USER_DIR}/sincromisor-frontend/
 
-WORKDIR ${SINCRO_USER_DIR}/sincromisor-frontend
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} package.json package-lock.json .npmrc ${SINCRO_USER_DIR}/
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} scripts/check-node-version.mjs ${SINCRO_USER_DIR}/scripts/
+RUN npm install --global npm@11.20.0
+
 USER $SINCRO_USER_ID
 RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.npm,uid=1001,gid=1001 \
     chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR} && \

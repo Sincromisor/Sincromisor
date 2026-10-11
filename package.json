@@ -22,7 +22,20 @@
         "gen:codex": "node scripts/gen/genCodex.mjs",
         "gen:codex:check": "node scripts/gen/genCodex.mjs --check",
         "git:hooks:install": "git config core.hooksPath .githooks",
-        "commit:check": "node scripts/git/checkCommitMessage.mjs"
+        "commit:check": "node scripts/git/checkCommitMessage.mjs",
+        "dev": "npm run dev --workspace sincromisor-frontend --",
+        "build": "npm run build --workspace sincromisor-frontend --",
+        "test": "npm run test --workspace sincromisor-frontend --",
+        "assets:prepare": "npm run assets:prepare --workspace sincromisor-frontend --",
+        "check": "npm run check --workspace sincromisor-frontend && npm run check:md",
+        "check:md": "prettier --config .prettierrc.json --ignore-path .prettierignore --check \"*.md\" \".agents/CUSTOMIZATIONS.md\" \".agents/skills/new-task/SKILL.md\" \".agents/skills/run-task/SKILL.md\" \".claude/agents/*.md\" \".claude/commands/*.md\" \"documents/**/*.md\" \"sincromisor-server/**/*.md\" \"tasks/**/*.md\" \"sincromisor-frontend/**/*.md\" \"utils/**/*.md\"",
+        "format": "npm run format --workspace sincromisor-frontend && npm run format:md",
+        "format:md": "prettier --config .prettierrc.json --ignore-path .prettierignore --write \"*.md\" \".agents/CUSTOMIZATIONS.md\" \".agents/skills/new-task/SKILL.md\" \".agents/skills/run-task/SKILL.md\" \".claude/agents/*.md\" \".claude/commands/*.md\" \"documents/**/*.md\" \"sincromisor-server/**/*.md\" \"tasks/**/*.md\" \"sincromisor-frontend/**/*.md\" \"utils/**/*.md\"",
+        "preinstall": "node scripts/check-node-version.mjs",
+        "check:runtime": "node scripts/check-node-version.mjs",
+        "browser": "playwright-cli",
+        "browser:install": "PLAYWRIGHT_BROWSERS_PATH=./work/playwright-browsers playwright install chromium",
+        "browser:test": "PLAYWRIGHT_BROWSERS_PATH=./work/playwright-browsers playwright test"
     },
     "codexGen": {
         "modelMap": {
@@ -36,25 +49,24 @@
     "gateSteps": [
         {
             "id": "lint",
-            "cmd": "cd sincromisor-frontend && npm run check",
+            "cmd": "npm run check",
             "label": "frontend lint/format and Markdown check"
         },
         {
             "id": "build",
-            "cmd": "cd sincromisor-frontend && npm run build",
+            "cmd": "npm run build",
             "label": "frontend type check and build"
         },
         {
             "id": "test",
-            "cmd": "cd sincromisor-frontend && npm run test",
+            "cmd": "npm run test",
             "label": "frontend tests"
         }
     ],
     "evalWorktree": {
         "symlinks": [
             "node_modules",
-            ".gate-cache",
-            "sincromisor-frontend/node_modules"
+            ".gate-cache"
         ],
         "copies": [
             ".env",
@@ -65,6 +77,17 @@
         "yaml": "^2.5.0"
     },
     "devDependencies": {
-        "@playwright/test": "1.63.0"
-    }
+        "@playwright/test": "1.63.0",
+        "@biomejs/biome": "^2.5.13",
+        "prettier": "^3.9.6",
+        "@playwright/cli": "0.1.22"
+    },
+    "workspaces": [
+        "sincromisor-frontend"
+    ],
+    "engines": {
+        "node": "26.11.1",
+        "npm": "11.20.0"
+    },
+    "packageManager": "npm@11.20.0"
 }

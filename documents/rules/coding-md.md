@@ -33,17 +33,17 @@ Markdownは「次に読む人とLLMエージェントが短時間で判断でき
 
 ## 2. 静的検査 / フォーマッタ / コミット前確認
 
-| 項目                    | ツール                                                                       |
-| ----------------------- | ---------------------------------------------------------------------------- |
-| フォーマッタ (Markdown) | **Prettier**(`*.md`のみスコープ)                                             |
-| Prettier設定            | [.prettierrc.json](../../.prettierrc.json)                                   |
-| Prettier除外設定        | [.prettierignore](../../.prettierignore)                                     |
-| 実行スクリプト          | [sincromisor-frontend/package.json](../../sincromisor-frontend/package.json) |
+| 項目                    | ツール                                     |
+| ----------------------- | ------------------------------------------ |
+| フォーマッタ (Markdown) | **Prettier**(`*.md`のみスコープ)           |
+| Prettier設定            | [.prettierrc.json](../../.prettierrc.json) |
+| Prettier除外設定        | [.prettierignore](../../.prettierignore)   |
+| 実行スクリプト          | [package.json](../../package.json)         |
 
 - PrettierはMarkdown専用として扱う。TypeScript / JavaScript / JSONはBiome、PythonはRuff、Goは `gofmt`に任せる。
 - `.prettierrc.json`の `proseWrap: "preserve"`を前提に、本文の改行位置は書き手が意味単位で決める。
 - 箇条書きやネストのインデントはPrettierの出力に従う。手で揃えるためのスペース調整をしない。
-- 通常変更はリポジトリルートから `sincromisor-frontend/node_modules/.bin/prettier --write <変更したMarkdownファイル...>`で整形し、同じ対象を `--check`で確認する。
+- 通常変更はリポジトリルートから `node_modules/.bin/prettier --write <変更したMarkdownファイル...>`で整形し、同じ対象を `--check`で確認する。
 - 全体の `npm run check:md`やTypeScriptの検査は、[タスク管理の確認範囲](../../tasks/README.md#確認コマンド) に従って必要な場合に選ぶ。Markdownだけの変更にアプリのビルドやテストを追加しない。
 
 **理由**: Markdownは手整形の癖が差分に出やすい。Prettierの責務をMarkdownに限定し、他言語のフォーマッタと衝突させない。
@@ -98,7 +98,6 @@ Markdownは「次に読む人とLLMエージェントが短時間で判断でき
 例
 
 ```sh
-cd sincromisor-frontend
 npm run check:md
 ```
 

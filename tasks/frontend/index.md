@@ -2,9 +2,15 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 18 件）
+## タスク一覧（自動生成 / 全 20 件）
 
-### done（完了） — 18 件
+### open（未完） — 1 件
+
+| タスク                                                                                                     | タイトル                                       | 判定 | 依存                                                 |
+| ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ---- | ---------------------------------------------------- |
+| [task-261011152416-update-frontend-dependencies](./task-261011152416-update-frontend-dependencies/task.md) | フロントエンドの実行時依存と開発依存を更新する | —    | `task-261011151020-unify-frontend-development-tools` |
+
+### done（完了） — 19 件
 
 | タスク                                                                                                             | タイトル                                                 | 判定    | 依存                                                 |
 | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- | ------- | ---------------------------------------------------- |
@@ -26,5 +32,6 @@
 | [task-261010185542-fix-settings-layout-and-controls](./task-261010185542-fix-settings-layout-and-controls/task.md) | 設定UIのタブ配置・スクロール・入力操作の不具合を修正する | ✅ PASS | —                                                    |
 | [task-261010185549-refresh-settings-visual-design](./task-261010185549-refresh-settings-visual-design/task.md)     | 設定UIの装飾・説明・状態表示を統一する                   | ✅ PASS | `task-261010185549-reorganize-settings-and-startup`  |
 | [task-261010185549-reorganize-settings-and-startup](./task-261010185549-reorganize-settings-and-startup/task.md)   | 設定項目を利用目的別に再編し起動前の導線を整理する       | ✅ PASS | `task-261010185542-fix-settings-layout-and-controls` |
+| [task-261011151020-unify-frontend-development-tools](./task-261011151020-unify-frontend-development-tools/task.md) | フロントエンド開発ツールをnpm workspacesで一元管理する   | ✅ PASS | —                                                    |
 
 <!-- AUTOGEN:tasks END -->
