@@ -170,6 +170,51 @@ Google Chrome 安定版で
 である。後始末は共通5秒期限でOffer 所有者、セッション登録簿、PeerConnection、コーデック、周期タイマー、
 メディア goroutineを終了処理を一度だけ実行する経路から収束させ、シグナル受信からプロセス終了までの上限は6秒とする。
 
+## 再生素材の準備と差し替え
+
+「体験を選ぶ」の「サンプル音声を繰り返す」、またはページの`talkMode=playback`で、
+固定音声・テロップ・口形を繰り返し確認できる。Consulと下流サービスへの接続は不要で、
+マイクは通常のフィルター・VAD経路で読み取るが、再生する内容には使わない。
+サンプル本文は接続ごとに1回だけチャットへ表示し、周回のたびに発話IDとテロップ時刻を更新する。
+診断中は自動ミュートを抑止する。VAD通過後の入力そのものを確認するときはechoを使う。
+
+素材はプロセスの**作業ディレクトリ**を基準に`assets/playback/default/voice.opus`と
+`assets/playback/default/synthesis.json`から読む。他のパスや音声への代替は行わない。
+ローカルでは上記手順どおり`sincromisor-server/sincro-rtc`へ移動して起動する。
+配布イメージでは同じセットを`/opt/sincromisor/assets/playback/default/`へ配置し、
+`WORKDIR /opt/sincromisor`から実行する。モード選択用の起動引数・環境変数はない。
+
+JSONの必須項目は次のとおり。`voice`と`speech_id`は含めない。
+
+| 項目            | 内容                                                                            |
+| --------------- | ------------------------------------------------------------------------------- |
+| `message`       | 実際に読み上げる文章                                                            |
+| `query`         | 音声合成へ渡した加工済みクエリのオブジェクト                                    |
+| `mora_queue`    | 既存合成処理が出力する`vowel`・`text`・秒単位の`length`の配列。前後の無音を含む |
+| `speaking_time` | 元の合成WAVの再生時間（秒）                                                     |
+| `audio_format`  | `audio/ogg;codecs=opus`固定。音声もOgg Opusであること                           |
+
+素材は初回playback利用時に検証・復号し、成功したPCMとモーラだけをプロセス内で共有する。
+周回ごとのFFmpeg起動は行わず、再生位置と待機・終了は各セッションが所有する。
+欠落、破損、JSON不正、音声長やモーラ時刻の不整合では、そのplayback開始をエラー表示する。
+通常の会話やecho、プロセスの起動は素材の成否に依存しない。
+エラー時は両ファイルの配置・読み取り権限・形式・同じ合成結果から作った組であることを確認する。
+
+生成には管理下のVOICEVOXとFFmpegを用意し、リポジトリルートで次を実行する。
+既存ディレクトリへの上書きは拒否する。新規ディレクトリへ出力してから、音声・JSON・
+利用条件を確認し、プロセス停止中にセットを差し替える。コンテナではイメージを再ビルドする。
+
+```sh
+uv run --group voice-synthesizer python utils/export_playback_sample.py \
+  --host 127.0.0.1 --port 50021 --style-id 3 \
+  --text 'こんにちは。音声と、口の動きを確認します。' \
+  --output /tmp/sincro-playback-new
+```
+
+クエリ解釈とモーラ抽出はPythonの既存`VoiceSynthesizer`を使う。JSONの時刻を手作業で音声へ当てはめない。
+差し替え後はRTCプロセスを再起動してキャッシュを破棄し、メニューから2周以上の音声・テロップ・口形を確認する。
+配布済みサンプルの出典・利用条件・ハッシュは[素材のREADME](assets/playback/default/README.md)を参照する。
+
 ## パイプライン再初期化ログ
 
 対象`session_id`でログを絞り、正常段階の直前に最初に出た`pipeline_reset_requested`から、再初期化で閉じた
