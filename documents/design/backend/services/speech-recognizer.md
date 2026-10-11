@@ -3,7 +3,7 @@
 ## 要約
 
 - SpeechRecognizerは抽出済み音声区間をテキストへ変換する下流サービスである。
-- 現在は主にNemoで音声を認識する。Nue-ASRは廃止済みで、コンテナの `SINCRO_RECOGNIZER_MODEL`は `nemo`のみ受け付ける。
+- NeMoで音声を認識する。コンテナの `SINCRO_RECOGNIZER_MODEL`は `nemo`のみ受け付ける。
 - 固有名詞補強は取り組み計画と辞書契約に分離する。
 
 コンテナはCUDA 13.0系を使う。ホスト側の条件は[Compose設計](../../infrastructure/compose.md#nemoのgpu基盤)を参照する。
@@ -12,7 +12,7 @@
 
 - 対象
     - SpeechRecognizerサービス境界
-    - Nemo音声認識処理の認識結果
+    - NeMo音声認識処理の認識結果
     - 確定 / 暫定の扱い
     - 固有名詞補強との接続点
 - 非対象
