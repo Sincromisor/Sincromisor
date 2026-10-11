@@ -97,9 +97,7 @@ install_project() {
     uv sync --locked --group dev --group full
     npm ci
     npm --prefix sincromisor-frontend ci
-    mkdir -p sincromisor-frontend/public/mediapipe-wasm
-    cp -r sincromisor-frontend/node_modules/@mediapipe/tasks-vision/wasm/. \
-        sincromisor-frontend/public/mediapipe-wasm/
+    npm --prefix sincromisor-frontend run assets:prepare
     (cd sincromisor-server/sincro-rtc && GOTOOLCHAIN=auto go mod download && GOTOOLCHAIN=auto go version)
     npm run git:hooks:install
     # 既存の設定・キャッシュには触れず、初回の保存先だけ準備する。
