@@ -57,6 +57,7 @@ func TestUpdateOfferSchemaAndStatusBoundaries(t *testing.T) {
 		wantStatus int
 	}{
 		{name: "valid", body: valid, fake: &fakeSessions{updateAnswer: rtc.Answer{Revision: 2}}, wantStatus: http.StatusOK},
+		{name: "echo preserves mode", body: strings.Replace(valid, `"chat"`, `"echo"`, 1), fake: &fakeSessions{updateAnswer: rtc.Answer{Revision: 2}}, wantStatus: http.StatusOK},
 		{name: "missing talk mode", body: strings.Replace(valid, `"talk_mode":"chat",`, "", 1), fake: &fakeSessions{}, wantStatus: http.StatusBadRequest},
 		{name: "invalid talk mode", body: strings.Replace(valid, `"chat"`, `"other"`, 1), fake: &fakeSessions{}, wantStatus: http.StatusBadRequest},
 		{name: "saved talk mode mismatch", body: strings.Replace(valid, `"chat"`, `"sincro"`, 1), fake: &fakeSessions{updateErr: rtc.ErrOfferConflict}, wantStatus: http.StatusConflict},
@@ -74,6 +75,9 @@ func TestUpdateOfferSchemaAndStatusBoundaries(t *testing.T) {
 			response := performRequest(newTestServer(t, test.fake, "").Handler(), http.MethodPost, offerPath, test.body)
 			if response.Code != test.wantStatus {
 				t.Fatalf("status = %d, want %d; body=%s", response.Code, test.wantStatus, response.Body.String())
+			}
+			if test.name == "echo preserves mode" && test.fake.lastUpdate.TalkMode != "echo" {
+				t.Fatalf("echo update Offer talk mode = %q, want echo", test.fake.lastUpdate.TalkMode)
 			}
 		})
 	}

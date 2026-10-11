@@ -46,17 +46,18 @@ type Stats struct {
 	Closed            bool   // Closedは追加と送信を終了済みかを表す。
 }
 
-// Processor は合成発話queue、Opus encoder、20 ms絶対deadline clockを所有する。
+// Processor はセッション単位の合成発話キューまたは診断PCM、Opus encoder、20 ms出力時計を所有する。
 //
 // Runはsession transport connected後に1回だけ開始し、context cancellation、codec/telop/track error、
 // またはPionのuint16で表現不能な連続drop数で戻る。queueが空でもsilenceを送る。Purgeは未送信audioと、
 // そのaudioから将来生成されるmora eventを同時に破棄するが、既にtrackへ書いたaudioは巻き戻さない。
 // TelopSinkは後段のDataChannelキューへの受け渡し境界であり、Processorはその配送を所有しない。
 type Processor struct {
-	mu             sync.Mutex
-	sendMu         sync.Mutex
-	queue          []*queuedSpeech
-	queuedSamples  int
+	mu            sync.Mutex
+	sendMu        sync.Mutex
+	queue         []*queuedSpeech
+	queuedSamples int
+	// echoPCMはセッション専用の48 kHzモノラル音声。最新1秒を上限としPurge/Closeで解放する。
 	echoPCM        []int16
 	encoder        outputEncoder
 	track          SampleWriter

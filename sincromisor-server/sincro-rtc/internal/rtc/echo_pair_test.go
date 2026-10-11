@@ -33,8 +33,9 @@ func TestEchoSessionsReturnAudioAndRemainIsolated(t *testing.T) {
 	firstRemote := waitEchoRemoteTrack(t, firstOutput)
 	secondRemote := waitEchoRemoteTrack(t, secondOutput)
 	writeEchoTone(t, firstInput, 440)
-	writeEchoTone(t, secondInput, 660)
 	readNonSilentEcho(t, firstRemote)
+	readSilentEcho(t, secondRemote)
+	writeEchoTone(t, secondInput, 660)
 	readNonSilentEcho(t, secondRemote)
 
 	if err := first.Close(); err != nil {
@@ -124,6 +125,10 @@ func readNonSilentEcho(t *testing.T, track *webrtc.TrackRemote) {
 		t.Fatalf("NewDecoderWithOutput() error = %v", err)
 	}
 	deadline := time.Now().Add(3 * time.Second)
+	if err := track.SetReadDeadline(deadline); err != nil {
+		t.Fatal(err)
+	}
+	defer track.SetReadDeadline(time.Time{})
 	for time.Now().Before(deadline) {
 		packet, _, err := track.ReadRTP()
 		if err != nil {
@@ -138,4 +143,31 @@ func readNonSilentEcho(t *testing.T, track *webrtc.TrackRemote) {
 		}
 	}
 	t.Fatal("echo outbound track did not receive non-silent audio")
+}
+
+// readSilentEcho は別Sessionの入力が混入していないことを、連続する返却frameの振幅で確認する。
+func readSilentEcho(t *testing.T, track *webrtc.TrackRemote) {
+	t.Helper()
+	decoder, err := pionopus.NewDecoderWithOutput(outputmedia.SampleRate, 2)
+	if err != nil {
+		t.Fatalf("NewDecoderWithOutput() error = %v", err)
+	}
+	if err := track.SetReadDeadline(time.Now().Add(3 * time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	defer track.SetReadDeadline(time.Time{})
+	// 入力前に受信済みの無音だけで判定せず、その後の送信時計も含む25フレームを読む。
+	for range 25 {
+		packet, _, err := track.ReadRTP()
+		if err != nil {
+			t.Fatalf("ReadRTP() error = %v", err)
+		}
+		pcm := make([]int16, outputmedia.SampleRate/25)
+		if _, err := decoder.DecodeToInt16(packet.Payload, pcm); err != nil {
+			t.Fatalf("DecodeToInt16() error = %v", err)
+		}
+		if stereoPeak(pcm) > 500 {
+			t.Fatal("echo session received audio from another session")
+		}
+	}
 }

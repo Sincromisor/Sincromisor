@@ -72,6 +72,12 @@ func TestOfferBoundary(t *testing.T) {
 			wantStatus: http.StatusOK,
 		},
 		{
+			name:       "echo initial offer",
+			body:       `{"sdp":"v=0\r\n","type":"offer","talk_mode":"echo","offer_request_id":"8e0e18a9-243b-4c72-8e97-a1b103854e42","offer_revision":1}`,
+			fake:       &fakeSessions{answer: rtc.Answer{SDP: "v=0\r\n", Type: "answer", SessionID: "01TEST"}},
+			wantStatus: http.StatusOK,
+		},
+		{
 			name: "legacy initial offer generates identity",
 			body: `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat"}`,
 			fake: &fakeSessions{answer: rtc.Answer{
@@ -114,6 +120,9 @@ func TestOfferBoundary(t *testing.T) {
 				if answer.SessionID != "01TEST" || answer.Revision != 1 {
 					t.Fatalf("legacy answer identity = %q/%d, want 01TEST/1", answer.SessionID, answer.Revision)
 				}
+			}
+			if test.name == "echo initial offer" && test.fake.lastOffer.TalkMode != "echo" {
+				t.Fatalf("echo initial Offer talk mode = %q, want echo", test.fake.lastOffer.TalkMode)
 			}
 		})
 	}
