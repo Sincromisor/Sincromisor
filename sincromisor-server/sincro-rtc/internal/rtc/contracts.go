@@ -2,7 +2,7 @@ package rtc
 
 // Offer はFrontendのinitial OfferをPion session作成境界へ渡す。
 //
-// OfferRequestIDはcanonical UUID、Typeはoffer、TalkModeはchat/sincroでなければCreateが拒否する。
+// OfferRequestIDはcanonical UUID、Typeはoffer、TalkModeはchat/sincro/echo/playbackでなければCreateが拒否する。
 // 成功時は新しいPeerConnectionとpipelineを所有するSessionを作り、OnClosedは全resource join後に呼ぶ。
 type Offer struct {
 	SDP            string
