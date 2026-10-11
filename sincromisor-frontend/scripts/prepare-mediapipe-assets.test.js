@@ -16,15 +16,19 @@ import { test } from "node:test";
 
 // 実際のCLIを隔離した配置先で実行し、ローカル素材やnode_modulesを変更せず再発条件を作る。
 test("古いリンク・素材を除去し、再実行と生成先リンクの交換でも他の素材を保つ", async () => {
-    const root = await mkdtemp(join(tmpdir(), "sincro-assets-"));
+    const workspace = await mkdtemp(join(tmpdir(), "sincro-assets-"));
+    const root = join(workspace, "frontend");
+    await mkdir(root);
     try {
         await mkdir(join(root, "scripts"));
         await writeFile(join(root, "package.json"), JSON.stringify({ type: "module" }));
         const script = join(root, "scripts/prepare-mediapipe-assets.js");
         await copyFile(new URL("./prepare-mediapipe-assets.js", import.meta.url), script);
-        const source = join(root, "node_modules/@mediapipe/tasks-vision/wasm");
+        const source = join(workspace, "node_modules/@mediapipe/tasks-vision/wasm");
         const destination = join(root, "public/mediapipe-wasm");
         await mkdir(source, { recursive: true });
+        await writeFile(join(source, "../package.json"), JSON.stringify({ main: "vision.cjs" }));
+        await writeFile(join(source, "../vision.cjs"), "");
         await mkdir(destination, { recursive: true });
         await writeFile(join(source, "vision.wasm"), "current");
         await writeFile(join(source, "vision.js"), "loader");
@@ -45,6 +49,6 @@ test("古いリンク・素材を除去し、再実行と生成先リンクの�
         assert.throws(run);
         assert.equal(await readFile(join(destination, "vision.wasm"), "utf8"), "current");
     } finally {
-        await rm(root, { recursive: true, force: true });
+        await rm(workspace, { recursive: true, force: true });
     }
 });

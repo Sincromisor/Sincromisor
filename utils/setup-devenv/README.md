@@ -36,7 +36,7 @@ export PATH="$HOME/.local/bin:$PATH"
 
 Ubuntu 標準の Node.js / npm、Go、C/C++ ビルドツール、FFmpeg、Opus、音声処理ライブラリ、Git、ripgrep、ShellCheck を導入する。Python は uv で `.python-version` の 3.14 を用意し、`uv sync --locked --group dev --group full` を実行する。Go の必要バージョンは `go.mod` と標準の自動ツールチェーン取得に従う。
 
-ルートとフロントエンドで `npm ci` を実行し、共通の `assets:prepare`でMediaPipeのWASMをインストール済みパッケージへ同期する。生成先の古い素材とリンクは交換する。`.env` とモデルキャッシュ用ディレクトリは存在しない場合だけ作る。再実行できるが、`node_modules` と Python 仮想環境はロックに同期され、Docker の GPU 設定時はデーモンを再起動する。APT リポジトリは `sincromisor-*` 名で登録する。既存環境への移植・他方式との混在は対象外とする。
+指定版のNode.js/npmへ切り替え、ルートで `npm ci` を一度実行し、共通の `assets:prepare`でMediaPipeのWASMをインストール済みパッケージへ同期する。生成先の古い素材とリンクは交換する。`.env` とモデルキャッシュ用ディレクトリは存在しない場合だけ作る。再実行できるが、`node_modules` と Python 仮想環境はロックに同期され、Docker の GPU 設定時はデーモンを再起動する。APT リポジトリは `sincromisor-*` 名で登録する。既存環境への移植・他方式との混在は対象外とする。
 
 Docker グループへの自動追加は行わない。以降の Docker 操作には `sudo docker` を使う。Compose のサービス、認識モデル、AgentServer、LLM、VRM 素材はこのスクリプトでは起動・取得しない。
 
@@ -45,8 +45,8 @@ Docker グループへの自動追加は行わない。以降の Docker 操作�
 リポジトリのルートで、変更対象に応じて以下を実行する。
 
 ```sh
-npm --prefix sincromisor-frontend run build
-npm --prefix sincromisor-frontend test
+npm run build
+npm test
 uv run --group dev --group full ruff check .
 uv run --group dev --group full ty check .
 uv run --group dev --group full pytest
@@ -57,7 +57,7 @@ uv run --group dev --group full pytest
 
 HTTP が開けても WebRTC の UDP が到達するとは限らない。既定の WSL NAT では Windows から到達できる WSL の IPv4 を広告し、再起動で変わった場合は `.env` を更新する。LAN の別端末から確認する場合は、Windows 11 の WSL ミラーネットワーク、Windows / Hyper-V ファイアウォール、HTTPS を別途設定し、TCP 8001 と `.env` のメディア UDP ポートへの到達性を確認する。TCP 用の `netsh interface portproxy` だけでは UDP を中継できない。スクリプトはネットワークやファイアウォールを変更しない。
 
-`--browser` を指定した場合は `playwright-cli open http://localhost:8086 --browser=chrome` で画面を確認し、`playwright-cli close` で終了する。実マイク・カメラの会話確認は Windows 側のブラウザーで行う。
+`--browser` を指定した場合は `npm run browser -- -s=sincromisor open http://localhost:8086 --browser=chrome --profile="$HOME/.local/share/PlaywrightProfiles/sincromisor"` で画面を確認し、`npm run browser -- -s=sincromisor close` で終了する。実マイク・カメラの会話確認は Windows 側のブラウザーで行う。
 
 スクリプト自体の確認は `bash -n utils/setup-devenv/setup.sh`、`shellcheck utils/setup-devenv/*.sh`、`bash utils/setup-devenv/test.sh` で行う。Ubuntu 26.04 / WSL2 での一括導入と実 GPU・ブラウザーでの動作は、この変更の作成環境では未検証である。
 
@@ -65,9 +65,11 @@ HTTP が開けても WebRTC の UDP が到達するとは限らない。既定�
 
 2026-09-13 に公式手順を確認した。採用範囲は次のとおり。
 
-- [Ubuntu の Node.js](https://packages.ubuntu.com/resolute/nodejs): 標準の Node.js 22 を利用する。
+- [Ubuntu の Node.js](https://packages.ubuntu.com/resolute/nodejs): 標準パッケージ導入後、`package.json`のNode.js 26.11.1 / npm 11.20.0へ公式配布または既存のバージョン管理ツールで切り替える。セットアップは不一致時に停止する。
 - [Docker Engine](https://docs.docker.com/engine/install/ubuntu/): Ubuntu 26.04 向け公式 APT、Compose、Buildx を導入する。
 - [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html): 安定版 APT と Docker ランタイム設定を利用する。
 - [CUDA on WSL](https://docs.nvidia.com/cuda/wsl-user-guide/index.html): Windows ドライバーを利用し、Linux ドライバーを追加しない。
 - [WSL の systemd](https://learn.microsoft.com/en-us/windows/wsl/systemd)、[WSL ネットワーク](https://learn.microsoft.com/en-us/windows/wsl/networking): Windows 側の手動準備と接続条件を確認する。
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)、[Go ツールチェーン](https://go.dev/doc/toolchain)、[Playwright CLI](https://github.com/microsoft/playwright-cli): 公式の導入とバージョン選択機能を使う。
+
+`--browser`は固定済みPlaywrightで自動テスト用Chromiumを`work/playwright-browsers`へ取得する。実機確認用Chromeは別途導入する。ブラウザーの取得は通常の`npm ci`では実行しない。

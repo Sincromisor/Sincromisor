@@ -6,9 +6,9 @@
 
 ## 導入の確認
 
-利用可能な `playwright-cli` を使う。見つからない場合は `npx --no-install playwright-cli --version` で既存の導入を確認する。依存追加や全体への導入を画面確認の前提として自動実行しない。導入が必要なら、依頼範囲と環境の権限に応じて判断する。
+ルートで`npm ci`を実行し、固定済みCLIを`npm run browser -- <引数>`で使う。グローバル導入は不要。
 
-利用するオプションは `playwright-cli open --help`、その他の操作は `playwright-cli --help` と対象コマンドのヘルプで確認する。
+利用するオプションは `npm run browser -- open --help`、その他の操作は `npm run browser -- --help` と対象コマンドのヘルプで確認する。
 
 ## Chromeの専用プロファイル
 
@@ -18,7 +18,7 @@ macOSでの標準保存先は `$HOME/Library/Application Support/PlaywrightProfi
 
 ```sh
 mkdir -p "$HOME/Library/Application Support/PlaywrightProfiles/sincromisor"
-playwright-cli -s=sincromisor open about:blank \
+npm run browser -- -s=sincromisor open about:blank \
   --browser=chrome \
   --headed \
   --profile="$HOME/Library/Application Support/PlaywrightProfiles/sincromisor"
@@ -34,10 +34,10 @@ playwright-cli -s=sincromisor open about:blank \
 リポジトリルートで実行し、操作対象は直前の `snapshot` で確認する。
 
 ```sh
-playwright-cli -s=sincromisor snapshot
-playwright-cli -s=sincromisor click <snapshotに表示された要素の参照>
-playwright-cli -s=sincromisor snapshot
-playwright-cli -s=sincromisor close
+npm run browser -- -s=sincromisor snapshot
+npm run browser -- -s=sincromisor click <snapshotに表示された要素の参照>
+npm run browser -- -s=sincromisor snapshot
+npm run browser -- -s=sincromisor close
 ```
 
 入力には `fill <参照> <値>`、キー操作には `press Enter` を使う。画面遷移などで要素の参照が変わった場合は `snapshot` を取得し直す。見た目の確認には `screenshot`、エラーや通信の調査には `console` / `requests` を使う。

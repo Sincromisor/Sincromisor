@@ -1,0 +1,13 @@
+id: task-261011152416-update-python-dependencies
+title: Python依存を更新しMediaPipeの厳密固定を解除する
+category: backend
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-10-11
+closed_at: null
+legacy_ids: []

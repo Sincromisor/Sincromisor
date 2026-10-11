@@ -95,9 +95,9 @@ install_project() {
     fi
     uv python install "$(cat .python-version)"
     uv sync --locked --group dev --group full
+    node scripts/check-node-version.mjs
     npm ci
-    npm --prefix sincromisor-frontend ci
-    npm --prefix sincromisor-frontend run assets:prepare
+    npm run assets:prepare
     (cd sincromisor-server/sincro-rtc && GOTOOLCHAIN=auto go mod download && GOTOOLCHAIN=auto go version)
     npm run git:hooks:install
     # 既存の設定・キャッシュには触れず、初回の保存先だけ準備する。
@@ -122,7 +122,7 @@ main() {
     done
     check_host
     cd "$(dirname "${BASH_SOURCE[0]}")/../.."
-    [[ -f uv.lock && -f sincromisor-frontend/package-lock.json ]] || fail 'リポジトリ一式が必要です。'
+    [[ -f uv.lock && -f package-lock.json ]] || fail 'リポジトリ一式が必要です。'
     sudo -v
     setup_tmp=$(mktemp -d)
     trap 'rm -rf "$setup_tmp"' EXIT
@@ -130,8 +130,7 @@ main() {
     if ((with_gpu)); then install_gpu; fi
     install_project
     if ((with_browser)); then
-        npm install --global --prefix "$HOME/.local" @playwright/cli
-        npm exec --yes --package=playwright -- playwright install --with-deps chrome
+        npm run browser:install -- --with-deps
     fi
     sudo docker compose version
     sudo docker buildx version

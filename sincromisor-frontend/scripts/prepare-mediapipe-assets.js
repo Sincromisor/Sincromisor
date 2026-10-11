@@ -1,11 +1,14 @@
 import { cp, mkdir, mkdtemp, readdir, rename, rm } from "node:fs/promises";
-import { join } from "node:path";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // インストール済みパッケージを配信素材の唯一の供給元にする。
 // 一時領域へのコピー完了後に生成先だけを交換し、古いファイルや壊れたリンクを残さない。
 const frontendRoot = fileURLToPath(new URL("../", import.meta.url));
-const source = join(frontendRoot, "node_modules/@mediapipe/tasks-vision/wasm");
+// workspaceの巻き上げ・入れ子配置のどちらもNodeのパッケージ解決に従う。
+const require = createRequire(import.meta.url);
+const source = join(dirname(require.resolve("@mediapipe/tasks-vision")), "wasm");
 const publicRoot = join(frontendRoot, "public");
 const destination = join(publicRoot, "mediapipe-wasm");
 const entries = await readdir(source, { withFileTypes: true });

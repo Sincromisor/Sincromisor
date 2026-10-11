@@ -369,7 +369,6 @@ Python 全体確認は実行時間と環境依存が大きいため全体ゲー�
 フロントエンド:
 
 ```sh
-cd sincromisor-frontend
 npm run build
 npm run check
 npm run test
@@ -395,6 +394,5 @@ docker compose --profile full up -d
 Markdown:
 
 ```sh
-cd sincromisor-frontend
 npm run check:md
 ```

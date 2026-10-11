@@ -1,0 +1,13 @@
+id: task-261011152417-update-agent-server-dependencies
+title: AgentServerのMastra一式と実行環境を更新する
+category: backend
+status: open
+depends_on: []
+superseded_by: null
+review: APPROVED
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-10-11
+closed_at: null
+legacy_ids: []
