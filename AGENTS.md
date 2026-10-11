@@ -44,7 +44,7 @@ Sincromisor を変更するエージェントの入口。共通の制約をこ�
 ## スキルの選択と編集元
 
 - タスクの起票を依頼された場合は `new-task`、既存タスクの実行を依頼された場合は `run-task` を使う。起票だけの依頼を実装へ広げない。次タスクの抽出は `npm run tasks:next` を使う。
-- ブラウザーの操作・画面確認・Playwrightテストを扱う場合は [playwright-cli](.agents/skills/playwright-cli/SKILL.md) を使う。UIコードを編集するだけなら読み込む必要はない。
+- ブラウザーの操作・画面確認・Playwrightテストを扱う場合は [Playwright CLI利用ルール](documents/rules/playwright-cli.md) に従い、`playwright-cli` スキルを使う。UIコードを編集するだけなら読み込む必要はない。
 - `new-task` / `run-task` の編集元は `.claude/commands/`、サブエージェントは `.claude/agents/`。`npm run gen:codex` で `.agents/skills/` と `.codex/agents/` を同期し、`npm run gen:codex:check` で確認する。生成印のない `playwright-cli` は直接編集する。
 - スキルの説明は用途と適用場面を短く書く。本文には共通の制約と必要な参照先を置き、用途別の詳細は必要時だけ読む。規約や手順を複製しない。
 
