@@ -4,18 +4,18 @@
 
 ## タスク一覧（自動生成 / 全 11 件）
 
-### open（未完） — 2 件
+### open（未完） — 1 件
 
 | タスク                                                                                                             | タイトル                                    | 判定 | 依存 |
 | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- | ---- | ---- |
 | [task-261011152417-update-agent-server-dependencies](./task-261011152417-update-agent-server-dependencies/task.md) | AgentServerのMastra一式と実行環境を更新する | —    | —    |
-| [task-261011152417-update-rtc-go-dependencies](./task-261011152417-update-rtc-go-dependencies/task.md)             | RTCのGo依存とGo保守版を更新する             | —    | —    |
 
-### blocked（停止中） — 1 件
+### blocked（停止中） — 2 件
 
 | タスク                                                                                                 | タイトル                                        | 判定 | 依存 |
 | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------- | ---- | ---- |
 | [task-261011152416-update-python-dependencies](./task-261011152416-update-python-dependencies/task.md) | Python依存を更新しMediaPipeの厳密固定を解除する | —    | —    |
+| [task-261011152417-update-rtc-go-dependencies](./task-261011152417-update-rtc-go-dependencies/task.md) | RTCのGo依存とGo保守版を更新する                 | —    | —    |
 
 ### done（完了） — 8 件
 

@@ -43,7 +43,7 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
 
 RUN npm run build
 
-FROM golang:1.26.8-bookworm AS pion-builder
+FROM golang:1.26.9-bookworm AS pion-builder
 
 WORKDIR /src/sincromisor-server/sincro-rtc
 

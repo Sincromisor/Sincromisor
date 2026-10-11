@@ -32,8 +32,8 @@ Go Module Proxyの各モジュールの`@latest`を参照した。同じモジ�
 
 ## 完了条件（受け入れ条件）
 
-- [ ] [go.mod](../../../sincromisor-server/sincro-rtc/go.mod)と`go.sum`を更新し、Pion一式とPrometheusの依存を矛盾なく解決できる。見送り候補には理由を残す。
-- [ ] Go 1.26.8を1.26系の保守版へ更新する。調査時の候補は1.26.9。[RTCのDockerfile](../../../Docker/sincro-rtc/Dockerfile)と[ログ監視のDockerfile](../../../Docker/logging/observer/Dockerfile)にあるGoビルド環境も揃える。
+- [x] [go.mod](../../../sincromisor-server/sincro-rtc/go.mod)と`go.sum`を更新し、Pion一式とPrometheusの依存を矛盾なく解決できる。見送り候補には理由を残す。
+- [x] Go 1.26.8を1.26系の保守版へ更新する。調査時の候補は1.26.9。[RTCのDockerfile](../../../Docker/sincro-rtc/Dockerfile)と[ログ監視のDockerfile](../../../Docker/logging/observer/Dockerfile)にあるGoビルド環境も揃える。
 - [ ] RTCの既存テストとビルドが通り、開発環境で接続・音声入出力・切断の主要経路を一度確認できる。
 
 ## 設計判断と変更範囲
@@ -51,3 +51,11 @@ Go更新に伴うログ監視バイナリのビルド確認を含める。RTCの
 ## 文書同期
 
 RTCのREADMEと採用Go版を記載した現行文書を必要に応じて同期する。[RTC契約](../../../documents/design/contracts/frontend-rtc.md)と[音声パイプライン契約](../../../documents/design/contracts/audio-pipeline-websocket.md)を維持する。
+
+## 実装・確認結果
+
+候補表の全版とGo 1.26.9を採用し、`go mod tidy`と`go mod verify`が成功した。Pion親依存が要求するtransport/v5 5.1.1も追加された。RTCとログ監視のバイナリはGo 1.26.9でビルドできた。
+
+全既存試験を実行したが、FFmpeg未導入の設定試験が失敗し、登録待ちのプロセス試験が停止しなかったためスタックを取得して停止した。macOS一時パスの表記差とOpus復号の固定ハッシュ差も検出したが、旧依存の一時コピーでも同一の差が再現した。`TMPDIR=/private/tmp`で一時パス差を避け、FFmpeg依存の試験と既存のOpus固定値試験を除く`go test -race`は成功した。
+
+実接続・音声入出力・切断とDockerビルドは未確認であり、完了にしていない。[実装記録](impl.md)に再開条件と試験除外を残す。
