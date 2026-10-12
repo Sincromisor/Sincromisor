@@ -133,6 +133,16 @@ func TestValidatedGoPathBuildsAndRerunsEvidence(t *testing.T) {
 	if err := os.WriteFile(goPath, []byte(script), 0o700); err != nil {
 		t.Fatal(err)
 	}
+	// 明示的なリンクを渡し、OSの一時ディレクトリ表記に依存せず正規化後の実行先を検証する。
+	goAlias := filepath.Join(t.TempDir(), "go-link")
+	if err := os.Symlink(goPath, goAlias); err != nil {
+		t.Fatal(err)
+	}
+	environment[goBinaryEnv] = goAlias
+	resolvedGoPath, err := filepath.EvalSymlinks(goPath)
+	if err != nil {
+		t.Fatal(err)
+	}
 	loaded, err := load(context.Background(), moduleRoot, mapLookup(environment), validProbeRunner)
 	if err != nil {
 		t.Fatal(err)
@@ -143,8 +153,8 @@ func TestValidatedGoPathBuildsAndRerunsEvidence(t *testing.T) {
 		t.Fatalf("BuildPion() error = %v", err)
 	}
 	command := loaded.GoCommand(context.Background(), "test", "-run", "HarnessContract", "./cmd/sincro-rtc")
-	if command.Path != goPath {
-		t.Fatalf("test command path = %q, want %q", command.Path, goPath)
+	if command.Path != resolvedGoPath {
+		t.Fatalf("test command path = %q, want %q", command.Path, resolvedGoPath)
 	}
 	if err := command.Run(); err != nil {
 		t.Fatalf("evidence command error = %v", err)
