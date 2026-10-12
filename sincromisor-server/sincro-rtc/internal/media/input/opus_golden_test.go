@@ -4,10 +4,12 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"math"
+	"os"
 	"testing"
 
 	"github.com/pion/interceptor"
@@ -19,35 +21,25 @@ import (
 )
 
 func TestInputProcessorOpusToS16LEGolden(t *testing.T) {
-	tests := []struct {
-		name         string
-		channels     int
-		pcm          []int16
-		sampleOffset int
-		wantSamples  []int16
-		wantSHA256   string
-	}{
-		{
-			name:         "mono",
-			channels:     1,
-			pcm:          goldenMonoPCM(960),
-			sampleOffset: 100,
-			wantSamples:  []int16{553, 622, 548, 407, 287, 168, 3, -134, -165, -183, -175, -126},
-			wantSHA256:   "0ecfdf1f7cb3a778131433fcddf8fbadb9d19f457090e384e50bd6040818b603",
-		},
-		{
-			name:         "stereo",
-			channels:     2,
-			pcm:          goldenStereoPCM(960),
-			sampleOffset: 100,
-			wantSamples:  []int16{12, -300, -360, -338, -449, -700, -1036, -1153, -811, -200, 501, 1200},
-			wantSHA256:   "1f5ad64df08fe58a57cdb3091f4cc11fde5b33f3ecec531f9a71dc60120645c2",
-		},
+	// 入力も固定し、実行環境ごとのlibopusエンコーダーを基準波形の比較から切り離す。
+	data, err := os.ReadFile("testdata/opus_to_s16le.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var tests []struct {
+		Name    string   `json:"name"`
+		Packets [][]byte `json:"packets"`
+		PCM     []int16  `json:"pcm"`
+	}
+	if err := json.Unmarshal(data, &tests); err != nil {
+		t.Fatal(err)
+	}
+	if len(tests) != 2 {
+		t.Fatalf("golden cases = %d, want mono and stereo", len(tests))
 	}
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			payloads := encodeTestOpus(t, test.pcm, test.channels, mediaopus.Latency10ms)
-			packets := opusRTPPackets(1, 0, payloads)
+		t.Run(test.Name, func(t *testing.T) {
+			packets := opusRTPPackets(1, 0, test.Packets)
 			reader := &countingPacketReader{packets: packets}
 			frames := runInputFrames(t, context.Background(), reader)
 			if len(frames) != 1 || len(frames[0]) != pcmFrameBytes {
@@ -57,18 +49,17 @@ func TestInputProcessorOpusToS16LEGolden(t *testing.T) {
 				t.Fatalf("submit read positions = %v, want [2] after two 10 ms packets", reader.submitReads)
 			}
 			gotSamples := decodeS16LE(frames[0])
-			if len(test.wantSamples) == 0 || test.wantSHA256 == "" {
-				t.Fatalf("golden missing: samples=%v sha256=%x",
-					gotSamples[test.sampleOffset:test.sampleOffset+12], sha256.Sum256(frames[0]))
+			if len(test.PCM) != pcmFrameSamples {
+				t.Fatalf("golden samples = %d, want %d", len(test.PCM), pcmFrameSamples)
 			}
-			for index, want := range test.wantSamples {
-				position := test.sampleOffset + index
-				if gotSamples[position] != want {
-					t.Fatalf("sample[%d] = %d, want %d", position, gotSamples[position], want)
+			// Pion Opusの融合積和の有無で、16-bit PCMに最大2 LSBの丸め差が生じる。
+			// ハッシュ一致ではなく全標本を比較し、音量・順序・downmix・FIRの変化は検出する。
+			const maxSampleDifference = 2
+			for index, want := range test.PCM {
+				difference := int(gotSamples[index]) - int(want)
+				if difference < -maxSampleDifference || difference > maxSampleDifference {
+					t.Fatalf("sample[%d] = %d, want %d ±%d", index, gotSamples[index], want, maxSampleDifference)
 				}
-			}
-			if got := fmt.Sprintf("%x", sha256.Sum256(frames[0])); got != test.wantSHA256 {
-				t.Fatalf("frame SHA-256 = %s, want %s", got, test.wantSHA256)
 			}
 		})
 	}
