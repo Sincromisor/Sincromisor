@@ -1,13 +1,13 @@
 id: task-261014011417-vps-container-update
 title: VPSのコンテナ更新と必須サービスの稼働確認
 category: infrastructure
-status: blocked
+status: done
 depends_on: []
 superseded_by: null
 review: null
 reviewed_sha: null
-verdict: null
-attempts: 1
+verdict: PASS
+attempts: 2
 created_at: 2026-10-14
-closed_at: null
+closed_at: 2026-10-14
 legacy_ids: []

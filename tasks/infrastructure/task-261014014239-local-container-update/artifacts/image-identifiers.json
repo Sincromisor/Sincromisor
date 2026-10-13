@@ -1,0 +1,123 @@
+{
+	"source_revision": "011853c595e8a02f4c226ccc99a38b1dc2bbe8eb",
+	"images": [
+		{
+			"reference": "ghcr.io/sincromisor/agent-server:latest",
+			"image_id": "sha256:4e05c34858df55cfea61f04a78f7d59d22dd21248a638c64a694d5b08549e961",
+			"services": ["agent-server"]
+		},
+		{
+			"reference": "hashicorp/consul:latest",
+			"image_id": "sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54",
+			"services": [
+				"bandog",
+				"consul-agent-chat",
+				"consul-agent-extractor",
+				"consul-agent-frontend",
+				"consul-agent-logging",
+				"consul-agent-logs",
+				"consul-agent-processor",
+				"consul-agent-recognizer",
+				"consul-agent-redis",
+				"consul-agent-rtc",
+				"consul-agent-s3",
+				"consul-agent-synthesizer",
+				"sincro-consul-server"
+			]
+		},
+		{
+			"reference": "curlimages/curl:latest",
+			"image_id": "sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777",
+			"services": ["consul-s3-registrar"]
+		},
+		{
+			"reference": "curlimages/curl:8.12.1",
+			"image_id": "sha256:94e9e444bcba979c2ea12e27ae39bee4cd10bc7041a472c4727a558e213744e6",
+			"services": [
+				"llama-model-initializer",
+				"s3-credential-initializer",
+				"service-initializer"
+			]
+		},
+		{
+			"reference": "ghcr.io/ggml-org/llama.cpp@sha256:92f75345eeeffa2e76e0e47526f310d0aca36b523bfe514a7dfda5bb1185f256",
+			"image_id": "sha256:92f75345eeeffa2e76e0e47526f310d0aca36b523bfe514a7dfda5bb1185f256",
+			"services": ["llama-server"]
+		},
+		{
+			"reference": "ghcr.io/sincromisor/log-observer:latest",
+			"image_id": "sha256:34fadb4b45cf334b0b8a1e20b0e6b45c049aa14c6d9579c332ab6f42d4fe19c8",
+			"services": ["log-observer"]
+		},
+		{
+			"reference": "caddy:2.10.2-alpine",
+			"image_id": "sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
+			"services": ["log-router"]
+		},
+		{
+			"reference": "chrislusf/seaweedfs:latest",
+			"image_id": "sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d",
+			"services": ["s3-bootstrap"]
+		},
+		{
+			"reference": "chrislusf/seaweedfs",
+			"image_id": "sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d",
+			"services": [
+				"seaweed-filer",
+				"seaweed-master",
+				"seaweed-volume",
+				"sincro-s3"
+			]
+		},
+		{
+			"reference": "ghcr.io/sincromisor/sincro-frontend:latest",
+			"image_id": "sha256:44d0db6af703485bff6ec6f016500b00ce82ada9c568ab60be24182193ede029",
+			"services": ["sincro-frontend"]
+		},
+		{
+			"reference": "ghcr.io/sincromisor/redis:latest",
+			"image_id": "sha256:9fca0a6c21ef379518e523434f3bb3deb106405d2d6287bc716cc134416c6687",
+			"services": ["sincro-redis"]
+		},
+		{
+			"reference": "ghcr.io/sincromisor/sincro-rtc:latest",
+			"image_id": "sha256:570e28ebd4c4962b16f7ac95bfede5ac885532a1c69816f4268dc5e28687b379",
+			"services": ["sincro-rtc"]
+		},
+		{
+			"reference": "ghcr.io/sincromisor/voicevox:latest",
+			"image_id": "sha256:29dfeb780ab1cfc6d914fca88a9d8d580a46b865001b5d82e6fe8200aa6dd8e0",
+			"services": ["sincro-voicevox"]
+		},
+		{
+			"reference": "ghcr.io/sincromisor/speech-extractor:latest",
+			"image_id": "sha256:f49c4cabc3242e61ea83080ff2bc49f6004b0e3095fca41c467ba0b97d749c35",
+			"services": ["speech-extractor"]
+		},
+		{
+			"reference": "ghcr.io/sincromisor/speech-recognizer-nemo:latest",
+			"image_id": "sha256:23238c1e4c473204b8d65420da05d5dcbd1fecbcf9aad75261360d29d5fb8166",
+			"services": ["speech-recognizer"]
+		},
+		{
+			"reference": "ghcr.io/sincromisor/text-processor:latest",
+			"image_id": "sha256:8771716b216e23edfe2acc6ed4d09f4dcf751e3ce40af6f6ed9aa6a17243f43a",
+			"services": ["text-processor"]
+		},
+		{
+			"reference": "ghcr.io/sincromisor/vector:0.58.0",
+			"image_id": "sha256:999a102d8fedffe7b86f500a43a7cc609128976f23eddc090367814ab2e96557",
+			"services": ["vector"]
+		},
+		{
+			"reference": "ghcr.io/sincromisor/victoria-logs:v1.52.0",
+			"image_id": "sha256:03394eba0982e9847c10cb164ef02df3c0ff3a5361f90f67f4f2fb60cdf2c343",
+			"services": ["victoria-logs"]
+		},
+		{
+			"reference": "ghcr.io/sincromisor/voice-synthesizer:latest",
+			"image_id": "sha256:3f1deab48fd4660a1568c72aed6c4c417e2b11c74ac17293ebdac5ac82aed547",
+			"services": ["voice-synthesizer"]
+		}
+	]
+}

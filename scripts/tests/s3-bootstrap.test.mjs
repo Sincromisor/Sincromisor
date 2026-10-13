@@ -127,10 +127,17 @@ test("S3の自動キーを維持し、変更・再作成後もオブジェクト
 			"-c",
 			`curl --silent --show-error --max-time 10 --aws-sigv4 aws:amz:us-east-1:s3 --user "sincromisor:$SINCRO_S3_SECRET_KEY" --write-out '\n%{http_code}' ${put ? "--request PUT --data-binary persisted-before-rotation" : ""} http://sincro-s3:8333/speech-recognizer/check.txt`,
 		]);
-		const boundary = output.lastIndexOf("\n");
+		// 起動ラッパーの診断行をHTTP本文へ混ぜない。
+		const diagnosticEnd = output.indexOf("\n");
+		assert.equal(
+			JSON.parse(output.slice(0, diagnosticEnd)).event,
+			"service_entrypoint",
+		);
+		const response = output.slice(diagnosticEnd + 1);
+		const boundary = response.lastIndexOf("\n");
 		return {
-			body: output.slice(0, boundary),
-			status: Number(output.slice(boundary + 1)),
+			body: response.slice(0, boundary),
+			status: Number(response.slice(boundary + 1)),
 		};
 	};
 	const fingerprint = () =>
@@ -156,6 +163,11 @@ test("S3の自動キーを維持し、変更・再作成後もオブジェクト
 		ready();
 		assert(!bootstrap().includes("secretKey"));
 		assert.equal(request("", true).status, 200);
+		bootstrap();
+		assert.deepEqual(request(), {
+			status: 200,
+			body: "persisted-before-rotation",
+		});
 		bootstrap(explicitKey);
 		assert.equal(request().status, 403);
 		assert.deepEqual(request(explicitKey), {
