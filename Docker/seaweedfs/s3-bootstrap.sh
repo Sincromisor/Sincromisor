@@ -25,8 +25,12 @@ weed_shell() {
 }
 
 stage=bucket_create
+# 既存バケットの再作成はエラーになるため、一覧取得が成功した場合だけ不足分を作る。
+existing_buckets=$(printf 's3.bucket.list\n' | weed shell -master=seaweed-master:9333 -filer=seaweed-filer:8888 2>/dev/null)
 for bucket in $(printf '%s' "$S3_BUCKETS" | tr ',' ' '); do
-    printf 's3.bucket.create -name %s\n' "$bucket" | weed_shell
+    if ! printf '%s\n' "$existing_buckets" | awk '{print $1}' | grep -Fxq -- "$bucket"; then
+        printf 's3.bucket.create -name %s\n' "$bucket" | weed_shell
+    fi
 done
 
 # 認証キーの変更は管理者が選んだ設定の反映として扱い、同じアクセスキーを更新する。
