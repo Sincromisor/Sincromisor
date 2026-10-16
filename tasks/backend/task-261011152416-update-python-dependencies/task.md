@@ -35,10 +35,10 @@
 
 ## 完了条件（受け入れ条件）
 
-- [ ] 候補を[ルートの依存定義](../../../pyproject.toml)、各サービスの`pyproject.toml`、[uv.lock](../../../uv.lock)へ整合する形で反映し、各サービスの依存を`--locked`で導入できる。
+- [x] 候補を[ルートの依存定義](../../../pyproject.toml)、各サービスの`pyproject.toml`、[uv.lock](../../../uv.lock)へ整合する形で反映し、各サービスの依存を`--locked`で導入できる。
 - [x] [SpeechExtractorの依存定義](../../../sincromisor-server/speech-extractor/pyproject.toml)の`mediapipe==1.0.1`を、採用版を下限とする範囲指定へ変更する。1.1.0採用時は`mediapipe>=1.1.0`を基本とし、上限は具体的な非互換根拠がある場合だけ設ける。実際の採用版は`uv.lock`で固定する。
-- [ ] SpeechExtractorの実際のAudioClassifierが起動し、既存の音声素材を処理できる。Python 3.14と既存Linuxコンテナで必要な配布物・ネイティブ依存が揃う。
-- [ ] 共通モデルのシリアライズ、音声認識の後処理、Mastraストリームの変換、音声合成の既存確認が通り、通信契約を維持する。
+- [x] SpeechExtractorの実際のAudioClassifierが起動し、既存の音声素材を処理できる。Python 3.14と既存Linuxコンテナで必要な配布物・ネイティブ依存が揃う。
+- [x] 共通モデルのシリアライズ、音声認識の後処理、Mastraストリームの変換、音声合成の既存確認が通り、通信契約を維持する。
 - [x] 更新した直接・推移依存の採用版、解決上の制約、見送った候補を記録する。
 
 ## 設計判断と変更範囲
@@ -69,3 +69,11 @@ Dockerfileの変更は今回の依存導入に必要な互換修正に限定す�
 `uv lock --check`、GPU不要の3サービスと開発グループの`uv sync --locked`、Ruff、導入済み5パッケージのty、共通設定・モデル・Mastraストリーム変換・音声合成の59テストが成功した。実SpeechExtractorWorkerのYAMNet AudioClassifierが既存Gate3音声を処理し、5分類結果を返した。Linux x86_64向け`uv sync --locked --group dev --group full --python-platform x86_64-unknown-linux-gnu --dry-run`も成功した。
 
 CUDA対応LinuxコンテナでのNeMo導入・実音声認識と全体型検査は未確認のため、タスクは完了にしていない。[実装記録](impl.md)に再開条件を残す。
+
+### 2026-10-16の再実行
+
+前回の停止要因だったDocker・CUDA不足は、Linux x86_64とRTX 5060 Tiの環境で解消した。稼働中の認識コンテナとリポジトリの`uv.lock`はSHA-256が一致し、NeMo 3.0.0、Torch 2.14.1、Transformers 5.19.0、MediaPipe 1.1.0を確認した。
+
+既存CUDAイメージから検証専用イメージを作り、`uv sync --locked --group dev --group full`が成功した。Goとの通信互換試験に必要なGo 1.26.9も検証用イメージに配置し、コンテナの依存環境を明示した`ty check --python /opt/sincromisor/.venv .`と対象5パッケージのpytestを実行した。型検査、78試験、2サブテストが成功した。
+
+Linuxの実AudioClassifierが同梱音声から6分類結果を返した。NeMoには同じ同梱音声を本番契約の16-bit PCMへ変換してWebSocket送信し、認識・保存・結果返送まで成功した。以前の確認用スクリプトのfloat32入力は音声保存時のopusencで失敗するため、その入力形式を本番の成功確認に用いていない。通信契約や本番コードの変更はない。

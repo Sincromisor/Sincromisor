@@ -4,15 +4,14 @@
 
 ## タスク一覧（自動生成 / 全 11 件）
 
-### blocked（停止中） — 3 件
+### blocked（停止中） — 2 件
 
-| タスク                                                                                                             | タイトル                                        | 判定    | 依存 |
-| ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- | ------- | ---- |
-| [task-261011152416-update-python-dependencies](./task-261011152416-update-python-dependencies/task.md)             | Python依存を更新しMediaPipeの厳密固定を解除する | —       | —    |
-| [task-261011152417-update-agent-server-dependencies](./task-261011152417-update-agent-server-dependencies/task.md) | AgentServerのMastra一式と実行環境を更新する     | ❌ FAIL | —    |
-| [task-261011152417-update-rtc-go-dependencies](./task-261011152417-update-rtc-go-dependencies/task.md)             | RTCのGo依存とGo保守版を更新する                 | —       | —    |
+| タスク                                                                                                             | タイトル                                    | 判定    | 依存 |
+| ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- | ------- | ---- |
+| [task-261011152417-update-agent-server-dependencies](./task-261011152417-update-agent-server-dependencies/task.md) | AgentServerのMastra一式と実行環境を更新する | ❌ FAIL | —    |
+| [task-261011152417-update-rtc-go-dependencies](./task-261011152417-update-rtc-go-dependencies/task.md)             | RTCのGo依存とGo保守版を更新する             | —       | —    |
 
-### done（完了） — 8 件
+### done（完了） — 9 件
 
 | タスク                                                                                                     | タイトル                                              | 判定    | 依存                                                                                 |
 | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ------- | ------------------------------------------------------------------------------------ |
@@ -24,5 +23,6 @@
 | [task-260921171254-agent-server-recovery](./task-260921171254-agent-server-recovery/task.md)               | AgentServerの再起動・Consul登録・未対応feedbackの修正 | ✅ PASS | —                                                                                    |
 | [task-260921173921-extract-agent-definition](./task-260921173921-extract-agent-definition/task.md)         | エージェント定義と初期プロンプトを分離する            | ✅ PASS | —                                                                                    |
 | [task-260921175038-modernize-mastra-storage](./task-260921175038-modernize-mastra-storage/task.md)         | 非推奨APIの調査とMastra保存領域型の更新               | ✅ PASS | —                                                                                    |
+| [task-261011152416-update-python-dependencies](./task-261011152416-update-python-dependencies/task.md)     | Python依存を更新しMediaPipeの厳密固定を解除する       | ✅ PASS | —                                                                                    |
 
 <!-- AUTOGEN:tasks END -->
