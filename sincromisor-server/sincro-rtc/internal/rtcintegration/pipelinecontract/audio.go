@@ -4,10 +4,10 @@ import "encoding/binary"
 
 const (
 	synthesizedSampleRate = 24_000
-	synthesizedSamples    = synthesizedSampleRate * 375 / 1000
+	synthesizedSamples    = synthesizedSampleRate / 10
 )
 
-// synthesizedWAV は契約serviceが返す0.375秒のmono PCM WAVを組み立てる。
+// synthesizedWAV は固定応答のspeaking_timeとモーラ合計に一致する0.1秒のmono PCM WAVを組み立てる。
 //
 // 固定振幅を反転した非無音であり、音質ではなくFFmpeg、Pion、Web Audioの
 // 実decode/playback経路を決定的に通すことだけを責務とする。
