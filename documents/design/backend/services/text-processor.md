@@ -44,7 +44,7 @@
 
 ## 変更時の確認
 
-- `ChatMessage`のフィールドを変える場合はフロントエンドRTC契約と `RTCMessage.ts`を確認する。
+- `ChatMessage`のフィールドを変える場合はフロントエンドRTC契約と `src/features/rtc/rtcMessage.ts`を確認する。
 - `expression_code`の値域や意味を変える場合はキャラクター動作とUI表示を確認する。
 - `talk_mode`を追加する場合はフロントエンド設定、Goパイプライン調停器のパス、TextProcessor経路を同時に更新する。
 

@@ -1,0 +1,105 @@
+documents/INSTALL.md
+この最終稿に必要な検査（lint、diff、資料との照合）を実行した記録があり、最終稿のハッシュが記録と合いました。合格の判定ではありません。完了報告を付けるときは、この出力の2行目を写してください。
+yomiyasu-check: executed via=verify run=20261016T224502Z-526aea67 attempt=1 final=sha256:8a1e91f6033d mode=rewrite doc_type=formal reader=expert checks=lint,diff,materials meaning_risk=27 replay=skipped
+記録: /tmp/sincro-doc-review/yomiyasu/runs/20261016T224502Z-526aea67/attempt-1.json
+記録の中身: 見直し候補 最終稿 1件、直した箇所 11か所（原文の件数と元と後は run の出力にあります）
+documents/memo.md
+この最終稿に必要な検査（lint、diff、資料との照合）を実行した記録があり、最終稿のハッシュが記録と合いました。合格の判定ではありません。完了報告を付けるときは、この出力の2行目を写してください。
+yomiyasu-check: executed via=verify run=20261016T224502Z-ce4e9952 attempt=2 final=sha256:70316108a284 mode=rewrite doc_type=formal reader=expert checks=lint,diff,materials meaning_risk=4 replay=skipped
+記録: /tmp/sincro-doc-review/yomiyasu/runs/20261016T224502Z-ce4e9952/attempt-2.json
+記録の中身: 見直し候補 最終稿 1件、直した箇所 5か所（原文の件数と元と後は run の出力にあります）
+documents/tasks/README.md
+この最終稿に必要な検査（lint、diff、資料との照合）を実行した記録があり、最終稿のハッシュが記録と合いました。合格の判定ではありません。完了報告を付けるときは、この出力の2行目を写してください。
+yomiyasu-check: executed via=verify run=20261016T224503Z-6b220cd7 attempt=1 final=sha256:3323053b5d43 mode=rewrite doc_type=formal reader=expert checks=lint,diff,materials meaning_risk=3 replay=skipped
+記録: /tmp/sincro-doc-review/yomiyasu/runs/20261016T224503Z-6b220cd7/attempt-1.json
+記録の中身: 見直し候補 最終稿 1件、直した箇所 1か所（原文の件数と元と後は run の出力にあります）
+documents/design/index.md
+この最終稿に必要な検査（lint、diff、資料との照合）を実行した記録があり、最終稿のハッシュが記録と合いました。合格の判定ではありません。完了報告を付けるときは、この出力の2行目を写してください。
+yomiyasu-check: executed via=verify run=20261016T224504Z-a122e11a attempt=1 final=sha256:3d2577637a26 mode=rewrite doc_type=formal reader=expert checks=lint,diff,materials meaning_risk=1 replay=skipped
+記録: /tmp/sincro-doc-review/yomiyasu/runs/20261016T224504Z-a122e11a/attempt-1.json
+記録の中身: 見直し候補 最終稿 3件、直した箇所 3か所（原文の件数と元と後は run の出力にあります）
+documents/design/architecture/overview.md
+この最終稿に必要な検査（lint、diff、資料との照合）を実行した記録があり、最終稿のハッシュが記録と合いました。合格の判定ではありません。完了報告を付けるときは、この出力の2行目を写してください。
+yomiyasu-check: executed via=verify run=20261016T224505Z-bcd66bc8 attempt=1 final=sha256:b8f6603fc381 mode=rewrite doc_type=formal reader=expert checks=lint,diff,materials meaning_risk=1 replay=skipped
+記録: /tmp/sincro-doc-review/yomiyasu/runs/20261016T224505Z-bcd66bc8/attempt-1.json
+記録の中身: 見直し候補 最終稿 5件、直した箇所 1か所（原文の件数と元と後は run の出力にあります）
+documents/design/architecture/runtime-flow.md
+この最終稿に必要な検査（lint、diff、資料との照合）を実行した記録があり、最終稿のハッシュが記録と合いました。合格の判定ではありません。完了報告を付けるときは、この出力の2行目を写してください。
+yomiyasu-check: executed via=verify run=20261016T224506Z-41609c56 attempt=1 final=sha256:45881ff479db mode=rewrite doc_type=formal reader=expert checks=lint,diff,materials meaning_risk=4 replay=skipped
+記録: /tmp/sincro-doc-review/yomiyasu/runs/20261016T224506Z-41609c56/attempt-1.json
+記録の中身: 見直し候補 最終稿 8件、直した箇所 3か所（原文の件数と元と後は run の出力にあります）
+documents/design/contracts/frontend-rtc.md
+この最終稿に必要な検査（lint、diff、資料との照合）を実行した記録があり、最終稿のハッシュが記録と合いました。合格の判定ではありません。完了報告を付けるときは、この出力の2行目を写してください。
+yomiyasu-check: executed via=verify run=20261016T224507Z-96d9d439 attempt=1 final=sha256:da3bbc474536 mode=rewrite doc_type=formal reader=expert checks=lint,diff,materials meaning_risk=5 replay=skipped
+記録: /tmp/sincro-doc-review/yomiyasu/runs/20261016T224507Z-96d9d439/attempt-1.json
+記録の中身: 見直し候補 最終稿 3件、直した箇所 2か所（原文の件数と元と後は run の出力にあります）
+documents/design/contracts/audio-pipeline-websocket.md
+この最終稿に必要な検査（lint、diff、資料との照合）を実行した記録があり、最終稿のハッシュが記録と合いました。合格の判定ではありません。完了報告を付けるときは、この出力の2行目を写してください。
+yomiyasu-check: executed via=verify run=20261016T224508Z-398d0cdf attempt=1 final=sha256:466c6e90a584 mode=rewrite doc_type=formal reader=expert checks=lint,diff,materials meaning_risk=2 replay=skipped
+記録: /tmp/sincro-doc-review/yomiyasu/runs/20261016T224508Z-398d0cdf/attempt-1.json
+記録の中身: 見直し候補 最終稿 3件、直した箇所 3か所（原文の件数と元と後は run の出力にあります）
+documents/design/frontend/app-shell.md
+この最終稿に必要な検査（lint、diff、資料との照合）を実行した記録があり、最終稿のハッシュが記録と合いました。合格の判定ではありません。完了報告を付けるときは、この出力の2行目を写してください。
+yomiyasu-check: executed via=verify run=20261016T224509Z-a5cd2b7b attempt=1 final=sha256:6d4d27756155 mode=rewrite doc_type=formal reader=expert checks=lint,diff,materials meaning_risk=2 replay=skipped
+記録: /tmp/sincro-doc-review/yomiyasu/runs/20261016T224509Z-a5cd2b7b/attempt-1.json
+記録の中身: 見直し候補 最終稿 4件、直した箇所 1か所（原文の件数と元と後は run の出力にあります）
+documents/design/frontend/setting-and-debug-ui/settings-design.md
+この最終稿に必要な検査（lint、diff、資料との照合）を実行した記録があり、最終稿のハッシュが記録と合いました。合格の判定ではありません。完了報告を付けるときは、この出力の2行目を写してください。
+yomiyasu-check: executed via=verify run=20261016T224510Z-fe30f8ab attempt=1 final=sha256:2d52892bea0f mode=rewrite doc_type=formal reader=expert checks=lint,diff,materials meaning_risk=2 replay=skipped
+記録: /tmp/sincro-doc-review/yomiyasu/runs/20261016T224510Z-fe30f8ab/attempt-1.json
+記録の中身: 見直し候補 最終稿 2件、直した箇所 2か所（原文の件数と元と後は run の出力にあります）
+documents/design/frontend/setting-and-debug-ui/settings-items.md
+この最終稿に必要な検査（lint、diff、資料との照合）を実行した記録があり、最終稿のハッシュが記録と合いました。合格の判定ではありません。完了報告を付けるときは、この出力の2行目を写してください。
+yomiyasu-check: executed via=verify run=20261016T224511Z-428c7ebf attempt=1 final=sha256:f39ad5f97865 mode=rewrite doc_type=formal reader=expert checks=lint,diff,materials meaning_risk=2 replay=skipped
+記録: /tmp/sincro-doc-review/yomiyasu/runs/20261016T224511Z-428c7ebf/attempt-1.json
+記録の中身: 見直し候補 最終稿 1件、直した箇所 3か所（原文の件数と元と後は run の出力にあります）
+documents/design/backend/services/speech-recognizer.md
+この最終稿に必要な検査（lint、diff、資料との照合）を実行した記録があり、最終稿のハッシュが記録と合いました。合格の判定ではありません。完了報告を付けるときは、この出力の2行目を写してください。
+yomiyasu-check: executed via=verify run=20261016T224512Z-ad5cdf48 attempt=1 final=sha256:ba10744c98f1 mode=rewrite doc_type=formal reader=expert checks=lint,diff,materials meaning_risk=1 replay=skipped
+記録: /tmp/sincro-doc-review/yomiyasu/runs/20261016T224512Z-ad5cdf48/attempt-1.json
+記録の中身: 見直し候補 最終稿 1件、直した箇所 2か所（原文の件数と元と後は run の出力にあります）
+documents/design/backend/services/text-processor.md
+この最終稿に必要な検査（lint、diff、資料との照合）を実行した記録があり、最終稿のハッシュが記録と合いました。合格の判定ではありません。完了報告を付けるときは、この出力の2行目を写してください。
+yomiyasu-check: executed via=verify run=20261016T224513Z-1751c323 attempt=1 final=sha256:11ab4d8e8510 mode=rewrite doc_type=formal reader=expert checks=lint,diff,materials meaning_risk=2 replay=skipped
+記録: /tmp/sincro-doc-review/yomiyasu/runs/20261016T224513Z-1751c323/attempt-1.json
+記録の中身: 見直し候補 最終稿 1件、直した箇所 1か所（原文の件数と元と後は run の出力にあります）
+documents/design/infrastructure/compose.md
+この最終稿に必要な検査（lint、diff、資料との照合）を実行した記録があり、最終稿のハッシュが記録と合いました。合格の判定ではありません。完了報告を付けるときは、この出力の2行目を写してください。
+yomiyasu-check: executed via=verify run=20261016T224514Z-9624f23c attempt=1 final=sha256:06f86c9ebedd mode=rewrite doc_type=formal reader=expert checks=lint,diff,materials meaning_risk=1 replay=skipped
+記録: /tmp/sincro-doc-review/yomiyasu/runs/20261016T224514Z-9624f23c/attempt-1.json
+記録の中身: 見直し候補 最終稿 5件、直した箇所 2か所（原文の件数と元と後は run の出力にあります）
+documents/design/infrastructure/storage.md
+この最終稿に必要な検査（lint、diff、資料との照合）を実行した記録があり、最終稿のハッシュが記録と合いました。合格の判定ではありません。完了報告を付けるときは、この出力の2行目を写してください。
+yomiyasu-check: executed via=verify run=20261016T224515Z-a0463593 attempt=1 final=sha256:9c93f2ff80da mode=rewrite doc_type=formal reader=expert checks=lint,diff,materials meaning_risk=1 replay=skipped
+記録: /tmp/sincro-doc-review/yomiyasu/runs/20261016T224515Z-a0463593/attempt-1.json
+記録の中身: 見直し候補 最終稿 1件、直した箇所 1か所（原文の件数と元と後は run の出力にあります）
+documents/design/initiatives/proper-noun-biasing.md
+この最終稿に必要な検査（lint、diff、資料との照合）を実行した記録があり、最終稿のハッシュが記録と合いました。合格の判定ではありません。完了報告を付けるときは、この出力の2行目を写してください。
+yomiyasu-check: executed via=verify run=20261016T224516Z-bcc6dd31 attempt=1 final=sha256:a3d01003b1fb mode=rewrite doc_type=formal reader=expert checks=lint,diff,materials meaning_risk=2 replay=skipped
+記録: /tmp/sincro-doc-review/yomiyasu/runs/20261016T224516Z-bcc6dd31/attempt-1.json
+記録の中身: 見直し候補 最終稿 3件、直した箇所 2か所（原文の件数と元と後は run の出力にあります）
+documents/migration/pion/README.md
+この最終稿に必要な検査（lint、diff、資料との照合）を実行した記録があり、最終稿のハッシュが記録と合いました。合格の判定ではありません。完了報告を付けるときは、この出力の2行目を写してください。
+yomiyasu-check: executed via=verify run=20261016T224517Z-dbb13e17 attempt=1 final=sha256:2c1710283418 mode=rewrite doc_type=formal reader=expert checks=lint,diff,materials meaning_risk=7 replay=skipped
+記録: /tmp/sincro-doc-review/yomiyasu/runs/20261016T224517Z-dbb13e17/attempt-1.json
+記録の中身: 見直し候補 最終稿 2件、直した箇所 3か所（原文の件数と元と後は run の出力にあります）
+documents/migration/pion/phase-4-cutover-runbook.md
+この最終稿に必要な検査（lint、diff、資料との照合）を実行した記録があり、最終稿のハッシュが記録と合いました。合格の判定ではありません。完了報告を付けるときは、この出力の2行目を写してください。
+yomiyasu-check: executed via=verify run=20261016T224518Z-9b6870f3 attempt=1 final=sha256:7dc17cc85c2a mode=rewrite doc_type=formal reader=expert checks=lint,diff,materials meaning_risk=1 replay=skipped
+記録: /tmp/sincro-doc-review/yomiyasu/runs/20261016T224518Z-9b6870f3/attempt-1.json
+記録の中身: 見直し候補 最終稿 2件、直した箇所 1か所（原文の件数と元と後は run の出力にあります）
+documents/research/character_animation/roadmap.md
+この最終稿に必要な検査（lint、diff、資料との照合）を実行した記録があり、最終稿のハッシュが記録と合いました。合格の判定ではありません。完了報告を付けるときは、この出力の2行目を写してください。
+yomiyasu-check: executed via=verify run=20261016T224519Z-9bcf1593 attempt=2 final=sha256:47aa544aebc0 mode=rewrite doc_type=formal reader=expert checks=lint,diff,materials meaning_risk=1 replay=skipped
+記録: /tmp/sincro-doc-review/yomiyasu/runs/20261016T224519Z-9bcf1593/attempt-2.json
+記録の中身: 見直し候補 最終稿 77件、直した箇所 1か所（原文の件数と元と後は run の出力にあります）
+documents/rules/coding-ts.md
+この最終稿に必要な検査（lint、diff、資料との照合）を実行した記録があり、最終稿のハッシュが記録と合いました。合格の判定ではありません。完了報告を付けるときは、この出力の2行目を写してください。
+yomiyasu-check: executed via=verify run=20261016T224521Z-401e9a3e attempt=1 final=sha256:b41114bf79b7 mode=rewrite doc_type=formal reader=expert checks=lint,diff,materials meaning_risk=12 replay=skipped
+記録: /tmp/sincro-doc-review/yomiyasu/runs/20261016T224521Z-401e9a3e/attempt-1.json
+記録の中身: 見直し候補 最終稿 10件、直した箇所 5か所（原文の件数と元と後は run の出力にあります）
+documents/rules/coding-py.md
+この最終稿に必要な検査（lint、diff、資料との照合）を実行した記録があり、最終稿のハッシュが記録と合いました。合格の判定ではありません。完了報告を付けるときは、この出力の2行目を写してください。
+yomiyasu-check: executed via=verify run=20261016T224523Z-d7f5b6a0 attempt=1 final=sha256:a8059d18c55b mode=rewrite doc_type=formal reader=expert checks=lint,diff,materials meaning_risk=4 replay=skipped
+記録: /tmp/sincro-doc-review/yomiyasu/runs/20261016T224523Z-d7f5b6a0/attempt-1.json
+記録の中身: 見直し候補 最終稿 11件、直した箇所 1か所（原文の件数と元と後は run の出力にあります）

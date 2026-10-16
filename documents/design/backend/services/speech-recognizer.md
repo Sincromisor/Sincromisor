@@ -34,7 +34,7 @@
     - `documents/design/initiatives/proper-noun-biasing.md`
 - 基本方針
     - 暫定の低遅延経路を保つ。
-    - 確定時に読み一致補正、文脈による認識候補の補強、上位N候補の再順位付けを段階導入する。
+    - 確定時の読み一致補正、文脈による認識候補の補強、上位N候補の再順位付けは実装済みである。辞書と各機能の設定に応じて適用する。
     - 未補正の音声認識結果と補正の追跡記録はデバッグ可能に残す。
 
 ## 変更時の確認
@@ -87,7 +87,8 @@ $ ./utils/setup/proper_noun_dictionary.sh
 
 このスクリプトは `volumes/proper-noun-dictionaries/`配下を
 `directory=755`、`file=644`にそろえる。あわせて `.csv`の先頭行を確認し、
-`surface,yomi,priority,category,enabled,ambiguous`ヘッダが無ければ自動で補う。
+先頭行が`surface,yomi`と一致せず、`surface,yomi,`でも始まらない場合は、
+`surface,yomi,priority,category,enabled,ambiguous`を先頭へ追加する。既存の列順は並べ替えない。
 個別パスを指定することもできる。
 
 ```sh

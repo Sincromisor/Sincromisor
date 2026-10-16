@@ -1,0 +1,13 @@
+id: task-261017073951-refresh-current-documents
+title: documents配下の資料を現行実装と照合して更新する
+category: documentation
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-10-17
+closed_at: 2026-10-17
+legacy_ids: []

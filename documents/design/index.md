@@ -109,14 +109,21 @@
 - [ADR-260412固有名詞認識の補強方針](decisions/ADR-260412-proper-noun-biasing.md)
 - [ADR-260517 Sincroの腕IKソルバーの採用](decisions/ADR-260517-sincro-arm-ik-solver-adoption.md)
 
-## 移行
+## 完了済みの移行
 
 - [PionへのWebRTC移行](../migration/pion/README.md)
+    - 旧Python RTC実装の削除まで完了した移行の記録。現在の通信仕様は契約とサービス設計を参照する。
+
+## 調査資料
+
+- [キャラクターアニメーションの調査とロードマップ](../research/character_animation/roadmap.md)
+    - 調査時点の提案と実装状況。現在の動作・追跡仕様はフロントエンドのキャラクター設計を参照する。
 
 ## 取り組み計画
 
 - [React移行](initiatives/react-migration.md)
 - [固有名詞認識の補強](initiatives/proper-noun-biasing.md)
+    - 各段階の実装は完了済み。導入方針と評価観点を参照する。
 
 ## 廃止予定と削除済み
 
