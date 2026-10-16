@@ -20,7 +20,7 @@
 
 - DataChannel名、エンドポイントパス、必須JSONフィールドの変更は破壊的変更として扱う。
 - `text_ch`の `expression_code`は任意フィールドとし、欠落時は中立相当として扱う。
-- 破壊的変更時は `src/features/rtc/rtcTalkClient.ts`、`RTCSignalingServer.py`、`RTCSessionOffer.py`、関連タスクを同時に更新する。
+- 破壊的変更時はフロントの[RTC実装](../../../sincromisor-frontend/src/features/rtc/)、Goの[シグナリング](../../../sincromisor-server/sincro-rtc/internal/signaling/)と[RTCセッション](../../../sincromisor-server/sincro-rtc/internal/rtc/)、関連する契約テストを同時に更新する。
 
 ## エンドポイント・チャネル
 
@@ -213,8 +213,8 @@
 - HTTP本文の1 MiB超過、SDPの256 KiB超過、候補文字列の8 KiB超過はHTTP 413を返す。
 - セッション上限、初回Offer登録簿上限、1改訂番号の候補64件超過はHTTP 429を返す。
 - 候補収集が起動時設定の期限を超えた場合はHTTP 504を返し、失敗結果をキャッシュしない。
-- 不正DataChannelまたは想定外トラックはセッションプロセス側で終了対象とする。
-- 候補の形式異常はログに残し、可能な範囲で接続継続を優先する。
+- 不正DataChannelまたは想定外トラックはRTCセッションの終了対象とする。
+- 候補の形式異常はHTTP 400で拒否する。フロント側の終了・再接続条件は以下に従う。
 - `expression_code`の未知値や欠落はフロント側で中立として扱う。
 
 フロントエンドは400、409、413、応答解析・識別情報不一致、再試行回数の使い切りを当該PeerConnection

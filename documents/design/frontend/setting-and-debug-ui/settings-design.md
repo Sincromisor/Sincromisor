@@ -72,9 +72,9 @@ Looking Glassの値は専用の実行時設定へ反映し、設定スナップ�
 
 ## 保存と復元
 
-通常設定は `localStorage`の `sincromisor:settings:<ページ識別子>`に `{ version: 1, settings: { ... } }`として保存する。ページ識別子は `simple-vrm`、`vrm360`、`looking-glass-vrm`の3種類で、末尾スラッシュや `index.html`に依存しない。5分類の通常入力とLooking Glassの7項目が対象で、一般UIにない `enableTalk`・`enableInspector`・`enableVR`は含めない。
+通常設定は `localStorage`の `sincromisor:settings:<ページ識別子>`に `{ version: 1, settings: { ... } }`として保存する。ページ識別子は `simple-vrm`、`vrm360`、`looking-glass-vrm`の3種類で、末尾スラッシュや `index.html`に依存しない。5分類の通常入力とLooking Glassの7項目が対象で、一般UIにない `enableTalk`・`enableInspector`・`enableVR`と、ページ内だけで保持する`muteMicrophone`は含めない。
 
-利用可否確定後、共通既定値、ページ既定値、保存した利用者設定、有効なURL設定の順で反映し、最終的な利用可否制約を適用する。購読・シーンへの初期反映と手動・OBS開始より前に同期的に復元する。現行のURL入口は `simple-vrm`の `talkMode=chat|sincro`。未指定・不正値では保存値を使い、URL適用自体は保存した選択を書き換えない。
+利用可否確定後、共通既定値、ページ既定値、保存した利用者設定、有効なURL設定の順で反映し、最終的な利用可否制約を適用する。購読・シーンへの初期反映と手動・OBS開始より前に同期的に復元する。現行のURL入口は `simple-vrm`の `talkMode=chat|sincro|echo|playback`。未指定・不正値では保存値を使い、URL適用自体は保存した選択を書き換えない。
 
 保存は利用者の適用済み入力だけを差分で行い、視線に付随する自動ミュート解除や音声デバッグからの会場プリセット解除も含む。初期化・復元・環境通知、操作可否・案内・接続状態、タブや配置は保存しない。機器のブラウザー既定はJSON上の `null`で表し、一時不在の機器IDは消さず既存の案内と開始制限を使う。
 

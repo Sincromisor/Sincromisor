@@ -27,6 +27,8 @@
 
 ## 会話処理の流れ
 
+以下は`chat` / `sincro`の経路である。下流サービス同士は直接接続せず、Goパイプライン調停器が4系統のWebSocketを中継する。`echo` / `playback`は下流へ接続しない。
+
 ```mermaid
 sequenceDiagram
     participant F as フロントエンド
@@ -39,12 +41,16 @@ sequenceDiagram
 
     F->>R: WebRTC 音声トラック
     R->>B: 音声フレーム
-    B->>E: MessagePack 音声データ
-    E->>A: 発話区間
-    A->>T: 認識したテキスト
-    T-->>R: 仲介キュー経由の ChatMessage
-    T->>V: 応答テキスト
-    V-->>R: 合成音声フレーム
+    B->>E: 初期化MessagePack / 未加工PCM
+    E-->>B: 発話区間
+    B->>A: 発話区間
+    A-->>B: 認識結果
+    B->>T: 認識文とチャット履歴
+    T-->>B: 応答テキストとChatMessage
+    B-->>R: ChatMessage
+    B->>V: 応答テキスト
+    V-->>B: 合成音声とモーラ時刻情報
+    B-->>R: 合成結果
     R-->>F: text_ch / telop_ch
     R-->>F: WebRTC 音声トラック
 ```
@@ -54,7 +60,7 @@ sequenceDiagram
 - `config.json` 取得失敗:
     - フロントの接続先設定、リバースプロキシ、`sincro-rtc` 起動状態を確認する。
 - `offer` 失敗:
-    - セッション上限、ICE 設定、`RTCSessionOffer` の互換性を確認する。
+    - セッション上限、ICE 設定、Offer要求の形式と識別情報を確認する。
 - ICE 失敗:
     - フロントの再接続ログ、候補送信、公開ホスト / ポートを確認する。
 - 下流サービス接続失敗:

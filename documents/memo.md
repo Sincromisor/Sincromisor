@@ -1,8 +1,12 @@
-# Memo
+# 旧Python RTC実装の調査メモ
 
-# 既知の問題
+## この資料の位置づけ
 
-## スレッドの未開放
+このメモは旧`GloriouSpeech` / aiortc実装で発生したスレッド未解放と、当時のプロセス・データ構造の記録である。旧Python RTC実装は削除済みであり、以下を現在の既知問題や起動手順として扱わない。現在の構成は[sincro-rtc設計](design/backend/services/sincro-rtc.md)、削除の記録は[Pion移行](migration/pion/README.md)を参照する。
+
+## 当時の既知の問題
+
+### スレッドの未解放
 
 WebRTCで再接続するたびに、プロセスのOSスレッドが無限に増えます。
 (1回のリロードで20程度)
@@ -34,7 +38,7 @@ $ cgexec -g pids:thread_test ./start.sh
 とりあえずWebRTCセッションの作成と処理を別プロセスに切り出し、
 そのセッションの通信が終了したらプロセスごと終了する手法を取り回避しました。
 
-# Processes
+## 当時のプロセス構成
 
 - GloriouSpeech
     - SpeechRecognizerProcessManager -> **SpeechRecognizerProcess**
@@ -42,7 +46,7 @@ $ cgexec -g pids:thread_test ./start.sh
         - RTCSession -> AudioTransformTrack -> **SpeechExtractorProcess(SpeechX[track_id])**
         - RTCSession -> AudioTransformTrack -> **VoiceSynthesizerProcess(VSynth[track_id])**
 
-# Dataflow
+## 当時のデータの流れ
 
 - SpeechRecognizerProcessManager
     - resultManager.dataChannelResults -> {

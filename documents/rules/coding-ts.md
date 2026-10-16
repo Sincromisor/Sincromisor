@@ -41,16 +41,14 @@ PoCでは下記2軸を最優先する。
 - Biomeの設定は [biome.json](../../sincromisor-frontend/biome.json) を正本とする。静的検査は `recommended`を有効化し、PoCで支障が出る項目のみ明示オプトアウト
 - `noExcessiveCognitiveComplexity`は認知的複雑度を見直す目安として扱い、上限超過だけで修正必須とはしない。警告の確認・記録は [タスク管理の警告方針](../../tasks/README.md#biomeの警告の扱い) に従う。
 - Prettierは **Markdown専用**。Biome 2.xがMarkdown未対応のため、ドキュメント整形だけPrettierを残す。設定ファイルを導入する場合はリポジトリ直下に置き、`*.md`のみに適用する
-- コミット前の確認項目
-    1. `npm run build`(型チェック + Viteビルド)
-    2. `npm run check`(Biome静的検査+整形 / PrettierによるMarkdown整形)
-    3. `npm run test`(変更レイヤ)
+- 確認範囲は[タスク管理の確認コマンド](../../tasks/README.md#確認コマンド)に従う。通常変更では変更ファイルの整形と対象を絞った静的検査・型確認・テストを行う。
+- 全体確認が必要な場合は`npm run build`（型チェックとViteビルド）、`npm run check`（BiomeとMarkdownの検査）、`npm run test`（Vitest）を使う。
 - 静的検査警告を局所的に抑制する場合は `// biome-ignore <rule>: <reason>`を付ける(本書 §0の `// reason:`ルールに準ずる)
-- コミット前フック (lefthook / husky等) は現時点で未導入。コミット漏れによる手戻りが見えた時点で導入を検討する
+- `npm run git:hooks:install`で`.githooks/commit-msg`を有効にし、コミットメッセージを検査する。コードの検査はこのフックでは実行しない。
 
 **理由**: 静的検査と整形の取りこぼしは手動チェックでは必ず発生し、後で大量修正の負債になる。Biomeは単一バイナリでTS / JS / JSONの静的検査 + 整形を兼ね、PrettierはMarkdown専用に限定することで設定衝突を最小化する。BiomeがMarkdown対応した時点でPrettierを撤去する(本書 §2を更新する宿題)。
 
-**適用方法**: 現時点では `npm run build`と `npm run check`を最低確認とする。テスト対象を変更した場合は `npm run test`も実行する。CI整備フェーズで上記3点(`npm run check` / `npm run build` / `npm run test`)を自動化する。
+**適用方法**: 対象確認が通ったら完了処理へ進む。検査の拡大・再実行は追加変更、失敗、未解決の懸念がある場合に行う。
 
 ## 3. エラーハンドリング
 
@@ -96,7 +94,7 @@ PoCでは下記2軸を最優先する。
 
 ## 5. テスト
 
-- ランナーは `npm run test`から呼び出す。実体のテスト実行ツールは導入時に決める
+- フロントエンドのテストは`npm run test`からVitestを実行する。ブラウザーの操作・画面確認は[Playwright CLI利用ルール](playwright-cli.md)に従う。
 - 配置は対象コードと同階層の `__tests__/`(例: `RTC/__tests__/RTCTalkClient.test.ts`)
 - ファイル名: `<対象>.test.ts`
 - フィクスチャは `__tests__/fixtures/`に置く。プロダクションコードからimportしない
@@ -109,7 +107,7 @@ PoCでは下記2軸を最優先する。
 - **パスの別名を使わない**。`tsconfig.json`の `paths`未設定を維持し、相対importを基本とする
 - 同一ディレクトリは `./foo`、跨る場合は `../bar/foo`。`../../../`が3段を超えたら**配置を見直すサイン**
 - 型のみの読み込みは `import type { X } from "./y"`または `import { type X } from "./y"`で分離(本書 §1参照)
-- importの並び順は **Biome `organizeImports`に従う**(`npm run check`で自動整列)。手で並び替える必要はない。デフォルトの順序は概ね「実行時組み込み → 外部依存 → 相対import」
+- importの並び順は **Biome `organizeImports`に従う**(`npm run check`で検査し、`npm run format`で適用)。手で並び替える必要はない。デフォルトの順序は概ね「実行時組み込み → 外部依存 → 相対import」
 
 **理由**: 別名は移設時の負債(リネーム / 移動で別名設定も追従が必要)になりやすい。相対パスは「物理位置 = 依存方向」が一目で見え、デバッグ時の追跡が容易。
 

@@ -2,6 +2,8 @@
 
 ## 目的
 
+この手順書は完了済みの段階5で使った記録である。プロファイルの起動対象やホスト公開ポートはその後変更されている。現在の配備には[Compose設計](../../design/infrastructure/compose.md)と[イメージ更新手順](../../design/infrastructure/image-publishing.md#各ホストへの反映と復旧)を使い、以下のコマンドは再実行しない。
+
 通常プロファイルのPion `sincro-rtc` で1往復を確認し、利用再開後の安定性を観測する。
 実測値と未観測事項は[Gate 5結果](../../../tasks/sincro-rtc/task-260822233904-pion-phase-5-maintenance-cutover/artifacts/gate-5-result.md)へ記録する。
 

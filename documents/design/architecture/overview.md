@@ -37,11 +37,10 @@ flowchart LR
     Browser["ブラウザーのフロントエンド"] -->|HTTP 接続設定 / offer / candidate| RTC["sincro-rtc"]
     Browser -->|WebRTC 音声トラック| RTC
     RTC --> Broker["Goパイプライン調停器"]
-    Broker --> Extractor["SpeechExtractor"]
-    Extractor --> Recognizer["SpeechRecognizer"]
-    Recognizer --> TextProcessor["TextProcessor"]
-    TextProcessor --> Synthesizer["VoiceSynthesizer"]
-    Synthesizer --> Broker
+    Broker <-->|音声フレーム / 発話区間| Extractor["SpeechExtractor"]
+    Broker <-->|発話区間 / 認識結果| Recognizer["SpeechRecognizer"]
+    Broker <-->|認識文と履歴 / 応答| TextProcessor["TextProcessor"]
+    Broker <-->|応答テキスト / 合成音声| Synthesizer["VoiceSynthesizer"]
     Broker --> RTC
     RTC -->|WebRTC 合成音声トラック| Browser
     RTC -->|DataChannel text_ch / telop_ch| Browser
