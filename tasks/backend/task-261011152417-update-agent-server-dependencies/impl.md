@@ -1,7 +1,7 @@
-# 未確認範囲と再開条件
+# 再実行結果
 
-実装は`/Users/aki/.codex/worktrees/agent-dependency-update/Sincromisor`のコミット`ea988231`に保持する。現在のmainには統合していない。
+2026-10-16、前回の専用ワークツリーとコミットが現在環境に無いため、記録された採用版を現在のワークツリーへ復元した。依存定義、再生成したロック、両Docker段のNode 24.21.0、設計文書を同期した。本番TypeScriptや公開契約の互換修正は不要だった。
 
-このホストにDockerと稼働中の既存ローカルLLMがないため、実LLMとの会話は未確認。既存試験の固定応答サーバーと本番Mastra、Pythonの実HTTP変換は確認できたが、生成モデルとの結合を置き換えるものではない。実LLMが使える環境で会話1件を確認し、Dockerの本番イメージで再現確認した後に再評価する。
+型検査、9件の既存試験、本番ビルド、Dockerビルドと起動、認証、Studio指示の編集・公開・再読込み、実LLMの2ターン会話とPythonの正常終端処理、旧DBの読出し・追記を確認した。詳細は[タスク本文](task.md#2026-10-16の再実行)と[評価](eval.md)を参照する。
 
-Studioには通常の会話Editorとは別に、指示を編集する`/cms/agents/sincromisor-character/edit`がある。使い捨てDBで指示を変更しSave・Publishを行い、再読込み後の反映を確認した。Dockerと同じ`MASTRA_AUTO_DETECT_URL=true`が同一オリジンの認証に必要。共有認証・会話ボリュームへは触れていない。
+検証用AgentServerは独立したコンテナ内DBと専用トークンを使用した。稼働中のAgentServer・共有DB・認証ボリュームは更新していない。実環境への配備は今回の再実行に含めない。
