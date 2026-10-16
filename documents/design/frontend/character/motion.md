@@ -5,12 +5,7 @@
 - キャラクター動作は `CharacterBehaviorSnapshot`を入力に、頭部 / 目 / 顔 / 身体 / 腕を低振幅で合成する。
 - `chat`では会話の存在感を優先し、`sincro`では顔 / 姿勢の変換を優先する。
 - 各制御処理はMediaPipeの生値ではなく、動作を変換したVRM向けの値を読む。
-- 本番実行時の現在のボーン / 表情 / ルート位置書き込み順序はタスク成果物
-  [runtime-motion-ownership-map](../../../../tasks/character-sincro-motion/task-260629225907-sincro-runtime-motion-ownership-map/artifacts/runtime-motion-ownership-map.md)
-  を参照する。現時点では `VRMCharacterManager.update()`の本番書き込み順序を変更しない。
-- 体幹 / 肩の姿勢合成処理の所有権移行計画はタスク成果物
-  [torso-shoulder-composer-migration-plan](../../../../tasks/character-sincro-motion/task-260629225951-torso-shoulder-composer-ownership-migration-plan/artifacts/torso-shoulder-composer-migration-plan.md)
-  を参照する。体幹 / 肩移行は腕姿勢合成処理適用フラグとは別段階で扱う。
+- 本番の姿勢合成とVRMへの適用条件は[本番適用の判定条件](#本番適用の判定条件)を参照する。
 
 ## 対象範囲
 
@@ -224,14 +219,8 @@
     - 任意ボーン代替処理の検証結果はタスク成果物
       [optional-bone-fallback-vrm-verification](../../../../tasks/character-sincro-motion/task-260629225957-composer-optional-bone-fallback-vrm-verification/artifacts/optional-bone-fallback-vrm-verification.md)
       を参照する。`default.vrm`と `aoi-1.0.7.vrm`は全面上半身対応能力として確認済みで、欠損
-      `upperChest`、欠損肩、低下した指のボーン列は実資材ではなく人工的なプロファイル / 単体テストで確認済みである。実VRMの欠損個体での見た目の確認は `setNormalizedPose(finalPose)`適用前の残リスクとして残す。
-    - 本番実行時の現行所有権mapはタスク成果物
-      [runtime-motion-ownership-map](../../../../tasks/character-sincro-motion/task-260629225907-sincro-runtime-motion-ownership-map/artifacts/runtime-motion-ownership-map.md)
-      を正本にする。移行前の `move-to-composer` / `keep-controller-owned` / `needs-decision`分類は設計本文へ重複展開しない。
-    - 削除済みの体幹直接書き込み処理の置き換え計画はタスク成果物
-      [torso-shoulder-composer-migration-plan](../../../../tasks/character-sincro-motion/task-260629225951-torso-shoulder-composer-ownership-migration-plan/artifacts/torso-shoulder-composer-migration-plan.md)
-      を正本にする。体幹 / 肩移行は腕姿勢合成処理適用フラグと別段階で進め、肩ボーン欠損時の `upperArm`代替処理だけを境界確認点にする。
-    - `vrm.humanoid.setNormalizedPose(finalPose)`への全面移行は後続タスクに残す。移行ゲートは、頭部 / 首 / 脚 / 表情の所有境界、motion-debug最終姿勢再生、既存制御処理との二重書き込み排除、複数VRMでの値の制限 / 任意ボーン検証が揃うこととする。
+      `upperChest`、欠損肩、低下した指のボーン列は実資材ではなく人工的なプロファイル / 単体テストで確認済みである。欠損ボーンを持つ実VRMでの見た目の確認は未完了である。
+    - 本番の所有境界と一括適用は[本番適用の判定条件](#本番適用の判定条件)を参照する。移行前の段階別計画は同節末尾のタスク成果物に残す。
 - `sincroCcdIkProbe`
     - Three.js公式アドオン `CCDIKSolver`とVRM未加工・正規化済みボーンの相性を見るためのPoC診断。
     - 左腕の元のスケルトンボーン列に対して1回の反復による動作確認を行い、結果を診断Consoleの `CCDIK PoC`に表示する。
@@ -551,37 +540,9 @@ Mouth / Emotion制御処理、`LegBoneController`、`vrm.update(deltaSeconds)`�
 `CharacterRootStabilizer.update()`は従来どおり更新する。診断専用の姿勢合成処理比較 /
 合成要約は引き続き残し、公開WebRTC / バックエンド契約やDataChannel送受信データは変更しない。
 
-補助リンク: [runtime-motion-ownership-map](../../../../tasks/character-sincro-motion/task-260629225907-sincro-runtime-motion-ownership-map/artifacts/runtime-motion-ownership-map.md)、[torso-shoulder-composer-migration-plan](../../../../tasks/character-sincro-motion/task-260629225951-torso-shoulder-composer-ownership-migration-plan/artifacts/torso-shoulder-composer-migration-plan.md)、[optional-bone-fallback-vrm-verification](../../../../tasks/character-sincro-motion/task-260629225957-composer-optional-bone-fallback-vrm-verification/artifacts/optional-bone-fallback-vrm-verification.md)。
+移行時の所有権・計画・検証記録: [runtime-motion-ownership-map](../../../../tasks/character-sincro-motion/task-260629225907-sincro-runtime-motion-ownership-map/artifacts/runtime-motion-ownership-map.md)、[torso-shoulder-composer-migration-plan](../../../../tasks/character-sincro-motion/task-260629225951-torso-shoulder-composer-ownership-migration-plan/artifacts/torso-shoulder-composer-migration-plan.md)、[optional-bone-fallback-vrm-verification](../../../../tasks/character-sincro-motion/task-260629225957-composer-optional-bone-fallback-vrm-verification/artifacts/optional-bone-fallback-vrm-verification.md)。
 
-## IKソルバーの方針
-
-- 本流
-    - 自前3D 2本のボーンによるIKを維持し、`@pixiv/three-vrm`正規化済みボーンにローカルクォータニオンを適用する。
-    - 理由はADR-260517に記録する。
-    - 腕単体の人体的制約と頭部 / chest侵入禁止領域はソルバー内の軽量安全性として扱い、全身IKや物理衝突へ拡張しない。
-- 比較対象
-    - `CCDIKSolver`は `SkinnedMesh.skeleton.bones`の索引を要求するため、正規化済みボーンへの直接適用とは責務が合わない。
-    - 元のスケルトンボーン列ではPoC動作確認可能だが、目標ボーンの追加と正規化済み姿勢と未加工姿勢の橋渡しが必要になる。
-- 将来候補
-    - 全身、複数末端、足接地拘束が必要になった場合に `closed-chain-ik-js`等を再評価する。
-    - 再評価時は処理担当化、配信ファイルの容量、診断Consoleでの説明可能性、VRM個体差への強さを同時に見る。
-- 参考のみ
-    - Kalidokitは廃止予定のため、API / 出力形式の参考に留める。
-
-## 変更時の確認
-
-- 新しい動作を追加する時は、どの会話モードで有効かを先に決める。
-- 複数制御処理が同時に最大値を出さないよう、調停処理で動作方針を調整する。
-- 欠損ボーン / 表情は無効化または近いボーンへの代替処理にする。
-- 診断Consoleで切り分けたい値はスナップショット / 動作の変換フレームに載せる。
-
-## 参照
-
-- `documents/design/frontend/character/overview.md`
-- `documents/design/frontend/character/tracking.md`
-- `documents/design/archive/legacy-flat/frontend_character.md`
-
-### 再生時の共通計算と保存値
+## 再生時の共通計算と保存値
 
 `MotionDebugReplayRuntime`はライブとは別の `SincroMotionComputation`を所有する。
 保存済みcanonical / temporalは再生側で解析して採用し、項目が無い場合だけ共通実装で補完する。
@@ -592,7 +553,7 @@ Mouth / Emotion制御処理、`LegBoneController`、`vrm.update(deltaSeconds)`�
 隣接する前進だけ推定履歴を継続し、同じフレームへの移動・飛び越し・後退・停止・読み込み・
 入力切替では既存の初期化境界で時系列と意図を同時に初期化する。ログの外側の版は維持する。共通表現の座標識別と時系列腕の適用重みは任意項目として読み取り・複製・保存する。旧読取実装は追加項目を拒否する場合があるため、新しい記録には現行の読取実装を使う。
 
-### 欠損腕の表示時計と最終合成
+## 欠損腕の表示時計と最終合成
 
 `SincroMotionClock`はPoseとHandそれぞれの観測時刻と受信時刻を実行中だけ保持する。
 `VRMCharacterManager.update(nowMs)`で `mediaTimeMs + max(0, nowMs - receivedAtPerformanceMs)`へ変換し、
@@ -606,7 +567,7 @@ Mouth / Emotion制御処理、`LegBoneController`、`vrm.update(deltaSeconds)`�
 追跡停止、`chat`、顔のみへの切替、時刻逆行、入力ソース切替、非連続な再生移動は系列番号を更新する。
 描画側は次のPoseを待たずに腕と合成の履歴を捨てる。VRM交換でも腕・合成・指の履歴を破棄する。
 
-### 固定観測からの比較
+## 固定観測からの比較
 
 開発者向け再生APIの `startReplay({ mode, recompute: true })`は保存済み下流値を採用せず、選んだ入力から再計算する。
 通常再生は保存値優先を維持する。`recomputeMotionReplay()`は同じ再生パーサーと本番の共通計算・リターゲット・合成を使い、
@@ -618,7 +579,7 @@ Mouth / Emotion制御処理、`LegBoneController`、`vrm.update(deltaSeconds)`�
 遅れは撮影から表示までの絶対遅延でも人体の正解値でもない。入力特徴と出力回転の関係が弱い区間は相関値とともに扱い、
 振幅が消えた候補を揺れだけで採用しない。静止区間以外の回転差RMSを静止時の揺れと呼ばない。
 
-### 指の実観測と補助動作の調停
+## 指の実観測と補助動作の調停
 
 合成サービスは左右別に最後の有効なHand特徴量と観測時刻を保持する。検出、左右割当、
 実観測の由来、信頼度0.2以上、無効警告と有限時刻を確認し、欠損の既定曲げ0を採用しない。
@@ -631,7 +592,7 @@ Mouth / Emotion制御処理、`LegBoneController`、`vrm.update(deltaSeconds)`�
 評価し250msで失効させる。部分抑制を含め `suppressedLayers`の `semantic_conflict`へ記録する。
 指は観測曲げを優先し、未観測の群だけ新鮮な意図で補う。停止後の古い意図を再使用しない。
 
-### 体幹の回転と腕の親座標
+## 体幹の回転と腕の親座標
 
 肩・腰の共通基底から中立XYZ基底との差を求め、`chestFollow`と追跡強度を掛けた回転を
 `spine`・`chest`・`upperChest`へプロファイルの比率で配分する。存在するボーンの比率を正規化し、
@@ -641,3 +602,22 @@ Mouth / Emotion制御処理、`LegBoneController`、`vrm.update(deltaSeconds)`�
 IKの極履歴は新しいPose観測でだけ確定し、描画予測では読み取る。手首のOne Euro Filter、
 155msの描画補間、最終角速度制限は維持する。肘フィルターと短い描画補間は既存録画で比較したが、
 揺れ・遅れ・振幅の改善を両立できず採用しない。
+
+## IKソルバーの方針
+
+本流は自前3Dの2本のボーンによるIKと、`@pixiv/three-vrm`正規化済みボーンへのローカルクォータニオン適用を維持する。腕の人体的制約と頭部 / chest侵入禁止領域はソルバー内で扱い、全身IKや物理衝突へ拡張しない。
+
+`CCDIKSolver`との比較、Kalidokitを参考に留める理由、全身・複数末端・足接地拘束が必要になった場合の再評価条件は[採用判断のADR](../../decisions/ADR-260517-sincro-arm-ik-solver-adoption.md)を参照する。再評価では処理担当化、配信ファイルの容量、診断Consoleでの説明可能性、VRM個体差への強さも確認する。
+
+## 変更時の確認
+
+- 新しい動作を追加する時は、どの会話モードで有効かを先に決める。
+- 複数制御処理が同時に最大値を出さないよう、調停処理で動作方針を調整する。
+- 欠損ボーン / 表情は無効化または近いボーンへの代替処理にする。
+- 診断Consoleで切り分けたい値はスナップショット / 動作の変換フレームに載せる。
+
+## 参照
+
+- `documents/design/frontend/character/overview.md`
+- `documents/design/frontend/character/tracking.md`
+- `documents/design/archive/legacy-flat/frontend_character.md`

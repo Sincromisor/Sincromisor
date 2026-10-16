@@ -48,12 +48,6 @@
 - `expression_code`の値域や意味を変える場合はキャラクター動作とUI表示を確認する。
 - `talk_mode`を追加する場合はフロントエンド設定、Goパイプライン調停器のパス、TextProcessor経路を同時に更新する。
 
-## 参照
-
-- `documents/design/contracts/audio-pipeline-websocket.md`
-- `documents/design/contracts/frontend-rtc.md`
-- `documents/design/archive/legacy-flat/backend_text_processor.md`
-
 ## 運用ログ
 
 Poke・Mastraとも共通ワーカーが新規入力、送信済み応答断片、確定結果をJSONLへ記録する。累積履歴は出力しない。`SINCRO_LOG_CONVERSATION_ENABLED=false`では本文イベントを止め、処理時間と成功・失敗・取消を残す。送信失敗と取消は確定扱いせず、Mastraの機能用履歴は変更しない。
@@ -62,3 +56,9 @@ Poke・Mastraとも共通ワーカーが新規入力、送信済み応答断片�
 ## 内部処理の診断
 
 `agent_stream`はHTTP応答、SSEの正常終端、予期しないEOF、リモートエラー/中断、取消、時間切れを区別し、会話IDと処理時間を残す。WebSocket送信の失敗は処理段階 `send`と相手 `rtc`を付ける。URL、認証値、外部応答や例外の自由文は記録しない。失敗の伝播と会話内容の記録切替は維持する。
+
+## 参照
+
+- `documents/design/contracts/audio-pipeline-websocket.md`
+- `documents/design/contracts/frontend-rtc.md`
+- `documents/design/archive/legacy-flat/backend_text_processor.md`

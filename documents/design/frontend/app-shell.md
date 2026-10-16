@@ -32,7 +32,7 @@
     - 基底と360度・Looking Glassの派生初期化処理、および配置済みDOM参照の契約を `app/bootstrap`に置く。シーン生成はページ別に行い、開始・保持・姿勢設定・通常設定同期は基底の共通手順で行う。
     - 生成時は依存と開始フックを組み立てる。Reactの配置完了から渡された2つのDOM参照を `bootstrap`が受け取り、ページ既定値・許可済みURL設定を `initialize`へ渡し、成功後に `startAutomatically`を呼ぶ。
     - 初期化は機器利用可否、初期設定適用、購読・キャッシュ復元の順に進める。同期失敗時は購読を解除し開始しない。キャッシュ失敗はログと既定表示で継続する。
-    - OBSの内部起動順序を、派生ページ既定値やsimple-vrmのURL設定が適用済みになってから開始する順序へ是正した。重複開始はアプリが抑止する。
+    - OBSも派生ページ既定値やsimple-vrmのURL設定の適用後に開始する。重複開始はアプリが抑止する。
 - `SincroAppController`
     - UIと中核処理の共通窓口。
     - 起動設定、RTC、メディア機器、診断用スナップショット、右側ツールパネル状態を束ねる。
@@ -148,16 +148,9 @@
 - 設定既定値を変更したら起動前ダイアログ、設定パネル、Looking Glass実行時スナップショットの初期値の一致を確認する。
 - 現行ページの配置を変えたらデスクトップ / モバイルの表示確認を行う。
 
-## 参照
-
-- `documents/design/frontend/pages.md`
-- `documents/design/frontend/setting-and-debug-ui/README.md`
-- `documents/design/archive/legacy-flat/frontend_ui.md`
-- `documents/design/archive/legacy-flat/frontend_migration_react.md`
-
 ## 起動前と常設設定の役割
 
-起動前は体験・現在モデル・必要な入力機器を選ぶ概要と、共通5分類の詳細を切り替える。開始操作は両表示で固定する。常設側も「体験」「キャラクター」「マイク・音声」「カメラ・動き」「画面・保存」の5分類を使い、接続状態と開始停止を本文から独立した固定領域に置く。診断値は開発者ツールへ集約し、カメラ品質案内と初期調整は通常設定に残す。
+起動前と開始後は共通の設定部品・購読値を使う。画面の分類、固定操作、診断との表示分担は[設定UIの画面構成](setting-and-debug-ui/settings-design.md#画面構成)と[失敗時の案内](setting-and-debug-ui/settings-design.md#失敗時の案内)を参照する。
 
 ## 通常設定の保存と起動順序
 
@@ -193,3 +186,10 @@ VADとTracker Workerは起動失敗と状態通知を使い、fallback・復旧�
 キャラクターの動作分類は従来の`chat`／`sincro`を維持し、echoとplaybackの表示はchat相当とする。視線から届く自動ミュートは`SincroRtcSessionController`が接続中のモードで抑止するため、次回用の設定変更だけで診断音声を止めない。通常モードで再接続すると自動ミュートの制御へ戻る。
 
 音声設定の「マイクをミュートする」は全モードで送信音声だけを止める。自動ミュートより優先し、ICE再接続と機器変更でも保持する。ページ内の操作状態として扱い、永続保存はしない。フィルター・VAD・マイク選択は通常の入力処理を使う。検証手順は[VAD設計](audio/vad.md#音声折り返しによる確認)を参照する。
+
+## 参照
+
+- `documents/design/frontend/pages.md`
+- `documents/design/frontend/setting-and-debug-ui/README.md`
+- `documents/design/archive/legacy-flat/frontend_ui.md`
+- `documents/design/archive/legacy-flat/frontend_migration_react.md`
