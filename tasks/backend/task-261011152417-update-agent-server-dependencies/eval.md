@@ -2,16 +2,17 @@
 
 ## 判定
 
-FAIL
+PASS
 
 ## 根拠
 
-- コミット`ea988231`は`package.json`、lockfile、Dockerfile、AgentServer設計だけを更新しており、公開HTTP・音声ストリーム・保存形式は変更していない。Mastra一式、TypeScript 7、Node 24.21.0とDockerのビルド段・実行段、設計文書の採用版は一致する。実装コードを変更していないため、コメント品質の追加点検は対象外である。変更したMarkdownは見出し、表記、リンクの規約に適合する。
-- Node 24.21.0で`npm run check`と`npm test`を実行し、型検査と9件の試験が成功した。試験はMCP 2系での発見・認証・呼出し・時間切れ・取消・切断、libSQLの同一thread履歴継続と別thread隔離、未認証拒否を確認する。`npm ls`で開発用、`.mastra/output`で配布用とも`@mastra/mcp` 2.1.2と`@modelcontextprotocol/client` 2.3.1のoverride解決を確認した。`/tmp/agent-node24-build.log`では本番ビルドも成功している。
-- 旧版で作成した使い捨てDBを新版で読む確認は、公開済み指示と会話履歴の読出し・追記が成功している。共有データを削除して更新を成立させていない。
-- 使い捨てDBと本番用の`npm start`でStudioの指示を編集、保存、公開し、再読込後の画面で確認番号`261011`を確認した。Python側は`text-processor/tests/test_mastra_stream.py`を含む59件が成功し、固定応答のローカルLLMフィクスチャから本番Mastraを経由して、更新済みの`MastraClient.chat`が実HTTPストリームを受信することも確認した。
-- ただし、受け入れ条件の「既存のローカルLLMへの会話一件」は固定応答フィクスチャで代替されており、実LLMでは未確認である。またDockerのビルド・実行段を通す確認も未実行である。依存更新後の実運用経路を満たしたとは判定できない。
+- 依存定義、ロックファイル、`Dockerfile`、AgentServer設計を確認した。Mastra一式、TypeScript 7、Node 24.21.0は開発・Dockerのビルド段・実行段・設計文書で一致する。公開HTTP、Python向けストリーム、認証、保存形式を変える実装コードは含まれないため、通信契約の追加文書更新と本番コードコメントの追加点検は対象外である。変更したMarkdownはPrettierとMarkdown規約に適合する。
+- Dockerfileと同じ`node:24.21.0-bookworm-slim`で`npm test`を実行し、9件が成功した。MCP 2系の発見・認証・呼出し・時間切れ・取消・切断、同一`thread`の履歴継続と別`thread`隔離、未認証拒否を確認する既存試験を通過している。`npm run check`、本番用ビルド、Dockerイメージのビルドも成功した。
+- 開発用、`.mastra/output`、ビルドした配布イメージのそれぞれで`npm ls`を確認し、`@mastra/mcp` 2.1.2配下の`@modelcontextprotocol/client`が`override`により2.3.1へ解決されていることを確認した。旧2.2.0から更新しており、`override`による脆弱性対策を後退させていない。
+- 共有ボリュームを使わない使い捨てDBで、旧版イメージが作成した公開済みエージェントの指示・公開版、`resource`/`thread`、`message`を更新版の`LibSQLStore`で読出した。更新版で同一`thread`へ`message`を追記し、`message`数が1件から2件へ増えることを確認した。
+- 専用の本番起動コンテナで、未認証と不正認証が401、正当認証が200となることを確認した。既存のGemmaで同一`thread`の2ターン会話をPythonの`MastraClient`から正常終端まで処理し、2ターン目の応答に1ターン目の合言葉が含まれることを確認した。
+- 専用ChromeでStudioへログインし、指示を保存・公開して再読込み後の`System Prompt`へ検証番号が残ることを確認した。管理者認証、Studioの指示公開、会話履歴、MCP接続の既存境界を維持する。
 
 ## 残課題
 
-- Dockerのビルド段・実行段を通してAgentServerと既存のローカルLLMを起動し、認証済みの実会話を1件確認する。使い捨ての検証環境を使い、共有の認証・会話保存領域は変更しない。
+なし

@@ -1,4 +1,4 @@
-FROM node:24.18.1-bookworm-slim AS build
+FROM node:24.21.0-bookworm-slim AS build
 WORKDIR /app
 ENV MASTRA_TELEMETRY_DISABLED=true
 COPY package.json package-lock.json ./
@@ -8,7 +8,7 @@ COPY src ./src
 COPY preserve-dependency-overrides.mjs ./
 RUN npm run build
 
-FROM node:24.18.1-bookworm-slim
+FROM node:24.21.0-bookworm-slim
 WORKDIR /app
 # Studioはページと同じURLを使い、コンテナの待受アドレスへブラウザーを接続させない。
 ENV NODE_ENV=production \
