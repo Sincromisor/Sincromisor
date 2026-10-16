@@ -120,12 +120,6 @@ Use case: precise-object-edit. Edit the supplied full-body dark-brown-haired too
 - 旧形式を復活させる判断が必要な場合
     - ADRを追加して理由を明記する。
 
-## 参照
-
-- `documents/design/frontend/app-shell.md`
-- `documents/design/archive/legacy-flat/frontend_ui.md`
-- `documents/design/archive/legacy-flat/frontend_migration_react.md`
-
 ## 共通設定とページ固有の操作
 
 3つのVRMページは、起動前の概要・詳細と常設の共通5分類を共有する。Looking Glassの設定・状態・開始停止は対応ページの常設設定に専用分類として追加する。通常の「体験」や「画面・保存」は維持し、通常ページにLooking Glassの状態は表示しない。VRM選択は起動前に置き、常設設定から現在モデルの確認と起動前設定への復帰ができる。
@@ -133,3 +127,9 @@ Use case: precise-object-edit. Edit the supplied full-body dark-brown-haired too
 ## 初期設定への復帰
 
 共通の3ページの設定画面から全ページの保存設定とVRMを初期化できる。この操作に限り `talkMode`を解除して同じページを再読込し、その他のクエリーとハッシュは保つ。通常起動のURL優先とOBS自動開始は維持する。削除対象と失敗時の扱いは[全設定の初期化](setting-and-debug-ui/settings-design.md#全設定の初期化)を参照する。
+
+## 参照
+
+- `documents/design/frontend/app-shell.md`
+- `documents/design/archive/legacy-flat/frontend_ui.md`
+- `documents/design/archive/legacy-flat/frontend_migration_react.md`

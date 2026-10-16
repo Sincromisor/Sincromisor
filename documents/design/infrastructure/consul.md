@@ -127,14 +127,14 @@ docker compose --profile full exec sincro-consul-server consul operator raft lis
 
 中央の保存・公開先・Consul登録は[ログの保存と検索](logging.md)を参照する。
 
-## 参照
-
-- `documents/design/infrastructure/compose.md`
-- `documents/design/archive/legacy-flat/service_consul.md`
-
-## 状態ログ
+### 状態ログ
 
 `log-observer`はVectorの収集状態と配送指標を確認し、収集・配送の異常と復旧だけをJSONLへ記録する。
 DNSを使うbandogはサービス単位の初回と異常・復旧だけをJSONLへ出し、既存の失敗件数による判定を維持する。
 補助収集自身は`SincroLogObserver_<host>`で登録し、収集状態または配送の異常時はcriticalにする。
 診断の除去規則、配送の限界、各ホストの対象は[ログ設計](logging.md#コンテナ状態とチェック診断)を参照する。
+
+## 参照
+
+- `documents/design/infrastructure/compose.md`
+- `documents/design/archive/legacy-flat/service_consul.md`

@@ -43,14 +43,6 @@
 - 辞書列を変える場合は固有名詞辞書の契約を更新する。
 - 確定専用の重い処理を入れる場合は遅延と代替処理を確認する。
 
-## 参照
-
-- `documents/design/contracts/audio-pipeline-websocket.md`
-- `documents/design/contracts/proper-noun-dictionary.md`
-- `documents/design/initiatives/proper-noun-biasing.md`
-- `documents/design/archive/legacy-flat/backend_speech_recognizer.md`
-- `documents/design/archive/legacy-flat/backend_speech_recognizer_proper_noun_biasing.md`
-
 ## 辞書の追加手順
 
 音声認識の固有名詞辞書は `speech-recognizer`コンテナに
@@ -131,3 +123,11 @@ $ docker compose logs speech-recognizer
 
 認識の運用ログは`recognition_result`へ本文と会話・発話・シーケンスID、確定状態を記録する。`SINCRO_LOG_CONVERSATION_ENABLED=false`では本文イベントを出さず、処理時間と結果だけを残す。補正追跡の運用ログへの重複出力はしない。認識音声・結果ファイルとS3保存はこの設定の対象外である。
 書式・例外情報・設定反映は[ログ基盤](../../infrastructure/logging.md#pythonのjsonl出力)を参照する。
+
+## 参照
+
+- `documents/design/contracts/audio-pipeline-websocket.md`
+- `documents/design/contracts/proper-noun-dictionary.md`
+- `documents/design/initiatives/proper-noun-biasing.md`
+- `documents/design/archive/legacy-flat/backend_speech_recognizer.md`
+- `documents/design/archive/legacy-flat/backend_speech_recognizer_proper_noun_biasing.md`

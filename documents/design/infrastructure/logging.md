@@ -99,12 +99,6 @@ curl --fail --data-urlencode 'query=_time:1h host:fixture service:fixture' \
 先に`docker compose --env-file examples/compose.env -f compose.yml build victoria-logs`でイメージを作る。
 設定・公開先を変える際は標準構成と分散用Compose、Consul登録、bandog、保存領域を同時確認する。
 
-## 参照
-
-2026-09-22に公式の[起動手順](https://docs.victoriametrics.com/victorialogs/quickstart/)、
-[保持期間と保存](https://docs.victoriametrics.com/victorialogs/#retention)、
-[VectorのJSONL投入](https://docs.victoriametrics.com/victorialogs/data-ingestion/vector/)を確認した。
-
 ## 各ホストの収集
 
 `compose/log-collector.yml`を標準includeし、既存の`full` / `backend` / `external` / `rtc` / `frontend` / `chat` / `s3`と中央用`logs`へVector・Caddy・Consulエージェントを同梱する。
@@ -275,3 +269,9 @@ Linuxの永続journal `/var/log/journal`と実行中journal `/run/log/journal`�
 収集イメージはVector 0.58.0の公式バイナリとUbuntu 26.04のjournalctlを使う。公式VectorのDebianイメージに含まれるjournalctl 257では過去bootの追尾をVectorが拒否するため、258以降が必要である。nativeの `journald`入力で `current_boot_only=false`、`--merge`を指定し、ホストとコンテナのmachine-idの違いを吸収する。読取位置は `host_journal`入力名で `vector-data`に保持する。入力名やボリュームを変更・削除すると再読取や欠落の原因になる。[Vectorのjournal入力仕様](https://vector.dev/docs/reference/configuration/sources/journald/)を参照する。
 
 VectorのhealthcheckはHTTP生存に加え、実journalのカーソルを読めることとnativeの追尾プロセスを確認する。原本本文をhealthcheck出力へ流さず、`journal_unreadable_or_missing` / `journal_input_unavailable`等の固定理由だけを状態ファイルへ残す。Vectorは共有journalを読む権限を持つため、Composeラベルによる対象選別は読取権限の分離ではない。ホスト・kernel・systemd・Docker daemonの診断変換は提供しない。
+
+## 参照
+
+2026-09-22に公式の[起動手順](https://docs.victoriametrics.com/victorialogs/quickstart/)、
+[保持期間と保存](https://docs.victoriametrics.com/victorialogs/#retention)、
+[VectorのJSONL投入](https://docs.victoriametrics.com/victorialogs/data-ingestion/vector/)を確認した。

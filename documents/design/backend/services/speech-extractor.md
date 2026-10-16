@@ -33,11 +33,11 @@
 - VAD / 無音パラメータを変える場合はGoパイプライン調停器のパスパラメータとDocker Compose環境変数を確認する。
 - フロント側VADとは役割が異なるため、`frontend/audio/vad.md`と混同しない。
 
+## 依存の再現性
+
+MediaPipeは`mediapipe>=1.1.0`の範囲指定とし、実際の採用版1.1.0はルートの`uv.lock`で固定する。Python 3.14と`uv sync --locked --group speech-extractor`を使い、起動時に依存を自動更新しない。
+
 ## 参照
 
 - `documents/design/contracts/audio-pipeline-websocket.md`
 - `documents/design/archive/legacy-flat/backend_speech_extractor.md`
-
-## 依存の再現性
-
-MediaPipeは`mediapipe>=1.1.0`の範囲指定とし、実際の採用版1.1.0はルートの`uv.lock`で固定する。Python 3.14と`uv sync --locked --group speech-extractor`を使い、起動時に依存を自動更新しない。
