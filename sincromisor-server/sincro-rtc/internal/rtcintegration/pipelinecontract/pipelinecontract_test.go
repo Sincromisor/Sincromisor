@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -25,6 +26,17 @@ func TestSynthesizedWAVIsFiniteAndNonSilent(t *testing.T) {
 	}
 	if bytes.Count(payload[44:], []byte{0}) == len(payload)-44 {
 		t.Fatal("WAV PCM is silent")
+	}
+	fixture, err := os.ReadFile(fixturePath(t, "voice_synthesizer_result.msgpack"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := decodeMap(fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result["speaking_time"] != float64(synthesizedSamples)/synthesizedSampleRate {
+		t.Fatal("WAV duration does not match the declared speaking_time")
 	}
 }
 

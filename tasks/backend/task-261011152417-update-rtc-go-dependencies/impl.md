@@ -1,14 +1,7 @@
-# 未確認範囲と再開条件
+# 再実行結果
 
-macOS arm64ホストにFFmpeg、Consul、Dockerがないため、実プロセスとブラウザーを結合した音声確認は実行できていない。FFmpegを代用品へ差し替えて試験を成功扱いにしていない。
+2026-10-16、Linux x86_64上で前回の環境不足を解消した。Go 1.26.9の全試験、race検査、RTCビルド、RTCとログ監視のDockerビルド段、実Chromeの音声統合試験が成功した。詳細は[タスク本文](task.md#2026-10-16の再実行)を参照する。
 
-`go test ./...`はFFmpegを呼ぶ子プロセスの終了後も登録通知を待つため、今回の試験プロセスだけへSIGQUITを送りスタックを保存した。`TestLoad`系も同じ未導入が原因で失敗した。`TestInputProcessorOpusToS16LEGolden`と`TestValidatedGoPathBuildsAndRerunsEvidence`の失敗は旧依存コピーで再現し、更新による悪化ではない。
+稼働サービスとの競合を避け、専用ネットワーク名前空間にループバックとIPv4付きダミーインターフェースを用意した。通常ホストでのICE収集タイムアウトとConsulのポート競合を、試験除外や本番検証の緩和で回避していない。前回除外された試験も今回は全件実行した。
 
-確認できたrace検査は次の範囲である。
-
-```sh
-cd sincromisor-server/sincro-rtc
-GOTOOLCHAIN=go1.26.9 TMPDIR=/private/tmp go test -race -skip 'TestProcessRegistersReadyServiceAndDeregistersOnSIGTERM|TestProcessSIGTERMStopsHTTPAndJoinsActiveSession|TestLoad|TestInputProcessorOpusToS16LEGolden' ./...
-```
-
-FFmpegとConsulが使える開発環境で全試験と実接続・音声入出力・切断を確認し、Dockerが使える環境で両Goビルド段を確認して完了する。
+ブラウザー試験の必須起動引数と固定音声の申告時間を現行契約へ合わせた。通信契約と本番動作は変更していない。前回の停止要因と未確認範囲は解消した。

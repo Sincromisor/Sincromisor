@@ -34,7 +34,7 @@ Go Module Proxyの各モジュールの`@latest`を参照した。同じモジ�
 
 - [x] [go.mod](../../../sincromisor-server/sincro-rtc/go.mod)と`go.sum`を更新し、Pion一式とPrometheusの依存を矛盾なく解決できる。見送り候補には理由を残す。
 - [x] Go 1.26.8を1.26系の保守版へ更新する。調査時の候補は1.26.9。[RTCのDockerfile](../../../Docker/sincro-rtc/Dockerfile)と[ログ監視のDockerfile](../../../Docker/logging/observer/Dockerfile)にあるGoビルド環境も揃える。
-- [ ] RTCの既存テストとビルドが通り、開発環境で接続・音声入出力・切断の主要経路を一度確認できる。
+- [x] RTCの既存テストとビルドが通り、開発環境で接続・音声入出力・切断の主要経路を一度確認できる。
 
 ## 設計判断と変更範囲
 
@@ -59,3 +59,13 @@ RTCのREADMEと採用Go版を記載した現行文書を必要に応じて同期
 全既存試験を実行したが、FFmpeg未導入の設定試験が失敗し、登録待ちのプロセス試験が停止しなかったためスタックを取得して停止した。macOS一時パスの表記差とOpus復号の固定ハッシュ差も検出したが、旧依存の一時コピーでも同一の差が再現した。`TMPDIR=/private/tmp`で一時パス差を避け、FFmpeg依存の試験と既存のOpus固定値試験を除く`go test -race`は成功した。
 
 実接続・音声入出力・切断とDockerビルドは未確認であり、完了にしていない。[実装記録](impl.md)に再開条件と試験除外を残す。
+
+### 2026-10-16の再実行
+
+Linux x86_64、FFmpeg、DockerとConsulを利用できる環境で再実行した。`go mod verify`、Go 1.26.9の`go test -count=1 ./...`、`go test -race -count=1 ./...`、RTCバイナリのビルドがすべて成功した。RTCの`pion-builder`とログ監視の`build`の両Dockerビルド段も成功した。
+
+稼働中Consulの8500番ポートとホストのICE収集の影響を避けるため、`unshare --user --map-root-user --net`の専用ネットワーク名前空間を使用した。ループバックに加え、専用の`test0`へ`192.0.2.1/24`を設定してIPv4ホスト候補を供給した。既存サービスの停止やネットワーク変更は行っていない。
+
+既存ブラウザー試験には現行RTCで必須のメディア・Consul起動引数が欠けていたため補った。また固定音声の実長0.375秒と`speaking_time`・モーラ合計0.1秒が不一致だったため、音声を0.1秒へ揃え、申告値との一致を検査する回帰確認を加えた。本番の通信契約や起動時検証は変更していない。
+
+実Chrome、現行フロント、Pion、専用Consul、4つの下流契約サービスによる`TestFrontendBrowserHarness`が成功した。接続、音声入力、固定応答の本文・テロップと非無音の音声出力、プロセス終了と接続の解放を確認した。`TestSynthesizedWAVIsFiniteAndNonSilent`も成功した。下流の実モデルはPython・AgentServerタスクで別途確認した。

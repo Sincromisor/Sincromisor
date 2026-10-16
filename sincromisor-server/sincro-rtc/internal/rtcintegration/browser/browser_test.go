@@ -92,10 +92,26 @@ func startPion(t *testing.T, environment harnessenv.Environment) (string, *testp
 		t.Fatalf("build Pion: %v: %s", err, output)
 	}
 	baseURL, address := unusedLoopbackURL(t)
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		t.Fatalf("list loopback interfaces: %v", err)
+	}
+	interfaceName := ""
+	for _, iface := range interfaces {
+		if iface.Flags&net.FlagLoopback != 0 && iface.Flags&net.FlagUp != 0 {
+			interfaceName = iface.Name
+			break
+		}
+	}
+	// 本番の必須引数を満たし、試験の音声とサービス発見をループバック内に限定する。
 	pion := testprocess.New(testprocess.Command{
 		Path: pionBinary,
-		Args: []string{"--http", address, "--frontend-dir", environment.FrontendDist, "--ffmpeg", environment.FFmpeg.Path},
-		Env:  os.Environ(), Dir: environment.ModuleRoot,
+		Args: []string{
+			"--http", address, "--frontend-dir", environment.FrontendDist, "--ffmpeg", environment.FFmpeg.Path,
+			"--interface", interfaceName, "--public-ipv4", "127.0.0.1", "--media-udp-port", "3478",
+			"--consul-agent-host", "127.0.0.1", "--consul-agent-port", "8500", "--service-bind-host", "127.0.0.1",
+		},
+		Env: os.Environ(), Dir: environment.ModuleRoot,
 	})
 	if err := pion.Start(); err != nil {
 		t.Fatalf("start Pion: %v", err)
