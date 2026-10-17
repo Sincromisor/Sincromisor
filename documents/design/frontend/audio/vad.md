@@ -22,6 +22,7 @@
     - マイク / カメラストリーム、機器制約、トラック生存期間、音声プロファイルを置く。
 - `src/features/media/vad`
     - Silero VAD処理担当、学習済みVADクライアント、音声処理実行時、発話状態を置く。
+    - Workerは `onnxruntime-web/wasm`のWASM専用入口を使う。Viteが出力するWASMと `/3rd_party/silero-vad/silero_vad.onnx`を同一オリジンから取得し、推論失敗時は既存のRMS判定へ移る。
 - `src/features/media/devices`
     - メディア機器リストサービスを置く。
 - UserMedia / 音声処理
