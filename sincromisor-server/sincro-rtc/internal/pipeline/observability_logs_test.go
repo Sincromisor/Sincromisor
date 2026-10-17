@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
+	"github.com/coder/websocket"
 	"log/slog"
 	"strings"
 	"testing"
@@ -136,7 +136,7 @@ func TestPipelineResetLogsRecordAcceptedOriginWithoutPayloads(t *testing.T) {
 		_ = receive(t, coordinator.SynthResults())
 		factory.setAt(t, 0).emit(pclient.Event{
 			Service: pclient.ServiceSynthesizer, Kind: pclient.EventRemoteClose,
-			Err: errors.New("error-body-marker"),
+			Operation: "read", Err: websocket.CloseError{Code: 1011, Reason: "error-body-marker"},
 		})
 		waitFor(t, func() bool { return factory.count() == 2 })
 		if err := coordinator.Close(); err != nil {
@@ -146,6 +146,7 @@ func TestPipelineResetLogsRecordAcceptedOriginWithoutPayloads(t *testing.T) {
 		assertResetLogs(t, logs.String(), []map[string]any{{
 			"session_id": "session-reset-log", "peer": string(pclient.ServiceSynthesizer),
 			"cause": string(pclient.EventRemoteClose), "generation": float64(1),
+			"operation": "read", "reason": "remote_close", "close_code": float64(1011), "close_reason": "unknown",
 		}})
 		assertLogDoesNotContain(t, logs.String(), "error-body-marker", "fixture recognized", "fixture response", "audio-payload-marker", "encoded-voice")
 	})
@@ -213,7 +214,7 @@ func assertResetLogs(t *testing.T, values string, want []map[string]any) {
 	for index, expected := range want {
 		for key := range got[index] {
 			switch key {
-			case "time", "level", "msg", "stage", "session_id", "peer", "cause", "generation":
+			case "time", "level", "msg", "stage", "session_id", "peer", "cause", "generation", "operation", "reason", "exception_type", "close_code", "close_reason":
 			default:
 				t.Fatalf("unexpected reset log field %q: %#v", key, got[index])
 			}

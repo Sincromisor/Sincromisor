@@ -78,7 +78,7 @@ func (c *baseClient) goWorker(stage string, counted bool, run func()) {
 		}
 		defer func() {
 			if recover() != nil {
-				c.terminal(EventPanic, fmt.Errorf("%s worker panic", stage))
+				c.terminal(stage, EventPanic, fmt.Errorf("%s worker panic", stage))
 			}
 		}()
 		run()
