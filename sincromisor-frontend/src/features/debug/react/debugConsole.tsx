@@ -10,12 +10,23 @@ import { SdpPanel } from "./panels/sdpPanel";
 import { SincroMotionPanel } from "./panels/sincroMotionPanel";
 import { StatusPanel } from "./panels/statusPanel";
 
+// 管理処理はページ内で共有し、描画のたびに購読関数を作り直さない。
+const debugConsoleManager = DebugConsoleManager.getManager();
+
+function subscribeDebugConsoleSnapshot(listener: () => void): () => void {
+    return debugConsoleManager.subscribeSnapshot(listener);
+}
+
+function getDebugConsoleSnapshot(): DebugConsoleSnapshot {
+    return debugConsoleManager.getSnapshot();
+}
+
+/** 診断の表示期間だけ最新スナップショットを購読する。 */
 function useDebugConsoleSnapshot(): DebugConsoleSnapshot {
-    const manager = DebugConsoleManager.getManager();
     return useSyncExternalStore(
-        (listener) => manager.subscribeSnapshot(listener),
-        () => manager.getSnapshot(),
-        () => manager.getSnapshot(),
+        subscribeDebugConsoleSnapshot,
+        getDebugConsoleSnapshot,
+        getDebugConsoleSnapshot,
     );
 }
 
