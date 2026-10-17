@@ -51,8 +51,14 @@ type FallbackReason string
 const (
 	// FallbackReasonConsulDisabled は base URL が未設定だったことを表す。
 	FallbackReasonConsulDisabled FallbackReason = "consul_disabled"
-	// FallbackReasonRequestFailed は HTTP、timeout、redirect、status、decode の失敗を表す。
-	FallbackReasonRequestFailed FallbackReason = "request_failed"
+	// FallbackReasonTimeout は探索の時間切れを表す。
+	FallbackReasonTimeout FallbackReason = "timeout"
+	// FallbackReasonConnectionFailed はHTTP接続または読取の失敗を表す。
+	FallbackReasonConnectionFailed FallbackReason = "connection_failed"
+	// FallbackReasonHTTPFailure はHTTP異常状態や拒否したリダイレクトを表す。
+	FallbackReasonHTTPFailure FallbackReason = "http_failure"
+	// FallbackReasonInvalidResponse は破損・上限超過・不正候補を表す。
+	FallbackReasonInvalidResponse FallbackReason = "invalid_response"
 	// FallbackReasonNoHealthyInstance は passing worker が0件だったことを表す。
 	FallbackReasonNoHealthyInstance FallbackReason = "no_healthy_instance"
 )
@@ -66,6 +72,9 @@ type Endpoint struct {
 	Port           uint16
 	Source         EndpointSource
 	FallbackReason FallbackReason
+	// HTTPStatusは応答がない場合0、Durationは探索の単調時計による経過時間である。
+	HTTPStatus int
+	Duration   time.Duration
 }
 
 // Resolver は service ごとに1回の接続先解決を行う。
@@ -148,7 +157,9 @@ func NewResolver(cfg ResolverConfig, client *http.Client, choose func(int) (int,
 // 未設定 Consul、lookup failure（worker endpoint不正を含む）、0件は Endpoint.FallbackReason で区別する。
 // 未知service、fallback不正、chooserの契約違反だけをerrorとして返し、response body、service payload、
 // credentialはerrorに含めない。
-func (r *resolver) Resolve(ctx context.Context, service Service) (Endpoint, error) {
+func (r *resolver) Resolve(ctx context.Context, service Service) (endpoint Endpoint, err error) {
+	started := time.Now()
+	defer func() { endpoint.Duration = time.Since(started) }()
 	if !validService(service) {
 		return Endpoint{}, fmt.Errorf("resolve service %q: unsupported service", service)
 	}
@@ -156,9 +167,11 @@ func (r *resolver) Resolve(ctx context.Context, service Service) (Endpoint, erro
 		return r.fallbackEndpoint(service, FallbackReasonConsulDisabled)
 	}
 
-	entries, reason := r.lookup(ctx, service)
+	entries, reason, status := r.lookup(ctx, service)
 	if reason != "" {
-		return r.fallbackEndpoint(service, reason)
+		endpoint, err := r.fallbackEndpoint(service, reason)
+		endpoint.HTTPStatus = status
+		return endpoint, err
 	}
 	index, err := r.choose(len(entries))
 	if err != nil || index < 0 || index >= len(entries) {
@@ -172,7 +185,8 @@ func (r *resolver) Resolve(ctx context.Context, service Service) (Endpoint, erro
 	}, nil
 }
 
-func (r *resolver) lookup(ctx context.Context, service Service) ([]consulEntry, FallbackReason) {
+// lookup は既存のサイズ・候補・転送先制約を維持し、応答本文を返さず探索失敗を分類する。
+func (r *resolver) lookup(ctx context.Context, service Service) ([]consulEntry, FallbackReason, int) {
 	requestURL := *r.baseURL
 	requestURL.Path = "/v1/health/service/" + url.PathEscape(string(service))
 	requestURL.RawQuery = url.Values{"passing": {"true"}}.Encode()
@@ -180,36 +194,55 @@ func (r *resolver) lookup(ctx context.Context, service Service) ([]consulEntry, 
 	defer cancel()
 	request, err := http.NewRequestWithContext(requestCtx, http.MethodGet, requestURL.String(), nil)
 	if err != nil {
-		return nil, FallbackReasonRequestFailed
+		return nil, FallbackReasonInvalidResponse, 0
 	}
 	response, err := r.client.Do(request)
 	if err != nil {
-		return nil, FallbackReasonRequestFailed
+		if errors.Is(err, errRedirectRejected) {
+			status := 0
+			if response != nil {
+				status = response.StatusCode
+			}
+			return nil, FallbackReasonHTTPFailure, status
+		}
+		return nil, lookupFailureReason(err), 0
 	}
 	defer response.Body.Close()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return nil, FallbackReasonRequestFailed
+		return nil, FallbackReasonHTTPFailure, response.StatusCode
 	}
 
 	reader := io.LimitReader(response.Body, maxConsulResponseBytes+1)
 	payload, err := io.ReadAll(reader)
-	if err != nil || int64(len(payload)) > maxConsulResponseBytes {
-		return nil, FallbackReasonRequestFailed
+	if err != nil {
+		return nil, lookupFailureReason(err), response.StatusCode
+	}
+	if int64(len(payload)) > maxConsulResponseBytes {
+		return nil, FallbackReasonInvalidResponse, response.StatusCode
 	}
 	var entries []consulEntry
 	if err := json.Unmarshal(payload, &entries); err != nil {
-		return nil, FallbackReasonRequestFailed
+		return nil, FallbackReasonInvalidResponse, response.StatusCode
 	}
 	if len(entries) == 0 {
-		return nil, FallbackReasonNoHealthyInstance
+		return nil, FallbackReasonNoHealthyInstance, response.StatusCode
 	}
 	for _, entry := range entries {
 		if err := validateHost(entry.Service.Address); err != nil ||
 			entry.Service.Port < 1 || entry.Service.Port > 65535 {
-			return nil, FallbackReasonRequestFailed
+			return nil, FallbackReasonInvalidResponse, response.StatusCode
 		}
 	}
-	return entries, ""
+	return entries, "", response.StatusCode
+}
+
+// lookupFailureReason はURLやHTTP本文を読まず、通信失敗と時間切れだけを分類する。
+func lookupFailureReason(err error) FallbackReason {
+	var netError net.Error
+	if errors.Is(err, context.DeadlineExceeded) || errors.As(err, &netError) && netError.Timeout() {
+		return FallbackReasonTimeout
+	}
+	return FallbackReasonConnectionFailed
 }
 
 func (r *resolver) fallbackEndpoint(service Service, reason FallbackReason) (Endpoint, error) {

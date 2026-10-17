@@ -138,3 +138,7 @@ DNSを使うbandogはサービス単位の初回と異常・復旧だけをJSONL
 
 - `documents/design/infrastructure/compose.md`
 - `documents/design/archive/legacy-flat/service_consul.md`
+
+## Goパイプラインの探索診断
+
+代替接続先の選択は`service_discovery`へ記録し、`peer`を接続対象、`discovery_source=consul`を探索元とする。`reason`は`consul_disabled` / `no_healthy_instance`に加え、`timeout` / `connection_failed` / `http_failure` / `invalid_response`を区別する。応答時だけ`http_status`を付け、`duration_ms`に探索時間を残す。URL・本文・候補アドレスは記録しない。既存の`request_failed`検索はこれらの原因分類へ変更する。

@@ -104,8 +104,12 @@ func (c *baseClient) establish(
 		return nil, nil, &ConnectError{Peer: c.service, Operation: "resolve", Err: err}
 	}
 	if endpoint.Source == discovery.EndpointSourceFallback {
-		c.logger.Warn("pipeline service discovery fell back",
-			"event", "service_discovery", "peer", "consul", "stage", c.service, "outcome", "fallback", "reason", endpoint.FallbackReason)
+		attrs := []any{"event", "service_discovery", "peer", string(c.service), "discovery_source", "consul",
+			"stage", "resolve", "outcome", "fallback", "reason", endpoint.FallbackReason, "duration_ms", endpoint.Duration.Milliseconds()}
+		if endpoint.HTTPStatus != 0 {
+			attrs = append(attrs, "http_status", endpoint.HTTPStatus)
+		}
+		c.logger.Warn("pipeline service discovery fell back", attrs...)
 	}
 
 	dialURL := url.URL{
