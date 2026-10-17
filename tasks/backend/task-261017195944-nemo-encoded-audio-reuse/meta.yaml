@@ -1,0 +1,14 @@
+id: task-261017195944-nemo-encoded-audio-reuse
+title: 確定音声の候補再試行でNeMoのエンコード結果を再利用する
+category: backend
+status: open
+depends_on:
+  - task-261017195944-nemo-encode-decode-separation
+superseded_by: null
+review: APPROVED
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-10-17
+closed_at: null
+legacy_ids: []

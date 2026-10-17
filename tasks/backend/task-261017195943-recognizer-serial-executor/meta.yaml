@@ -1,0 +1,13 @@
+id: task-261017195943-recognizer-serial-executor
+title: 共有NeMoモデルの直列実行を保って認識待ちを分離する
+category: backend
+status: open
+depends_on: []
+superseded_by: null
+review: APPROVED
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-10-17
+closed_at: null
+legacy_ids: []

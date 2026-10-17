@@ -22,6 +22,10 @@
 - `max_silence_ms`などのパラメータに従って音声区間を区切る。
 - `SpeechExtractorResult`を返す。
 
+## 分類器の実行と終了
+
+サービスが所有する1本の専用スレッドで、共有AudioClassifierの生成・分類・closeを順に実行する。接続側は分類結果を非同期に待ち、発話状態とsequence_idの更新・WebSocket送信を担当する。未開始の取消済み要求は分類せず、実行中の分類はサービス終了時に回収してから分類器を閉じる。
+
 ## 設定・配備
 
 - Docker Composeと環境変数は `infrastructure/compose.md`を確認する。

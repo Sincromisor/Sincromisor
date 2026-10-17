@@ -34,7 +34,6 @@ class SpeechExtractorProcess:
 
     def start(self) -> None:
         """発見登録後にAPIを起動し、Uvicornでも共通ログ設定を維持する。"""
-        SpeechExtractorWorker.setup_model()
         app: FastAPI = FastAPI()
         event: Event = Event()
         if not self.__args.consul_agent_host or not self.__args.consul_agent_port:
@@ -86,6 +85,7 @@ class SpeechExtractorProcess:
                         "WebSocket is already closed.",
                     )
 
+        SpeechExtractorWorker.setup_model()
         try:
             uvicorn.run(
                 app, host=self.__args.host, port=self.__args.port, log_config=None
@@ -94,6 +94,7 @@ class SpeechExtractorProcess:
             pass
         finally:
             event.set()
+            SpeechExtractorWorker.close_model()
 
 
 if __name__ == "__main__":
