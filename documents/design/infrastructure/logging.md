@@ -194,6 +194,7 @@ PokeとMastraは同じ対話ワーカーを通る。NeMo補正の詳細追跡は
 
 RTCは標準`slog.JSONHandler`を使い、時刻・レベル・本文キーを出力元で共通名へ揃える。
 `session_id`、`stage`、`reason`などの既存属性を維持する。
+再初期化ログは最初に受理した終了イベントの`operation`（`read` / `write` / `decode`）、`reason`、`exception_type`を保持する。受信した終了コードだけを`close_code`へ残し、`close_reason`は採用版websocketsの固定理由`keepalive_ping_timeout`または`unknown`とする。終了コード1000も未完了要求の成功とは扱わない。
 再初期化ログの通信相手は`peer`、`service`は中央収集が付けるCompose上の出力元とする。既存検索で切断元を指定していた`service`は`peer`へ変更する。通常ログは標準出力、起動失敗は標準エラーのJSONLへ出す。
 起動前の引数解析も直接のusage出力を止め、設定値を含み得る例外全文は出さず、`startup_failed`と例外型を残す。
 Pionなど第三者の非JSON行はVectorが原本の文字列を取り込む。

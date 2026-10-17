@@ -41,7 +41,7 @@ func (c *baseClient) send(ctx context.Context, payload []byte) error {
 	}
 	if int64(len(payload)) > c.readLimit {
 		err := errors.New("outbound message exceeds service limit")
-		c.terminal(EventMessageTooLarge, err)
+		c.terminal("write", EventMessageTooLarge, err)
 		return err
 	}
 
@@ -63,7 +63,7 @@ func (c *baseClient) send(ctx context.Context, payload []byte) error {
 			c.finishWrite(writeDone)
 			return ErrClosed
 		}
-		c.terminal(EventWriteFailed, fmt.Errorf("write binary message: %w", err))
+		c.terminal("write", EventWriteFailed, fmt.Errorf("write binary message: %w", err))
 		c.finishWrite(writeDone)
 		return err
 	}
@@ -102,18 +102,18 @@ func (c *baseClient) readLoop() {
 			case status != -1:
 				kind = EventRemoteClose
 			}
-			c.terminal(kind, fmt.Errorf("read binary message: %w", err))
+			c.terminal("read", kind, fmt.Errorf("read binary message: %w", err))
 			return
 		}
 		if messageType != websocket.MessageBinary {
-			c.terminal(EventReadFailed, errors.New("received non-binary websocket message"))
+			c.terminal("read", EventReadFailed, errors.New("received non-binary websocket message"))
 			return
 		}
 		if err := c.decode(c.lifetimeCtx, payload); err != nil {
 			if c.lifetimeCtx.Err() != nil {
 				return
 			}
-			c.terminal(EventDecodeFailed, fmt.Errorf("decode service response: %w", err))
+			c.terminal("decode", EventDecodeFailed, fmt.Errorf("decode service response: %w", err))
 			return
 		}
 	}

@@ -3,7 +3,9 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -128,7 +130,10 @@ func TestWriteTimeoutIsTerminalAndDoesNotLeaveHelper(t *testing.T) {
 	if err := client.SendResult(context.Background(), value); err == nil {
 		t.Fatal("SendResult() succeeded against a non-reading peer")
 	}
-	assertSingleTerminalEvent(t, client.Events(), EventWriteFailed)
+	event := assertSingleTerminalEvent(t, client.Events(), EventWriteFailed)
+	if event.Operation != "write" || !strings.Contains(fmt.Sprint(event.DiagnosticAttrs()), "reason timeout") {
+		t.Fatalf("write diagnosis = %v", event.DiagnosticAttrs())
+	}
 	close(release)
 	if err := client.Close(); err != nil {
 		t.Fatalf("Close() error = %v", err)
@@ -175,7 +180,7 @@ func TestTerminalEventIsOnceUnderConcurrentSources(t *testing.T) {
 		kind := kind
 		go func() {
 			defer senders.Done()
-			client.terminal(kind, errors.New("competing terminal source"))
+			client.terminal("read", kind, errors.New("competing terminal source"))
 		}()
 	}
 	senders.Wait()
@@ -218,13 +223,15 @@ func processorResultWithPadding(t *testing.T, paddingBytes int) protocol.Process
 	return result
 }
 
-func assertSingleTerminalEvent(t *testing.T, events <-chan Event, want EventKind) {
+func assertSingleTerminalEvent(t *testing.T, events <-chan Event, want EventKind) Event {
 	t.Helper()
+	var received Event
 	select {
 	case event, ok := <-events:
 		if !ok {
 			t.Fatal("Events channel closed without terminal event")
 		}
+		received = event
 		if event.Kind != want {
 			t.Fatalf("Event.Kind = %q, want %q (err=%v)", event.Kind, want, event.Err)
 		}
@@ -239,4 +246,5 @@ func assertSingleTerminalEvent(t *testing.T, events <-chan Event, want EventKind
 	case <-time.After(2 * time.Second):
 		t.Fatal("Events channel did not close after the single terminal event")
 	}
+	return received
 }

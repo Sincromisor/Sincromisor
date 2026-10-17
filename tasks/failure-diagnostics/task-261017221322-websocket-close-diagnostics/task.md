@@ -27,8 +27,8 @@ clientはCloseStatusを取得できるエラーをEvent.Errへ渡すが、onClie
 
 ## 完了条件
 
-- [ ] 1011/既知keepalive理由、1000、close frameなしの読取失敗、書込時間切れを区別できる。1000というコードだけで未完了処理の正常終了と断定しない。
-- [ ] 受理した再初期化にsession_id、generation、peerと安全な原因が残り、競合するイベントで原因が上書きされない。
+- [x] 1011/既知keepalive理由、1000、close frameなしの読取失敗、書込時間切れを区別できる。1000というコードだけで未完了処理の正常終了と断定しない。
+- [x] 受理した再初期化にsession_id、generation、peerと安全な原因が残り、競合するイベントで原因が上書きされない。
 
 ## 確認方法
 
@@ -40,3 +40,9 @@ clientはCloseStatusを取得できるエラーをEvent.Errへ渡すが、onClie
 - [documents/design/infrastructure/logging.md](../../../documents/design/infrastructure/logging.md)
 
 変更したログ項目と意味だけを該当節へ反映する。音声・会話の通信形式や正常処理は変更しない。
+
+## 実施結果
+
+終了イベントへ操作を付け、最初に受理された再初期化へ安全な原因・例外型・受信コード・既知理由を渡した。`websockets`のインストール済み実装で固定理由を確認した。1011、1000、フレームなし、書込時間切れ、秘密理由の非出力、競合・旧世代の除外を試験した。
+
+`GOCACHE=/tmp/sincro-go-cache go test ./internal/pipeline ./internal/pipeline/client`が成功した。最初の実行は環境のソケット制限で停止したため、ローカル待受を許可して同じ試験を実行した。再接続・取消・時間切れの制御は維持した。コメント点検: PASS。

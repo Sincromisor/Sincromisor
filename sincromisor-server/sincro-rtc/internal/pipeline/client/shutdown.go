@@ -11,7 +11,7 @@ import (
 
 // terminal はreader/sync writerの競合をclosedへの1回のstate transitionへ集約する。
 // 最初のeventをbufferへ置いてからlifetimeをcancelするため、finalizeによるchannel closeが通知を追い越さない。
-func (c *baseClient) terminal(kind EventKind, err error) {
+func (c *baseClient) terminal(operation string, kind EventKind, err error) {
 	c.mu.Lock()
 	if c.state == stateClosed || c.intentional {
 		c.mu.Unlock()
@@ -20,7 +20,7 @@ func (c *baseClient) terminal(kind EventKind, err error) {
 	c.state = stateClosed
 	cancel := c.cancel
 	c.eventOnce.Do(func() {
-		c.events <- Event{Service: c.service, Kind: kind, Err: err}
+		c.events <- Event{Service: c.service, Kind: kind, Operation: operation, Err: err}
 	})
 	c.mu.Unlock()
 	cancel()

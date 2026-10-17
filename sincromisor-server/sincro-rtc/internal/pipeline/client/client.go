@@ -52,12 +52,13 @@ const (
 
 // Event は最初の予期しない terminal failure を caller へ通知する。
 //
-// Err は payload、credential、response body を含まない診断用 error である。明示 Close と
+// Errは任意の相手側本文を含み得るため、ログにはDiagnosticAttrsの選別結果だけを使う。明示 Close と
 // parent context cancellation では Event は生成されず、Events channel の close だけで完了を通知する。
 type Event struct {
-	Service Service
-	Kind    EventKind
-	Err     error
+	Service   Service
+	Kind      EventKind
+	Operation string
+	Err       error
 }
 
 // Config は1つの session connection に共通する validation 済み設定である。
