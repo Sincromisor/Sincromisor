@@ -64,6 +64,7 @@ def test_generation_cache_and_failure(monkeypatch, conversation, synthesis):
     redis_data = {}
     s3_data = {}
     redis = SimpleNamespace(
+        close=lambda: None,
         get=redis_data.get,
         set=lambda key, value, **kwargs: redis_data.update({key: value}),
     )
@@ -75,6 +76,7 @@ def test_generation_cache_and_failure(monkeypatch, conversation, synthesis):
         return {"Body": StreamingBody(io.BytesIO(value), len(value))}
 
     s3 = SimpleNamespace(
+        close=lambda: None,
         get_object=get_object,
         put_object=lambda **kwargs: s3_data.update(
             {kwargs["Key"]: kwargs["Body"].read()}
@@ -170,6 +172,7 @@ def test_generation_cache_and_failure(monkeypatch, conversation, synthesis):
         server.shutdown()
         thread.join()
         server.server_close()
+        manager.close()
 
 
 @pytest.mark.parametrize("value", [None, "true", "false", "", "TRUE", "private-input"])

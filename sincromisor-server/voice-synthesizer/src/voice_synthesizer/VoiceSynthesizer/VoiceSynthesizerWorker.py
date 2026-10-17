@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import WebSocket
 from sincro_models import (
     TextProcessorResult,
@@ -36,7 +38,7 @@ class VoiceSynthesizerWorker:
         self.__voicevox_style_id: int = voicevox_style_id
 
     def close(self) -> None:
-        """合成処理の終了後、接続が所有するHTTPプールを解放する。"""
+        """合成処理の終了後、接続が所有するキャッシュとHTTPプールを解放する。"""
         self.__vvox.close()
 
     async def communicate(self, ws: WebSocket) -> None:
@@ -53,11 +55,26 @@ class VoiceSynthesizerWorker:
                 pre_phoneme_length=0.1,
                 post_phoneme_length=0.1,
             )
-            voice = self.__vvox.get_voice(
-                vs_request=request,
-                session_id=result.session_id,
-                sequence_id=result.sequence_id,
+            # 一要求ずつ完了を待ち、同期I/Oと音声変換だけをスレッドへ委ねる。
+            pending = asyncio.create_task(
+                asyncio.to_thread(
+                    self.__vvox.get_voice,
+                    vs_request=request,
+                    session_id=result.session_id,
+                    sequence_id=result.sequence_id,
+                )
             )
+            try:
+                voice = await asyncio.shield(pending)
+            except asyncio.CancelledError:
+                # スレッドは取消で止まらない。closeより先に回収し、結果は送らない。
+                cleanup = asyncio.gather(pending, return_exceptions=True)
+                while not cleanup.done():
+                    try:
+                        await asyncio.shield(cleanup)
+                    except asyncio.CancelledError:
+                        continue
+                raise
             # キャッシュの発話IDは保存時のままなので、送信する要求のIDへ戻す。
             voice.speech_id = request.speech_id
             await ws.send_bytes(voice.to_msgpack())

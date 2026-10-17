@@ -55,3 +55,9 @@ VOICEVOXの中央ログの除去とDocker原本の扱いは[ログ設計](../../
 接続ごとのVoiceVoxがRequestsのSessionを所有し、連続要求で接続プールを再利用する。APIごとの応答はその場で解放し、WebSocket終了時にWorker、VoiceCacheManager、VoiceSynthesizerの順で終了を伝えてSessionを閉じる。Sessionは他のクライアント生成が成功した後、初期化の最後に作る。
 
 HTTPは接続5秒・読取り30秒とし、自動再試行は行わない。HTTP非成功は本文・URLを含めないProtocolErrorで伝え、タイムアウトは既存の生成失敗経路へ伝播する。
+
+## 同期処理と接続終了
+
+Workerは一要求ごとに `get_voice`（Redis、S3、VOICEVOX、音声変換）を `asyncio.to_thread` へ渡し、完了を待ってから発話IDを付け替えてWebSocketへ返す。送受信とID操作はイベントループが所有し、次要求の先読みはしない。親取消は同期処理を止めないため、取消が重なっても実行終了を待ち、結果を送らず取消を伝える。接続切断は次のWebSocket入出力で検出する。
+
+ProcessはWorkerの終了後にcloseを呼び、合成用Session、S3、Redisを逆順に解放する。構築途中で失敗した場合も取得済みクライアントを閉じる。Redisは接続5秒・読取30秒で再試行なしとし、無期限待機を除く。S3は採用botocoreの既存既定（接続・読取60秒、legacyモードの有限再試行）を維持する。外部音声変換は共有 `encode_audio` の30秒制限で停止・回収する。これらは処理全体の一律期限ではなく、各I/Oの待機制限である。
