@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
-import type { ChatMessageViewRecord, SincroAppEvent } from "../../../../app/controller";
-import { SincroAppController } from "../../../../app/controller";
-import { subscribeActiveSincroAppEvents } from "../../../../app/react/subscribeActiveSincroAppEvents";
+import { useSyncExternalStore } from "react";
+import type { ChatMessageViewRecord } from "../../../../app/controller";
+import {
+    SincroAppController,
+    subscribeActiveSincroAppController,
+} from "../../../../app/controller";
 import type { ChatMessage } from "../../../rtc/rtcMessage";
+import type { ChatMessageSnapshot } from "../model/chatMessageService";
 
 function messageTypeToClassName(messageType: string): string {
     const name = messageType.charAt(0).toUpperCase() + messageType.slice(1);
@@ -43,71 +46,25 @@ export function SincroChatView() {
     );
 }
 
-function useSincroChatViewState() {
-    const initialController = SincroAppController.getCurrent();
-    const [messages, setMessages] = useState<ChatMessageViewRecord[]>(
-        initialController?.chat.getMessageViewSnapshot() ?? [],
-    );
-    const [systemIconUrl, setSystemIconUrl] = useState<string>(
-        initialController?.chat.getSystemIconUrl() ?? "../images/icon-system.webp",
-    );
-    useSincroChatEventSubscription(setMessages, setSystemIconUrl);
+const emptySnapshot: ChatMessageSnapshot = {
+    messages: [],
+    systemIconUrl: "../images/icon-system.webp",
+};
 
-    return { messages, systemIconUrl };
+function getChatSnapshot(): ChatMessageSnapshot {
+    return SincroAppController.getCurrent()?.chat.getSnapshot() ?? emptySnapshot;
 }
 
-function useSincroChatEventSubscription(
-    setMessages: (updater: (prev: ChatMessageViewRecord[]) => ChatMessageViewRecord[]) => void,
-    setSystemIconUrl: (iconUrl: string) => void,
-): void {
-    useEffect(() => {
-        const unsubscribe = subscribeActiveSincroAppEvents({
-            onControllerChange: (controller) => {
-                if (!controller) {
-                    setMessages(() => []);
-                    setSystemIconUrl("../images/icon-system.webp");
-                    return;
-                }
-                setMessages(() => controller.chat.getMessageViewSnapshot());
-                setSystemIconUrl(controller.chat.getSystemIconUrl());
-            },
-            onEvent: (event) => {
-                if (event.type === "chat_system_icon") {
-                    setSystemIconUrl(event.iconUrl);
-                    return;
-                }
-                if (
-                    event.type === "chat_message" ||
-                    event.type === "system_message" ||
-                    event.type === "error_message"
-                ) {
-                    setMessages((prev) => applyChatViewRecord(prev, event));
-                }
-            },
-        });
-
-        return unsubscribe;
-    }, [setMessages, setSystemIconUrl]);
+// 有効制御の差し替え時は旧サービス購読を外し、共有履歴の現在値から表示し直す。
+function subscribeChatSnapshot(listener: () => void): () => void {
+    return subscribeActiveSincroAppController((controller) => {
+        listener();
+        return controller?.chat.subscribeSnapshot(listener);
+    });
 }
 
-function applyChatViewRecord(
-    prev: ChatMessageViewRecord[],
-    event: Extract<
-        SincroAppEvent,
-        {
-            type: "chat_message" | "system_message" | "error_message";
-        }
-    >,
-): ChatMessageViewRecord[] {
-    const index = prev.findIndex(
-        (m) => m.message.message_id === event.viewRecord.message.message_id,
-    );
-    if (index >= 0) {
-        const next = [...prev];
-        next[index] = event.viewRecord;
-        return next;
-    }
-    return [event.viewRecord, ...prev].slice(0, 30);
+function useSincroChatViewState(): ChatMessageSnapshot {
+    return useSyncExternalStore(subscribeChatSnapshot, getChatSnapshot, getChatSnapshot);
 }
 
 function ChatMessageItem({
