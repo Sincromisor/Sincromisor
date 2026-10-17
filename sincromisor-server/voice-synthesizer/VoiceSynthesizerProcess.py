@@ -70,6 +70,7 @@ class VoiceSynthesizerProcess:
             # 本文を持つ要求の処理はワーカーへ委ね、ここでは接続の生存期間を管理する。
             self.__logger.info("Connected Websocket.")
             self.__sessions += 1
+            voice_synthesizer: VoiceSynthesizerWorker | None = None
             try:
                 redis_description: ServiceDescription | None = (
                     self.sd_referrer.get_random_worker(worker_type="SincroRedis")
@@ -104,6 +105,8 @@ class VoiceSynthesizerProcess:
             except Exception:
                 self.__logger.exception("WebSocket processing failed.")
             finally:
+                if voice_synthesizer is not None:
+                    voice_synthesizer.close()
                 self.__sessions -= 1
                 try:
                     await ws.close()
