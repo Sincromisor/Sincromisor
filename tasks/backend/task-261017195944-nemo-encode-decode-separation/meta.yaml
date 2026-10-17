@@ -1,13 +1,13 @@
 id: task-261017195944-nemo-encode-decode-separation
 title: NeMo認識を前処理・エンコード・デコードへ分ける
 category: backend
-status: open
+status: done
 depends_on: []
 superseded_by: null
 review: APPROVED
 reviewed_sha: null
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 1
 created_at: 2026-10-17
-closed_at: null
+closed_at: 2026-10-17
 legacy_ids: []
