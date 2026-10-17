@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { joinClassNames } from "../primitives/settingsClassNames";
 import { SettingsNavigation } from "./settingsNavigation";
 import "./settingsShell.css";
@@ -49,22 +49,21 @@ export function SettingsShell({
     navigationPlacement = "auto",
 }: SettingsShellProps) {
     const tabIdPrefix = useId();
-    const visiblePages = useMemo(() => pages, [pages]);
-    const fallbackPageId = visiblePages[0]?.id ?? "";
+    const fallbackPageId = pages[0]?.id ?? "";
     const [activePageId, setActivePageId] = useState<string>(initialPageId ?? fallbackPageId);
 
     useEffect(() => {
-        if (!visiblePages.some((page) => page.id === activePageId)) {
+        if (!pages.some((page) => page.id === activePageId)) {
             setActivePageId(initialPageId ?? fallbackPageId);
         }
-    }, [activePageId, fallbackPageId, initialPageId, visiblePages]);
+    }, [activePageId, fallbackPageId, initialPageId, pages]);
 
-    const activePage = visiblePages.find((page) => page.id === activePageId) ?? visiblePages[0];
+    const activePage = pages.find((page) => page.id === activePageId) ?? pages[0];
     if (!activePage) {
         return null;
     }
-    const primaryPages = visiblePages.filter((page) => page.tone !== "developer");
-    const developerPages = visiblePages.filter((page) => page.tone === "developer");
+    const primaryPages = pages.filter((page) => page.tone !== "developer");
+    const developerPages = pages.filter((page) => page.tone === "developer");
     const shellClassName = settingsShellClassName({
         className,
         responsiveMode,
