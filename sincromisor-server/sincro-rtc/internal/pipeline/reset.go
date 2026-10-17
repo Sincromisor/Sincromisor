@@ -86,8 +86,8 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, c
 	oldWork, oldSet := c.work, c.set
 	c.work, c.set = nil, nil
 	c.generation = next
-	drain(c.textOut)
-	drain(c.synthOut)
+	discardedText := drain(c.textOut)
+	discardedAudio := drain(c.synthOut)
 	c.notifyGeneration(next)
 	c.mu.Unlock()
 	c.outputMu.Unlock()
@@ -104,6 +104,15 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, c
 		oldWork.input.close()
 		_ = oldSet.Close()
 		oldWork.wg.Wait()
+		// 送信が再初期化と交差しても成功数を取りこぼさないよう、旧workerの回収後に確定する。
+		unreceived := uint64(0)
+		if oldWork.synthesisSent > oldWork.synthesisReceived {
+			unreceived = oldWork.synthesisSent - oldWork.synthesisReceived
+		}
+		c.logger.Warn("pipeline_interrupted", "session_id", c.sessionID, "generation", generation,
+			"peer", string(service), "cause", cause,
+			"synthesis_sent", oldWork.synthesisSent, "synthesis_received", oldWork.synthesisReceived,
+			"synthesis_unreceived", unreceived, "discarded_text", discardedText, "discarded_audio", discardedAudio)
 		c.mu.Lock()
 		if c.state == StateClosed {
 			c.resetting = false
@@ -160,12 +169,18 @@ func (c *Coordinator) recordStaleDrop(service pclient.Service) {
 	c.logger.Info("dropped stale pipeline value", "stage", service, "reason", "stale_generation", "count", count)
 }
 
-func drain[T any](values chan T) {
+// drain は出力境界内で実際に取り除いた値だけを数える。消費済み出力は含めない。
+func drain[T any](values chan T) int {
+	count := 0
 	for {
 		select {
-		case <-values:
+		case _, ok := <-values:
+			if !ok {
+				return count
+			}
+			count++
 		default:
-			return
+			return count
 		}
 	}
 }

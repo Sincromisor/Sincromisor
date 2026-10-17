@@ -122,6 +122,11 @@ type generationWork struct {
 	input  *frameQueue
 	conv   *conversation
 	wg     sync.WaitGroup
+
+	// 各段階の単一workerだけが加算し、再初期化は全workerのjoin後に読む。
+	// 送信成功と現世代での結果受理を数え、ブラウザー再生数は推測しない。
+	synthesisSent     uint64
+	synthesisReceived uint64
 }
 
 // NewCoordinator はdependencyを検証し、固定queue / timeoutを持つidle Coordinatorを返す。
