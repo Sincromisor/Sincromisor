@@ -38,6 +38,7 @@ func TestResolverSelectsPassingInstanceAndBuildsFixedRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Resolve() error = %v", err)
 	}
+	endpoint.Duration = 0
 	if endpoint != (Endpoint{Host: "127.0.0.2", Port: 8002, Source: EndpointSourceConsul}) {
 		t.Fatalf("Endpoint = %+v", endpoint)
 	}
@@ -86,9 +87,9 @@ func TestResolverFallbackReasonsRemainTyped(t *testing.T) {
 		{
 			name: "server failure",
 			handler: http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
-				http.Error(writer, "sensitive response", http.StatusInternalServerError)
+				http.Error(writer, "sensitive response", http.StatusServiceUnavailable)
 			}),
-			reason:    FallbackReasonRequestFailed,
+			reason:    FallbackReasonHTTPFailure,
 			useServer: true,
 		},
 		{
@@ -96,7 +97,7 @@ func TestResolverFallbackReasonsRemainTyped(t *testing.T) {
 			handler: http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 				fmt.Fprint(writer, `{not-json}`)
 			}),
-			reason:    FallbackReasonRequestFailed,
+			reason:    FallbackReasonInvalidResponse,
 			useServer: true,
 		},
 	}
@@ -126,6 +127,16 @@ func TestResolverFallbackReasonsRemainTyped(t *testing.T) {
 				Port:           9000,
 				Source:         EndpointSourceFallback,
 				FallbackReason: test.reason,
+			}
+			if endpoint.Duration < 0 {
+				t.Fatal("negative lookup duration")
+			}
+			endpoint.Duration = 0
+			if test.useServer {
+				want.HTTPStatus = 200
+			}
+			if test.name == "server failure" {
+				want.HTTPStatus = 503
 			}
 			if endpoint != want {
 				t.Fatalf("Endpoint = %+v, want %+v", endpoint, want)
@@ -159,7 +170,7 @@ func TestResolverRejectsRedirectForInjectedHTTPClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Resolve() error = %v", err)
 	}
-	if endpoint.FallbackReason != FallbackReasonRequestFailed {
+	if endpoint.FallbackReason != FallbackReasonHTTPFailure {
 		t.Fatalf("FallbackReason = %q", endpoint.FallbackReason)
 	}
 	if targetReached {
@@ -216,7 +227,7 @@ func TestResolverRejectsOversizedBodyAndInvalidWorkerWithoutLeakingPayload(t *te
 			FallbackPort: 9000, RequestTimeout: time.Second,
 		}, server.Client(), nil)
 		endpoint, err := resolver.Resolve(context.Background(), ServiceSynthesizer)
-		if err != nil || endpoint.FallbackReason != FallbackReasonRequestFailed {
+		if err != nil || endpoint.FallbackReason != FallbackReasonInvalidResponse {
 			t.Fatalf("Resolve() = %+v, %v", endpoint, err)
 		}
 	})
@@ -234,7 +245,7 @@ func TestResolverRejectsOversizedBodyAndInvalidWorkerWithoutLeakingPayload(t *te
 		if err != nil {
 			t.Fatalf("Resolve() error = %v", err)
 		}
-		if endpoint.FallbackReason != FallbackReasonRequestFailed {
+		if endpoint.FallbackReason != FallbackReasonInvalidResponse {
 			t.Fatalf("FallbackReason = %q", endpoint.FallbackReason)
 		}
 	})
