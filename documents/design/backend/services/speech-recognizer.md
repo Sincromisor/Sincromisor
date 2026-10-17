@@ -131,3 +131,9 @@ $ docker compose logs speech-recognizer
 - `documents/design/initiatives/proper-noun-biasing.md`
 - `documents/design/archive/legacy-flat/backend_speech_recognizer.md`
 - `documents/design/archive/legacy-flat/backend_speech_recognizer_proper_noun_biasing.md`
+
+## 共有モデルの実行と終了
+
+サービス所有の単一ThreadPoolExecutorでWorkerを生成し、複数接続の認識・候補再試行・保存を直列実行する。接続は完了を非同期に待ち、その間も状態確認を受け付ける。未開始の取消要求は実行しない。実行中の取消はモデル設定の復元と保存完了まで回収し、その後に接続固有のS3クライアントを閉じる。全接続の終了後、同じスレッドでWorkerを解放して実行スレッドを閉じる。
+
+S3は接続5秒・読取り30秒・1試行、認識と合成で共有する外部符号化は30秒を上限とする。符号化の時間切れは子プロセスを回収して伝播する。GPU推論の強制停止や自動再試行は追加しない。

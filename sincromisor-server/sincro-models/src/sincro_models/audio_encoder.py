@@ -6,13 +6,20 @@ from time import perf_counter
 
 from sincro_config.runtime_diagnostics import failure_fields, stderr_fields
 
+# ローカル符号化の異常停止で認識・合成の終了待ちを無期限にしない。
+ENCODE_TIMEOUT_SECONDS = 30
+
 
 def encode_audio(command: list[str], voice: bytes, ids: dict[str, object]) -> bytes:
     """一度だけ実行して成功出力を返す。失敗は原例外を保ち、診断には入力・引数を含めない。"""
     started = perf_counter()
     try:
         return subprocess.run(
-            command, input=voice, capture_output=True, check=True
+            command,
+            input=voice,
+            capture_output=True,
+            check=True,
+            timeout=ENCODE_TIMEOUT_SECONDS,
         ).stdout
     except (OSError, subprocess.SubprocessError) as error:
         stderr = (

@@ -2,6 +2,7 @@
 
 import logging
 import logging.config
+from functools import partial
 from logging import Logger
 from threading import Event
 
@@ -18,6 +19,7 @@ from sincro_config import (
 )
 from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
 from speech_recognizer_nemo.models import SpeechRecognizerNemoProcessArgument
+from speech_recognizer_nemo.recognizer_execution import RecognizerExecution
 from speech_recognizer_nemo.SpeechRecognizerNemo import SpeechRecognizerNemoWorker
 from speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerS3Client import (
     SpeechRecognizerS3Client,
@@ -53,15 +55,6 @@ class SpeechRecognizerNemoProcess:
             consul_agent_host=self.__args.consul_agent_host,
             consul_agent_port=self.__args.consul_agent_port,
         )
-        speech_recognizer = SpeechRecognizerNemoWorker(
-            voice_log_dir=args.voice_log_dir,
-            proper_noun_enable=args.proper_noun_enable,
-            proper_noun_dict_path=args.proper_noun_dict_path,
-            proper_noun_context_biasing_enable=args.proper_noun_context_biasing_enable,
-            proper_noun_context_biasing_beam_size=args.proper_noun_context_biasing_beam_size,
-            proper_noun_nbest_enable=args.proper_noun_nbest_enable,
-            proper_noun_nbest_beam_size=args.proper_noun_nbest_beam_size,
-        )
         app: FastAPI = FastAPI()
         event: Event = Event()
         self.sd_reporter: ServiceDiscoveryReporter = ServiceDiscoveryReporter(
@@ -85,8 +78,8 @@ class SpeechRecognizerNemoProcess:
             # 本文を持つ要求の処理はワーカーへ委ね、ここでは接続の生存期間を管理する。
             self.__logger.info("Connected Websocket.")
             self.__sessions += 1
+            s3_client: SpeechRecognizerS3Client | None = None
             try:
-                s3_client: SpeechRecognizerS3Client | None = None
                 s3_description: ServiceDescription | None = (
                     self.sd_referrer.get_random_worker(worker_type="SincroS3")
                 )
@@ -123,7 +116,7 @@ class SpeechRecognizerNemoProcess:
                             extractor_result.voice,
                         )
                         extractor_result.voice = current_speech_buffer
-                    result: SpeechRecognizerResult = speech_recognizer.recognize(
+                    result: SpeechRecognizerResult = await speech_recognizer.recognize(
                         spe_result=extractor_result, s3_client=s3_client
                     )
                     await ws.send_bytes(result.to_msgpack())
@@ -132,6 +125,8 @@ class SpeechRecognizerNemoProcess:
             except Exception:
                 self.__logger.exception("WebSocket processing failed.")
             finally:
+                if s3_client is not None:
+                    s3_client.close()
                 self.__sessions -= 1
                 try:
                     await ws.close()
@@ -140,6 +135,18 @@ class SpeechRecognizerNemoProcess:
                         "WebSocket is already closed.",
                     )
 
+        speech_recognizer = RecognizerExecution(
+            partial(
+                SpeechRecognizerNemoWorker,
+                voice_log_dir=self.__args.voice_log_dir,
+                proper_noun_enable=self.__args.proper_noun_enable,
+                proper_noun_dict_path=self.__args.proper_noun_dict_path,
+                proper_noun_context_biasing_enable=self.__args.proper_noun_context_biasing_enable,
+                proper_noun_context_biasing_beam_size=self.__args.proper_noun_context_biasing_beam_size,
+                proper_noun_nbest_enable=self.__args.proper_noun_nbest_enable,
+                proper_noun_nbest_beam_size=self.__args.proper_noun_nbest_beam_size,
+            )
+        )
         try:
             uvicorn.run(
                 app, host=self.__args.host, port=self.__args.port, log_config=None
@@ -148,6 +155,7 @@ class SpeechRecognizerNemoProcess:
             pass
         finally:
             event.set()
+            speech_recognizer.close()
 
 
 if __name__ == "__main__":

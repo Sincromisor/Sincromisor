@@ -26,9 +26,19 @@ class SpeechRecognizerS3Client:
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key,
             region_name="us-east-1",
-            config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
+            config=Config(
+                signature_version="s3v4",
+                s3={"addressing_style": "path"},
+                connect_timeout=5,
+                read_timeout=30,
+                retries={"total_max_attempts": 1},
+            ),
         )
         self.bucket_name: str = "speech-recognizer"
+
+    def close(self) -> None:
+        """接続側が実行中の認識・保存を回収した後、HTTPプールを解放する。"""
+        self.s3_client.close()
 
     def __put_s3(
         self,

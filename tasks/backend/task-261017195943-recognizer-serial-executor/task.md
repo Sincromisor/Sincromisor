@@ -24,9 +24,9 @@ SpeechRecognizerNemoProcessは共有WorkerのrecognizeをasyncなWebSocket処理
 
 ## 完了条件と確認方法
 
-- [ ] 2接続の試験で認識処理の同時実行数が1を超えず、推論中も同一イベントループの処理が進む。
-- [ ] 待機中と実行中の取消、および認識失敗で、次要求へのデコード設定の漏れ・資源の早期解放がない。
-- [ ] 既存test_speech_recognizer_nemo_worker.pyを通す。実NeMoを利用できる既存CUDA検証環境で、ローカルWebSocketから一つの固定音声を認識し、スレッド移行後の推論と終了を確認する。
+- [x] 2接続の試験で認識処理の同時実行数が1を超えず、推論中も同一イベントループの処理が進む。
+- [x] 待機中と実行中の取消、および認識失敗で、次要求へのデコード設定の漏れ・資源の早期解放がない。
+- [x] 既存test_speech_recognizer_nemo_worker.pyを通す。実NeMoを利用できる既存CUDA検証環境で、ローカルWebSocketから一つの固定音声を認識し、スレッド移行後の推論と終了を確認する。
 
 変更ファイルに対象を絞った整形・静的検査を行う。Pythonはロックに従う環境を使い、環境の再現方法は[task.md](../../../tasks/backend/task-261011152416-update-python-dependencies/task.md)を参照する。
 
@@ -44,3 +44,9 @@ SpeechRecognizerNemoProcessは共有WorkerのrecognizeをasyncなWebSocket処理
 2026-10-17参照。採用する範囲は各項目に記す。
 
 - [非同期処理と実行スレッドの境界](https://docs.python.org/3.14/library/asyncio-task.html#running-in-threads)。
+
+## 実装・確認結果
+
+共有Workerの生成・認識・解放を1本の実行スレッドへ移した。取消された未開始要求は実行せず、実行中要求は繰り返しの取消でも回収してから接続のS3クライアントを閉じる。S3は接続5秒・読取り30秒・1試行、共通の外部符号化は30秒とし、ローカルI/Oの異常で終了待ちを無期限にしない。GPU推論は強制停止しない。
+
+ロック済みCUDA検証イメージで既存Workerを含む14試験と2サブテスト、対象Ruff・tyが成功した。既存モデルキャッシュと同梱固定音声を使い、実プロセスのローカルWebSocketで認識、並行する状態確認、JSON・Opus保存、終了を確認した。再現用スクリプトはacceptance/check_websocket.py。モデルと音声は複製していない。設計・コメントを点検し、通信契約は維持した。
