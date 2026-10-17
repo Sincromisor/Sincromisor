@@ -131,3 +131,27 @@ if (get_env_var("SINCRO_LOG_SYNTHESIS_ENABLED") ?? "true") == "false" {
 assert_eq!(.container_id, "voicevox-container")
 assert_eq!(.service, "sincro-voicevox")
 '''
+
+[[tests]]
+name = "パイプラインの通信相手を配置識別子と区別して保持する"
+[[tests.inputs]]
+insert_at = "normalize"
+type = "log"
+[tests.inputs.log_fields]
+message = '{"message":"pipeline_reset_requested","host":"forged","service":"forged","peer":"VoiceSynthesizer","session_id":"fixture-session","generation":1,"cause":"remote_close"}'
+timestamp = "2026-10-17T00:00:00Z"
+[tests.inputs.log_fields.label]
+"com.docker.compose.project" = "fixture"
+"com.docker.compose.service" = "sincro-rtc"
+[[tests.outputs]]
+extract_from = "normalize"
+[[tests.outputs.conditions]]
+type = "vrl"
+source = """
+assert_eq!(.host, "fixture")
+assert_eq!(.service, "sincro-rtc")
+assert_eq!(.peer, "VoiceSynthesizer")
+assert_eq!(.session_id, "fixture-session")
+assert_eq!(.generation, 1)
+assert_eq!(.cause, "remote_close")
+"""

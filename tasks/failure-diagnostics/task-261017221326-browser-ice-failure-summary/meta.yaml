@@ -1,0 +1,14 @@
+id: task-261017221326-browser-ice-failure-summary
+title: ICE失敗時の限定した診断値を中央へ送る
+category: failure-diagnostics
+status: open
+depends_on:
+  - task-261017221326-browser-signaling-diagnostics
+superseded_by: null
+review: APPROVED
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-10-17
+closed_at: null
+legacy_ids: []
