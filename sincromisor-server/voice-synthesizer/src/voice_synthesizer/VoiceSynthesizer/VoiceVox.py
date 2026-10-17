@@ -8,6 +8,9 @@ from sincro_models.VoiceVoxQuery import VoiceVoxQuery
 class VoiceVox:
     """VOICEVOX HTTP要求を包み、失敗時に本文を含むURLを公開しない。"""
 
+    # 接続はGo側の接続上限に合わせ、読取りは開発環境の合成時間に余裕を持たせる。
+    HTTP_TIMEOUT = (5, 30)
+
     class ProtocolError(Exception):
         """HTTP状態だけを持つ、本文とURLを含まない通信失敗。"""
 
@@ -16,12 +19,17 @@ class VoiceVox:
             self.status_code = status_code
             super().__init__(f"VOICEVOX HTTP status {status_code}")
 
-    def __init__(self, host: str = "127.0.0.1", port: int = 50021):
+    def __init__(self, host: str = "127.0.0.1", port: int = 50021) -> None:
         """接続先を保持する。要求URLは運用ログへ渡さない。"""
         self.host = host
         self.port = port
         self.base_url = f"http://{self.host}:{self.port}"
-        self.style_id_key: str = "speaker"  # speaker(deprecated)、style_id(新)。
+        self.style_id_key: str = "speaker"  # 既存のVOICEVOX APIへ渡す話者キー。
+        self.session = requests.Session()
+
+    def close(self) -> None:
+        """接続所有のHTTPプールを解放する。進行中の合成を回収してから呼ぶ。"""
+        self.session.close()
 
     # テキストを+synthesis+に渡せるクエリJSON(連想配列)に変換。
     # * +text+ - クエリに変換するテキスト文字列。
@@ -29,12 +37,13 @@ class VoiceVox:
     # * 戻り値 - クエリ連想配列
     def audio_query(self, text: str, style_id: int = 1) -> VoiceVoxQuery:
         params: dict[str, str | int] = {self.style_id_key: style_id, "text": text}
-        res = requests.post(
+        with self.session.post(
             url=f"{self.base_url}/audio_query",
             params=params,
-        )
-        self.response_validator(res)
-        return VoiceVoxQuery.model_validate(res.json())
+            timeout=self.HTTP_TIMEOUT,
+        ) as res:
+            self.response_validator(res)
+            return VoiceVoxQuery.model_validate(res.json())
 
     # テキストからアクセント句を生成。
     # * +text+ - アクセントに変換する文字列。
@@ -59,26 +68,28 @@ class VoiceVox:
             "text": text,
             "is_kana": is_kana,
         }
-        res = requests.post(
+        with self.session.post(
             url=f"{self.base_url}/accent_phrases",
             params=params,
-        )
-        self.response_validator(res)
-        return res.json()
+            timeout=self.HTTP_TIMEOUT,
+        ) as res:
+            self.response_validator(res)
+            return res.json()
 
     # ++audio_query++メソッドなどで得たクエリを元に音声を生成。
     # * +query+ - 変換を要求するクエリ。
     # * +speaker+ - 話者ID。+speakers+メソッドで得られる。(default: 1)
     # * 戻り値 - wavストリーム
     def query_synthesis(self, query: VoiceVoxQuery, style_id: int = 1) -> bytes:
-        res = requests.post(
+        with self.session.post(
             url=f"{self.base_url}/synthesis",
             params={self.style_id_key: style_id},
             headers={"Content-Type": "application/json"},
             data=query.model_dump_json(),
-        )
-        self.response_validator(res)
-        return res.content
+            timeout=self.HTTP_TIMEOUT,
+        ) as res:
+            self.response_validator(res)
+            return res.content
 
     # とにかくテキストを音声に変換する。
     # * +text+ - 音声に変換する文字列。
@@ -101,7 +112,7 @@ class VoiceVox:
         target_style_id: int = 2,
         morph_rate: float = 0.5,
     ) -> bytes:
-        res = requests.post(
+        with self.session.post(
             url=f"{self.base_url}/synthesis_morphing",
             params={
                 f"base_{self.style_id_key}": base_style_id,
@@ -110,27 +121,31 @@ class VoiceVox:
             },
             headers={"Content-Type": "application/json"},
             data=query.model_dump_json(),
-        )
-        self.response_validator(res)
-        return res.content
+            timeout=self.HTTP_TIMEOUT,
+        ) as res:
+            self.response_validator(res)
+            return res.content
 
     # 話者の一覧を取得。
     # * 戻り値 - 話者一覧の配列。
     def speakers(self) -> list:
-        res = requests.get(url=f"{self.base_url}/speakers")
-        self.response_validator(res)
-        return res.json()
+        with self.session.get(
+            url=f"{self.base_url}/speakers", timeout=self.HTTP_TIMEOUT
+        ) as res:
+            self.response_validator(res)
+            return res.json()
 
     # 話者の追加情報を取得。
     # * +speaker_uuid+ - 話者のUUID。+speakers+メソッドで得られる...はず。
     # * 戻り値 - 話者の詳細情報の連想配列。
     def speaker_info(self, speaker_uuid: str) -> dict:
-        res = requests.get(
+        with self.session.get(
             url=f"{self.base_url}/speaker_info",
             params={"speaker_uuid": speaker_uuid},
-        )
-        self.response_validator(res)
-        return res.json()
+            timeout=self.HTTP_TIMEOUT,
+        ) as res:
+            self.response_validator(res)
+            return res.json()
 
     # スタイルIDをキーにして話者名とスタイル名を持つdictを返す。
     def get_speaker_ids(self) -> dict:
@@ -153,23 +168,29 @@ class VoiceVox:
     # サーバエンジンが保持しているプリセットを取得。
     # * 戻り値 - 配列
     def presets(self) -> list:
-        res = requests.get(url=f"{self.base_url}/presets")
-        self.response_validator(res)
-        return res.json()
+        with self.session.get(
+            url=f"{self.base_url}/presets", timeout=self.HTTP_TIMEOUT
+        ) as res:
+            self.response_validator(res)
+            return res.json()
 
     # サーバのバージョンを取得。
     # 戻り値 - バージョン文字列
     def version(self) -> str:
-        res = requests.get(url=f"{self.base_url}/version")
-        self.response_validator(res)
-        return res.json()
+        with self.session.get(
+            url=f"{self.base_url}/version", timeout=self.HTTP_TIMEOUT
+        ) as res:
+            self.response_validator(res)
+            return res.json()
 
     # エンジンコアのバージョンを取得。
     # 戻り値 - バージョン文字列の配列
     def core_versions(self) -> list[str]:
-        res = requests.get(url=f"{self.base_url}/core_versions")
-        self.response_validator(res)
-        return res.json()
+        with self.session.get(
+            url=f"{self.base_url}/core_versions", timeout=self.HTTP_TIMEOUT
+        ) as res:
+            self.response_validator(res)
+            return res.json()
 
     def response_validator(self, res: requests.Response) -> bool:
         """通常APIの成功を判定し、異常は安全なHTTP状態だけで通知する。"""

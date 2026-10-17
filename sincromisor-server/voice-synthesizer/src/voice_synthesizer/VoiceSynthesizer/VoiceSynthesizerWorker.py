@@ -35,6 +35,10 @@ class VoiceSynthesizerWorker:
         )
         self.__voicevox_style_id: int = voicevox_style_id
 
+    def close(self) -> None:
+        """合成処理の終了後、接続が所有するHTTPプールを解放する。"""
+        self.__vvox.close()
+
     async def communicate(self, ws: WebSocket) -> None:
         """本文を含む受信全体を出力せず、生成境界へ保持中のIDだけを渡す。"""
         while pack := await ws.receive_bytes():

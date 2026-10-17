@@ -56,6 +56,10 @@ class VoiceCacheManager:
             port=voicevox_port,
         )
 
+    def close(self) -> None:
+        """接続終了を生成器へ伝え、HTTPプールを解放する。"""
+        self.vsynth.close()
+
     def get_voice(
         self,
         vs_request: VoiceSynthesizerRequest,
