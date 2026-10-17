@@ -1,14 +1,14 @@
 id: task-261017221324-pipeline-runtime-causes
 title: パイプライン内部失敗の操作と原因を区別する
 category: failure-diagnostics
-status: open
+status: done
 depends_on:
   - task-261017221322-websocket-close-diagnostics
 superseded_by: null
 review: null
 reviewed_sha: null
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 1
 created_at: 2026-10-17
-closed_at: null
+closed_at: 2026-10-17
 legacy_ids: []

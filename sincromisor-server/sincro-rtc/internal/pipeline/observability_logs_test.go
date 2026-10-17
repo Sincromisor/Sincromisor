@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/coder/websocket"
 	"log/slog"
 	"strings"
@@ -214,7 +215,7 @@ func assertResetLogs(t *testing.T, values string, want []map[string]any) {
 	for index, expected := range want {
 		for key := range got[index] {
 			switch key {
-			case "time", "level", "msg", "stage", "session_id", "peer", "cause", "generation", "operation", "reason", "exception_type", "close_code", "close_reason":
+			case "time", "level", "msg", "stage", "session_id", "peer", "cause", "generation", "operation", "reason", "exception_type", "close_code", "close_reason", "speech_id", "sequence_id":
 			default:
 				t.Fatalf("unexpected reset log field %q: %#v", key, got[index])
 			}
@@ -253,4 +254,44 @@ func pipelineStageLogs(t *testing.T, values string) map[string]map[string]any {
 		}
 	}
 	return stages
+}
+
+func TestRuntimeFailureLogsIdentifyOperationAndPeer(t *testing.T) {
+	for _, tt := range []struct {
+		operation, reason string
+		peer              pclient.Service
+	}{
+		{"validate_extraction", "invalid_data", pclient.ServiceExtractor},
+		{"send_extraction", "write_failed", pclient.ServiceRecognizer},
+		{"publish_audio", "backpressure_timeout", pclient.ServiceSynthesizer},
+	} {
+		t.Run(tt.operation, func(t *testing.T) {
+			var logs bytes.Buffer
+			factory := &fakeFactory{t: t}
+			c, err := newCoordinatorWithHooks(factory, slog.New(slog.NewJSONHandler(&logs, nil)), func(time.Duration) (time.Duration, error) { return 0, nil }, immediateWait)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := c.Start(context.Background(), "runtime-session", "sincro"); err != nil {
+				t.Fatal(err)
+			}
+			set := factory.setAt(t, 0)
+			switch tt.operation {
+			case "validate_extraction":
+				set.extractor.results <- protocol.ExtractorResult{SessionID: "wrong-secret", SpeechID: 7, SequenceID: 1}
+			case "send_extraction":
+				set.recognizer.sendError = errors.New("secret-write-error")
+				set.extractor.results <- protocol.ExtractorResult{SessionID: "runtime-session", SpeechID: 7, SequenceID: 1}
+			case "publish_audio":
+				for range outputQueueCapacity {
+					c.synthOut <- Output[protocol.SynthesizerResult]{}
+				}
+				set.synth.results <- protocol.SynthesizerResult{SpeechID: 7}
+			}
+			waitFor(t, func() bool { return factory.count() == 2 })
+			_ = c.Close()
+			assertResetLogs(t, logs.String(), []map[string]any{{"session_id": "runtime-session", "generation": float64(1), "peer": string(tt.peer), "operation": tt.operation, "reason": tt.reason, "speech_id": float64(7)}})
+			assertLogDoesNotContain(t, logs.String(), "wrong-secret", "secret-write-error")
+		})
+	}
 }

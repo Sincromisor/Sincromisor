@@ -119,12 +119,16 @@ func (c *fakeExtractor) Results() <-chan protocol.ExtractorResult { return c.res
 func (c *fakeExtractor) Events() <-chan pclient.Event             { return c.events }
 
 type fakeRecognizer struct {
+	sendError    error
 	results      chan protocol.RecognizerResult
 	events       chan pclient.Event
 	onExtraction func(protocol.ExtractorResult)
 }
 
 func (c *fakeRecognizer) SendExtraction(_ context.Context, value protocol.ExtractorResult) error {
+	if c.sendError != nil {
+		return c.sendError
+	}
 	c.onExtraction(value)
 	return nil
 }

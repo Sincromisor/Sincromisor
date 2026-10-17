@@ -220,6 +220,8 @@ llamaのJSONLの`time`は経過時間なので、中央の発生時刻にはDock
 
 `pipeline_connect_failed`は`peer`、`connect_stage`（`resolve` / `dial` / `initialize` / `activate`）、安全な原因、`session_id`、`generation`、1起点の`attempt`、実際の`retry_delay_ms`を記録する。`pipeline_connect_result`は成功・失敗・取消、試行数と`duration_ms`を残し、`initial`で初回と再接続を区別する。公開前に終了イベントを受けた場合は後続の取消よりその最初の原因を優先する。
 
+内部処理の再初期化は`cause=runtime_error`を維持し、`operation`で検証・次段送信・文字出力・音声出力を区別する。`reason`は`invalid_data` / `write_failed` / `backpressure_timeout`、`peer`は失敗した段階の相手とし、保持中の発話IDを添える。認識器への送信失敗を抽出器の失敗とせず、通常取消は新しい障害に数えない。
+
 ## 音声生成
 
 `SINCRO_LOG_SYNTHESIS_ENABLED`は対話設定と独立し、VoiceSynthesizerとVectorの再作成で反映する。

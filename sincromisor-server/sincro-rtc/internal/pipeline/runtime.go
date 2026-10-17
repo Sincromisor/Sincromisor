@@ -16,7 +16,7 @@ func (c *Coordinator) pcmLoop(work *generationWork, extractor ExtractorClient) {
 			return
 		}
 		if err := extractor.SendPCM(work.ctx, frame); err != nil {
-			c.requestReset(work.number, pclient.ServiceExtractor, resetCauseRuntimeError)
+			c.runtimeFailure(work, pclient.ServiceExtractor, "send_pcm", "write_failed")
 			return
 		}
 	}
@@ -31,15 +31,16 @@ func (c *Coordinator) extractorLoop(work *generationWork, extractor ExtractorCli
 			if !ok {
 				return
 			}
-			value, current, err := c.acceptExtraction(work.number, work.conv, value)
+			accepted, current, err := c.acceptExtraction(work.number, work.conv, value)
 			if !current {
 				continue
 			}
-			if err == nil {
-				err = recognizer.SendExtraction(work.ctx, value)
-			}
 			if err != nil {
-				c.requestReset(work.number, pclient.ServiceExtractor, resetCauseRuntimeError)
+				c.runtimeFailure(work, pclient.ServiceExtractor, "validate_extraction", "invalid_data", "speech_id", value.SpeechID, "sequence_id", value.SequenceID)
+				return
+			}
+			if err := recognizer.SendExtraction(work.ctx, accepted); err != nil {
+				c.runtimeFailure(work, pclient.ServiceRecognizer, "send_extraction", "write_failed", "speech_id", value.SpeechID, "sequence_id", value.SequenceID)
 				return
 			}
 		}
@@ -59,7 +60,7 @@ func (c *Coordinator) recognizerLoop(work *generationWork, recognizer Recognizer
 				continue
 			}
 			if _, err := work.conv.acceptRecognition(value); err != nil {
-				c.requestReset(work.number, pclient.ServiceRecognizer, resetCauseRuntimeError)
+				c.runtimeFailure(work, pclient.ServiceRecognizer, "validate_recognition", "invalid_data", "speech_id", value.SpeechID)
 				return
 			}
 			// 段階ログは照合用IDと完了状態だけを保持する。認識、会話、音声の内容を
@@ -69,11 +70,11 @@ func (c *Coordinator) recognizerLoop(work *generationWork, recognizer Recognizer
 				"speech_id", value.SpeechID, "confirmed", value.Confirmed)
 			message := work.conv.recognitionMessage(value)
 			if message.MessageID == "" {
-				c.requestReset(work.number, pclient.ServiceRecognizer, resetCauseRuntimeError)
+				c.runtimeFailure(work, pclient.ServiceRecognizer, "recognition_message", "invalid_data", "speech_id", value.SpeechID)
 				return
 			}
 			if err := c.publishText(work.number, pclient.ServiceRecognizer, message); err != nil {
-				c.requestReset(work.number, pclient.ServiceRecognizer, resetCauseRuntimeError)
+				c.runtimeFailure(work, pclient.ServiceRecognizer, "publish_text", "backpressure_timeout", "speech_id", value.SpeechID)
 				return
 			}
 			c.mu.Lock()
@@ -88,7 +89,7 @@ func (c *Coordinator) recognizerLoop(work *generationWork, recognizer Recognizer
 			}
 			work.conv.rememberRequest(request)
 			if err := processor.SendRequest(work.ctx, request); err != nil {
-				c.requestReset(work.number, pclient.ServiceProcessor, resetCauseRuntimeError)
+				c.runtimeFailure(work, pclient.ServiceProcessor, "send_request", "write_failed", "speech_id", value.SpeechID)
 				return
 			}
 			c.logger.Info("pipeline stage reached",
@@ -112,7 +113,7 @@ func (c *Coordinator) processorLoop(work *generationWork, processor ProcessorCli
 			}
 			_, final, err := work.conv.validateProcessor(value)
 			if err != nil {
-				c.requestReset(work.number, pclient.ServiceProcessor, resetCauseRuntimeError)
+				c.runtimeFailure(work, pclient.ServiceProcessor, "validate_processor", "invalid_data", "speech_id", value.ResponseMessage.SpeechID)
 				return
 			}
 			c.logger.Info("pipeline stage reached",
@@ -121,7 +122,7 @@ func (c *Coordinator) processorLoop(work *generationWork, processor ProcessorCli
 				"end_of_response", value.EndOfResponse,
 				"voice_text_present", value.VoiceText != nil && *value.VoiceText != "")
 			if err = c.publishText(work.number, pclient.ServiceProcessor, value.ResponseMessage); err != nil {
-				c.requestReset(work.number, pclient.ServiceProcessor, resetCauseRuntimeError)
+				c.runtimeFailure(work, pclient.ServiceProcessor, "publish_text", "backpressure_timeout", "speech_id", value.ResponseMessage.SpeechID)
 				return
 			}
 			if final {
@@ -131,7 +132,7 @@ func (c *Coordinator) processorLoop(work *generationWork, processor ProcessorCli
 			}
 			if value.VoiceText != nil && *value.VoiceText != "" {
 				if err = synth.SendResult(work.ctx, value); err != nil {
-					c.requestReset(work.number, pclient.ServiceSynthesizer, resetCauseRuntimeError)
+					c.runtimeFailure(work, pclient.ServiceSynthesizer, "send_synthesis", "write_failed", "speech_id", value.ResponseMessage.SpeechID)
 					return
 				}
 			}
@@ -155,7 +156,7 @@ func (c *Coordinator) synthLoop(work *generationWork, synth SynthesizerClient) {
 				"stage", "synthesizer_result_received", "session_id", c.sessionID,
 				"speech_id", value.SpeechID, "confirmed", true)
 			if err := c.publishSynth(work.number, value); err != nil {
-				c.requestReset(work.number, pclient.ServiceSynthesizer, resetCauseRuntimeError)
+				c.runtimeFailure(work, pclient.ServiceSynthesizer, "publish_audio", "backpressure_timeout", "speech_id", value.SpeechID)
 				return
 			}
 		}
