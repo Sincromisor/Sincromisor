@@ -1,14 +1,14 @@
 id: task-261017221323-pipeline-reconnect-attempts
 title: パイプライン再接続の試行と復旧を記録する
 category: failure-diagnostics
-status: open
+status: done
 depends_on:
   - task-261017221322-websocket-close-diagnostics
 superseded_by: null
 review: null
 reviewed_sha: null
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 1
 created_at: 2026-10-17
-closed_at: null
+closed_at: 2026-10-17
 legacy_ids: []

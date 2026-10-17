@@ -6,11 +6,19 @@ import (
 )
 
 // Connect は4 serviceを順に接続し、途中の失敗時は構築済み接続を逆順に閉じる。
-func (f *setFactory) Connect(ctx context.Context, sessionID, talkMode string) (Set, error) {
+func (f *setFactory) Connect(ctx context.Context, sessionID, talkMode string) (result Set, err error) {
 	cfg := DefaultConfig(sessionID, talkMode)
 	connectCtx, cancel := context.WithCancel(ctx)
 	set := &connectionSet{cancel: cancel, closeDone: make(chan struct{})}
-	var err error
+	// 後続のresolve/dialが取消で終わっても、最初の公開前切断を原因として返す。
+	defer func() {
+		set.mu.Lock()
+		defer set.mu.Unlock()
+		if err != nil && set.pending != nil {
+			event := set.pending
+			err = &ConnectError{Peer: event.Service, Operation: "activate", Err: event.Err, Terminal: event}
+		}
+	}()
 	if set.extractor, err = NewExtractor(cfg, f.resolver, f.logger, f.now); err != nil {
 		_ = set.Close()
 		return nil, err
@@ -74,8 +82,10 @@ func (s *connectionSet) watch(service Service, events <-chan Event) {
 			return
 		}
 		if !s.published {
-			copy := event
-			s.pending = &copy
+			if s.pending == nil {
+				copy := event
+				s.pending = &copy
+			}
 			cancel := s.cancel
 			s.mu.Unlock()
 			// 構築中の失敗は後続clientのresolve/dialを中断し、factoryがpartial set全体を逆順に閉じる。
@@ -106,7 +116,7 @@ func (s *connectionSet) Activate(handler func(Event)) error {
 		return errors.New("pipeline client set is already active")
 	}
 	if s.pending != nil {
-		return errors.New("pipeline client failed before activation")
+		return &ConnectError{Peer: s.pending.Service, Operation: "activate", Err: s.pending.Err, Terminal: s.pending}
 	}
 	s.handler = handler
 	s.published = true

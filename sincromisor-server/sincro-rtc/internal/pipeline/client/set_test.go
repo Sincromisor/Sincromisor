@@ -22,8 +22,10 @@ func TestConnectionSetActivationGateClassifiesEvents(t *testing.T) {
 		case <-time.After(time.Second):
 			t.Fatal("building-set event did not cancel the connect attempt")
 		}
-		if err := set.Activate(func(Event) {}); err == nil {
-			t.Fatal("Activate() published a set that failed while building")
+		err := set.Activate(func(Event) {})
+		var failure *ConnectError
+		if !errors.As(err, &failure) || failure.Peer != ServiceExtractor || failure.Operation != "activate" || failure.Terminal == nil || failure.Terminal.Kind != EventRemoteClose {
+			t.Fatalf("activation diagnosis = %#v", failure)
 		}
 		close(events)
 		if err := set.Close(); err != nil {
