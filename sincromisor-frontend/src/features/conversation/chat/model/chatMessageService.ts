@@ -74,16 +74,6 @@ export class ChatMessageService {
         };
     }
 
-    /** React初期描画用に、描画方式を含む件数制限付き履歴を新しい順で返す。 */
-    getMessageViewSnapshot(): ChatMessageViewRecord[] {
-        return [...this.snapshot.messages];
-    }
-
-    /** 初期表示用に、現在のシステムアイコンを返す。 */
-    getSystemIconUrl(): string {
-        return this.snapshot.systemIconUrl;
-    }
-
     /** 同じIDはその位置で更新し、新規IDは履歴の先頭へ追加して通知する。 */
     writeMessage(cMessage: ChatMessage, isHTML: boolean = false): void {
         this.upsertMessageSnapshot(cMessage, isHTML);

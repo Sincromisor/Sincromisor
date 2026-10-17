@@ -30,16 +30,15 @@
 
 ## タスク一覧（自動生成 / 全 48 件）
 
-### open（未完） — 4 件
+### open（未完） — 3 件
 
 | タスク                                                                                                     | タイトル                                  | 判定 | 依存                                                |
 | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ---- | --------------------------------------------------- |
 | [task-261017151032-pause-hidden-debug-view](./task-261017151032-pause-hidden-debug-view/task.md)           | 非表示の診断表示をActivityで休止          | —    | `task-261017151032-separate-debug-tracking-dom`     |
 | [task-261017151032-separate-debug-tracking-dom](./task-261017151032-separate-debug-tracking-dom/task.md)   | 追跡映像と受信音声のDOMを診断表示から分離 | —    | `task-261017151032-stabilize-debug-subscription`    |
-| [task-261017151032-subscribe-chat-store](./task-261017151032-subscribe-chat-store/task.md)                 | チャット表示をサービスの履歴購読へ移行    | —    | `task-261017151032-stabilize-chat-snapshot`         |
 | [task-261017151033-subscribe-media-device-store](./task-261017151033-subscribe-media-device-store/task.md) | 機器一覧のReact同期を外部ストア購読へ移行 | —    | `task-261017151032-stabilize-media-device-snapshot` |
 
-### done（完了） — 44 件
+### done（完了） — 45 件
 
 | タスク                                                                                                                                 | タイトル                                              | 判定    | 依存                                                                                                                                                          |
 | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -85,6 +84,7 @@
 | [task-261017151032-stabilize-chat-snapshot](./task-261017151032-stabilize-chat-snapshot/task.md)                                       | チャット履歴を安定したスナップショットとして公開      | ✅ PASS | —                                                                                                                                                             |
 | [task-261017151032-stabilize-debug-subscription](./task-261017151032-stabilize-debug-subscription/task.md)                             | 診断画面の描画ごとの再購読をなくす                    | ✅ PASS | —                                                                                                                                                             |
 | [task-261017151032-stabilize-media-device-snapshot](./task-261017151032-stabilize-media-device-snapshot/task.md)                       | 機器一覧のスナップショット参照を安定化                | ✅ PASS | —                                                                                                                                                             |
+| [task-261017151032-subscribe-chat-store](./task-261017151032-subscribe-chat-store/task.md)                                             | チャット表示をサービスの履歴購読へ移行                | ✅ PASS | `task-261017151032-stabilize-chat-snapshot`                                                                                                                   |
 | [task-261017151033-remove-settings-pass-through-memo](./task-261017151033-remove-settings-pass-through-memo/task.md)                   | 設定画面の不要なuseMemoを削除                         | ✅ PASS | —                                                                                                                                                             |
 | [task-261017151033-unify-scene-animation-loop](./task-261017151033-unify-scene-animation-loop/task.md)                                 | 通常描画とXR描画をThree.jsのループへ統一              | ✅ PASS | —                                                                                                                                                             |
 

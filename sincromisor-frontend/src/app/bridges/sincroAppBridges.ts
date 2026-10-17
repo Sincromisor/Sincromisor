@@ -19,13 +19,13 @@ export type SincroAppDialogBridge = {
     getSelectedVrmUrl: () => string;
 };
 
-/** チャットの書き込みとReactの初期履歴取得に使う窓口。 */
+/** チャットの書き込みとReactのスナップショット購読に使う窓口。 */
 export type SincroAppChatBridge = {
     writeUnknownUserMessage: (message: string, isHTML?: boolean) => void;
     writeSystemMessage: (message: string, isHTML?: boolean) => void;
     setSystemIcon: (iconUrl: string) => void;
-    getMessageViewSnapshot: () => import("../controller/sincroAppTypes").ChatMessageViewRecord[];
-    getSystemIconUrl: () => string;
+    getSnapshot: () => import("../../features/conversation/chat/model/chatMessageService").ChatMessageSnapshot;
+    subscribeSnapshot: (listener: () => void) => () => void;
 };
 
 /** 診断画面の停止操作と右側パネルの表示・購読を扱う窓口。 */
