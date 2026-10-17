@@ -1,3 +1,5 @@
+import { type IceDiagnosticSummary, iceDiagnosticSummarySchema } from "./iceDiagnosticSummary";
+
 /** 端末診断だけの固定語彙。本文・URL・stack・任意contextは送信形式に持たせない。 */
 export type DiagnosticEvent =
     | "microphone"
@@ -42,13 +44,15 @@ const SESSION_ID = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/i;
 const MAX_PENDING = 64;
 const ENDPOINT = "/api/v1/RTCSignalingServer/diagnostics";
 
-/** HTTP境界で得た操作と状態だけを持つ。本文やURLは受け取らない。 */
-export type SignalingDiagnostic = {
+/** イベントごとの許可属性だけを持つ。session_idの明示省略は非同期収集開始時のIDなしを表す。 */
+export type DiagnosticDetails = {
     operation?: "initial-offer" | "update-offer" | "candidate";
     http_status?: number;
+    ice_summary?: IceDiagnosticSummary;
+    session_id?: string;
 };
 
-type Diagnostic = SignalingDiagnostic & {
+type Diagnostic = DiagnosticDetails & {
     event: DiagnosticEvent;
     reason: string;
     client_time: string;
@@ -116,28 +120,41 @@ export class BrowserDiagnostics {
     }
 
     /** 直前と同じ診断は回数へ集約し、空の待ち行列には新規追加する。本体の応答は待たせない。 */
-    record(event: DiagnosticEvent, reason: string, signaling?: SignalingDiagnostic): void {
+    record(event: DiagnosticEvent, reason: string, details?: DiagnosticDetails): void {
         if (
-            signaling &&
-            (event !== "signaling" ||
-                (signaling.operation !== undefined &&
-                    !["initial-offer", "update-offer", "candidate"].includes(
-                        signaling.operation,
-                    )) ||
-                (signaling.http_status !== undefined &&
-                    (!Number.isInteger(signaling.http_status) ||
-                        signaling.http_status < 100 ||
-                        signaling.http_status > 599)))
+            details &&
+            (((details.operation !== undefined || details.http_status !== undefined) &&
+                event !== "signaling") ||
+                (details.operation !== undefined &&
+                    !["initial-offer", "update-offer", "candidate"].includes(details.operation)) ||
+                (details.http_status !== undefined &&
+                    (!Number.isInteger(details.http_status) ||
+                        details.http_status < 100 ||
+                        details.http_status > 599)))
         )
             return;
+        const parsed =
+            details?.ice_summary === undefined
+                ? undefined
+                : iceDiagnosticSummarySchema.safeParse(details.ice_summary);
+        if (parsed && (event !== "rtc" || !parsed.success)) return;
+        const summary = parsed?.data;
+        // 開始時にIDがなかった収集も、完了時の新しい会話へ付け替えない。
+        const captured = details && "session_id" in details;
+        const sessionId = captured
+            ? details.session_id && SESSION_ID.test(details.session_id)
+                ? details.session_id
+                : undefined
+            : this.sessionId;
         const safeReason = REASONS.has(reason) ? reason : "unknown";
         const last = this.queue[this.queue.length - 1];
         if (
             last?.event === event &&
             last.reason === safeReason &&
-            last.session_id === this.sessionId &&
-            last.operation === signaling?.operation &&
-            last.http_status === signaling?.http_status
+            last.session_id === sessionId &&
+            last.operation === details?.operation &&
+            last.http_status === details?.http_status &&
+            JSON.stringify(last.ice_summary) === JSON.stringify(summary)
         ) {
             last.count = Math.min(1000000, last.count + 1);
         } else if (this.queue.length + this.batch.length < MAX_PENDING) {
@@ -145,10 +162,11 @@ export class BrowserDiagnostics {
                 event,
                 reason: safeReason,
                 client_time: new Date().toISOString(),
-                session_id: this.sessionId,
+                session_id: sessionId,
                 count: 1,
-                operation: signaling?.operation,
-                http_status: signaling?.http_status,
+                operation: details?.operation,
+                http_status: details?.http_status,
+                ice_summary: summary,
             });
         } else {
             this.dropped = Math.min(1000000, this.dropped + 1);
