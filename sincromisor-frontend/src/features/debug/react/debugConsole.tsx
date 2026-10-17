@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from "react";
+import { Activity, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { DebugConsoleManager, type DebugConsoleSnapshot } from "../model/debugConsoleManager";
 import { DebugConsoleTabs } from "./debugConsoleTabs";
@@ -31,8 +31,8 @@ function useDebugConsoleSnapshot(): DebugConsoleSnapshot {
     );
 }
 
-/** 枠・タブ選択・追跡映像・受信音声は常設し、診断の購読を子へ分離する。 */
-export function DebugConsole() {
+/** 枠・タブ選択・映像・音声は常設し、非表示時はActivity内の診断購読だけを休止する。 */
+export function DebugConsole({ isVisible = true }: { isVisible?: boolean }) {
     const [activeTab, setActiveTab] = useState<DebugTabKey>("status");
     const [gazeDetailsRoot, setGazeDetailsRoot] = useState<HTMLDivElement | null>(null);
     const manager = debugConsoleManager;
@@ -54,7 +54,9 @@ export function DebugConsole() {
             <DebugConsoleTabs activeTab={activeTab} onSelect={setActiveTab} />
             <div className="debugConsolePanelSlot">
                 <GazePanel isActive={activeTab === "gaze"} detailsRef={setGazeDetailsRoot} />
-                <DebugConsolePanels activeTab={activeTab} gazeDetailsRoot={gazeDetailsRoot} />
+                <Activity mode={isVisible ? "visible" : "hidden"}>
+                    <DebugConsolePanels activeTab={activeTab} gazeDetailsRoot={gazeDetailsRoot} />
+                </Activity>
                 {/* biome-ignore lint/a11y/useMediaCaption: RTCの受信音声出力であり、字幕トラックは存在しない。 */}
                 <audio id="rtcAudio" autoPlay={true}></audio>
             </div>
@@ -74,21 +76,39 @@ function DebugConsolePanels({
     const manager = debugConsoleManager;
     return (
         <>
-            <StatusPanel snapshot={snapshot} isActive={activeTab === "status"} />
-            <AudioPanel snapshot={snapshot} manager={manager} isActive={activeTab === "audio"} />
-            <RtcPanel snapshot={snapshot} isActive={activeTab === "rtc"} />
-            <MessagesPanel snapshot={snapshot} isActive={activeTab === "messages"} />
-            {gazeDetailsRoot &&
-                createPortal(
-                    <GazeDetails snapshot={snapshot} manager={manager} />,
-                    gazeDetailsRoot,
-                )}
-            <SincroMotionPanel
-                snapshot={snapshot}
-                manager={manager}
-                isActive={activeTab === "sincro"}
-            />
-            <SdpPanel snapshot={snapshot} isActive={activeTab === "sdp"} />
+            <Activity mode={activeTab === "status" ? "visible" : "hidden"}>
+                <StatusPanel snapshot={snapshot} isActive={activeTab === "status"} />
+            </Activity>
+            <Activity mode={activeTab === "audio" ? "visible" : "hidden"}>
+                <AudioPanel
+                    snapshot={snapshot}
+                    manager={manager}
+                    isActive={activeTab === "audio"}
+                />
+            </Activity>
+            <Activity mode={activeTab === "rtc" ? "visible" : "hidden"}>
+                <RtcPanel snapshot={snapshot} isActive={activeTab === "rtc"} />
+            </Activity>
+            <Activity mode={activeTab === "messages" ? "visible" : "hidden"}>
+                <MessagesPanel snapshot={snapshot} isActive={activeTab === "messages"} />
+            </Activity>
+            <Activity mode={activeTab === "gaze" ? "visible" : "hidden"}>
+                {gazeDetailsRoot &&
+                    createPortal(
+                        <GazeDetails snapshot={snapshot} manager={manager} />,
+                        gazeDetailsRoot,
+                    )}
+            </Activity>
+            <Activity mode={activeTab === "sincro" ? "visible" : "hidden"}>
+                <SincroMotionPanel
+                    snapshot={snapshot}
+                    manager={manager}
+                    isActive={activeTab === "sincro"}
+                />
+            </Activity>
+            <Activity mode={activeTab === "sdp" ? "visible" : "hidden"}>
+                <SdpPanel snapshot={snapshot} isActive={activeTab === "sdp"} />
+            </Activity>
         </>
     );
 }
