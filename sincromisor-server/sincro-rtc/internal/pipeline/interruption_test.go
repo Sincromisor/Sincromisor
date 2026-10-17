@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -79,6 +81,12 @@ func TestInterruptionCountsPartialResultsAndSeparatesGenerations(t *testing.T) {
 	waitFor(t, func() bool { return factory.count() == 3 })
 	if err := c.Close(); err != nil {
 		t.Fatal(err)
+	}
+	// 中央結合試験は同じ本番出力を再利用し、件数を手書きしたJSONを作らない。
+	if dir := os.Getenv("SINCRO_DIAGNOSTIC_FIXTURE_DIR"); dir != "" {
+		if err := os.WriteFile(filepath.Join(dir, "go-partial.jsonl"), logs.Bytes(), 0600); err != nil {
+			t.Fatal(err)
+		}
 	}
 	events := interruptionLogs(t, logs.String())
 	if len(events) != 2 {
