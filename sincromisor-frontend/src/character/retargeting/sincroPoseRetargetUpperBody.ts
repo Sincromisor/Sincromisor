@@ -1,4 +1,4 @@
-import { MathUtils } from "three/src/math/MathUtils.js";
+import { MathUtils } from "three";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfileTypes";
 import type { SincroPoseRetargetConfig, SincroPoseRetargetFrame } from "./sincroPoseRetargetTypes";

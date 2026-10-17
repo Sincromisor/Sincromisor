@@ -1,7 +1,4 @@
-import { LinearFilter, RGBFormat, SRGBColorSpace } from "three/src/constants.js";
-import { MathUtils } from "three/src/math/MathUtils.js";
-import { Vector3 } from "three/src/math/Vector3.js";
-import { VideoTexture } from "three/src/textures/VideoTexture.js";
+import { LinearFilter, MathUtils, RGBFormat, SRGBColorSpace, Vector3, VideoTexture } from "three";
 import { frontendLogger } from "../../shared/logging/appLogger";
 
 /* フレーム毎の光源の情報 */

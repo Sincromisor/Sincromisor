@@ -1,5 +1,5 @@
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
-import { Object3D } from "three/src/core/Object3D.js";
+import { Object3D } from "three";
 import { describe, expect, it } from "vitest";
 
 import { createMinimalAvatarMotionProfile } from "../minimalAvatarMotionProfile";

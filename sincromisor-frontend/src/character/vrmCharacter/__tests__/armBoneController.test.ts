@@ -1,9 +1,5 @@
 import type { VRM, VRMHumanBoneName } from "@pixiv/three-vrm";
-import { Object3D } from "three/src/core/Object3D.js";
-import { Timer } from "three/src/core/Timer.js";
-import { Euler } from "three/src/math/Euler.js";
-import { Quaternion } from "three/src/math/Quaternion.js";
-import { Vector3 } from "three/src/math/Vector3.js";
+import { Euler, Object3D, Quaternion, Timer, Vector3 } from "three";
 import { describe, expect, it, vi } from "vitest";
 import {
     buildCharacterBehaviorSnapshot,

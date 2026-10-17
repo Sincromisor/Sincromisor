@@ -1,7 +1,7 @@
 // reason: structure-threshold-exception 既存のフレーム生成・複製・平滑化の対称性を保つ。体幹クォータニオンも同じ複製・補間境界で扱う。
-import { MathUtils } from "three/src/math/MathUtils.js";
-import { Quaternion } from "three/src/math/Quaternion.js";
-import type { Vector3 } from "three/src/math/Vector3.js";
+
+import type { Vector3 } from "three";
+import { MathUtils, Quaternion } from "three";
 import type { SincroArmIkConstraintSnapshot } from "../ik/sincroArmIkConstraint";
 import type { SincroArmIkQuaternion } from "../ik/sincroArmIkSolver";
 import type { SincroArmIkTarget } from "../ik/sincroArmIkTypes";

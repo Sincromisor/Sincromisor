@@ -1,4 +1,4 @@
-import { MathUtils } from "three/src/math/MathUtils.js";
+import { MathUtils } from "three";
 import type { CharacterBehaviorSnapshot } from "../behavior/characterBehaviorTypes";
 import { CHARACTER_IDLE_MOTION_CONFIG } from "./characterMotionConfig";
 

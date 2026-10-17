@@ -3,9 +3,7 @@
  * profile の curl distribution と splay limit を尊重し、per-finger raw landmark rotation は生成しない。
  */
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
-import { MathUtils } from "three/src/math/MathUtils.js";
-import { Quaternion } from "three/src/math/Quaternion.js";
-import { Vector3 } from "three/src/math/Vector3.js";
+import { MathUtils, Quaternion, Vector3 } from "three";
 import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfileTypes";
 import type { VrmNormalizedLocalPose } from "../vrmPose/vrmPoseTypes";

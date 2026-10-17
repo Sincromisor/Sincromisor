@@ -1,6 +1,4 @@
-import { MathUtils } from "three/src/math/MathUtils.js";
-import { Quaternion } from "three/src/math/Quaternion.js";
-import { Vector3 } from "three/src/math/Vector3.js";
+import { MathUtils, Quaternion, Vector3 } from "three";
 import type { SincroArmSide } from "./sincroArmIkTypes";
 
 export type SincroArmIkReachOptions = {

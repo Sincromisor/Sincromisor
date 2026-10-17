@@ -1,6 +1,5 @@
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
-import { Object3D } from "three/src/core/Object3D.js";
-import { Vector3 } from "three/src/math/Vector3.js";
+import { Object3D, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 import type { SincroArmIkVrmSource } from "../sincroArmIkSkeleton";
 import { SincroArmIkSolver } from "../sincroArmIkSolver";

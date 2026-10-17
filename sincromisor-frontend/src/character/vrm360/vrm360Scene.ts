@@ -1,16 +1,17 @@
-import { DoubleSide, SRGBColorSpace } from "three/src/constants.js";
-import { CircleGeometry } from "three/src/geometries/CircleGeometry.js";
-import { SphereGeometry } from "three/src/geometries/SphereGeometry.js";
-import { MeshBasicMaterial } from "three/src/materials/MeshBasicMaterial.js";
-import { MeshStandardMaterial } from "three/src/materials/MeshStandardMaterial.js";
-import type { Vector3 } from "three/src/math/Vector3.js";
-import { Mesh } from "three/src/objects/Mesh.js";
-import { CanvasTexture } from "three/src/textures/CanvasTexture.js";
-import type { VideoTexture } from "three/src/textures/VideoTexture.js";
+import type { Vector3, VideoTexture } from "three";
+import {
+    CanvasTexture,
+    CircleGeometry,
+    DoubleSide,
+    Mesh,
+    MeshBasicMaterial,
+    MeshStandardMaterial,
+    SphereGeometry,
+    SRGBColorSpace,
+} from "three";
 import { LookingGlassXRController } from "../lookingGlass/lookingGlassXrController";
 import { VRMScene, type VRMSceneOptions } from "../scene/vrmScene";
 import { SphereVideo } from "./sphereVideo";
-//import { MathUtils } from "three/src/math/MathUtils.js";
 
 export class VRM360Scene extends VRMScene {
     private readonly sphereVideo: SphereVideo;

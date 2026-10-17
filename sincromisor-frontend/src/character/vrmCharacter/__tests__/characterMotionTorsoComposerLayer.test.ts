@@ -1,5 +1,4 @@
-import { Object3D } from "three/src/core/Object3D.js";
-import { Euler } from "three/src/math/Euler.js";
+import { Euler, Object3D } from "three";
 import { describe, expect, it } from "vitest";
 import type { MinimalAvatarMotionProfile } from "../../avatarProfile/minimalAvatarMotionProfile";
 import { NEUTRAL_POSE_FRAME } from "../../retargeting/sincroPoseRetargetTypes";

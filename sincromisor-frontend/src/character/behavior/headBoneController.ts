@@ -1,9 +1,6 @@
 import type { VRM, VRMHumanBoneName } from "@pixiv/three-vrm";
-import type { PerspectiveCamera } from "three/src/cameras/PerspectiveCamera.js";
-import type { Object3D } from "three/src/core/Object3D.js";
-import { Euler } from "three/src/math/Euler.js";
-import { MathUtils } from "three/src/math/MathUtils.js";
-import { Vector3 } from "three/src/math/Vector3.js";
+import type { Object3D, PerspectiveCamera } from "three";
+import { Euler, MathUtils, Vector3 } from "three";
 import { CharacterGaze } from "../../features/gaze/characterGaze/characterGaze";
 import type { SincroFaceRetargetFrame } from "../retargeting/sincroFaceRetargeter";
 import type { VRMCamera } from "../scene/vrmCamera";

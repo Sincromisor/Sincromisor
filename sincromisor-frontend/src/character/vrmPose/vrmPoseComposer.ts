@@ -1,6 +1,6 @@
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
-import { MathUtils } from "three/src/math/MathUtils.js";
-import type { Quaternion } from "three/src/math/Quaternion.js";
+import type { Quaternion } from "three";
+import { MathUtils } from "three";
 import type { AvatarOptionalBoneCapabilities } from "../avatarProfile/minimalAvatarMotionProfile";
 import {
     armSide,

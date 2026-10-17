@@ -1,5 +1,4 @@
-import type { WebGLRenderer } from "three/src/renderers/WebGLRenderer.js";
-import type { Scene } from "three/src/scenes/Scene.js";
+import type { Scene, WebGLRenderer } from "three";
 import { frontendLogger } from "../../shared/logging/appLogger";
 import {
     disableExternalCanvasPointerEvents,

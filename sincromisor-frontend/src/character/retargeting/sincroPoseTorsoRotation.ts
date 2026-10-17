@@ -1,8 +1,5 @@
 /** 肩・腰の共通基底を中立のXYZ基底との差へ変換する。顔と画面内の中心位置は使わない。 */
-import { Euler } from "three/src/math/Euler.js";
-import { Matrix4 } from "three/src/math/Matrix4.js";
-import { Quaternion } from "three/src/math/Quaternion.js";
-import { Vector3 } from "three/src/math/Vector3.js";
+import { Euler, Matrix4, Quaternion, Vector3 } from "three";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import { estimateCanonicalTorsoFrame } from "../canonical/canonicalTorsoFrameEstimator";
 import { readCanonicalWorldPoint } from "../canonical/canonicalWorldPoint";

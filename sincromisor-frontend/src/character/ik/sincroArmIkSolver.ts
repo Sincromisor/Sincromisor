@@ -1,8 +1,6 @@
 // reason: structure-threshold-exception 既存IK所有者が計測時の親座標と極履歴を管理する。今回の変更は両基準の選択であり、解法と制約処理の大規模な分割は行わない。
-import type { Object3D } from "three/src/core/Object3D.js";
-import { MathUtils } from "three/src/math/MathUtils.js";
-import { Quaternion } from "three/src/math/Quaternion.js";
-import { Vector3 } from "three/src/math/Vector3.js";
+import type { Object3D } from "three";
+import { MathUtils, Quaternion, Vector3 } from "three";
 import {
     SincroArmIkConstraintResolver,
     type SincroArmIkConstraintSnapshot,

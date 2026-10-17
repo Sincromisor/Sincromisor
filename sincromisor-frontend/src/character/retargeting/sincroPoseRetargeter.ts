@@ -1,6 +1,6 @@
 // reason: structure-threshold-exception IK・観測単位の極履歴・表示予測の破棄を一つの既存所有者で調停する。予測と体幹の計算は専用モジュールへ分離する。
 import type { VRM } from "@pixiv/three-vrm";
-import { MathUtils } from "three/src/math/MathUtils.js";
+import { MathUtils } from "three";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import { createAvatarMotionProfile } from "../avatarProfile/avatarMotionProfile";
 import { cloneAvatarMotionProfile } from "../avatarProfile/avatarMotionProfileClone";

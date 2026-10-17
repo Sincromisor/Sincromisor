@@ -1,12 +1,7 @@
 import type { VRM, VRMHumanBoneName } from "@pixiv/three-vrm";
+import type { Object3D, Quaternion } from "three";
+import { Bone, MathUtils, Matrix4, SkinnedMesh, Vector3 } from "three";
 import { CCDIKSolver, type IK } from "three/examples/jsm/animation/CCDIKSolver.js";
-import type { Object3D } from "three/src/core/Object3D.js";
-import { MathUtils } from "three/src/math/MathUtils.js";
-import { Matrix4 } from "three/src/math/Matrix4.js";
-import type { Quaternion } from "three/src/math/Quaternion.js";
-import { Vector3 } from "three/src/math/Vector3.js";
-import { Bone } from "three/src/objects/Bone.js";
-import { SkinnedMesh } from "three/src/objects/SkinnedMesh.js";
 
 export type SincroCcdIkProbeStatus = "ready" | "unsupported" | "failed";
 

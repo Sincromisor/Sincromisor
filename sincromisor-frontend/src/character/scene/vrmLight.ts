@@ -1,6 +1,5 @@
-import { AmbientLight } from "three/src/lights/AmbientLight.js";
-import { DirectionalLight } from "three/src/lights/DirectionalLight.js";
-import type { Vector3 } from "three/src/math/Vector3.js";
+import type { Vector3 } from "three";
+import { AmbientLight, DirectionalLight } from "three";
 
 // VRMシーンの基本照明（指向性ライト + 環境光）。
 // VRM360Scene では SphereVideo 由来の推定ライトへ毎フレームゆるやかに追従させる。

@@ -1,5 +1,4 @@
-import { Euler } from "three/src/math/Euler.js";
-import { Quaternion } from "three/src/math/Quaternion.js";
+import { Euler, Quaternion } from "three";
 import { expect } from "vitest";
 import type { MinimalAvatarMotionProfile } from "../../avatarProfile/minimalAvatarMotionProfile";
 import type { VrmPoseLayer, VrmPoseQuaternion } from "../vrmPoseTypes";

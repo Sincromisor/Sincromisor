@@ -1,7 +1,7 @@
 /** VRMの正規化ボーンを計測し、生成側へThree.jsの参照を含まない値と警告を渡す。 */
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
-import type { Object3D } from "three/src/core/Object3D.js";
-import { Vector3 } from "three/src/math/Vector3.js";
+import type { Object3D } from "three";
+import { Vector3 } from "three";
 import {
     AVATAR_MOTION_PROFILE_BONE_NAMES,
     type AvatarMotionProfile,

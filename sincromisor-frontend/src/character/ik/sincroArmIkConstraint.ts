@@ -1,5 +1,4 @@
-import { MathUtils } from "three/src/math/MathUtils.js";
-import { Vector3 } from "three/src/math/Vector3.js";
+import { MathUtils, Vector3 } from "three";
 import type { ArmPoleState } from "./sincroArmIkPole";
 import type { SincroArmSide } from "./sincroArmIkTypes";
 
