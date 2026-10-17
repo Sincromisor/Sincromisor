@@ -4,8 +4,8 @@ import { noopLogger } from "@mastra/core/logger";
 import type { Processor } from "@mastra/core/processors";
 import { MCPClient } from "@mastra/mcp";
 import { z } from "zod";
+import { failureFields } from "./failureDiagnostics.js";
 import { conversationId, createServiceLogger } from "./logging.js";
-import { failureReason } from "./runtimeDiagnostics.js";
 
 /** ファイルと将来の管理画面で共用する設定境界。実行コードや指示は受け付けない。 */
 export const mcpConfigSchema = z.strictObject({
@@ -46,7 +46,11 @@ export async function readMcpConfig(path: string) {
 	try {
 		data = await readFile(path, "utf8");
 	} catch (error) {
-		if (error instanceof Error && "code" in error && error.code === "ENOENT")
+		if (
+			error instanceof Error &&
+			"code" in error &&
+			error.code === "ENOENT"
+		)
 			return parseMcpConfig({ servers: {} });
 		throw error;
 	}
@@ -130,7 +134,9 @@ export async function connectMcp(
 						const started = performance.now();
 						const sessionId = conversationId({
 							memory: {
-								thread: context?.requestContext?.get("mastra__threadId"),
+								thread: context?.requestContext?.get(
+									"mastra__threadId",
+								),
 							},
 						});
 						const ids = sessionId ? { session_id: sessionId } : {};
@@ -147,29 +153,42 @@ export async function connectMcp(
 								result !== null &&
 								"isError" in result &&
 								result.isError === true;
-							logger.info(failed ? "MCP tool failed" : "MCP tool succeeded", {
-								event: "mcp_tool_finished",
-								...ids,
-								server: id,
-								tool: name,
-								outcome: failed ? "failed" : "success",
-								reason: failed ? "tool_error" : "completed",
-								duration_ms: performance.now() - started,
-							});
+							logger[failed ? "error" : "info"](
+								failed
+									? "MCP tool failed"
+									: "MCP tool succeeded",
+								{
+									event: "mcp_tool_finished",
+									...ids,
+									server: id,
+									tool: name,
+									outcome: failed ? "failed" : "success",
+									reason: failed ? "tool_error" : "completed",
+									duration_ms: performance.now() - started,
+								},
+							);
 							return result;
 						} catch (error) {
+							const fields = failureFields(error);
 							const reason = context?.abortSignal?.aborted
 								? "cancelled"
-								: failureReason(error);
-							logger.warn("MCP tool failed", {
-								event: "mcp_tool_finished",
-								...ids,
-								server: id,
-								tool: name,
-								outcome: reason === "cancelled" ? "cancelled" : "failed",
-								reason,
-								duration_ms: performance.now() - started,
-							});
+								: fields.reason;
+							logger[reason === "cancelled" ? "info" : "error"](
+								"MCP tool failed",
+								{
+									event: "mcp_tool_finished",
+									...ids,
+									server: id,
+									tool: name,
+									outcome:
+										reason === "cancelled"
+											? "cancelled"
+											: "failed",
+									...fields,
+									reason,
+									duration_ms: performance.now() - started,
+								},
+							);
 							// MCP側のエラー全文をモデル・Studio・公開ログへ流さない。
 							throw new Error("MCP tool execution failed.");
 						}
@@ -189,7 +208,8 @@ export async function connectMcp(
 				event: "mcp_discovery_finished",
 				server: id,
 				outcome: "failed",
-				reason: discovery.signal.aborted ? "timeout" : failureReason(error),
+				...failureFields(error),
+				...(discovery.signal.aborted ? { reason: "timeout" } : {}),
 				duration_ms: performance.now() - start,
 			});
 			await client.disconnect();

@@ -27,8 +27,8 @@ AgentServerのfailureReasonは複数の例外をfailed/http_failureへまとめ�
 
 ## 完了条件
 
-- [ ] 503と他のHTTP異常、DB権限・容量エラー、接続拒否をreasonに加えて安全なコードで識別できる。
-- [ ] 親・子ロガーとライブラリ経由でも診断項目が保持され、未知例外のメッセージ・URL・ツール入出力・資格情報が出ない。
+- [x] 503と他のHTTP異常、DB権限・容量エラー、接続拒否をreasonに加えて安全なコードで識別できる。
+- [x] 親・子ロガーとライブラリ経由でも診断項目が保持され、未知例外のメッセージ・URL・ツール入出力・資格情報が出ない。
 
 ## 確認方法
 
@@ -40,3 +40,9 @@ AgentServerのfailureReasonは複数の例外をfailed/http_failureへまとめ�
 - [documents/design/backend/services/agent-server.md](../../../documents/design/backend/services/agent-server.md)
 
 変更したログ項目と意味だけを該当節へ反映する。音声・会話の通信形式や正常処理は変更しない。
+
+## 実施結果
+
+4段までの原因走査を共有し、既知の型・コードと数値HTTP状態を既存LLM・MCP・保存・要求入口へ渡した。親・子PinoとlibSQL内部ConsoleLoggerの転送にも同じ値の選別を適用した。未知のname/codeはunknownとなり、例外本文・URL・ツール内容は渡さない。要求失敗・回復可能な発見失敗・取消のレベルをそれぞれerror・warn・infoへ揃えた。
+
+実Pino JSON、HTTPのLLM代役、MCP代役、実libSQL、原因の深さ・循環・未知値の対象9試験が成功した。分類整理とレベル検査後の対象6件・MCP3件の再実行、npm run check、Biome整形・静的検査が成功した。Biomeの複雑度警告は有限の原因分類と既存MCP実行分岐に残るが、責務の追加分割は不要と判断した。コメント点検: PASS。実LLM・外部MCPは未使用。

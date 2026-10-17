@@ -16,12 +16,12 @@ test("LLMの503・切断とDBの書込拒否を本文なしで分類する", asy
 	const dir = await mkdtemp(join(tmpdir(), "runtime-diagnostics-"));
 	const logger = createServiceLogger(false);
 	const events: Record<string, unknown>[] = [];
-	logger.info =
-		logger.warn =
-		logger.error =
-			(_message, fields = {}) => {
-				events.push(fields);
-			};
+	for (const level of ["info", "warn", "error"] as const) {
+		logger[level] = (_message, fields = {}) => {
+			events.push({ ...fields, level });
+		};
+	}
+
 	routeLibraryConsoleLogs(logger);
 	const db = createClient({ url: `file:${join(dir, "test.db")}` });
 	const storage = new LibSQLStore({ id: "runtime-test", client: db });
@@ -35,7 +35,9 @@ test("LLMの503・切断とDBの書込拒否を本文なしで分類する", asy
 			response.end("private-response-token");
 		} else response.destroy();
 	});
-	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+	await new Promise<void>((resolve) =>
+		server.listen(0, "127.0.0.1", resolve),
+	);
 	const address = server.address();
 	assert(address && typeof address !== "string");
 	const agent = createCharacterAgent({
@@ -55,24 +57,38 @@ test("LLMの503・切断とDBの書込拒否を本文なしで分類する", asy
 			try {
 				const stream = await agent.stream(
 					[{ role: "user", content: "private-request-body" }],
-					{ memory: { thread: `sincromisor:${mode}`, resource: "test" } },
+					{
+						memory: {
+							thread: `sincromisor:${mode}`,
+							resource: "test",
+						},
+					},
 				);
 				await stream.consumeStream();
 			} catch {
 				/* 公開側の失敗伝播を許可し、運用診断を別に確認する。 */
 			}
-			const rows = events.filter((event) => event.event === "llm_request");
+			const rows = events.filter(
+				(event) => event.event === "llm_request",
+			);
 			assert(
 				rows.some((row) => row.outcome === "started"),
 				JSON.stringify(rows),
 			);
 			assert(
-				rows.some((row) => row.outcome === "failed"),
+				rows.some(
+					(row) => row.outcome === "failed" && row.level === "error",
+				),
 				JSON.stringify(rows),
 			);
 			if (mode === "503")
 				assert(
-					rows.some((row) => row.reason === "http_503"),
+					rows.some(
+						(row) =>
+							row.reason === "http_503" &&
+							row.http_status === 503 &&
+							row.exception_type === "AI_APICallError",
+					),
 					JSON.stringify(rows),
 				);
 			assert(!JSON.stringify(rows).includes("private-"));
@@ -90,13 +106,16 @@ test("LLMの503・切断とDBの書込拒否を本文なしで分類する", asy
 				},
 			}),
 		);
-		const rows = events.filter((event) => event.event === "memory_operation");
+		const rows = events.filter(
+			(event) => event.event === "memory_operation",
+		);
 		assert(
 			rows.some(
 				(row) =>
 					row.outcome === "failed" &&
 					row.stage === "write_thread" &&
-					row.reason === "permission_denied",
+					row.reason === "permission_denied" &&
+					row.error_code === "SQLITE_READONLY",
 			),
 			JSON.stringify(rows),
 		);

@@ -18,7 +18,9 @@ test("MCP未設定と無応答の発見失敗でも通常会話用の空集合�
 	assert.deepEqual(empty.tools, {});
 	await empty.disconnect();
 	const server = createServer();
-	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+	await new Promise<void>((resolve) =>
+		server.listen(0, "127.0.0.1", resolve),
+	);
 	const address = server.address();
 	assert(address && typeof address !== "string");
 	try {
@@ -46,12 +48,17 @@ test("MCP設定は不在なら空、秘密は管理者専用ファイルに限�
 	try {
 		assert.deepEqual(await readMcpConfig(path), { servers: {} });
 		assert.throws(
-			() => parseMcpConfig({ servers: { example: { url: "file:///secret" } } }),
+			() =>
+				parseMcpConfig({
+					servers: { example: { url: "file:///secret" } },
+				}),
 			/Invalid MCP configuration/,
 		);
 		assert.throws(() =>
 			parseMcpConfig({
-				servers: { example: { url: "http://localhost", timeoutMs: 30_000 } },
+				servers: {
+					example: { url: "http://localhost", timeoutMs: 30_000 },
+				},
 			}),
 		);
 		await writeFile(path, '{"secret-token":bad-json}', { mode: 0o600 });
@@ -72,7 +79,10 @@ test("MCP設定は不在なら空、秘密は管理者専用ファイルに限�
 		await chmod(path, 0o644);
 		await assert.rejects(readMcpConfig(path), /owner-only permissions/);
 		await chmod(path, 0o600);
-		assert.equal((await readMcpConfig(path)).servers.local?.timeoutMs, 20_000);
+		assert.equal(
+			(await readMcpConfig(path)).servers.local?.timeoutMs,
+			20_000,
+		);
 	} finally {
 		await rm(dir, { recursive: true });
 	}
@@ -82,9 +92,11 @@ test("実MCPの一覧・認証・呼出し・失敗・上限と取消を扱う",
 	const fixture = await startMcpFixture();
 	const logger = createServiceLogger(false);
 	const events: Record<string, unknown>[] = [];
-	logger.info = logger.warn = (_message, fields = {}) => {
-		events.push(fields);
-	};
+	for (const level of ["info", "warn", "error"] as const) {
+		logger[level] = (_message, fields = {}) => {
+			events.push({ ...fields, level });
+		};
+	}
 	const registry = await connectMcp(
 		parseMcpConfig({
 			servers: {
@@ -100,7 +112,9 @@ test("実MCPの一覧・認証・呼出し・失敗・上限と取消を扱う",
 	try {
 		const secret = registry.tools.local_get_secret_word;
 		assert(secret?.execute);
-		assert(!JSON.stringify(secret.inputSchema).includes("fixture-mcp-token"));
+		assert(
+			!JSON.stringify(secret.inputSchema).includes("fixture-mcp-token"),
+		);
 		const result = await secret.execute({}, { observe: noopObserve });
 		assert(JSON.stringify(result).includes("琥珀の月583"));
 		const fail = registry.tools.local_fail;
@@ -131,8 +145,10 @@ test("実MCPの一覧・認証・呼出し・失敗・上限と取消を扱う",
 		assert.equal(finished.length, 4);
 		assert.equal(finished[0].outcome, "success");
 		assert.equal(finished[1].outcome, "failed");
+		assert.equal(finished[1].level, "error");
 		assert.equal(finished[2].reason, "timeout");
 		assert.equal(finished[3].outcome, "cancelled");
+		assert.equal(finished[3].level, "info");
 		assert(
 			finished.every(
 				(event) =>

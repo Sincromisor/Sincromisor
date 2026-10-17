@@ -2,6 +2,7 @@
 
 import { ConsoleLogger } from "@mastra/core/logger";
 import { PinoLogger } from "@mastra/loggers";
+import { failureFields, safeFailureField } from "./failureDiagnostics.js";
 
 const messages = new Set([
 	"Runtime operation",
@@ -34,6 +35,9 @@ const diagnosticKeys = new Set([
 	"reason",
 	"stage",
 	"peer",
+	"exception_type",
+	"error_code",
+	"http_status",
 ]);
 
 /** 本文の主記録元はTextProcessor。第三者の任意属性は診断に必要な項目へ限定する。 */
@@ -70,14 +74,24 @@ export function createServiceLogger(
 			level: (level) => ({ level }),
 			log: (fields) =>
 				Object.fromEntries(
-					Object.entries(fields).filter(
-						([key, value]) =>
-							(diagnosticKeys.has(key) ||
-								(conversationEnabled && key === "text")) &&
-							(typeof value === "string" ||
-								typeof value === "number" ||
-								typeof value === "boolean"),
-					),
+					Object.entries(fields)
+						.map(([key, value]): [string, unknown] =>
+							[
+								"exception_type",
+								"error_code",
+								"http_status",
+							].includes(key)
+								? [key, safeFailureField(key, value)]
+								: [key, value],
+						)
+						.filter(
+							([key, value]) =>
+								(diagnosticKeys.has(key) ||
+									(conversationEnabled && key === "text")) &&
+								(typeof value === "string" ||
+									typeof value === "number" ||
+									typeof value === "boolean"),
+						),
 				),
 		},
 		// 例外や動的メッセージにURL・認証・要求本文が入り得るため、固定文だけを許可する。
@@ -92,7 +106,8 @@ export function createServiceLogger(
 
 /** Pythonが作るthreadだけを会話IDへ戻す。Studioの任意のthread名を本文として記録しない。 */
 export function conversationId(body: unknown): string | undefined {
-	if (typeof body !== "object" || body === null || !("memory" in body)) return;
+	if (typeof body !== "object" || body === null || !("memory" in body))
+		return;
 	const memory = body.memory;
 	if (typeof memory !== "object" || memory === null || !("thread" in memory))
 		return;
@@ -102,11 +117,24 @@ export function conversationId(body: unknown): string | undefined {
 
 /** LibSQL内部の非公開DB層が独自生成するConsoleLoggerも、安全な共通出力へ接続する。
  * 採用版はこの層へloggerを注入できないため公開クラスの出力口だけを置換する。
- * 製品が内部logger注入に対応したらその設定へ移す。任意の引数は渡さない。
+ * 製品が内部logger注入に対応したらその設定へ移す。例外の型・既知コードだけを選び、任意の引数は渡さない。
  */
 export function routeLibraryConsoleLogs(logger: PinoLogger): void {
 	for (const level of ["debug", "info", "warn", "error"] as const) {
-		ConsoleLogger.prototype[level] = () =>
-			logger[level]("Mastra event", { event: "library_log" });
+		ConsoleLogger.prototype[level] = (...args: unknown[]) => {
+			const error =
+				args.find((value) => value instanceof Error) ??
+				args
+					.filter(
+						(value): value is Record<string, unknown> =>
+							typeof value === "object" && value !== null,
+					)
+					.flatMap((value) => [value.error, value.err])
+					.find((value) => value instanceof Error);
+			logger[level]("Mastra event", {
+				event: "library_log",
+				...(error ? failureFields(error) : {}),
+			});
+		};
 	}
 }

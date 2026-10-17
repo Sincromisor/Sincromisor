@@ -3,33 +3,8 @@ import type { Processor } from "@mastra/core/processors";
 import { MASTRA_THREAD_ID_KEY } from "@mastra/core/request-context";
 import type { MemoryStorage } from "@mastra/core/storage";
 import type { PinoLogger } from "@mastra/loggers";
+import { failureFields } from "./failureDiagnostics.js";
 import { conversationId } from "./logging.js";
-
-/** 下位例外の既知コードだけを読む。causeの参照も最大4段で止める。 */
-export function failureReason(error: unknown): string {
-	for (let n = 0; n < 4 && error instanceof Error; n++) {
-		if (error.name === "AbortError") return "cancelled";
-		if (error.name === "TimeoutError") return "timeout";
-		const code = "code" in error ? error.code : undefined;
-		if (
-			["EACCES", "EPERM", "SQLITE_READONLY", "SQLITE_AUTH"].includes(
-				String(code),
-			)
-		)
-			return "permission_denied";
-		if (["ECONNREFUSED", "ECONNRESET", "ENOTFOUND"].includes(String(code)))
-			return "connection_failed";
-		if (["ETIMEDOUT", "UND_ERR_CONNECT_TIMEOUT"].includes(String(code)))
-			return "timeout";
-		if (code === -32001 || code === "REQUEST_TIMEOUT") return "timeout";
-		if (code === "SQLITE_FULL") return "disk_full";
-		if (code === "SQLITE_BUSY") return "busy";
-		if ("statusCode" in error && typeof error.statusCode === "number")
-			return error.statusCode === 503 ? "http_503" : "http_failure";
-		error = error.cause;
-	}
-	return "failed";
-}
 
 /** Pythonの会話threadだけを採用し、Studioの任意名称や内容を識別子へ転用しない。 */
 function threadFields(thread: unknown): Record<string, string> {
@@ -44,17 +19,21 @@ export function modelDiagnostics(logger: PinoLogger) {
 	const finish = (
 		state: Record<string, unknown>,
 		outcome: string,
-		reason: string,
+		fields: Record<string, string | number>,
 	) => {
 		if (state.finished || typeof state.started !== "number") return;
 		state.finished = true;
 		if (typeof state.cleanup === "function") state.cleanup();
-		logger.info("Runtime operation", {
+		logger[
+			fields.reason === "cancelled" || outcome !== "failed"
+				? "info"
+				: "error"
+		]("Runtime operation", {
 			event: "llm_request",
 			peer: "llama_server",
 			stage: "generate",
-			outcome,
-			reason,
+			outcome: fields.reason === "cancelled" ? "cancelled" : outcome,
+			...fields,
 			...threadFields(state.thread),
 			duration_ms: performance.now() - state.started,
 		});
@@ -76,7 +55,8 @@ export function modelDiagnostics(logger: PinoLogger) {
 				outcome: "started",
 				...threadFields(state.thread),
 			});
-			const cancelled = () => finish(state, "cancelled", "cancelled");
+			const cancelled = () =>
+				finish(state, "cancelled", { reason: "cancelled" });
 			abortSignal?.addEventListener("abort", cancelled, { once: true });
 			state.cleanup = () =>
 				abortSignal?.removeEventListener("abort", cancelled);
@@ -84,8 +64,9 @@ export function modelDiagnostics(logger: PinoLogger) {
 		},
 		async processOutputStream({ part, state }) {
 			if (part.type === "error")
-				finish(state, "failed", failureReason(part.payload.error));
-			if (part.type === "abort") finish(state, "cancelled", "remote_abort");
+				finish(state, "failed", failureFields(part.payload.error));
+			if (part.type === "abort")
+				finish(state, "cancelled", { reason: "remote_abort" });
 			return part;
 		},
 		processLLMResponse({ state, chunks }) {
@@ -95,7 +76,7 @@ export function modelDiagnostics(logger: PinoLogger) {
 				state,
 				error ? "failed" : aborted ? "cancelled" : "success",
 				error
-					? failureReason(
+					? failureFields(
 							typeof error.payload === "object" &&
 								error.payload !== null &&
 								"error" in error.payload
@@ -103,12 +84,12 @@ export function modelDiagnostics(logger: PinoLogger) {
 								: undefined,
 						)
 					: aborted
-						? "remote_abort"
-						: "completed",
+						? { reason: "remote_abort" }
+						: { reason: "completed" },
 			);
 		},
 		processAPIError({ error, state }) {
-			finish(state, "failed", failureReason(error));
+			finish(state, "failed", failureFields(error));
 		},
 	} satisfies Processor;
 }
@@ -145,15 +126,20 @@ export function observeMemoryOperations(
 			});
 			return result;
 		} catch (error) {
-			logger.warn("Runtime operation", {
-				event: "memory_operation",
-				peer: "libsql",
-				stage,
-				outcome: "failed",
-				reason: failureReason(error),
-				...ids,
-				duration_ms: performance.now() - started,
-			});
+			const fields = failureFields(error);
+			logger[fields.reason === "cancelled" ? "info" : "error"](
+				"Runtime operation",
+				{
+					event: "memory_operation",
+					peer: "libsql",
+					stage,
+					outcome:
+						fields.reason === "cancelled" ? "cancelled" : "failed",
+					...fields,
+					...ids,
+					duration_ms: performance.now() - started,
+				},
+			);
 			throw error;
 		}
 	};
