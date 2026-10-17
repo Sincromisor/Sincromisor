@@ -37,9 +37,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 17 件）
+## タスク一覧（自動生成 / 全 18 件）
 
-### done（完了） — 17 件
+### done（完了） — 18 件
 
 | タスク                                                                                                               | タイトル                                               | 判定    | 依存                                                                                                                                                                                                                                                                                                                                             |
 | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -60,5 +60,6 @@
 | [task-261017221326-python-library-log-causes](./task-261017221326-python-library-log-causes/task.md)                 | Pythonの第三者ログに安全な原因分類を残す               | ✅ PASS | `task-261017221323-python-failure-classification`                                                                                                                                                                                                                                                                                                |
 | [task-261017221327-disconnect-log-central-acceptance](./task-261017221327-disconnect-log-central-acceptance/task.md) | 切断診断と未完了件数を中央ログで結合確認する           | ✅ PASS | `task-261017221322-pipeline-peer-log-fields`, `task-261017221322-websocket-close-diagnostics`, `task-261017221323-python-websocket-lifecycle`, `task-261017221323-pipeline-reconnect-attempts`, `task-261017221324-pipeline-runtime-causes`, `task-261017221324-synthesis-websocket-delivery`, `task-261017221325-pipeline-interruption-summary` |
 | [task-261017221327-go-panic-source-location](./task-261017221327-go-panic-source-location/task.md)                   | Goの回復したpanicに安全な発生位置を残す                | ✅ PASS | `task-261017221322-websocket-close-diagnostics`, `task-261017221324-pipeline-runtime-causes`                                                                                                                                                                                                                                                     |
+| [task-261018011035-synthesis-keepalive-investigation](./task-261018011035-synthesis-keepalive-investigation/task.md) | 音声合成WebSocketの生存確認タイムアウトを調査する      | ✅ PASS | —                                                                                                                                                                                                                                                                                                                                                |
 
 <!-- AUTOGEN:tasks END -->
