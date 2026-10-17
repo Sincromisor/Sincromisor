@@ -139,6 +139,7 @@ type SincroRightToolFramesProps = {
     controlPanel: ReactElement;
 };
 
+// 両パネルを常設し、診断には表示状態を渡して購読だけを休止する。
 function SincroRightToolFrames({ activePanel, controlPanel }: SincroRightToolFramesProps) {
     return (
         <>
@@ -150,7 +151,7 @@ function SincroRightToolFrames({ activePanel, controlPanel }: SincroRightToolFra
                 onClose={hideRightToolDebugPanel}
                 variant="debug"
             >
-                <DebugConsole />
+                <DebugConsole isVisible={activePanel === "debug"} />
             </RightToolFrame>
             <RightToolFrame
                 id="sincroReactSettingsPanelContainer"
