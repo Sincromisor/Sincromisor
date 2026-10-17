@@ -1,0 +1,13 @@
+id: task-261017195945-nemo-streaming-feasibility
+title: 現行ReazonSpeechでNeMoの逐次認識を利用できるか調査する
+category: backend
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-10-17
+closed_at: null
+legacy_ids: []

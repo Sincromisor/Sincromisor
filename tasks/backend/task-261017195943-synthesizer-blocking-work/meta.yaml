@@ -1,0 +1,14 @@
+id: task-261017195943-synthesizer-blocking-work
+title: 音声合成の同期処理をイベントループから分離する
+category: backend
+status: open
+depends_on:
+  - task-261017195943-voicevox-http-session
+superseded_by: null
+review: APPROVED
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-10-17
+closed_at: null
+legacy_ids: []
