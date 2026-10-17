@@ -55,11 +55,11 @@ func TestStreamingResamplerGoldenResponse(t *testing.T) {
 }
 
 func TestDownmixStereoPreservesMonoAndCancelsOppositeChannels(t *testing.T) {
-	mono := downmixStereo([]int16{1200, 1200, -32000, -32000})
+	mono := downmixStereo([]int16{1200, 1200, -32000, -32000}, make([]int16, 2))
 	if mono[0] != 1200 || mono[1] != -32000 {
 		t.Fatalf("duplicated mono downmix = %v", mono)
 	}
-	opposite := downmixStereo([]int16{32767, -32767, -30000, 30000})
+	opposite := downmixStereo([]int16{32767, -32767, -30000, 30000}, make([]int16, 2))
 	if opposite[0] != 0 || opposite[1] != 0 {
 		t.Fatalf("opposite stereo downmix = %v, want silence", opposite)
 	}
