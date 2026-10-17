@@ -48,7 +48,9 @@ VOICEVOXの中央ログの除去とDocker原本の扱いは[ログ設計](../../
 - `documents/design/backend/services/text-processor.md`
 - `documents/design/archive/legacy-flat/backend_voice_synthesizer.md`
 
-`voice_cache_operation`はRedis/S3の読取・復号・書込を区別し、キー不存在と権限拒否・接続失敗・破損を分ける。会話・発話IDを付け、キー・本文・音声・例外文字列は記録しない。S3読取の生成への代替、保存失敗時の継続、破損キャッシュの例外伝播は従来どおりとする。opusenc/fdkaacの非ゼロ終了・起動不能は共有 `audio_command_failure`で記録する。診断はstderrの先頭64 KiBを固定語彙へ置換し、原文を出さない。コマンドの実行回数や既存の出力取得方法は変えない。
+本文ログ設定によらず、`synthesis_processing`は開始と取得元付きの結果・`duration_ms`を残す。`synthesis_operation`はクエリ作成（`audio_query`）、WAV生成と時刻整形（`synthesis`）、音声変換（`encode`）の結果・所要時間・安全な原因を記録する。
+
+`voice_cache_operation`は読取（復号込み）または書込全体の`duration_ms`を持つ。Redis/S3の読取・復号・書込を区別し、キー不存在と権限拒否・接続失敗・破損を分ける。会話・発話IDを付け、キー・本文・音声・例外文字列は記録しない。S3読取の生成への代替、保存失敗時の継続、破損キャッシュの例外伝播は従来どおりとする。opusenc/fdkaacの非ゼロ終了・起動不能は共有 `audio_command_failure`で記録する。診断はstderrの先頭64 KiBを固定語彙へ置換し、原文を出さない。コマンドの実行回数や既存の出力取得方法は変えない。
 
 ## HTTP接続の所有と待機上限
 

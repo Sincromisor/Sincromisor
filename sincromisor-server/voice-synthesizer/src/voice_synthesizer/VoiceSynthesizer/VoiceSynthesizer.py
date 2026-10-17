@@ -1,6 +1,11 @@
+import logging
 import wave
+from collections.abc import Iterator
+from contextlib import contextmanager
 from io import BytesIO
+from time import perf_counter
 
+from sincro_config.runtime_diagnostics import failure_fields
 from sincro_models import (
     VoiceSynthesizerMora,
     VoiceSynthesizerRequest,
@@ -23,21 +28,54 @@ class VoiceSynthesizer(VoiceVox):
         self.host: str = host
         self.port: int = port
 
-    # テキストを元に音声を生成し、エンコード済み音声と母音タイミングデータをdictにまとめて返す。
-    def generate(self, vs_request: VoiceSynthesizerRequest) -> VoiceSynthesizerResult:
-        query: VoiceVoxQuery = self.audio_query(
-            text=vs_request.message,
-            style_id=vs_request.style_id,
-        )
-        query.prePhonemeLength = vs_request.pre_phoneme_length
-        query.postPhonemeLength = vs_request.post_phoneme_length
-        query = self.query_filter(query)
-        wav: bytes = self.query_synthesis(query, style_id=vs_request.style_id)
-        mora_list: list[VoiceSynthesizerMora] = self.__parse_phrases(query)
-        sp_time: float = self.__wav_speaking_time(wav)
-        enc_result: dict = self.encode(
-            wav, vs_request.audio_format, speech_id=vs_request.speech_id
-        )
+    @contextmanager
+    def __operation(self, stage: str, ids: dict[str, object]) -> Iterator[None]:
+        """生成の一段階を計測する。失敗原因は値を文字列化せず、例外をそのまま返す。"""
+        started = perf_counter()
+        fields: dict[str, object] = {
+            "event": "synthesis_operation",
+            **ids,
+            "stage": stage,
+            "outcome": "success",
+        }
+        try:
+            yield
+        except Exception as error:
+            fields.update(failure_fields(error), outcome="failed")
+            if isinstance(error, self.ProtocolError):
+                fields.update(http_status=error.status_code, reason="http_failure")
+            raise
+        finally:
+            fields["duration_ms"] = (perf_counter() - started) * 1000
+            logging.getLogger("sincro.VoiceSynthesizer").log(
+                logging.WARNING if fields["outcome"] == "failed" else logging.INFO,
+                fields,
+            )
+
+    def generate(
+        self,
+        vs_request: VoiceSynthesizerRequest,
+        *,
+        diagnostic_ids: dict[str, object] | None = None,
+    ) -> VoiceSynthesizerResult:
+        """クエリ、WAVと時刻、変換の順に生成する。診断IDは音声・保存形式へ含めない。"""
+        ids = diagnostic_ids or {"speech_id": vs_request.speech_id}
+        with self.__operation("audio_query", ids):
+            query: VoiceVoxQuery = self.audio_query(
+                text=vs_request.message,
+                style_id=vs_request.style_id,
+            )
+            query.prePhonemeLength = vs_request.pre_phoneme_length
+            query.postPhonemeLength = vs_request.post_phoneme_length
+            query = self.query_filter(query)
+        with self.__operation("synthesis", ids):
+            wav: bytes = self.query_synthesis(query, style_id=vs_request.style_id)
+            mora_list: list[VoiceSynthesizerMora] = self.__parse_phrases(query)
+            sp_time: float = self.__wav_speaking_time(wav)
+        with self.__operation("encode", ids):
+            enc_result: dict = self.encode(
+                wav, vs_request.audio_format, speech_id=vs_request.speech_id
+            )
         return VoiceSynthesizerResult(
             # 元となったメッセージテキスト
             message=vs_request.message,
