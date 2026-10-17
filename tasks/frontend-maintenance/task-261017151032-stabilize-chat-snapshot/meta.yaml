@@ -1,0 +1,13 @@
+id: task-261017151032-stabilize-chat-snapshot
+title: チャット履歴を安定したスナップショットとして公開
+category: frontend-maintenance
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-10-17
+closed_at: 2026-10-17
+legacy_ids: []
