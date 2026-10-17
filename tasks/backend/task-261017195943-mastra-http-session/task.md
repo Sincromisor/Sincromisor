@@ -23,9 +23,9 @@ MastraClient._chatは発話ごとにaiohttp.ClientSessionを生成して閉じ�
 
 ## 完了条件と確認方法
 
-- [ ] 2発話を同じWorkerで処理し、一つのSessionを利用する。HTTP/1.1持続接続を返すローカルサーバーで接続の再利用を確認する。
-- [ ] test_mastra_stream.pyの既存正常・異常終端・取消試験を通し、生成中の切断とcommunicate終了で応答・Sessionの解放を確認する。
-- [ ] 異なるWebSocket接続のthreadが混ざらず、Session生成前の失敗でも未初期化資源をcloseしようとして元の例外を隠さない。
+- [x] 2発話を同じWorkerで処理し、一つのSessionを利用する。HTTP/1.1持続接続を返すローカルサーバーで接続の再利用を確認する。
+- [x] test_mastra_stream.pyの既存正常・異常終端・取消試験を通し、生成中の切断とcommunicate終了で応答・Sessionの解放を確認する。
+- [x] 異なるWebSocket接続のthreadが混ざらず、Session生成前の失敗でも未初期化資源をcloseしようとして元の例外を隠さない。
 
 変更ファイルに対象を絞った整形・静的検査を行う。Pythonはロックに従う環境を使い、環境の再現方法は[task.md](../../../tasks/backend/task-261011152416-update-python-dependencies/task.md)を参照する。
 
@@ -43,3 +43,7 @@ AgentServer側API、認証方式、SSE形式、会話履歴の設計、プロセ
 2026-10-17参照。採用する範囲は各項目に記す。
 
 - [Sessionと接続プールの再利用](https://docs.aiohttp.org/en/stable/client_quickstart.html)。
+
+## 実装・確認結果
+
+MastraClientの接続プールをWorkerのcommunicateが所有し、受信・生成処理を回収してから閉じる。発話ごとの応答解放、SSE終端検証、30秒の接続・無受信上限は維持した。ロック済み検証イメージで既存試験を含む36試験、Ruff・整形・tyが成功した。ローカルHTTP/1.1の2発話で同一TCP接続の再利用、2会話のthreadとSessionの分離、切断・取消・生成前の初期化失敗を確認した。設計とコメントを点検し、通信契約の変更はない。

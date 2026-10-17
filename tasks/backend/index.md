@@ -4,11 +4,10 @@
 
 ## タスク一覧（自動生成 / 全 23 件）
 
-### open（未完） — 11 件
+### open（未完） — 10 件
 
 | タスク                                                                                                           | タイトル                                                | 判定 | 依存                                              |
 | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ---- | ------------------------------------------------- |
-| [task-261017195943-mastra-http-session](./task-261017195943-mastra-http-session/task.md)                         | Mastra向けHTTPセッションを会話接続内で再利用する        | —    | —                                                 |
 | [task-261017195943-recognizer-serial-executor](./task-261017195943-recognizer-serial-executor/task.md)           | 共有NeMoモデルの直列実行を保って認識待ちを分離する      | —    | —                                                 |
 | [task-261017195943-synthesizer-blocking-work](./task-261017195943-synthesizer-blocking-work/task.md)             | 音声合成の同期処理をイベントループから分離する          | —    | `task-261017195943-voicevox-http-session`         |
 | [task-261017195943-voicevox-http-session](./task-261017195943-voicevox-http-session/task.md)                     | VOICEVOXのHTTP接続を再利用し要求待ちを制限する          | —    | —                                                 |
@@ -20,7 +19,7 @@
 | [task-261017195944-synthesizer-model-serialization](./task-261017195944-synthesizer-model-serialization/task.md) | 音声合成モデルの変換をPydanticの標準処理へ集約する      | —    | —                                                 |
 | [task-261017195945-nemo-streaming-feasibility](./task-261017195945-nemo-streaming-feasibility/task.md)           | 現行ReazonSpeechでNeMoの逐次認識を利用できるか調査する  | —    | —                                                 |
 
-### done（完了） — 12 件
+### done（完了） — 13 件
 
 | タスク                                                                                                             | タイトル                                              | 判定    | 依存                                                                                 |
 | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- | ------- | ------------------------------------------------------------------------------------ |
@@ -36,5 +35,6 @@
 | [task-261011152417-update-agent-server-dependencies](./task-261011152417-update-agent-server-dependencies/task.md) | AgentServerのMastra一式と実行環境を更新する           | ✅ PASS | —                                                                                    |
 | [task-261011152417-update-rtc-go-dependencies](./task-261011152417-update-rtc-go-dependencies/task.md)             | RTCのGo依存とGo保守版を更新する                       | ✅ PASS | —                                                                                    |
 | [task-261017195943-extractor-serial-executor](./task-261017195943-extractor-serial-executor/task.md)               | MediaPipeの共有分類器を直列実行して受信待ちを分離する | ✅ PASS | —                                                                                    |
+| [task-261017195943-mastra-http-session](./task-261017195943-mastra-http-session/task.md)                           | Mastra向けHTTPセッションを会話接続内で再利用する      | ✅ PASS | —                                                                                    |
 
 <!-- AUTOGEN:tasks END -->
