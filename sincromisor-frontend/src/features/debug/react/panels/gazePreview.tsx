@@ -1,3 +1,4 @@
+/** CharacterGazeとマーカー制御が保持するDOM。診断の購読・可視性とは独立して常設する。 */
 export function GazePreview() {
     return (
         <div id="characterGaze">

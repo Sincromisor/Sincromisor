@@ -9,6 +9,7 @@ type AudioPanelProps = DebugPanelProps & {
     manager: DebugConsoleManager;
 };
 
+/** 音声の診断値と調整だけを描画する。受信音声DOMは常設のDebugConsoleが所有する。 */
 export function AudioPanel({ snapshot, manager, isActive }: AudioPanelProps) {
     return (
         <section
@@ -29,8 +30,6 @@ export function AudioPanel({ snapshot, manager, isActive }: AudioPanelProps) {
                 />
                 <AudioPanelAdvancedControls audio={snapshot.audio} manager={manager} />
             </div>
-            {/* biome-ignore lint/a11y/useMediaCaption: RTC の受信音声出力であり、対応する字幕トラックは存在しない。 */}
-            <audio id="rtcAudio" autoPlay={true}></audio>
         </section>
     );
 }

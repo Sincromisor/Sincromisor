@@ -1,9 +1,10 @@
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { DebugConsoleManager, type DebugConsoleSnapshot } from "../model/debugConsoleManager";
 import { DebugConsoleTabs } from "./debugConsoleTabs";
 import type { DebugTabKey } from "./debugConsoleTypes";
 import { AudioPanel } from "./panels/audioPanel";
-import { GazePanel } from "./panels/gazePanel";
+import { GazeDetails, GazePanel } from "./panels/gazePanel";
 import { MessagesPanel } from "./panels/messagesPanel";
 import { RtcPanel } from "./panels/rtcPanel";
 import { SdpPanel } from "./panels/sdpPanel";
@@ -30,12 +31,11 @@ function useDebugConsoleSnapshot(): DebugConsoleSnapshot {
     );
 }
 
-// Debug Console は snapshot 購読と panel 選択だけを持つ。
-// 個別の診断表示や tuning 操作は panels 側へ分け、巨大な JSX への再集中を防ぐ。
+/** 枠・タブ選択・追跡映像・受信音声は常設し、診断の購読を子へ分離する。 */
 export function DebugConsole() {
-    const snapshot = useDebugConsoleSnapshot();
     const [activeTab, setActiveTab] = useState<DebugTabKey>("status");
-    const manager = useMemo(() => DebugConsoleManager.getManager(), []);
+    const [gazeDetailsRoot, setGazeDetailsRoot] = useState<HTMLDivElement | null>(null);
+    const manager = debugConsoleManager;
 
     return (
         <div id="debugConsole">
@@ -53,22 +53,42 @@ export function DebugConsole() {
             </header>
             <DebugConsoleTabs activeTab={activeTab} onSelect={setActiveTab} />
             <div className="debugConsolePanelSlot">
-                <StatusPanel snapshot={snapshot} isActive={activeTab === "status"} />
-                <AudioPanel
-                    snapshot={snapshot}
-                    manager={manager}
-                    isActive={activeTab === "audio"}
-                />
-                <RtcPanel snapshot={snapshot} isActive={activeTab === "rtc"} />
-                <MessagesPanel snapshot={snapshot} isActive={activeTab === "messages"} />
-                <GazePanel snapshot={snapshot} manager={manager} isActive={activeTab === "gaze"} />
-                <SincroMotionPanel
-                    snapshot={snapshot}
-                    manager={manager}
-                    isActive={activeTab === "sincro"}
-                />
-                <SdpPanel snapshot={snapshot} isActive={activeTab === "sdp"} />
+                <GazePanel isActive={activeTab === "gaze"} detailsRef={setGazeDetailsRoot} />
+                <DebugConsolePanels activeTab={activeTab} gazeDetailsRoot={gazeDetailsRoot} />
+                {/* biome-ignore lint/a11y/useMediaCaption: RTCの受信音声出力であり、字幕トラックは存在しない。 */}
+                <audio id="rtcAudio" autoPlay={true}></audio>
             </div>
         </div>
+    );
+}
+
+/** スナップショット購読を所有する表示部分。portal先の常設DOMの生存期間は変更しない。 */
+function DebugConsolePanels({
+    activeTab,
+    gazeDetailsRoot,
+}: {
+    activeTab: DebugTabKey;
+    gazeDetailsRoot: HTMLDivElement | null;
+}) {
+    const snapshot = useDebugConsoleSnapshot();
+    const manager = debugConsoleManager;
+    return (
+        <>
+            <StatusPanel snapshot={snapshot} isActive={activeTab === "status"} />
+            <AudioPanel snapshot={snapshot} manager={manager} isActive={activeTab === "audio"} />
+            <RtcPanel snapshot={snapshot} isActive={activeTab === "rtc"} />
+            <MessagesPanel snapshot={snapshot} isActive={activeTab === "messages"} />
+            {gazeDetailsRoot &&
+                createPortal(
+                    <GazeDetails snapshot={snapshot} manager={manager} />,
+                    gazeDetailsRoot,
+                )}
+            <SincroMotionPanel
+                snapshot={snapshot}
+                manager={manager}
+                isActive={activeTab === "sincro"}
+            />
+            <SdpPanel snapshot={snapshot} isActive={activeTab === "sdp"} />
+        </>
     );
 }
