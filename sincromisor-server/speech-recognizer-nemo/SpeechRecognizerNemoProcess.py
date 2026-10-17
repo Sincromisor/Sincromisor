@@ -96,26 +96,29 @@ class SpeechRecognizerNemoProcess:
                     )
                 await ws.accept()
                 current_speech_id = -1
-                current_speech_buffer = np.zeros(0, dtype=np.int16)
+                current_speech_buffer = np.empty(0, dtype=np.int16)
+                used_samples = 0
                 while pack := await ws.receive_bytes():
                     extractor_result = SpeechExtractorResult.from_msgpack(pack)
                     if current_speech_id != extractor_result.speech_id:
                         current_speech_id = extractor_result.speech_id
-                        # voiceのndarrayのフラグwriteableをtrueにしないと、
-                        # torch.from_numpy()で下記の警告が出る。
-                        # 一旦copy()しないとwriteableにできない点にも注意。
-                        # (copy()すると自動的にwritableになる)
-                        # UserWarning: The given NumPy array is not writable,
-                        # and PyTorch does not support non-writable tensors.
-                        # ~~~
-                        # (Triggered internally at ../torch/csrc/utils/tensor_numpy.cpp:206.)
-                        current_speech_buffer = extractor_result.voice.copy()
-                    else:
-                        current_speech_buffer = np.append(
-                            current_speech_buffer,
-                            extractor_result.voice,
+                        used_samples = 0
+                    needed = used_samples + extractor_result.voice.size
+                    if needed > current_speech_buffer.size:
+                        # 容量不足時だけ倍増し、発話内の使用済み音声を移す。
+                        expanded = np.empty(
+                            max(needed, current_speech_buffer.size * 2), dtype=np.int16
                         )
-                        extractor_result.voice = current_speech_buffer
+                        expanded[:used_samples] = current_speech_buffer[:used_samples]
+                        current_speech_buffer = expanded
+                    # 初回も受信bytesを参照せず、認識へ書込み可能な連続配列を渡す。
+                    np.copyto(
+                        current_speech_buffer[used_samples:needed],
+                        extractor_result.voice,
+                        casting="no",
+                    )
+                    used_samples = needed
+                    extractor_result.voice = current_speech_buffer[:used_samples]
                     result: SpeechRecognizerResult = await speech_recognizer.recognize(
                         spe_result=extractor_result, s3_client=s3_client
                     )
