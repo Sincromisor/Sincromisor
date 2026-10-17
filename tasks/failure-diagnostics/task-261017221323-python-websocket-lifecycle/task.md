@@ -27,8 +27,8 @@ SpeechExtractor、SpeechRecognizer、TextProcessor、VoiceSynthesizerのWebSocke
 
 ## 完了条件
 
-- [ ] 全4サービスで同時接続と初回要求前の切断をconnection_idで区別できる。要求受信後の異常には実際に保持する会話IDを付ける。
-- [ ] 正常切断と異常コード、受信・処理・送信の失敗が区別され、cleanupの二次例外で原因ログを失わない。
+- [x] 全4サービスで同時接続と初回要求前の切断をconnection_idで区別できる。要求受信後の異常には実際に保持する会話IDを付ける。
+- [x] 正常切断と異常コード、受信・処理・送信の失敗が区別され、cleanupの二次例外で原因ログを失わない。
 
 ## 確認方法
 
@@ -40,3 +40,11 @@ SpeechExtractor、SpeechRecognizer、TextProcessor、VoiceSynthesizerのWebSocke
 - [documents/design/contracts/audio-pipeline-websocket.md](../../../documents/design/contracts/audio-pipeline-websocket.md)
 
 変更したログ項目と意味だけを該当節へ反映する。音声・会話の通信形式や正常処理は変更しない。
+
+## 実施結果
+
+全4入口とchat/sincro双方の対話ワーカーへ接続内診断を渡し、受信前には接続IDのみ、受信後には保持するIDを記録した。最初の例外と操作を一緒に保持し、後始末取消とWebSocket・S3・合成キャッシュ・Mastra HTTPプールの解放失敗を分離した。
+
+入口の対象pytestは16件、同時失敗・正常終了後の取消・外部取消・HTTPプール解放の試験は5件成功した。既存Extractor受信/分類器と合成回収の試験は10件成功した。変更PythonのRuff（既存PascalCaseモジュール名のN999を除外）と整形確認、共通診断・入口・対話/合成ワーカーのtyが成功した。コメント点検: PASS。
+
+環境制約: sounddeviceのimportが実機器初期化で停止したため、受信・分類器試験ではsounddeviceだけを無効化した。スレッド通知とローカルHTTPの試験はソケット制限を解除して実行した。既存の実HTTP合成2件はホストにopusencがなく失敗し、今回の変更による失敗ではない。実GPU・実マイクは使っていない。

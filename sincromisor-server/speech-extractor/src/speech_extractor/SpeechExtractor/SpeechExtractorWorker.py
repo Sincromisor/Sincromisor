@@ -1,3 +1,5 @@
+"""接続ごとの音声区間と診断を保持し、共有分類器へ判定だけを委ねる。"""
+
 import asyncio
 import logging
 import time
@@ -12,6 +14,7 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import audio
 from mediapipe.tasks.python.audio.audio_classifier import AudioClassifier
 from mediapipe.tasks.python.components import containers
+from sincro_config.websocket_diagnostics import WebSocketDiagnostics
 from sincro_models import SpeechExtractorResult
 
 
@@ -44,7 +47,9 @@ class SpeechExtractorWorker:
         voice_channels: int = 1,
         voice_sampling_rate: int = 16000,
     ) -> None:
+        """会話の音声形式と接続診断を初期化する。分類器の所有者はサービス側である。"""
         self.logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
+        self.diagnostic = WebSocketDiagnostics(self.logger)
         self.session_id: str = session_id
         self.voice_channels: int = voice_channels
         self.voice_sampling_rate: int = voice_sampling_rate
@@ -90,7 +95,11 @@ class SpeechExtractorWorker:
         self,
         ws: WebSocket,
         max_silence_ms: int = 600,
-    ):
+        diagnostic: WebSocketDiagnostics | None = None,
+    ) -> None:
+        """接続の診断状態を共有し、受信・判定・送信を直列に進める。"""
+        self.diagnostic = diagnostic or WebSocketDiagnostics(self.logger)
+        self.diagnostic.ids = {"session_id": self.session_id}
         self.logger.info("Start Extractor.extract.")
         # extractはI/O制御に専念し、状態遷移は__process_audio_chunkへ委譲する。
         state = SpeechExtractorWorker.ExtractState(
@@ -98,12 +107,13 @@ class SpeechExtractorWorker:
         )
 
         async for mic_voice in self.__get_audio_buffer(ws):
-            await self.__process_audio_chunk(
-                ws=ws,
-                state=state,
-                mic_voice=mic_voice,
-                max_silence_ms=max_silence_ms,
-            )
+            with self.diagnostic.operation("process"):
+                await self.__process_audio_chunk(
+                    ws=ws,
+                    state=state,
+                    mic_voice=mic_voice,
+                    max_silence_ms=max_silence_ms,
+                )
         self.logger.info("End Extractor.extract.")
 
     # ===== Input buffering =====
@@ -121,10 +131,10 @@ class SpeechExtractorWorker:
         sample_count = 0
 
         while True:
-            np_frame: np.ndarray = np.frombuffer(
-                await ws.receive_bytes(),
-                dtype=self.voice_dtype,
-            )
+            with self.diagnostic.operation("receive"):
+                frame = await ws.receive_bytes()
+            with self.diagnostic.operation("decode"):
+                np_frame: np.ndarray = np.frombuffer(frame, dtype=self.voice_dtype)
             chunks.append(np_frame)
             sample_count += np_frame.size
             if sample_count > target_length:
@@ -219,7 +229,11 @@ class SpeechExtractorWorker:
         # 送信時点で確定したvoice/metadataをmsgpack化して下流へ渡す。
         self.__increment_sequence(state.result)
         state.result.confirmed = confirmed
-        await ws.send_bytes(state.result.to_msgpack())
+        self.diagnostic.ids.update(
+            speech_id=state.result.speech_id, sequence_id=state.result.sequence_id
+        )
+        with self.diagnostic.operation("send"):
+            await ws.send_bytes(state.result.to_msgpack())
         state.result.clear_voice()
         if confirmed:
             self.__finish_speech(state)

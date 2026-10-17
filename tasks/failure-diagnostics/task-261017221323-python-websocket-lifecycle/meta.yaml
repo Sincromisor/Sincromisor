@@ -1,14 +1,14 @@
 id: task-261017221323-python-websocket-lifecycle
 title: Python音声サービスの接続終了を識別可能にする
 category: failure-diagnostics
-status: open
+status: done
 depends_on:
   - task-261017221323-python-failure-classification
 superseded_by: null
 review: null
 reviewed_sha: null
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 2
 created_at: 2026-10-17
-closed_at: null
+closed_at: 2026-10-17
 legacy_ids: []

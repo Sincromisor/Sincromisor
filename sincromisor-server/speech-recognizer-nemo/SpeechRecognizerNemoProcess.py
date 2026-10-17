@@ -1,5 +1,6 @@
 """共通JSONL設定でHTTP状態確認と音声パイプラインのWebSocket境界を起動する。"""
 
+import asyncio
 import logging
 import logging.config
 from functools import partial
@@ -8,7 +9,7 @@ from threading import Event
 
 import numpy as np
 import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket
 from fastapi.responses import JSONResponse
 from setproctitle import setproctitle
 from sincro_config import (
@@ -17,6 +18,7 @@ from sincro_config import (
     ServiceDiscoveryReporter,
     SincromisorLoggerConfig,
 )
+from sincro_config.websocket_diagnostics import WebSocketDiagnostics
 from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
 from speech_recognizer_nemo.models import SpeechRecognizerNemoProcessArgument
 from speech_recognizer_nemo.recognizer_execution import RecognizerExecution
@@ -24,6 +26,7 @@ from speech_recognizer_nemo.SpeechRecognizerNemo import SpeechRecognizerNemoWork
 from speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerS3Client import (
     SpeechRecognizerS3Client,
 )
+from starlette.websockets import WebSocketState
 
 setproctitle("SPRecognizer")
 args: SpeechRecognizerNemoProcessArgument = (
@@ -75,8 +78,10 @@ class SpeechRecognizerNemoProcess:
 
         @app.websocket("/api/v1/SpeechRecognizer/recognize")
         async def websocket_chat_endpoint(ws: WebSocket) -> None:
+            """接続単位の診断と後始末を所有し、要求処理の主原因を保持する。"""
             # 本文を持つ要求の処理はワーカーへ委ね、ここでは接続の生存期間を管理する。
-            self.__logger.info("Connected Websocket.")
+            diagnostic = WebSocketDiagnostics(self.__logger)
+            diagnostic.start()
             self.__sessions += 1
             s3_client: SpeechRecognizerS3Client | None = None
             try:
@@ -94,49 +99,77 @@ class SpeechRecognizerNemoProcess:
                         access_key=self.__args.s3_access_key,
                         secret_key=self.__args.s3_secret_key,
                     )
-                await ws.accept()
+                with diagnostic.operation("accept"):
+                    await ws.accept()
                 current_speech_id = -1
                 current_speech_buffer = np.empty(0, dtype=np.int16)
                 used_samples = 0
-                while pack := await ws.receive_bytes():
-                    extractor_result = SpeechExtractorResult.from_msgpack(pack)
-                    if current_speech_id != extractor_result.speech_id:
-                        current_speech_id = extractor_result.speech_id
-                        used_samples = 0
-                    needed = used_samples + extractor_result.voice.size
-                    if needed > current_speech_buffer.size:
-                        # 容量不足時だけ倍増し、発話内の使用済み音声を移す。
-                        expanded = np.empty(
-                            max(needed, current_speech_buffer.size * 2), dtype=np.int16
+                while True:
+                    with diagnostic.operation("receive"):
+                        pack = await ws.receive_bytes()
+                    if not pack:
+                        break
+                    with diagnostic.operation("decode"):
+                        extractor_result = SpeechExtractorResult.from_msgpack(pack)
+                    diagnostic.ids = {
+                        "session_id": extractor_result.session_id,
+                        "speech_id": extractor_result.speech_id,
+                        "sequence_id": extractor_result.sequence_id,
+                    }
+                    with diagnostic.operation("process"):
+                        if current_speech_id != extractor_result.speech_id:
+                            current_speech_id = extractor_result.speech_id
+                            used_samples = 0
+                        needed = used_samples + extractor_result.voice.size
+                        if needed > current_speech_buffer.size:
+                            # 容量不足時だけ倍増し、発話内の使用済み音声を移す。
+                            expanded = np.empty(
+                                max(needed, current_speech_buffer.size * 2),
+                                dtype=np.int16,
+                            )
+                            expanded[:used_samples] = current_speech_buffer[
+                                :used_samples
+                            ]
+                            current_speech_buffer = expanded
+                        # 初回も受信bytesを参照せず、認識へ書込み可能な連続配列を渡す。
+                        np.copyto(
+                            current_speech_buffer[used_samples:needed],
+                            extractor_result.voice,
+                            casting="no",
                         )
-                        expanded[:used_samples] = current_speech_buffer[:used_samples]
-                        current_speech_buffer = expanded
-                    # 初回も受信bytesを参照せず、認識へ書込み可能な連続配列を渡す。
-                    np.copyto(
-                        current_speech_buffer[used_samples:needed],
-                        extractor_result.voice,
-                        casting="no",
-                    )
-                    used_samples = needed
-                    extractor_result.voice = current_speech_buffer[:used_samples]
-                    result: SpeechRecognizerResult = await speech_recognizer.recognize(
-                        spe_result=extractor_result, s3_client=s3_client
-                    )
-                    await ws.send_bytes(result.to_msgpack())
-            except WebSocketDisconnect:
-                self.__logger.info("Disconnected WebSocket.")
-            except Exception:
-                self.__logger.exception("WebSocket processing failed.")
+                        used_samples = needed
+                        extractor_result.voice = current_speech_buffer[:used_samples]
+                        with diagnostic.operation("process"):
+                            result: SpeechRecognizerResult = (
+                                await speech_recognizer.recognize(
+                                    spe_result=extractor_result, s3_client=s3_client
+                                )
+                            )
+                    with diagnostic.operation("send"):
+                        await ws.send_bytes(result.to_msgpack())
+            except asyncio.CancelledError as error:
+                diagnostic.finish(error)
+                raise
+            except Exception as error:  # noqa: BLE001  # reason: 接続境界で安全な原因を記録し、他接続へ例外を波及させない。
+                diagnostic.finish(error)
+            else:
+                diagnostic.finish()
             finally:
                 if s3_client is not None:
-                    s3_client.close()
+                    try:
+                        s3_client.close()
+                    except Exception as error:  # noqa: BLE001  # reason: 接続境界で安全な原因を記録し、他接続へ例外を波及させない。
+                        diagnostic.cleanup_failed(error)
                 self.__sessions -= 1
-                try:
-                    await ws.close()
-                except RuntimeError:
-                    self.__logger.warning(
-                        "WebSocket is already closed.",
-                    )
+                # 切断済みの接続は再度closeせず、後始末の失敗も主原因と別に記録する。
+                if (
+                    ws.client_state != WebSocketState.DISCONNECTED
+                    and ws.application_state != WebSocketState.DISCONNECTED
+                ):
+                    try:
+                        await ws.close()
+                    except Exception as error:  # noqa: BLE001  # reason: 接続境界で安全な原因を記録し、他接続へ例外を波及させない。
+                        diagnostic.cleanup_failed(error)
 
         speech_recognizer = RecognizerExecution(
             partial(

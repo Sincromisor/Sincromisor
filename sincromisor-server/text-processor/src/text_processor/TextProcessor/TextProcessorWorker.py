@@ -10,6 +10,7 @@ from time import perf_counter
 from fastapi import WebSocket
 from sincro_config import SincromisorLoggerConfig
 from sincro_config.runtime_diagnostics import failure_fields
+from sincro_config.websocket_diagnostics import WebSocketDiagnostics
 from sincro_models import TextProcessorRequest, TextProcessorResult
 
 
@@ -30,23 +31,29 @@ class TextProcessorWorker:
         self.speaker_id: str = "system"
         self.speaker_name: str = "Glorious AI"
 
-    async def communicate(self, ws: WebSocket) -> None:
+    async def communicate(
+        self, ws: WebSocket, diagnostic: WebSocketDiagnostics | None = None
+    ) -> None:
         """確定済み要求を直列処理し、失敗・切断・取消時に両子処理を終了待機する。
 
         WebSocketの受信・送信失敗と応答生成の例外はサービス入口へ伝える。
         要求の到着待ちとHTTP待機のいずれでも、親の取消で後始末まで完了する。
         """
+        self.diagnostic = diagnostic or WebSocketDiagnostics(self.logger)
         requests: asyncio.Queue[bytes] = asyncio.Queue()
         receive_task = asyncio.create_task(self.__receive_requests(ws, requests))
         process_task = asyncio.create_task(self.__process_requests(ws, requests))
         try:
-            done, _ = await asyncio.wait(
-                (receive_task, process_task),
-                return_when=asyncio.FIRST_COMPLETED,
-            )
-            for task in done:
-                task.result()
+            with self.diagnostic.operation("process"):
+                done, _ = await asyncio.wait(
+                    (receive_task, process_task),
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+                for task in done:
+                    task.result()
         finally:
+            # 入口が受ける主原因は確定済み。残る子処理の後始末取消では上書きしない。
+            self.diagnostic.accept_failures = False
             await self.__cancel_all(receive_task, process_task)
 
     async def __receive_requests(
@@ -55,7 +62,11 @@ class TextProcessorWorker:
         requests: asyncio.Queue[bytes],
     ) -> None:
         """受信を継続し、切断を進行中の応答処理へ即時に知らせる。"""
-        while pack := await ws.receive_bytes():
+        while True:
+            with self.diagnostic.operation("receive"):
+                pack = await ws.receive_bytes()
+            if not pack:
+                break
             # ponytail: 応答中の次要求も保持する単純な待ち行列。要求量の上限が必要なら接続ごとの上限制御を追加する。
             requests.put_nowait(pack)
 
@@ -66,9 +77,17 @@ class TextProcessorWorker:
     ) -> None:
         """受信順に要求を処理し、応答中でも受信処理の切断を待たせない。"""
         while True:
-            request = TextProcessorRequest.from_msgpack(pack=await requests.get())
+            pack = await requests.get()
+            with self.diagnostic.operation("decode"):
+                request = TextProcessorRequest.from_msgpack(pack=pack)
+            self.diagnostic.ids = {
+                "session_id": request.session_id,
+                "speech_id": request.request_message.speech_id,
+                "sequence_id": request.sequence_id,
+            }
             if request.confirmed:
-                await self.__process_and_send(ws, request)
+                with self.diagnostic.operation("process"):
+                    await self.__process_and_send(ws, request)
 
     async def __process_and_send(
         self,
@@ -99,7 +118,8 @@ class TextProcessorWorker:
             async with aclosing(self.process_async(request=request)) as responses:
                 async for response in responses:
                     stage = "send"
-                    await ws.send_bytes(response.to_msgpack())
+                    with self.diagnostic.operation("send"):
+                        await ws.send_bytes(response.to_msgpack())
                     stage = "generate"
                     if response_t < 0:
                         response_t = perf_counter()

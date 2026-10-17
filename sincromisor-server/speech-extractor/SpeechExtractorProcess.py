@@ -1,18 +1,21 @@
 """共通JSONL設定でHTTP状態確認と音声パイプラインのWebSocket境界を起動する。"""
 
+import asyncio
 import logging
 import logging.config
 from logging import Logger
 from threading import Event
 
 import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket
 from fastapi.responses import JSONResponse
 from setproctitle import setproctitle
 from sincro_config import ServiceDiscoveryReporter, SincromisorLoggerConfig
+from sincro_config.websocket_diagnostics import WebSocketDiagnostics
 from sincro_models import SpeechExtractorInitializeRequest
 from speech_extractor.models import SpeechExtractorProcessArgument
 from speech_extractor.SpeechExtractor import SpeechExtractorWorker
+from starlette.websockets import WebSocketState
 
 setproctitle("SPExtractor")
 
@@ -60,30 +63,46 @@ class SpeechExtractorProcess:
         async def websocket_chat_endpoint(
             ws: WebSocket, max_silence_ms: int = 600
         ) -> None:
-            self.__logger.info(f"Connected Websocket - max_silence_ms={max_silence_ms}")
+            """初期化要求から会話IDを保持し、抽出接続の終了を一度記録する。"""
+            diagnostic = WebSocketDiagnostics(self.__logger)
+            diagnostic.start()
             self.__sessions += 1
             try:
-                await ws.accept()
-                pack = await ws.receive_bytes()
-                speRequest = SpeechExtractorInitializeRequest.from_msgpack(pack=pack)
+                with diagnostic.operation("accept"):
+                    await ws.accept()
+                with diagnostic.operation("receive"):
+                    pack = await ws.receive_bytes()
+                with diagnostic.operation("decode"):
+                    speRequest = SpeechExtractorInitializeRequest.from_msgpack(
+                        pack=pack
+                    )
+                diagnostic.ids = {"session_id": speRequest.session_id}
                 speechExtractor = SpeechExtractorWorker(
                     session_id=speRequest.session_id,
                     voice_channels=speRequest.voice_channels,
                     voice_sampling_rate=speRequest.voice_sampling_rate,
                 )
-                await speechExtractor.extract(ws=ws, max_silence_ms=max_silence_ms)
-            except WebSocketDisconnect:
-                self.__logger.info("Disconnected WebSocket.")
-            except Exception:
-                self.__logger.exception("WebSocket processing failed.")
+                await speechExtractor.extract(
+                    ws=ws, max_silence_ms=max_silence_ms, diagnostic=diagnostic
+                )
+            except asyncio.CancelledError as error:
+                diagnostic.finish(error)
+                raise
+            except Exception as error:  # noqa: BLE001  # reason: 接続境界で安全な原因を記録し、他接続へ例外を波及させない。
+                diagnostic.finish(error)
+            else:
+                diagnostic.finish()
             finally:
                 self.__sessions -= 1
-                try:
-                    await ws.close()
-                except RuntimeError:
-                    self.__logger.warning(
-                        "WebSocket is already closed.",
-                    )
+                # 切断済みの接続は再度closeせず、後始末の失敗も主原因と別に記録する。
+                if (
+                    ws.client_state != WebSocketState.DISCONNECTED
+                    and ws.application_state != WebSocketState.DISCONNECTED
+                ):
+                    try:
+                        await ws.close()
+                    except Exception as error:  # noqa: BLE001  # reason: 接続境界で安全な原因を記録し、他接続へ例外を波及させない。
+                        diagnostic.cleanup_failed(error)
 
         SpeechExtractorWorker.setup_model()
         try:
