@@ -5,7 +5,7 @@ description = '''
 task.mdに沿って必要最小限の変更を実装・検証し、コミットする。
 '''
 sandbox_mode = "workspace-write"
-model = "gpt-5.6-terra"
+model = "gpt-6.1-sol"
 developer_instructions = '''
 > Codex では sandbox_mode=workspace-write に加え、本文の変更範囲を守ること。
 

@@ -5,7 +5,7 @@ description = '''
 リスクが高いタスク仕様、またはレビューを明示的に求められたタスク仕様を独立してレビューする。実装は変更しない。
 '''
 sandbox_mode = "workspace-write"
-model = "gpt-5.6-terra"
+model = "gpt-6.1-sol"
 developer_instructions = '''
 > Codex では sandbox_mode=workspace-write に加え、本文の変更範囲を守ること。
 
