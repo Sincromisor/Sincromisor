@@ -1,6 +1,10 @@
 package rtc
 
-import "context"
+import (
+	"context"
+
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/diagnostics"
+)
 
 // Go はセッション所有のgoroutineを開始し、後始末で待ち合わせる。panicは回収した値を
 // ログへ出さずに分類し、通常の失敗と同じ一度限りの終了処理へ収束させる。
@@ -19,7 +23,7 @@ func (s *Session) goReserved(stage string, run func(context.Context)) {
 		defer s.wg.Done()
 		defer func() {
 			if recover() != nil {
-				s.logger.Error("session goroutine panic", "session_id", s.id, "stage", stage, "reason", "panic")
+				s.logger.Error("session goroutine panic", "session_id", s.id, "stage", stage, "reason", "panic", "panic_frames", diagnostics.CapturePanic().Frames)
 				_ = s.Close("panic")
 			}
 		}()
@@ -33,7 +37,7 @@ func (s *Session) SafeCallback(stage string, callback func()) func() {
 	return func() {
 		defer func() {
 			if recover() != nil {
-				s.logger.Error("session callback panic", "session_id", s.id, "stage", stage, "reason", "panic")
+				s.logger.Error("session callback panic", "session_id", s.id, "stage", stage, "reason", "panic", "panic_frames", diagnostics.CapturePanic().Frames)
 				_ = s.Close("panic")
 			}
 		}()
@@ -47,7 +51,7 @@ func (s *Session) startCleanup(reason string) {
 	go func() {
 		defer func() {
 			if recover() != nil {
-				s.logger.Error("session cleanup panic", "session_id", s.id, "stage", "cleanup", "reason", "panic")
+				s.logger.Error("session cleanup panic", "session_id", s.id, "stage", "cleanup", "reason", "panic", "panic_frames", diagnostics.CapturePanic().Frames)
 			}
 		}()
 		s.cleanup(reason)

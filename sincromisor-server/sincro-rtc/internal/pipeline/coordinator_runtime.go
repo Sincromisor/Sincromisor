@@ -9,6 +9,7 @@ import (
 
 // ConfigureRuntime はprocess recorderと所有Sessionのpanic callbackをStart前に設定する。
 // 全workerが同一の不変な失敗境界を共有するため、Start後の再設定は拒否する。
+// panicHandlerはrecover中の同じgoroutineで同期呼出しし、通知先で発生位置を取得できる。
 func (c *Coordinator) ConfigureRuntime(observer Observer, panicHandler func(stage string)) error {
 	if observer == nil || panicHandler == nil {
 		return errors.New("pipeline runtime hooks must not be nil")
@@ -52,6 +53,7 @@ func (c *Coordinator) SubmitPCM(frame []byte) error {
 	return nil
 }
 
+// goCoordinator はCoordinator所有workerの終了を待ち合わせ、回復中に所有Sessionへ通知する。
 func (c *Coordinator) goCoordinator(stage string, run func()) {
 	go func() {
 		defer c.wg.Done()
@@ -64,6 +66,7 @@ func (c *Coordinator) goCoordinator(stage string, run func()) {
 	}()
 }
 
+// goWork は世代所有workerを待ち合わせ、panicの終了責務を所有Sessionへ渡す。
 func (c *Coordinator) goWork(work *generationWork, stage string, run func()) {
 	go func() {
 		defer work.wg.Done()
@@ -76,6 +79,7 @@ func (c *Coordinator) goWork(work *generationWork, stage string, run func()) {
 	}()
 }
 
+// goDetached は待ち合わせ対象外の補助処理でも同じ同期panic通知を使う。
 func (c *Coordinator) goDetached(stage string, run func()) {
 	go func() {
 		defer func() {
@@ -87,6 +91,7 @@ func (c *Coordinator) goDetached(stage string, run func()) {
 	}()
 }
 
+// safeCallback は同期callbackのpanicを呼出し元へ戻す前に所有Sessionへ通知する。
 func (c *Coordinator) safeCallback(stage string, run func()) {
 	defer func() {
 		if recover() != nil {

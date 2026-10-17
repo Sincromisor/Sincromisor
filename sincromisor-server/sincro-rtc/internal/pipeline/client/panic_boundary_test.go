@@ -1,7 +1,11 @@
 package client
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"log/slog"
+	"strings"
 	"testing"
 	"time"
 )
@@ -30,6 +34,32 @@ func TestConnectionWorkerStagesRecoverAsTerminalPanic(t *testing.T) {
 			})
 			select {
 			case event := <-client.events:
+				var logs bytes.Buffer
+				slog.New(slog.NewJSONHandler(&logs, nil)).Error("terminal", event.DiagnosticAttrs()...)
+				var row map[string]any
+				if err := json.Unmarshal(logs.Bytes(), &row); err != nil {
+					t.Fatal(err)
+				}
+				if row["reason"] != "panic" || row["operation"] != test.stage {
+					t.Fatal(row)
+				}
+				found := false
+				for _, value := range row["panic_frames"].([]any) {
+					frame := value.(map[string]any)
+					if frame["file"] == "panic_boundary_test.go" && strings.Contains(frame["function"].(string), "TestConnectionWorkerStagesRecoverAsTerminalPanic") && frame["line"].(float64) > 0 {
+						found = true
+					}
+					if strings.Contains(frame["file"].(string), "/") {
+						t.Fatal(frame)
+					}
+				}
+				if !found || strings.Contains(logs.String(), "payload-chat-marker") {
+					t.Fatal(logs.String())
+				}
+				client.terminal("again", EventPanic, event.Err)
+				if len(client.events) != 0 {
+					t.Fatal("duplicate terminal event")
+				}
 				if event.Kind != EventPanic || event.Service != ServiceExtractor {
 					t.Fatalf("panic event = %+v", event)
 				}

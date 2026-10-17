@@ -9,6 +9,8 @@ import (
 	"syscall"
 
 	"github.com/coder/websocket"
+
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/diagnostics"
 )
 
 // DiagnosticAttrs は終端の操作と型を記録し、相手が指定した終了理由は既知値だけに限定する。
@@ -35,9 +37,12 @@ func (e Event) DiagnosticAttrs() []any {
 // URLや相手の本文を含むラップ済みエラーを直接ログへ渡してはならない。
 func FailureAttrs(err error) []any {
 	reason := "failed"
+	var panicErr *diagnostics.Panic
 	var networkError net.Error
 	var closeErr websocket.CloseError
 	switch {
+	case errors.As(err, &panicErr):
+		reason = "panic"
 	case errors.Is(err, context.DeadlineExceeded), errors.As(err, &networkError) && networkError.Timeout():
 		reason = "timeout"
 	case errors.Is(err, context.Canceled):
@@ -54,6 +59,9 @@ func FailureAttrs(err error) []any {
 		reason = "closed"
 	}
 	attrs := []any{"reason", reason}
+	if panicErr != nil {
+		attrs = append(attrs, "panic_frames", panicErr.Frames)
+	}
 	if err != nil {
 		for errors.Unwrap(err) != nil {
 			err = errors.Unwrap(err)

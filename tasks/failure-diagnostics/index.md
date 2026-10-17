@@ -39,14 +39,13 @@
 
 ## タスク一覧（自動生成 / 全 17 件）
 
-### open（未完） — 2 件
+### open（未完） — 1 件
 
 | タスク                                                                                                               | タイトル                                     | 判定 | 依存                                                                                                                                                                                                                                                                                                                                             |
 | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | [task-261017221327-disconnect-log-central-acceptance](./task-261017221327-disconnect-log-central-acceptance/task.md) | 切断診断と未完了件数を中央ログで結合確認する | —    | `task-261017221322-pipeline-peer-log-fields`, `task-261017221322-websocket-close-diagnostics`, `task-261017221323-python-websocket-lifecycle`, `task-261017221323-pipeline-reconnect-attempts`, `task-261017221324-pipeline-runtime-causes`, `task-261017221324-synthesis-websocket-delivery`, `task-261017221325-pipeline-interruption-summary` |
-| [task-261017221327-go-panic-source-location](./task-261017221327-go-panic-source-location/task.md)                   | Goの回復したpanicに安全な発生位置を残す      | —    | `task-261017221322-websocket-close-diagnostics`, `task-261017221324-pipeline-runtime-causes`                                                                                                                                                                                                                                                     |
 
-### done（完了） — 15 件
+### done（完了） — 16 件
 
 | タスク                                                                                                       | タイトル                                               | 判定    | 依存                                                                                           |
 | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------- |
@@ -65,5 +64,6 @@
 | [task-261017221326-browser-ice-failure-summary](./task-261017221326-browser-ice-failure-summary/task.md)     | ICE失敗時の限定した診断値を中央へ送る                  | ✅ PASS | `task-261017221326-browser-signaling-diagnostics`                                              |
 | [task-261017221326-browser-signaling-diagnostics](./task-261017221326-browser-signaling-diagnostics/task.md) | ブラウザー診断へシグナリングの操作とHTTP状態を追加する | ✅ PASS | —                                                                                              |
 | [task-261017221326-python-library-log-causes](./task-261017221326-python-library-log-causes/task.md)         | Pythonの第三者ログに安全な原因分類を残す               | ✅ PASS | `task-261017221323-python-failure-classification`                                              |
+| [task-261017221327-go-panic-source-location](./task-261017221327-go-panic-source-location/task.md)           | Goの回復したpanicに安全な発生位置を残す                | ✅ PASS | `task-261017221322-websocket-close-diagnostics`, `task-261017221324-pipeline-runtime-causes`   |
 
 <!-- AUTOGEN:tasks END -->
