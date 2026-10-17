@@ -4,9 +4,12 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/diagnostics"
 )
 
 func TestCoordinatorWorkerPanicUsesConfiguredSessionBoundary(t *testing.T) {
@@ -19,7 +22,8 @@ func TestCoordinatorWorkerPanicUsesConfiguredSessionBoundary(t *testing.T) {
 	}
 	observer := &recordingPipelineObserver{}
 	recovered := make(chan string, 1)
-	if err := coordinator.ConfigureRuntime(observer, func(stage string) { recovered <- stage }); err != nil {
+	var captured *diagnostics.Panic
+	if err := coordinator.ConfigureRuntime(observer, func(stage string) { captured = diagnostics.CapturePanic(); recovered <- stage }); err != nil {
 		t.Fatal(err)
 	}
 	work := &generationWork{}
@@ -28,6 +32,15 @@ func TestCoordinatorWorkerPanicUsesConfiguredSessionBoundary(t *testing.T) {
 	work.wg.Wait()
 	select {
 	case stage := <-recovered:
+		found := false
+		for _, frame := range captured.Frames {
+			if frame.File == "observability_worker_test.go" && strings.Contains(frame.Function, "TestCoordinatorWorkerPanic") && frame.Line > 0 {
+				found = true
+			}
+		}
+		if !found {
+			t.Fatal(captured.Frames)
+		}
 		if stage != "pipeline_test_stage" {
 			t.Fatalf("panic stage = %q", stage)
 		}

@@ -199,6 +199,7 @@ RTCは標準`slog.JSONHandler`を使い、時刻・レベル・本文キーを�
 再初期化ログは最初に受理した終了イベントの`operation`（`read` / `write` / `decode`）、`reason`、`exception_type`を保持する。受信した終了コードだけを`close_code`へ残し、`close_reason`は採用版websocketsの固定理由`keepalive_ping_timeout`または`unknown`とする。終了コード1000も未完了要求の成功とは扱わない。
 再初期化ログの通信相手は`peer`、`service`は中央収集が付けるCompose上の出力元とする。既存検索で切断元を指定していた`service`は`peer`へ変更する。通常ログは標準出力、起動失敗は標準エラーのJSONLへ出す。
 起動前の引数解析も直接のusage出力を止め、設定値を含み得る例外全文は出さず、`startup_failed`と例外型を残す。
+回復したclient worker・Coordinator worker/callback・Session worker/callbackのpanicは、同じgoroutineで取得した最大32件の`panic_frames`（関数名・ファイル名・行番号）を保持する。clientの終端イベントから再初期化ログへも引き継ぐ。panic値・引数・絶対パス・スタック原文は出力しない。
 Pionなど第三者の非JSON行はVectorが原本の文字列を取り込む。
 
 AgentServerは導入済みMastraのPinoロガーを直接依存として宣言し、整形表示を無効にする。

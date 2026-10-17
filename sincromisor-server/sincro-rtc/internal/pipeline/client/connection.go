@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/coder/websocket"
 
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/diagnostics"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/discovery"
 )
 
@@ -78,7 +78,7 @@ func (c *baseClient) goWorker(stage string, counted bool, run func()) {
 		}
 		defer func() {
 			if recover() != nil {
-				c.terminal(stage, EventPanic, fmt.Errorf("%s worker panic", stage))
+				c.terminal(stage, EventPanic, diagnostics.CapturePanic())
 			}
 		}()
 		run()

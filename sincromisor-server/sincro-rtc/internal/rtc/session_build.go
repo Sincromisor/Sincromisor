@@ -9,6 +9,7 @@ import (
 
 	"github.com/pion/webrtc/v4"
 
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/diagnostics"
 	inputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/input"
 	outputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/output"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/playback"
@@ -78,9 +79,10 @@ func newSession(
 		onClosed: onClosed, lifecycle: lifecycle, ctx: ctx, cancel: cancel,
 		encoder: encoder, done: make(chan struct{}), recorder: recorder,
 	}
+	// 通知はrecoverのdeferから同期呼出しされるため、ここでも発生時のスタックを取得できる。
 	if coordinator != nil {
 		if err := coordinator.ConfigureRuntime(recorder, func(stage string) {
-			logger.Error("pipeline worker panic", "session_id", id, "stage", stage, "reason", "panic")
+			logger.Error("pipeline worker panic", "session_id", id, "stage", stage, "reason", "panic", "panic_frames", diagnostics.CapturePanic().Frames)
 			_ = session.Close("panic")
 		}); err != nil {
 			_ = pc.Close()
@@ -95,7 +97,7 @@ func newSession(
 	}, datachannel.Options{
 		Recorder: recorder,
 		RecoverPanic: func(stage string) {
-			logger.Error("data channel callback panic", "session_id", id, "stage", stage, "reason", "panic")
+			logger.Error("data channel callback panic", "session_id", id, "stage", stage, "reason", "panic", "panic_frames", diagnostics.CapturePanic().Frames)
 			_ = session.Close("panic")
 		},
 	})

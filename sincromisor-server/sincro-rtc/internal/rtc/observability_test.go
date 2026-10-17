@@ -1,8 +1,12 @@
 package rtc
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -119,9 +123,41 @@ func TestSessionRecoverWrappersConvergeOnCloseOnce(t *testing.T) {
 		for _, stage := range kind.stages {
 			t.Run(kind.name+"/"+stage, func(t *testing.T) {
 				manager, session := newManagedLifecycleSession(t, &fakeClock{}, blockingPipelineFactory{})
+				var logs bytes.Buffer
+				session.logger = slog.New(slog.NewJSONHandler(&logs, nil))
 				kind.inject(session, stage)
 				waitSessionDone(t, session)
 				assertClosedSession(t, manager, session, "panic")
+				count := 0
+				for _, line := range strings.Split(strings.TrimSpace(logs.String()), "\n") {
+					var row map[string]any
+					if err := json.Unmarshal([]byte(line), &row); err != nil {
+						t.Fatal(err)
+					}
+					if row["stage"] != stage {
+						continue
+					}
+					count++
+					if row["session_id"] != session.id || row["reason"] != "panic" {
+						t.Fatal(row)
+					}
+					found := false
+					for _, value := range row["panic_frames"].([]any) {
+						frame := value.(map[string]any)
+						if frame["file"] == "observability_test.go" && strings.Contains(frame["function"].(string), "TestSessionRecoverWrappers") && frame["line"].(float64) > 0 {
+							found = true
+						}
+						if strings.Contains(frame["file"].(string), "/") {
+							t.Fatal(frame)
+						}
+					}
+					if !found {
+						t.Fatal(row)
+					}
+				}
+				if count != 1 || strings.Contains(logs.String(), "payload-") {
+					t.Fatal(logs.String())
+				}
 			})
 		}
 	}
