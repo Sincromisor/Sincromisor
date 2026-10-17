@@ -136,32 +136,34 @@ def test_text_expression_steps_and_thread_mapping() -> None:
             worker = MastraTextProcessorWorker(
                 url, "test-token", "sincromisor-character"
             )
-            for _ in range(2):
-                results = [
-                    result.model_copy(deep=True)
-                    async for result in worker.process_async(_request())
-                ]
-                expected = "こんにちは。" + "次。" * 12 + "末尾"
+            async with worker.mastra_client:
+                for _ in range(2):
+                    results = [
+                        result.model_copy(deep=True)
+                        async for result in worker.process_async(_request())
+                    ]
+                    expected = "こんにちは。" + "次。" * 12 + "末尾"
+                    assert (
+                        "".join(result.voice_text or "" for result in results)
+                        == expected
+                    )
+                    assert results[-1].response_message.message == expected
+                    assert results[-1].response_message.expression_code == 2
+                    assert sum(result.end_of_response for result in results) == 1
+                    assert len(results[-1].history.messages) == 3
                 assert (
-                    "".join(result.voice_text or "" for result in results) == expected
+                    requests
+                    == [
+                        {
+                            "messages": [{"role": "user", "content": "新しい質問"}],
+                            "memory": {
+                                "resource": "sincromisor-local",
+                                "thread": "sincromisor:session-a",
+                            },
+                        }
+                    ]
+                    * 2
                 )
-                assert results[-1].response_message.message == expected
-                assert results[-1].response_message.expression_code == 2
-                assert sum(result.end_of_response for result in results) == 1
-                assert len(results[-1].history.messages) == 3
-            assert (
-                requests
-                == [
-                    {
-                        "messages": [{"role": "user", "content": "新しい質問"}],
-                        "memory": {
-                            "resource": "sincromisor-local",
-                            "thread": "sincromisor:session-a",
-                        },
-                    }
-                ]
-                * 2
-            )
 
     asyncio.run(run())
 
@@ -192,16 +194,17 @@ def test_recorded_http_events(name: str) -> None:
             worker = MastraTextProcessorWorker(
                 url, "test-token", "sincromisor-character"
             )
-            try:
-                async for result in worker.process_async(_request()):
-                    results.append(result.model_copy(deep=True))
-            except MastraResponseError:
-                assert name != "normal"
-            else:
-                assert name == "normal"
-            assert any(result.end_of_response for result in results) == (
-                name == "normal"
-            )
+            async with worker.mastra_client:
+                try:
+                    async for result in worker.process_async(_request()):
+                        results.append(result.model_copy(deep=True))
+                except MastraResponseError:
+                    assert name != "normal"
+                else:
+                    assert name == "normal"
+                assert any(result.end_of_response for result in results) == (
+                    name == "normal"
+                )
 
     asyncio.run(run())
 
@@ -245,15 +248,16 @@ def test_invalid_stream_never_finalizes(ending: list[bytes], caplog) -> None:
             worker = MastraTextProcessorWorker(
                 url, "test-token", "sincromisor-character"
             )
+            async with worker.mastra_client:
 
-            async def consume() -> None:
-                async for result in worker.process_async(_request()):
-                    assert not result.end_of_response
+                async def consume() -> None:
+                    async for result in worker.process_async(_request()):
+                        assert not result.end_of_response
 
-            with pytest.raises((MastraResponseError, ValidationError)) as error:
-                await consume()
-            assert "invalid-secret" not in str(error.value)
-            assert "private" not in str(error.value)
+                with pytest.raises((MastraResponseError, ValidationError)) as error:
+                    await consume()
+                assert "invalid-secret" not in str(error.value)
+                assert "private" not in str(error.value)
 
     asyncio.run(run())
     events = [
@@ -272,12 +276,10 @@ def test_timeout_http_failure_and_long_tool_wait(caplog) -> None:
     caplog.set_level("INFO", logger="sincro.MastraClient")
 
     async def read(url: str) -> list[str]:
-        return [
-            text
-            async for text in MastraClient(
-                url, "test-token", "sincromisor-character", timeout_seconds=0.05
-            ).chat("質問", "session")
-        ]
+        async with MastraClient(
+            url, "test-token", "sincromisor-character", timeout_seconds=0.05
+        ) as client:
+            return [text async for text in client.chat("質問", "session")]
 
     async def run() -> None:
         async with _server([], status=503) as (url, _, _):
@@ -346,6 +348,7 @@ def test_websocket_failure_closes_http(failure: str) -> None:
             ):
                 await asyncio.wait_for(task, 1)
             await asyncio.wait_for(disconnected.wait(), 1)
+            assert worker.mastra_client.session.closed
 
     asyncio.run(run())
 
@@ -419,3 +422,82 @@ def test_conversation_logs(monkeypatch, caplog, enabled, outcome, engine):
         else:
             assert not any(event["event"] == "conversation_final" for event in content)
     assert bool(sent) == (outcome == "success")
+
+
+def test_communicate_reuses_connection_and_separates_threads():
+    from aiohttp import web
+
+    async def run():
+        transports = {}
+
+        async def stream(request):
+            body = await request.json()
+            thread = body["memory"]["thread"]
+            transports.setdefault(thread, []).append(request.transport)
+            return web.Response(
+                body=_event("text-delta", {"text": "応答。"}) + FINISH + DONE,
+                content_type="text/event-stream",
+            )
+
+        app = web.Application()
+        app.router.add_post("/api/agents/agent/stream", stream)
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, "127.0.0.1", 0)
+        await site.start()
+        url = f"http://127.0.0.1:{runner.addresses[0][1]}"
+
+        class Socket:
+            def __init__(self, session_id):
+                self.request = _request().model_copy(update={"session_id": session_id})
+                self.received = 0
+                self.finalized = 0
+                self.done = asyncio.Event()
+
+            async def receive_bytes(self):
+                self.received += 1
+                if self.received <= 2:
+                    return self.request.to_msgpack()
+                await self.done.wait()
+                raise WebSocketDisconnect
+
+            async def send_bytes(self, pack):
+                if TextProcessorResult.from_msgpack(pack).end_of_response:
+                    self.finalized += 1
+                    if self.finalized == 2:
+                        self.done.set()
+
+        async def connect(session_id):
+            worker = MastraTextProcessorWorker(url, "token", "agent")
+            with pytest.raises(WebSocketDisconnect):
+                await asyncio.wait_for(worker.communicate(Socket(session_id)), 3)
+            assert worker.mastra_client.session.closed
+            return worker.mastra_client.session
+
+        try:
+            sessions = await asyncio.gather(connect("a"), connect("b"))
+            assert sessions[0] is not sessions[1]
+            assert set(transports) == {"sincromisor:a", "sincromisor:b"}
+            for connections in transports.values():
+                assert len(connections) == 2
+                assert connections[0] is connections[1]
+            assert transports["sincromisor:a"][0] is not transports["sincromisor:b"][0]
+        finally:
+            await runner.cleanup()
+
+    asyncio.run(run())
+
+
+def test_session_creation_failure_is_preserved(monkeypatch):
+    def fail(**_kwargs):
+        raise ValueError("session initialization failed")
+
+    monkeypatch.setattr(aiohttp, "ClientSession", fail)
+
+    async def run():
+        worker = MastraTextProcessorWorker("http://unused", "token", "agent")
+        with pytest.raises(ValueError, match="session initialization failed"):
+            await worker.communicate(None)
+        assert worker.mastra_client.session is None
+
+    asyncio.run(run())

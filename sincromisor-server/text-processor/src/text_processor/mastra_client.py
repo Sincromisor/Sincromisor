@@ -5,6 +5,7 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import aclosing
 from time import perf_counter
+from typing import Self
 from urllib.parse import quote
 
 import aiohttp
@@ -45,7 +46,7 @@ class MastraResponseError(RuntimeError):
 
 
 class MastraClient:
-    """一発話のHTTP接続を所有し、読取り取消時に応答とセッションを閉じる。"""
+    """会話接続内のHTTPプールを所有し、発話単位で応答だけを解放する。"""
 
     def __init__(
         self,
@@ -59,12 +60,23 @@ class MastraClient:
             f"{base_url.rstrip('/')}/api/agents/{quote(agent_id, safe='')}/stream"
         )
         self.api_key = api_key
+        self.session: aiohttp.ClientSession | None = None
         # ツール待ちも無受信時間へ含める。本文が届き続ける生成全体は制限しない。
         self.timeout = aiohttp.ClientTimeout(
             total=None,
             connect=timeout_seconds,
             sock_read=timeout_seconds,
         )
+
+    async def __aenter__(self) -> Self:
+        """WebSocket処理と同じイベントループ上で接続プールを生成する。"""
+        self.session = aiohttp.ClientSession(timeout=self.timeout)
+        return self
+
+    async def __aexit__(self, *_exc: object) -> None:
+        """呼出元が生成処理を回収した後、接続プールを閉じる。"""
+        if self.session is not None:
+            await self.session.close()
 
     async def chat(self, query: str, session_id: str) -> AsyncGenerator[str]:
         """HTTP/SSEの正常終端・取消・失敗を区別し、URL・要求・応答は記録しない。"""
@@ -101,9 +113,10 @@ class MastraClient:
         呼出元は生成器をaclosingで所有する。HTTP失敗・不正イベント・異常終端・
         途中EOFを例外として伝え、取消時も再試行せず接続を解放する。
         """
+        if self.session is None:
+            raise RuntimeError("Mastra client is not open.")
         async with (
-            aiohttp.ClientSession(timeout=self.timeout) as session,
-            session.post(
+            self.session.post(
                 self.url,
                 headers={"Authorization": f"Bearer {self.api_key}"},
                 json={
