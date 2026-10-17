@@ -21,10 +21,13 @@ from voice_synthesizer.VoiceSynthesizer import VoiceCacheManager
 
 @pytest.mark.parametrize("conversation", ["true", "false"])
 @pytest.mark.parametrize("synthesis", ["true", "false"])
-def test_generation_cache_and_failure(monkeypatch, conversation, synthesis):
+@pytest.mark.parametrize("failure_stage", ["audio_query", "synthesis", "encode"])
+def test_generation_cache_and_failure(
+    monkeypatch, conversation, synthesis, failure_stage
+):
     monkeypatch.setenv("SINCRO_LOG_CONVERSATION_ENABLED", conversation)
     monkeypatch.setenv("SINCRO_LOG_SYNTHESIS_ENABLED", synthesis)
-    state = SimpleNamespace(failed=False, calls=0)
+    state = SimpleNamespace(failed=None, calls=0)
     query = {
         "accent_phrases": [],
         "speedScale": 1.1,
@@ -50,7 +53,11 @@ def test_generation_cache_and_failure(monkeypatch, conversation, synthesis):
         def do_POST(self):  # reason: 標準HTTPサーバーのコールバック名
             state.calls += 1
             self.rfile.read(int(self.headers.get("Content-Length", "0")))
-            self.send_response(503 if state.failed else 200)
+            self.send_response(
+                503
+                if state.failed and self.path.startswith("/" + state.failed)
+                else 200
+            )
             self.end_headers()
             self.wfile.write(
                 json.dumps(query).encode()
@@ -101,11 +108,12 @@ def test_generation_cache_and_failure(monkeypatch, conversation, synthesis):
     output = io.StringIO()
     handler = logging.StreamHandler(output)
     handler.setFormatter(JsonLogFormatter())
-    logger = manager.logger
-    previous = logger.level, logger.propagate
-    logger.setLevel(logging.INFO)
-    logger.propagate = False
-    logger.addHandler(handler)
+    loggers = [manager.logger, logging.getLogger("sincro.VoiceSynthesizer")]
+    previous = [(logger.level, logger.propagate) for logger in loggers]
+    for logger in loggers:
+        logger.setLevel(logging.INFO)
+        logger.propagate = False
+        logger.addHandler(handler)
     request = VoiceSynthesizerRequest(
         speech_id=8,
         message="人工本文・青い鳥621",
@@ -128,7 +136,13 @@ def test_generation_cache_and_failure(monkeypatch, conversation, synthesis):
         assert state.calls == 2
         redis_data.clear()
         s3_data.clear()
-        state.failed = True
+        state.failed = failure_stage
+        if failure_stage == "encode":
+
+            def fail_encode(*args, **kwargs):
+                raise FileNotFoundError("private-encoder-path")
+
+            monkeypatch.setattr(manager.vsynth, "encode", fail_encode)
         with pytest.raises(VoiceCacheManager.VoiceSynthesizerServerException):
             manager.get_voice(request, session_id="session-a", sequence_id=2)
         text = output.getvalue()
@@ -137,7 +151,44 @@ def test_generation_cache_and_failure(monkeypatch, conversation, synthesis):
         assert "audio_query?" not in text
         assert "voice" not in events[-1]
         assert events[-1]["outcome"] == "failed"
-        assert events[-1]["http_status"] == 503
+        if failure_stage != "encode":
+            assert events[-1]["http_status"] == 503
+        assert "private-encoder-path" not in text
+        processing = [e for e in events if e["event"] == "synthesis_processing"]
+        assert [e["outcome"] for e in processing] == [
+            "started",
+            "success",
+            "started",
+            "success",
+            "started",
+            "success",
+            "started",
+            "failed",
+        ]
+        assert [e["cache"] for e in processing if e["outcome"] == "success"] == [
+            "generated",
+            "redis",
+            "s3",
+        ]
+        operations = [e for e in events if e["event"] == "synthesis_operation"]
+        assert [e["stage"] for e in operations[:3]] == [
+            "audio_query",
+            "synthesis",
+            "encode",
+        ]
+        assert operations[-1]["stage"] == failure_stage
+        assert operations[-1]["outcome"] == "failed"
+        for event in events:
+            if (
+                event["event"]
+                in {
+                    "synthesis_processing",
+                    "synthesis_operation",
+                    "voice_cache_operation",
+                }
+                and event["outcome"] != "started"
+            ):
+                assert event["duration_ms"] >= 0
         assert all(
             event["session_id"] == "session-a"
             and event["speech_id"] == 8
@@ -162,13 +213,19 @@ def test_generation_cache_and_failure(monkeypatch, conversation, synthesis):
             assert "人工本文" not in text
             assert "人工カナ" not in text
             assert all(
-                event["event"] in {"synthesis_processing", "voice_cache_operation"}
+                event["event"]
+                in {
+                    "synthesis_processing",
+                    "voice_cache_operation",
+                    "synthesis_operation",
+                }
                 for event in events
             )
     finally:
-        logger.removeHandler(handler)
-        logger.setLevel(previous[0])
-        logger.propagate = previous[1]
+        for logger, (level, propagate) in zip(loggers, previous, strict=True):
+            logger.removeHandler(handler)
+            logger.setLevel(level)
+            logger.propagate = propagate
         server.shutdown()
         thread.join()
         server.server_close()

@@ -230,7 +230,7 @@ llamaのJSONLの`time`は経過時間なので、中央の発生時刻にはDock
 有効時は`synthesis_request`と`synthesis_result`へ読み上げ本文、スタイルID、音声形式、実際の生成条件、取得元（`generated` / `redis` / `s3`）、所要時間を記録する。
 結果の生成条件はキャッシュにも保存されたクエリから取り出す。音声本体・モーラ本文・カナはログへ複製しない。
 処理境界で保持する会話・発話・シーケンスIDを付けるが、MessagePackとキャッシュキーは変更しない。
-無効時は`synthesis_processing`の成功・失敗だけを残す。失敗は例外型と取得できるHTTP状態を使い、要求URL・理由句・例外本文を出さない。
+本文設定によらず`synthesis_processing`で開始と成功・失敗を記録し、結果へ取得元と`duration_ms`を付ける。`synthesis_operation`は`audio_query`、`synthesis`（WAVと時刻の整形を含む）、`encode`の結果と所要時間を残す。`voice_cache_operation`の所要時間は読取（復号を含む）または書込全体を表す。失敗は例外型と取得できるHTTP状態を使い、要求URL・理由句・例外本文を出さない。
 
 固定VOICEVOX ENGINE 0.25.2にはアクセスログの本文だけを止める起動設定がない。
 無効時はVectorが`sincro-voicevox`のイベント全体を共通メタデータと固定メッセージへ置換し、認識できるアクセス行からHTTPメソッドと状態だけを残す。
