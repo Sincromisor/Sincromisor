@@ -2,9 +2,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 23 件）
+## タスク一覧（自動生成 / 全 24 件）
 
-### done（完了） — 23 件
+### done（完了） — 24 件
 
 | タスク                                                                                                             | タイトル                                                | 判定    | 依存                                                                                 |
 | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------ |
@@ -31,5 +31,6 @@
 | [task-261017195944-sudachi-tokenizer-reuse](./task-261017195944-sudachi-tokenizer-reuse/task.md)                   | Sudachiの分割モードを生成時に固定し解析領域を再利用する | ✅ PASS | —                                                                                    |
 | [task-261017195944-synthesizer-model-serialization](./task-261017195944-synthesizer-model-serialization/task.md)   | 音声合成モデルの変換をPydanticの標準処理へ集約する      | ✅ PASS | —                                                                                    |
 | [task-261017195945-nemo-streaming-feasibility](./task-261017195945-nemo-streaming-feasibility/task.md)             | 現行ReazonSpeechでNeMoの逐次認識を利用できるか調査する  | ✅ PASS | —                                                                                    |
+| [task-261018011615-synthesis-keepalive-backpressure](./task-261018011615-synthesis-keepalive-backpressure/task.md) | 音声合成WebSocketの受信停止と生存確認の競合を修正する   | ✅ PASS | `task-261018011035-synthesis-keepalive-investigation`                                |
 
 <!-- AUTOGEN:tasks END -->

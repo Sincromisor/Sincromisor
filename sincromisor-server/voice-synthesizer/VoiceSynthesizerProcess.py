@@ -18,6 +18,7 @@ from sincro_config import (
 )
 from sincro_config.websocket_diagnostics import WebSocketDiagnostics
 from starlette.websockets import WebSocketState
+from voice_synthesizer.backpressure_websocket import BackpressureWebSocketProtocol
 from voice_synthesizer.models import VoiceSynthesizerProcessArgument
 from voice_synthesizer.VoiceSynthesizer import VoiceSynthesizerWorker
 
@@ -132,7 +133,11 @@ class VoiceSynthesizerProcess:
 
         try:
             uvicorn.run(
-                app, host=self.__args.host, port=self.__args.port, log_config=None
+                app,
+                host=self.__args.host,
+                port=self.__args.port,
+                log_config=None,
+                ws=BackpressureWebSocketProtocol,
             )
         except KeyboardInterrupt:
             pass
