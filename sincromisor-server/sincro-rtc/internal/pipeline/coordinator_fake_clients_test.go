@@ -151,6 +151,7 @@ func (c *fakeProcessor) Results() <-chan protocol.ProcessorResult { return c.res
 func (c *fakeProcessor) Events() <-chan pclient.Event             { return c.events }
 
 type fakeSynth struct {
+	sendError  error
 	results    chan protocol.SynthesizerResult
 	events     chan pclient.Event
 	onResult   func(protocol.ProcessorResult)
@@ -158,6 +159,9 @@ type fakeSynth struct {
 }
 
 func (c *fakeSynth) SendResult(_ context.Context, value protocol.ProcessorResult) error {
+	if c.sendError != nil {
+		return c.sendError
+	}
 	c.lastResult = value
 	c.onResult(value)
 	return nil

@@ -135,6 +135,7 @@ func (c *Coordinator) processorLoop(work *generationWork, processor ProcessorCli
 					c.runtimeFailure(work, pclient.ServiceSynthesizer, "send_synthesis", "write_failed", "speech_id", value.ResponseMessage.SpeechID)
 					return
 				}
+				work.synthesisSent++
 			}
 		}
 	}
@@ -149,7 +150,7 @@ func (c *Coordinator) synthLoop(work *generationWork, synth SynthesizerClient) {
 			if !ok {
 				return
 			}
-			if !c.isCurrentGeneration(work.number, pclient.ServiceSynthesizer) {
+			if !c.acceptSynthesisResult(work) {
 				continue
 			}
 			c.logger.Info("pipeline stage reached",
@@ -161,6 +162,20 @@ func (c *Coordinator) synthLoop(work *generationWork, synth SynthesizerClient) {
 			}
 		}
 	}
+}
+
+// acceptSynthesisResult は世代判定と受理件数を同じ境界で確定し、遅着を別に数える。
+func (c *Coordinator) acceptSynthesisResult(work *generationWork) bool {
+	c.mu.Lock()
+	current := c.state == StateRunning && c.generation == work.number
+	if current {
+		work.synthesisReceived++
+	}
+	c.mu.Unlock()
+	if !current {
+		c.recordStaleDrop(pclient.ServiceSynthesizer)
+	}
+	return current
 }
 
 func (c *Coordinator) publishText(

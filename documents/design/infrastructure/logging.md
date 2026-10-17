@@ -224,6 +224,8 @@ llamaのJSONLの`time`は経過時間なので、中央の発生時刻にはDock
 
 内部処理の再初期化は`cause=runtime_error`を維持し、`operation`で検証・次段送信・文字出力・音声出力を区別する。`reason`は`invalid_data` / `write_failed` / `backpressure_timeout`、`peer`は失敗した段階の相手とし、保持中の発話IDを添える。認識器への送信失敗を抽出器の失敗とせず、通常取消は新しい障害に数えない。
 
+再初期化の`pipeline_interrupted`は旧世代の処理終了を待って、`synthesis_sent`（TTS送信成功）、`synthesis_received`（現世代での合成結果受理）、`synthesis_unreceived`（差分、下限0）を一度記録する。送信失敗で配送が不確かな要求は成功数へ含めない。`discarded_text`と`discarded_audio`は世代更新時に内部出力キューから実際に取り除いた数であり、消費済み出力・旧世代の遅着とは区別する。件数は世代ごとに初期化し、結果未受信をブラウザーの再生欠落数と解釈しない。
+
 ## 音声生成
 
 `SINCRO_LOG_SYNTHESIS_ENABLED`は対話設定と独立し、VoiceSynthesizerとVectorの再作成で反映する。
