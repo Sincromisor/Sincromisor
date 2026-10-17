@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import {
     buildSincroMediaDeviceSelections,
     type SincroMediaDeviceSelectionState,
@@ -18,26 +18,23 @@ type UseSincroMediaDeviceStateResult = {
     refreshDevices: () => Promise<SincroMediaDeviceSnapshot>;
 };
 
-// React UI 向けに media device service を hook 化する。
-// enumerate と devicechange は service 側、選択済みIDの有効性導出は hook 側で扱う。
+// 取得・購読関数を固定し、再描画による再登録を避ける。
+const service = SincroMediaDeviceService.getInstance();
+const getSnapshot = () => service.getSnapshot();
+const subscribe = (listener: () => void) => service.subscribe(listener);
+const refreshDevices = () => service.refresh();
+
+/** 共有機器サービスを直接購読し、選択済みIDの有効性だけを導出する。 */
 export function useSincroMediaDeviceState(
     params: UseSincroMediaDeviceStateParams = {},
 ): UseSincroMediaDeviceStateResult {
-    const service = SincroMediaDeviceService.getInstance();
-    const [snapshot, setSnapshot] = useState<SincroMediaDeviceSnapshot>(() =>
-        service.getSnapshot(),
-    );
+    const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
     useEffect(() => {
         service.start();
-        const unsubscribe = service.subscribe((nextSnapshot) => {
-            setSnapshot(nextSnapshot);
-        });
         void service.refresh();
-        return () => {
-            unsubscribe();
-        };
-    }, [service]);
+        // 監視は共有サービスが所有するため、画面の取り外しでは停止しない。
+    }, []);
 
     const selections = buildSincroMediaDeviceSelections({
         snapshot,
@@ -49,6 +46,6 @@ export function useSincroMediaDeviceState(
         snapshot,
         audioInputSelection: selections.audioInput,
         videoInputSelection: selections.videoInput,
-        refreshDevices: () => service.refresh(),
+        refreshDevices,
     };
 }
