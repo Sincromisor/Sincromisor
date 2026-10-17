@@ -2,11 +2,13 @@ package output
 
 import (
 	"fmt"
+	medialog "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media"
 	"math"
 
 	pionmedia "github.com/pion/webrtc/v4/pkg/media"
 )
 
+// writeFrame は一枠の符号化・テロップ投入・RTP送信を行い、失敗操作と発話IDを返す。
 func (p *Processor) writeFrame() error {
 	p.sendMu.Lock()
 	defer p.sendMu.Unlock()
@@ -21,16 +23,16 @@ func (p *Processor) writeFrame() error {
 	if pendingDrops > math.MaxUint16 {
 		return fmt.Errorf("outbound dropped slot count %d exceeds Pion packetizer limit", pendingDrops)
 	}
-	frame, telop := p.nextFrame()
+	frame, telop, speechID := p.nextFrame()
 	packet, err := p.encoder.Encode(frame)
 	if err != nil {
 		p.observer.CodecError("encode_out")
 		p.observer.PacingAbort("codec")
-		return err
+		return &medialog.OperationError{Operation: "encode_opus", Err: err, SpeechID: speechID}
 	}
 	if telop != nil && p.telop != nil {
 		if err := p.telop(*telop); err != nil {
-			return fmt.Errorf("enqueue outbound telop: %w", err)
+			return &medialog.OperationError{Operation: "enqueue_telop", Err: fmt.Errorf("enqueue outbound telop: %w", err), SpeechID: speechID}
 		}
 	}
 	if err := p.track.WriteSample(Sample{
@@ -40,7 +42,7 @@ func (p *Processor) writeFrame() error {
 		SamplePosition: samplePosition,
 		RTPTimestamp:   uint32(samplePosition),
 	}); err != nil {
-		return fmt.Errorf("write outbound audio: %w", err)
+		return &medialog.OperationError{Operation: "write_rtp", Err: fmt.Errorf("write outbound audio: %w", err), SpeechID: speechID}
 	}
 	p.observer.AudioFrame("out", "sent")
 	// Pionがdrop metadataを受理した成功点だけでpending countを消費する。
@@ -59,7 +61,8 @@ func (p *Processor) writeFrame() error {
 //
 // frame内で始まるmoraは次frameまで切り替えず、frame開始sampleを含むactive moraだけを返す。
 // 最終audio frameはsilence paddingするが、itemのsample accountingは実PCM分だけを消費する。
-func (p *Processor) nextFrame() ([]int16, *TelopPayload) {
+// 発話IDは最終frameでキューから除去しても診断へ渡し、無音と診断PCMではnilを返す。
+func (p *Processor) nextFrame() ([]int16, *TelopPayload, *int64) {
 	p.mu.Lock()
 	frame := make([]int16, frameSamples)
 	if len(p.echoPCM) > 0 {
@@ -68,11 +71,11 @@ func (p *Processor) nextFrame() ([]int16, *TelopPayload) {
 		copy(p.echoPCM, p.echoPCM[consumed:])
 		p.echoPCM = p.echoPCM[:len(p.echoPCM)-consumed]
 		p.mu.Unlock()
-		return frame, nil
+		return frame, nil, nil
 	}
 	if len(p.queue) == 0 {
 		p.mu.Unlock()
-		return frame, nil
+		return frame, nil, nil
 	}
 	item := p.queue[0]
 	start := item.offset
@@ -108,10 +111,10 @@ func (p *Processor) nextFrame() ([]int16, *TelopPayload) {
 		p.queue = p.queue[1:]
 		p.mu.Unlock()
 		p.observer.QueueDepthDelta("speech", -1)
-		return frame, payload
+		return frame, payload, &item.speech.SpeechID
 	}
 	p.mu.Unlock()
-	return frame, payload
+	return frame, payload, &item.speech.SpeechID
 }
 
 func stringValue(value *string) string {

@@ -226,6 +226,8 @@ llamaのJSONLの`time`は経過時間なので、中央の発生時刻にはDock
 
 再初期化の`pipeline_interrupted`は旧世代の処理終了を待って、`synthesis_sent`（TTS送信成功）、`synthesis_received`（現世代での合成結果受理）、`synthesis_unreceived`（差分、下限0）を一度記録する。送信失敗で配送が不確かな要求は成功数へ含めない。`discarded_text`と`discarded_audio`は世代更新時に内部出力キューから実際に取り除いた数であり、消費済み出力・旧世代の遅着とは区別する。件数は世代ごとに初期化し、結果未受信をブラウザーの再生欠落数と解釈しない。
 
+音声入出力の失敗は`operation`で`read_rtp`、`decode_opus`、`submit_pcm`、`encode_opus`、`write_rtp`、`read_rtcp`を区別し、`session_id`、安全な`exception_type`と固定分類の`reason`を記録する。出力枠が発話を保持するときだけ`speech_id`を付け、無音・入力枠へ推測のIDを付けない。合成音声の復号失敗は受信済みの`generation`も記録する。エラー原文や音声・SDP・候補アドレスは記録しない。入力EOF・取消と既存のセッション終了理由は変更しない。
+
 ## 音声生成
 
 `SINCRO_LOG_SYNTHESIS_ENABLED`は対話設定と独立し、VoiceSynthesizerとVectorの再作成で反映する。

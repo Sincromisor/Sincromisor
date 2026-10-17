@@ -76,6 +76,8 @@
 
 ## 運用ログ
 
+音声入出力の失敗は`operation`で`read_rtp`、`decode_opus`、`submit_pcm`、`encode_opus`、`write_rtp`、`read_rtcp`を区別し、`session_id`、安全な`exception_type`と固定分類の`reason`を記録する。出力枠が発話を保持するときだけ`speech_id`を付け、無音・入力枠へ推測のIDを付けない。合成音声の復号失敗は受信済みの`generation`も記録する。エラー原文や音声・SDP・候補アドレスは記録しない。入力EOF・取消と既存のセッション終了理由は変更しない。
+
 標準slogのJSONLで起動・セッション・終了を記録する。既存のsession_id・stage・reasonは構造付き項目のまま維持する。起動失敗は生の引数や設定値を出さず、共通形式で標準エラーへ残す。
 内容切替と互換性は[ログ基盤](../../infrastructure/logging.md#rtcagentserverllm)を参照する。
 
