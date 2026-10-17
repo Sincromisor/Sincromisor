@@ -1,13 +1,12 @@
-import json
-from typing import Any
-
 import msgpack
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
-from .VoiceVoxQuery import VoiceVoxAccentPhrase, VoiceVoxMora, VoiceVoxQuery
+from .VoiceVoxQuery import VoiceVoxQuery
 
 
 class VoiceSynthesizerMora(BaseModel):
+    """合成音声の母音と継続秒数を保持し、口形の再生へ渡す。"""
+
     # a,i,u,e,o,N
     vowel: str | None = None
     length: float = 0.0
@@ -15,8 +14,7 @@ class VoiceSynthesizerMora(BaseModel):
 
 
 class VoiceSynthesizerResult(BaseModel):
-    # np.ndarrayがメンバにいるとコケる問題対策
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    """音声・クエリ・モーラ時刻を、キャッシュとRTCへの共通形式で保持する。"""
 
     # 発話ごとに割り振られるID。TextProcessorから引き継ぐ。
     # 音声を検知する度に割り当てられる。
@@ -39,65 +37,16 @@ class VoiceSynthesizerResult(BaseModel):
     audio_format: str
 
     def to_msgpack(self) -> bytes:
-        pack: Any | None = msgpack.packb(
-            {
-                "speech_id": self.speech_id,
-                "message": self.message,
-                "query": self.query,
-                "mora_queue": self.mora_queue,
-                "speaking_time": self.speaking_time,
-                "voice": self.voice,
-                "audio_format": self.audio_format,
-            },
-            default=self.__object_pack,
-        )
+        """入れ子モデルをPython値へ展開し、音声はバイナリのまま送信・保存する。"""
+        pack = msgpack.packb(self.model_dump())
         assert isinstance(pack, bytes), "msgpack.packb returned non-bytes"
         return pack
 
     def to_json(self) -> str:
-        return json.dumps(
-            {
-                "speech_id": self.speech_id,
-                "message": self.message,
-                "query": self.query,
-                "mora_queue": self.mora_queue,
-                "speaking_time": self.speaking_time,
-                "audio_format": self.audio_format,
-            },
-            ensure_ascii=False,
-            default=self.__object_pack,
-        )
-
-    def __object_pack(self, obj):
-        if isinstance(obj, VoiceSynthesizerMora):
-            return obj.model_dump()
-        if isinstance(obj, VoiceVoxQuery):
-            return obj.model_dump()
-        if isinstance(obj, VoiceVoxAccentPhrase):
-            return obj.model_dump()
-        if isinstance(obj, VoiceVoxMora):
-            return obj.model_dump()
-        return obj
+        """音声を除いた同じモデルを診断・表示用JSONへ変換する。"""
+        return self.model_dump_json(exclude={"voice"})
 
     @classmethod
     def from_msgpack(cls, vpackage: bytes) -> VoiceSynthesizerResult:
-        """音声合成結果をクエリ・モーラごと復元する。省略されたspeech_idは-1とし、復号・検証失敗は伝播する。"""
-        content = msgpack.unpackb(vpackage)
-        mora_queue = [
-            VoiceSynthesizerMora.model_validate(m) for m in content["mora_queue"]
-        ]
-
-        # contentにspeech_idがない場合は-1を設定
-        # (redis、S3上のデータから復元した場合など)
-        if "speech_id" not in content:
-            content["speech_id"] = -1
-
-        return VoiceSynthesizerResult(
-            speech_id=content["speech_id"],
-            message=content["message"],
-            query=VoiceVoxQuery.model_validate(content["query"]),
-            mora_queue=mora_queue,
-            speaking_time=content["speaking_time"],
-            voice=content["voice"],
-            audio_format=content["audio_format"],
-        )
+        """クエリとモーラを検証して復元する。保存時に省略されたspeech_idは-1とする。"""
+        return cls.model_validate(msgpack.unpackb(vpackage))

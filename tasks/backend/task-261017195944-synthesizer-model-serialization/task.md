@@ -21,9 +21,9 @@ VoiceSynthesizerResultはフィールド列挙、子モデル別の変換、復�
 
 ## 完了条件と確認方法
 
-- [ ] 既存固定データで変換前後のMessagePackを復号した値とJSON値が一致し、speech_id省略時の復元が一致する。バイト配列の並び順やJSONの空白を新しい契約にしない。
-- [ ] 必須項目欠落・不正なモーラ・不正JSONを拒否し、VOICEVOXのHTTP失敗を従来どおり扱う。
-- [ ] 対象Python試験と、sincro-rtcディレクトリでgo test ./internal/pipeline/protocolを実行しGo側受理も確認する。
+- [x] 既存固定データで変換前後のMessagePackを復号した値とJSON値が一致し、speech_id省略時の復元が一致する。バイト配列の並び順やJSONの空白を新しい契約にしない。
+- [x] 必須項目欠落・不正なモーラ・不正JSONを拒否し、VOICEVOXのHTTP失敗を従来どおり扱う。
+- [x] 対象Python試験と、sincro-rtcディレクトリでgo test ./internal/pipeline/protocolを実行しGo側受理も確認する。
 
 変更ファイルに対象を絞った整形・静的検査を行う。Pythonはロックに従う環境を使い、環境の再現方法は[task.md](../../../tasks/backend/task-261011152416-update-python-dependencies/task.md)を参照する。
 
@@ -42,3 +42,7 @@ VoiceSynthesizerResultはフィールド列挙、子モデル別の変換、復�
 
 - [入れ子モデルの検証と変換](https://pydantic.dev/docs/validation/latest/concepts/models/)。
 - [model_validate_jsonによる直接検証](https://pydantic.dev/docs/validation/latest/concepts/performance/)。
+
+## 実装・確認結果
+
+VoiceSynthesizerResultのMessagePack出力をmodel_dump、音声を除くJSONをmodel_dump_json、復元をmodel_validateへ集約し、手書きの入れ子変換と不要な設定を削除した。VOICEVOX audio_queryはHTTP状態検査後にmodel_validate_jsonで読む。既存固定データのMessagePack・JSON値、音声バイナリ、speech_id省略時の-1、必須項目・不正モーラ・不正JSONの拒否を確認した。ロック済み環境で30試験、固定データ再生成の差分なし、対象Ruff・tyが成功し、Go 1.26.9のgo test ./internal/pipeline/protocolも成功した。固定データや通信契約の変更は不要だった。コメント点検を完了した。

@@ -43,7 +43,7 @@ class VoiceVox:
             timeout=self.HTTP_TIMEOUT,
         ) as res:
             self.response_validator(res)
-            return VoiceVoxQuery.model_validate(res.json())
+            return VoiceVoxQuery.model_validate_json(res.content)
 
     # テキストからアクセント句を生成。
     # * +text+ - アクセントに変換する文字列。

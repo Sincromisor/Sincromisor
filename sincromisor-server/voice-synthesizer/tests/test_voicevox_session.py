@@ -166,3 +166,22 @@ def test_worker_two_requests_use_one_session(endpoint, monkeypatch, fail):
     close.assert_called_once()
     assert len(state.connections) == 2
     assert state.connections[0] is state.connections[1]
+
+
+def test_audio_query_validates_http_before_json(monkeypatch):
+    from pydantic import ValidationError
+
+    client = VoiceVox()
+    response = Mock(status_code=503, content=b"invalid-json")
+    context = Mock()
+    context.__enter__ = Mock(return_value=response)
+    context.__exit__ = Mock(return_value=False)
+    monkeypatch.setattr(client.session, "post", Mock(return_value=context))
+    try:
+        with pytest.raises(VoiceVox.ProtocolError):
+            client.audio_query("text")
+        response.status_code = 200
+        with pytest.raises(ValidationError):
+            client.audio_query("text")
+    finally:
+        client.close()
