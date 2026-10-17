@@ -169,3 +169,13 @@ func drain[T any](values chan T) {
 		}
 	}
 }
+
+// runtimeFailure は実行段階で確定した固定原因と保持中のIDだけを記録する。
+// 通常取消は障害に数えず、clientと競合してもrequestResetが最初の原因だけを受理する。
+func (c *Coordinator) runtimeFailure(work *generationWork, peer pclient.Service, operation, reason string, ids ...any) {
+	if work.ctx.Err() != nil {
+		return
+	}
+	attrs := []any{"operation", operation, "reason", reason}
+	c.requestReset(work.number, peer, resetCauseRuntimeError, append(attrs, ids...)...)
+}
