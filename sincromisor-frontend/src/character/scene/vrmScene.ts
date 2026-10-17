@@ -87,25 +87,17 @@ export class VRMScene {
         }
     }
 
-    // ページ種別ごとの描画開始入口。XR有無で animation loop の経路を切り替える。
+    /** 継続描画の予約とXR切替はレンダラーが所有し、通常起動だけ即時に初回描画する。 */
     start(): void {
+        this.renderer.setAnimationLoop(() => {
+            // 予約時刻は渡さず、環境更新後にキャラクター側で時刻を取得する。
+            this.renderFrame();
+        });
         if (this.xrMode) {
-            this.setXRAnimationLoop();
-            /* XRモードの時は、1mぐらい後ろに下がる */
             this.vrmCharacterManager.characterPosition = new Vector3(0, 0, 0.0);
         } else {
-            this.animate();
+            this.renderFrame();
         }
-    }
-
-    private animate(): void {
-        // WebXRセッション中は、renderer.setAnimationLoopが使用される
-        if (!this.renderer.xr.isPresenting) {
-            window.requestAnimationFrame(() => {
-                this.animate();
-            });
-        }
-        this.renderFrame();
     }
 
     /** 環境→キャラクター→描画の順序を全入口で共有する。未指定時刻はキャラクター側で取得する。 */
@@ -210,13 +202,6 @@ export class VRMScene {
         } else {
             frontendLogger.warn("WebXR API is not supported.");
         }
-    }
-
-    private setXRAnimationLoop(): void {
-        this.renderer.setAnimationLoop(() => {
-            // XRの予約はレンダラーに任せ、時刻取得は通常描画と同じ経路を使う。
-            this.renderFrame();
-        });
     }
 }
 

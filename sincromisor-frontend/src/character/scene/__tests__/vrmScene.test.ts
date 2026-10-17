@@ -12,7 +12,10 @@ it("通常・XR・単発描画の順序と予約、時刻の取得位置を維�
     vi.spyOn(performance, "now").mockImplementation(() => nowMs);
     const requestAnimationFrame = vi.fn();
     vi.stubGlobal("window", { requestAnimationFrame });
-    let xrFrame: (() => void) | undefined;
+    let frame: ((time: number) => void) | undefined;
+    const setAnimationLoop = vi.fn((callback: (time: number) => void) => {
+        frame = callback;
+    });
     const characterUpdate = vi.fn((timestamp = performance.now()) => {
         calls.push(`character:${timestamp}`);
     });
@@ -30,24 +33,26 @@ it("通常・XR・単発描画の順序と予約、時刻の取得位置を維�
         renderer: {
             xr: { isPresenting: false },
             render: () => calls.push("render"),
-            setAnimationLoop: (callback: () => void) => {
-                xrFrame = callback;
-            },
+            setAnimationLoop,
         },
     });
     scene.start();
-    expect(requestAnimationFrame).toHaveBeenCalledOnce();
+    expect(requestAnimationFrame).not.toHaveBeenCalled();
     expect(calls.splice(0)).toEqual(["environment", "character:101", "render"]);
+    expect(setAnimationLoop).toHaveBeenCalledOnce();
+    frame?.(999);
+    expect(calls.splice(0)).toEqual(["environment", "character:102", "render"]);
     Object.assign(scene, { xrMode: true });
     scene.start();
     expect(calls).toEqual([]);
-    expect(xrFrame).toBeDefined();
-    xrFrame?.();
-    expect(requestAnimationFrame).toHaveBeenCalledOnce();
-    expect(calls.splice(0)).toEqual(["environment", "character:102", "render"]);
+    expect(setAnimationLoop).toHaveBeenCalledTimes(2);
+    expect(frame).toBeDefined();
+    frame?.(999);
+    expect(requestAnimationFrame).not.toHaveBeenCalled();
+    expect(calls.splice(0)).toEqual(["environment", "character:103", "render"]);
     scene.renderOnce(42);
     expect(calls.splice(0)).toEqual(["environment", "character:42", "render"]);
     scene.renderOnce();
-    expect(calls).toEqual(["environment", "character:103", "render"]);
-    expect(characterUpdate).toHaveBeenCalledTimes(4);
+    expect(calls).toEqual(["environment", "character:104", "render"]);
+    expect(characterUpdate).toHaveBeenCalledTimes(5);
 });

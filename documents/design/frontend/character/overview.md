@@ -47,7 +47,7 @@
     - `createSemanticMotionPoseLayer()`は `MotionIntentState`と完成版 `AvatarMotionProfile`から `semantic`姿勢レイヤーを作る補助処理であり、プリセットID、暫定腕上書き、診断用スナップショットを開発者専用に観測できるようにする。本番のVRMボーン書き込み順序は変更しない。
     - `createFingerCurlPoseLayer()`は `SincroHandMotionSnapshot`と `MotionIntentState`、完成版 `AvatarMotionProfile`から指の曲げ用の `semantic`姿勢レイヤーを作る補助処理である。入力は低次元手特徴量とプロファイル対応能力に限定し、MediaPipe未加工のランドマーク、VRM Object3D、元のボーンノードは読まない。
 - `VRMScene`
-    - 描画処理、カメラ、照明、サイズ変更、描画ループを持つ。
+    - 描画処理、カメラ、照明、サイズ変更、描画ループを持つ。継続描画は通常・XRとも `WebGLRenderer.setAnimationLoop`へ予約を委ねる。通常起動のみ即時初回描画し、環境→キャラクター→描画の順序と単発再生の明示時刻を維持する。XR終了後の通常予約もレンダラーが復帰させる。
 - `VRMCharacterManager`
     - VRM読み込み、制御処理初期化、毎フレーム更新を持つ。表情ログは任意の `onEmotionLog`を表情制御へ渡し、アプリとmotion-debugの入口が既存テキストログへ接続する。
     - ページ初期化処理はアプリの姿勢設定窓口を使い、生成済みシーンへ正規化後の設定を適用する。設定の所有と操作通知はアプリ側、motion-debugの明示適用は独立ページ側が担う。
