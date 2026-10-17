@@ -205,6 +205,8 @@ AgentServerは導入済みMastraのPinoロガーを直接依存として宣言�
 `timestamp`・`level`・`message`への対応付けは出力元で行い、Pinoの数値`time`は補助項目として残る。
 任意の要求・ヘッダー・例外・動的メッセージは出さず、固定メッセージと選別した診断属性を使う。
 対話設定は厳密に検証し、無効時は`text`を出力しない。本文の主記録元はTextProcessorとし、AgentServerに重複した本文イベントは追加しない。
+AgentServerの失敗は最大4段の`cause`から既知原因を選び、認識した`exception_type`、既知の`error_code`、整数100〜599の`http_status`を添える。未知の型・コードは`unknown`とし、親・子ロガーとlibSQL内部ログでも同じ値の選別を行う。要求を終えるLLM・MCPツール・保存の失敗はerror、会話を継続できるMCP発見失敗はwarn、取消と成功はinfoとする。再試行と外部へ返す例外の契約は変えない。
+
 子ロガーでも同じ属性選別を適用する。配布用の起動スクリプト`start.mjs`は設定失敗もJSONLへ変換する。
 
 TextProcessorが送る`memory.thread = sincromisor:<session_id>`を、認証済みAgent API要求の処理開始・引渡しへ対応付ける。

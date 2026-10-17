@@ -6,6 +6,7 @@ import { MastraEditor } from "@mastra/editor";
 import { LibSQLStore } from "@mastra/libsql";
 import { createCharacterAgent } from "./agents/character.js";
 import { readConfig } from "./config.js";
+import { failureFields } from "./failureDiagnostics.js";
 import {
 	conversationId,
 	createServiceLogger,
@@ -65,17 +66,25 @@ export const mastra = new Mastra({
 		middleware: [
 			{
 				path: "/api/agents/:agentId/stream",
-				handler: async (c: ContextWithMastra, next: () => Promise<void>) => {
+				handler: async (
+					c: ContextWithMastra,
+					next: () => Promise<void>,
+				) => {
 					if (!(await auth.getCurrentUser(c.req.raw))) return next();
 					// 生の要求を再読込みする生成ルートのため、複製からIDだけを読む。
 					let sessionId: string | undefined;
 					try {
-						sessionId = conversationId(await c.req.raw.clone().json());
+						sessionId = conversationId(
+							await c.req.raw.clone().json(),
+						);
 					} catch {
 						/* 不正JSONの応答は本来のルートへ委ねる。 */
 					}
 					const ids = sessionId
-						? { session_id: sessionId, thread_id: `sincromisor:${sessionId}` }
+						? {
+								session_id: sessionId,
+								thread_id: `sincromisor:${sessionId}`,
+							}
 						: {};
 					const start = performance.now();
 					logger.info("Agent request started", {
@@ -92,8 +101,16 @@ export const mastra = new Mastra({
 							duration_ms: performance.now() - start,
 						});
 					} catch (error) {
-						logger.error("Agent request failed", {
+						const fields = failureFields(error);
+						logger[
+							fields.reason === "cancelled" ? "info" : "error"
+						]("Agent request failed", {
 							event: "agent_request_failed",
+							...fields,
+							outcome:
+								fields.reason === "cancelled"
+									? "cancelled"
+									: "failed",
 							...ids,
 							duration_ms: performance.now() - start,
 						});
@@ -103,13 +120,18 @@ export const mastra = new Mastra({
 			},
 			{
 				path: "/api/observability/feedback",
-				handler: async (c: ContextWithMastra, next: () => Promise<void>) => {
+				handler: async (
+					c: ContextWithMastra,
+					next: () => Promise<void>,
+				) => {
 					if (
 						c.req.method === "GET" &&
 						(await auth.getCurrentUser(c.req.raw))
 					) {
 						return c.json(
-							{ error: "Observability storage domain is not available" },
+							{
+								error: "Observability storage domain is not available",
+							},
 							501,
 						);
 					}
