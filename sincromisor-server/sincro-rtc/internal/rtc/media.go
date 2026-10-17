@@ -7,6 +7,8 @@ import (
 	"io"
 	"time"
 
+	medialog "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media"
+	pclient "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/client"
 	"github.com/pion/interceptor"
 	"github.com/pion/rtcp"
 	"github.com/pion/rtp"
@@ -42,14 +44,16 @@ func (s *Session) installOutboundTrack() error {
 //
 // connected後はPeerConnection.CloseがReadを解除する。goroutineはtransportReadyがlifecycle mutex内で
 // WaitGroup予約した後に開始し、cleanupは解除とjoinを同じSession ownershipで完了する。
-func (s *Session) startRTCPDrain(sender *webrtc.RTPSender) {
+func (s *Session) startRTCPDrain(sender interface {
+	Read([]byte) (int, interceptor.Attributes, error)
+}) {
 	s.goReserved("rtcp_reader", func(context.Context) {
 		buffer := make([]byte, 1500)
 		for {
 			n, _, readErr := sender.Read(buffer)
 			if readErr != nil {
 				if s.ctx.Err() == nil {
-					s.logger.Error("rtcp reader stopped", "session_id", s.id, "reason", "media_read_error")
+					s.logger.Error("rtcp reader stopped", s.mediaFailureAttrs("read_rtcp", readErr)...)
 					_ = s.Close("media_read_error")
 				}
 				return
@@ -118,7 +122,7 @@ func (s *Session) startInbound(reader inputmedia.RTPReader) {
 		case errors.Is(err, io.EOF):
 			_ = s.Close("normal")
 		case err != nil && !errors.Is(err, context.Canceled):
-			s.logger.Error("inbound audio processing stopped", "session_id", s.id, "reason", "media_read_error")
+			s.logger.Error("inbound audio processing stopped", s.mediaFailureAttrs("process_input", err)...)
 			_ = s.Close("media_error")
 		}
 	})
@@ -162,4 +166,19 @@ func (w pionSampleWriter) WriteSample(sample outputmedia.Sample) error {
 
 func (r rtpReader) ReadRTP() (*rtp.Packet, interceptor.Attributes, error) {
 	return r.track.ReadRTP()
+}
+
+// mediaFailureAttrs は音声エラーから操作・安全な型と原因だけを取り出す。
+// 入出力時計には世代を推測で付けず、実際の発話を保持する場合だけIDを添える。
+func (s *Session) mediaFailureAttrs(operation string, err error) []any {
+	var failure *medialog.OperationError
+	attrs := []any{"session_id", s.id}
+	if errors.As(err, &failure) {
+		operation = failure.Operation
+		if failure.SpeechID != nil {
+			attrs = append(attrs, "speech_id", *failure.SpeechID)
+		}
+	}
+	attrs = append(attrs, "operation", operation)
+	return append(attrs, pclient.FailureAttrs(err)...)
 }

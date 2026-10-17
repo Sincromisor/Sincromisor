@@ -71,7 +71,7 @@ func (s *Session) outputLoop() {
 	if err == nil || errors.Is(err, context.Canceled) {
 		return
 	}
-	s.logger.Error("outbound audio processing stopped", "session_id", s.id, "reason", "media_write_error")
+	s.logger.Error("outbound audio processing stopped", s.mediaFailureAttrs("process_output", err)...)
 	_ = s.Close("outbound_error")
 }
 
@@ -153,7 +153,7 @@ func (s *Session) handleSynthOutput(output pipeline.Output[protocol.SynthesizerR
 	if err != nil {
 		if s.isCurrentGeneration(output.Generation) && s.ctx.Err() == nil {
 			codecErrorKind, codecErrorReason := codecErrorDetails(err)
-			attrs := []any{"session_id", s.id, "speech_id", output.Value.SpeechID, "reason", "codec_error", "codec_error_kind", codecErrorKind, "codec_error_reason", codecErrorReason}
+			attrs := []any{"session_id", s.id, "speech_id", output.Value.SpeechID, "generation", output.Generation, "reason", "codec_error", "codec_error_kind", codecErrorKind, "codec_error_reason", codecErrorReason}
 			s.logger.Error("synthesized audio decode failed", append(attrs, synthdecode.DiagnosticAttrs(err)...)...)
 			s.metrics().CodecError("decode_synth")
 			_ = s.Close("codec_error")

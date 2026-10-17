@@ -11,6 +11,7 @@ import (
 	pionopus "github.com/pion/opus"
 	"github.com/pion/rtp"
 
+	medialog "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline"
 )
 
@@ -79,10 +80,10 @@ func (p *Processor) Run(ctx context.Context, reader RTPReader, submit SubmitFunc
 				}
 				stream.dropBuffered(p.observer)
 			}
-			return fmt.Errorf("read opus rtp: %w", err)
+			return &medialog.OperationError{Operation: "read_rtp", Err: fmt.Errorf("read opus rtp: %w", err)}
 		}
 		if packet == nil {
-			return errors.New("read opus rtp returned nil packet")
+			return &medialog.OperationError{Operation: "read_rtp", Err: errors.New("read opus rtp returned nil packet")}
 		}
 		if stream == nil || stream.ssrc != packet.SSRC {
 			if stream != nil {
@@ -223,7 +224,7 @@ func (s *inputStream) decode(payload []byte, observer Observer, submit SubmitFun
 	samplesPerChannel, err := s.decoder.DecodeToInt16(payload, s.pcm[:])
 	if err != nil {
 		observeInputCodecError(observer)
-		return fmt.Errorf("decode opus packet: %w", err)
+		return &medialog.OperationError{Operation: "decode_opus", Err: fmt.Errorf("decode opus packet: %w", err)}
 	}
 	mono := downmixStereo(s.pcm[:samplesPerChannel*maxChannels], s.mono[:])
 	s.framed = append(s.framed, s.resampler.process(mono)...)
@@ -238,7 +239,7 @@ func (s *inputStream) decode(payload []byte, observer Observer, submit SubmitFun
 				observer.ObserveInputEvent(InputEventPipelineUnavailable)
 				continue
 			}
-			return fmt.Errorf("submit pipeline PCM: %w", err)
+			return &medialog.OperationError{Operation: "submit_pcm", Err: fmt.Errorf("submit pipeline PCM: %w", err)}
 		}
 		observeAcceptedInput(observer)
 	}

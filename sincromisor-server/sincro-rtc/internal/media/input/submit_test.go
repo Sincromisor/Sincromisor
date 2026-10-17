@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	medialog "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media"
 	"github.com/pion/rtp"
 
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline"
@@ -63,6 +64,12 @@ func TestInputProcessorSubmitPolicies(t *testing.T) {
 			}
 			if test.wantError != "" && (err == nil || !strings.Contains(err.Error(), test.wantError)) {
 				t.Fatalf("Run() error = %v, want containing %q", err, test.wantError)
+			}
+			if test.wantError != "" {
+				var failure *medialog.OperationError
+				if !errors.As(err, &failure) || failure.Operation != "submit_pcm" {
+					t.Fatalf("failure = %#v", err)
+				}
 			}
 			if frames != test.wantFrames {
 				t.Fatalf("submitted frames = %d, want %d", frames, test.wantFrames)
@@ -127,6 +134,10 @@ func TestInputProcessorMalformedOpusAndObserverPanic(t *testing.T) {
 			packets:  []*rtp.Packet{{Header: rtp.Header{SSRC: 1}, Payload: []byte{0xff}}},
 			terminal: io.EOF,
 		}, func([]byte) error { return nil })
+		var failure *medialog.OperationError
+		if !errors.As(err, &failure) || failure.Operation != "decode_opus" {
+			t.Fatalf("failure = %#v", err)
+		}
 		if err == nil || !strings.Contains(err.Error(), "decode opus packet") {
 			t.Fatalf("Run() error = %v, want decode error", err)
 		}

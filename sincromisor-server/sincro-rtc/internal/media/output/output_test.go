@@ -83,10 +83,10 @@ func TestOutputTelopUsesAudioFrameSampleTick(t *testing.T) {
 		t.Fatalf("Enqueue() error = %v", err)
 	}
 
-	_, first := processor.nextFrame()
-	_, second := processor.nextFrame()
-	_, third := processor.nextFrame()
-	_, fourth := processor.nextFrame()
+	_, first, _ := processor.nextFrame()
+	_, second, _ := processor.nextFrame()
+	_, third, _ := processor.nextFrame()
+	_, fourth, _ := processor.nextFrame()
 	if first == nil || second == nil || third == nil || fourth == nil {
 		t.Fatal("active mora frame did not produce telop")
 	}
@@ -119,7 +119,7 @@ func TestOutputFrameWithoutActiveMoraSendsAudioOnly(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Enqueue() error = %v", err)
 	}
-	frame, telop := processor.nextFrame()
+	frame, telop, _ := processor.nextFrame()
 	if len(frame) != frameSamples || telop != nil {
 		t.Fatalf("frame/telop = %d/%+v, want audio only", len(frame), telop)
 	}
@@ -139,7 +139,7 @@ func TestOutputPurgeDropsCurrentAndQueuedSpeech(t *testing.T) {
 	if len(processor.queue) != 0 || processor.queuedSamples != 0 {
 		t.Fatalf("purged queue = %d/%d, want empty", len(processor.queue), processor.queuedSamples)
 	}
-	frame, telop := processor.nextFrame()
+	frame, telop, _ := processor.nextFrame()
 	if telop != nil {
 		t.Fatalf("silence frame produced telop: %+v", telop)
 	}
