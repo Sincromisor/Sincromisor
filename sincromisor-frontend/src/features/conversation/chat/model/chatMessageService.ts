@@ -3,8 +3,14 @@ import { type ChatMessage, ChatMessageBuilder } from "../../../rtc/rtcMessage";
 
 /** 本文と明示的なHTML許可を組にして、履歴と通知で共有する。 */
 export type ChatMessageViewRecord = {
-    message: ChatMessage;
-    renderMode: ChatMessageRenderMode;
+    readonly message: Readonly<ChatMessage>;
+    readonly renderMode: ChatMessageRenderMode;
+};
+
+/** 履歴とアイコンを同じ更新単位で公開し、更新がない間は参照を維持する。 */
+export type ChatMessageSnapshot = {
+    readonly messages: readonly ChatMessageViewRecord[];
+    readonly systemIconUrl: string;
 };
 
 /** 通常文字列と、既存の信頼済みHTMLを区別する。 */
@@ -25,11 +31,14 @@ export class ChatMessageService {
     private readonly systemUserName: string = "Glorious AI";
     // systemメッセージだけは、VRMのthumbnailImageに動的に差し替え可能にする。
     // 取得前/未設定VRM向けに既存アイコンをデフォルト値として保持する。
-    private systemIconUrl: string = "../images/icon-system.webp";
+    private snapshot: ChatMessageSnapshot = {
+        messages: [],
+        systemIconUrl: "../images/icon-system.webp",
+    };
     /* 画面上に表示される最大メッセージ数 */
     private readonly maxMessageCount: number = 30;
     private readonly listeners = new Set<(event: ChatMessageServiceEvent) => void>();
-    private messages: ChatMessageViewRecord[] = [];
+    private readonly snapshotListeners = new Set<() => void>();
 
     /* 同じエラーメッセージが何度も表示されないようにするために使用 */
     lastErrorMessage: string = "";
@@ -52,14 +61,27 @@ export class ChatMessageService {
         };
     }
 
+    /** 外部ストア購読向けの読み取り専用値。後続の更新で過去の値を変更しない。 */
+    getSnapshot(): ChatMessageSnapshot {
+        return this.snapshot;
+    }
+
+    /** 状態更新後だけ通知する。購読者は返された関数で自分の購読を解除する。 */
+    subscribeSnapshot(listener: () => void): () => void {
+        this.snapshotListeners.add(listener);
+        return () => {
+            this.snapshotListeners.delete(listener);
+        };
+    }
+
     /** React初期描画用に、描画方式を含む件数制限付き履歴を新しい順で返す。 */
     getMessageViewSnapshot(): ChatMessageViewRecord[] {
-        return [...this.messages];
+        return [...this.snapshot.messages];
     }
 
     /** 初期表示用に、現在のシステムアイコンを返す。 */
     getSystemIconUrl(): string {
-        return this.systemIconUrl;
+        return this.snapshot.systemIconUrl;
     }
 
     /** 同じIDはその位置で更新し、新規IDは履歴の先頭へ追加して通知する。 */
@@ -128,21 +150,35 @@ export class ChatMessageService {
 
     /** VRM読込後のアイコンを通知し、表示済みのシステムメッセージにも反映する。 */
     setSystemIcon(iconUrl: string): void {
-        this.systemIconUrl = iconUrl;
+        if (this.snapshot.systemIconUrl === iconUrl) return;
+        this.snapshot = { ...this.snapshot, systemIconUrl: iconUrl };
+        this.notifySnapshot();
         this.emitSystemIconChanged();
     }
 
     // React描画向けの履歴正本。message_id ベースで更新/新規挿入を行う。
     private upsertMessageSnapshot(message: ChatMessage, isHTML: boolean): void {
         const renderMode: ChatMessageRenderMode = isHTML ? "trusted_html" : "text";
-        const existingIndex = this.messages.findIndex(
+        const messages = this.snapshot.messages;
+        const existingIndex = messages.findIndex(
             (m) => m.message.message_id === message.message_id,
         );
-        if (existingIndex >= 0) {
-            this.messages[existingIndex] = { message, renderMode };
-            return;
-        }
-        this.messages = [{ message, renderMode }, ...this.messages].slice(0, this.maxMessageCount);
+        // 呼び出し元による入力の再利用も、発行済み履歴へ波及させない。
+        const record = { message: { ...message }, renderMode };
+        this.snapshot = {
+            ...this.snapshot,
+            messages:
+                existingIndex >= 0
+                    ? messages.map((previous, index) =>
+                          index === existingIndex ? record : previous,
+                      )
+                    : [record, ...messages].slice(0, this.maxMessageCount),
+        };
+        this.notifySnapshot();
+    }
+
+    private notifySnapshot(): void {
+        for (const listener of this.snapshotListeners) listener();
     }
 
     // 本文と描画方式を一緒に通知し、履歴からの初期表示と追加更新を一致させる。
@@ -162,7 +198,7 @@ export class ChatMessageService {
     private emitSystemIconChanged(): void {
         const event: ChatMessageServiceEvent = {
             type: "system_icon_changed",
-            systemIconUrl: this.systemIconUrl,
+            systemIconUrl: this.snapshot.systemIconUrl,
         };
         for (const listener of this.listeners) {
             listener(event);
