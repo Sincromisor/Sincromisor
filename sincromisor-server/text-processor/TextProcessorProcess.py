@@ -1,15 +1,18 @@
 """共通JSONL設定でHTTP状態確認と音声パイプラインのWebSocket境界を起動する。"""
 
+import asyncio
 import logging
 import logging.config
 from logging import Logger
 from threading import Event
 
 import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket
 from fastapi.responses import JSONResponse
 from setproctitle import setproctitle
 from sincro_config import ServiceDiscoveryReporter, SincromisorLoggerConfig
+from sincro_config.websocket_diagnostics import WebSocketDiagnostics
+from starlette.websockets import WebSocketState
 from text_processor.mastra_worker import MastraTextProcessorWorker
 from text_processor.models import TextProcessorProcessArgument
 from text_processor.TextProcessor import (
@@ -62,11 +65,14 @@ class TextProcessorProcess:
 
         @app.websocket("/api/v1/TextProcessor/chat")
         async def websocket_chat_endpoint(ws: WebSocket) -> None:
-            self.__logger.info("Connected Websocket - chat")
+            """接続単位の診断と後始末を所有し、要求処理の主原因を保持する。"""
+            diagnostic = WebSocketDiagnostics(self.__logger)
+            diagnostic.start()
             self.__sessions += 1
             try:
                 text_worker: TextProcessorWorker
-                await ws.accept()
+                with diagnostic.operation("accept"):
+                    await ws.accept()
                 # sincro単独の起動を維持するため、Mastra設定はchat接続時だけ拒否する。
                 if self.__args.mastra_token:
                     text_worker = MastraTextProcessorWorker(
@@ -74,45 +80,60 @@ class TextProcessorProcess:
                         api_key=self.__args.mastra_token,
                         agent_id=self.__args.mastra_agent_id,
                     )
-                    await text_worker.communicate(ws=ws)
+                    await text_worker.communicate(ws=ws, diagnostic=diagnostic)
                 else:
                     raise RuntimeError(
                         "Mastra token is required for chat mode.",
                     )
-            except WebSocketDisconnect:
-                self.__logger.info("Disconnected WebSocket.")
-            except Exception:
-                self.__logger.exception("Chat WebSocket processing failed.")
+            except asyncio.CancelledError as error:
+                diagnostic.finish(error)
+                raise
+            except Exception as error:  # noqa: BLE001  # reason: 接続境界で安全な原因を記録し、他接続へ例外を波及させない。
+                diagnostic.finish(error)
+            else:
+                diagnostic.finish()
             finally:
                 self.__sessions -= 1
-                try:
-                    await ws.close()
-                except RuntimeError:
-                    self.__logger.warning(
-                        "WebSocket is already closed.",
-                    )
+                # 切断済みの接続は再度closeせず、後始末の失敗も主原因と別に記録する。
+                if (
+                    ws.client_state != WebSocketState.DISCONNECTED
+                    and ws.application_state != WebSocketState.DISCONNECTED
+                ):
+                    try:
+                        await ws.close()
+                    except Exception as error:  # noqa: BLE001  # reason: 接続境界で安全な原因を記録し、他接続へ例外を波及させない。
+                        diagnostic.cleanup_failed(error)
 
         @app.websocket("/api/v1/TextProcessor/sincro")
         async def websocket_sincro_endpoint(ws: WebSocket) -> None:
-            self.__logger.info("Connected Websocket - sincro")
+            """sincro接続の診断と後始末を所有し、失敗を他接続へ波及させない。"""
+            diagnostic = WebSocketDiagnostics(self.__logger)
+            diagnostic.start()
             self.__sessions += 1
             try:
                 text_worker: TextProcessorWorker
-                await ws.accept()
+                with diagnostic.operation("accept"):
+                    await ws.accept()
                 text_worker = PokeTextProcessorWorker()
-                await text_worker.communicate(ws=ws)
-            except WebSocketDisconnect:
-                self.__logger.info("Disconnected WebSocket.")
-            except Exception:
-                self.__logger.exception("Sincro WebSocket processing failed.")
+                await text_worker.communicate(ws=ws, diagnostic=diagnostic)
+            except asyncio.CancelledError as error:
+                diagnostic.finish(error)
+                raise
+            except Exception as error:  # noqa: BLE001  # reason: 接続境界で安全な原因を記録し、他接続へ例外を波及させない。
+                diagnostic.finish(error)
+            else:
+                diagnostic.finish()
             finally:
                 self.__sessions -= 1
-                try:
-                    await ws.close()
-                except RuntimeError:
-                    self.__logger.warning(
-                        "WebSocket is already closed.",
-                    )
+                # 切断済みの接続は再度closeせず、後始末の失敗も主原因と別に記録する。
+                if (
+                    ws.client_state != WebSocketState.DISCONNECTED
+                    and ws.application_state != WebSocketState.DISCONNECTED
+                ):
+                    try:
+                        await ws.close()
+                    except Exception as error:  # noqa: BLE001  # reason: 接続境界で安全な原因を記録し、他接続へ例外を波及させない。
+                        diagnostic.cleanup_failed(error)
 
         try:
             uvicorn.run(

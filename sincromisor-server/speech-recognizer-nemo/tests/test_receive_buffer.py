@@ -9,6 +9,7 @@ import numpy as np
 from sincro_config import ServiceDiscoveryReferrer, ServiceDiscoveryReporter
 from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
 from speech_recognizer_nemo import recognizer_execution
+from starlette.websockets import WebSocketState
 
 
 def test_receive_buffer_capacity_and_speech_ids(monkeypatch):
@@ -54,6 +55,9 @@ def test_receive_buffer_capacity_and_speech_ids(monkeypatch):
             pass
 
     class Socket:
+        client_state = WebSocketState.CONNECTED
+        application_state = WebSocketState.CONNECTED
+
         def __init__(self):
             self.packs = [request.to_msgpack() for request in requests] + [b""]
 
@@ -76,7 +80,15 @@ def test_receive_buffer_capacity_and_speech_ids(monkeypatch):
     monkeypatch.setattr(
         sys,
         "argv",
-        ["test", "--consul-agent-host", "unused", "--consul-agent-port", "8500"],
+        [
+            "test",
+            "--consul-agent-host",
+            "unused",
+            "--consul-agent-port",
+            "8500",
+            "--public-bind-host",
+            "127.0.0.1",
+        ],
     )
     monkeypatch.setattr(ServiceDiscoveryReporter, "start", lambda self: None)
     monkeypatch.setattr(

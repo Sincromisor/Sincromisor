@@ -39,11 +39,10 @@
 
 ## タスク一覧（自動生成 / 全 17 件）
 
-### open（未完） — 11 件
+### open（未完） — 10 件
 
 | タスク                                                                                                               | タイトル                                               | 判定 | 依存                                                                                                                                                                                                                                                                                                                                             |
 | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [task-261017221323-python-websocket-lifecycle](./task-261017221323-python-websocket-lifecycle/task.md)               | Python音声サービスの接続終了を識別可能にする           | —    | `task-261017221323-python-failure-classification`                                                                                                                                                                                                                                                                                                |
 | [task-261017221324-synthesis-operation-timing](./task-261017221324-synthesis-operation-timing/task.md)               | 本文設定に依存しない音声合成の段階と時間を記録する     | —    | `task-261017221323-python-failure-classification`                                                                                                                                                                                                                                                                                                |
 | [task-261017221324-synthesis-websocket-delivery](./task-261017221324-synthesis-websocket-delivery/task.md)           | 合成完了とRTCへの音声送信結果を区別する                | —    | `task-261017221323-python-websocket-lifecycle`, `task-261017221324-synthesis-operation-timing`                                                                                                                                                                                                                                                   |
 | [task-261017221325-pipeline-interruption-summary](./task-261017221325-pipeline-interruption-summary/task.md)         | 再初期化で未完了になった音声要求と破棄数を残す         | —    | `task-261017221324-pipeline-runtime-causes`, `task-261017221324-synthesis-websocket-delivery`                                                                                                                                                                                                                                                    |
@@ -55,15 +54,16 @@
 | [task-261017221327-disconnect-log-central-acceptance](./task-261017221327-disconnect-log-central-acceptance/task.md) | 切断診断と未完了件数を中央ログで結合確認する           | —    | `task-261017221322-pipeline-peer-log-fields`, `task-261017221322-websocket-close-diagnostics`, `task-261017221323-python-websocket-lifecycle`, `task-261017221323-pipeline-reconnect-attempts`, `task-261017221324-pipeline-runtime-causes`, `task-261017221324-synthesis-websocket-delivery`, `task-261017221325-pipeline-interruption-summary` |
 | [task-261017221327-go-panic-source-location](./task-261017221327-go-panic-source-location/task.md)                   | Goの回復したpanicに安全な発生位置を残す                | —    | `task-261017221322-websocket-close-diagnostics`, `task-261017221324-pipeline-runtime-causes`                                                                                                                                                                                                                                                     |
 
-### done（完了） — 6 件
+### done（完了） — 7 件
 
-| タスク                                                                                                       | タイトル                                     | 判定    | 依存                                            |
-| ------------------------------------------------------------------------------------------------------------ | -------------------------------------------- | ------- | ----------------------------------------------- |
-| [task-261017221322-pipeline-peer-log-fields](./task-261017221322-pipeline-peer-log-fields/task.md)           | 中央ログでパイプラインの通信相手を保持する   | ✅ PASS | —                                               |
-| [task-261017221322-websocket-close-diagnostics](./task-261017221322-websocket-close-diagnostics/task.md)     | GoのWebSocket切断原因を再初期化ログへ残す    | ✅ PASS | `task-261017221322-pipeline-peer-log-fields`    |
-| [task-261017221323-pipeline-reconnect-attempts](./task-261017221323-pipeline-reconnect-attempts/task.md)     | パイプライン再接続の試行と復旧を記録する     | ✅ PASS | `task-261017221322-websocket-close-diagnostics` |
-| [task-261017221323-python-failure-classification](./task-261017221323-python-failure-classification/task.md) | Pythonの実ライブラリ例外を診断原因へ分類する | ✅ PASS | —                                               |
-| [task-261017221324-pipeline-runtime-causes](./task-261017221324-pipeline-runtime-causes/task.md)             | パイプライン内部失敗の操作と原因を区別する   | ✅ PASS | `task-261017221322-websocket-close-diagnostics` |
-| [task-261017221325-consul-discovery-causes](./task-261017221325-consul-discovery-causes/task.md)             | GoのConsul探索失敗を原因別に記録する         | ✅ PASS | `task-261017221322-pipeline-peer-log-fields`    |
+| タスク                                                                                                       | タイトル                                     | 判定    | 依存                                              |
+| ------------------------------------------------------------------------------------------------------------ | -------------------------------------------- | ------- | ------------------------------------------------- |
+| [task-261017221322-pipeline-peer-log-fields](./task-261017221322-pipeline-peer-log-fields/task.md)           | 中央ログでパイプラインの通信相手を保持する   | ✅ PASS | —                                                 |
+| [task-261017221322-websocket-close-diagnostics](./task-261017221322-websocket-close-diagnostics/task.md)     | GoのWebSocket切断原因を再初期化ログへ残す    | ✅ PASS | `task-261017221322-pipeline-peer-log-fields`      |
+| [task-261017221323-pipeline-reconnect-attempts](./task-261017221323-pipeline-reconnect-attempts/task.md)     | パイプライン再接続の試行と復旧を記録する     | ✅ PASS | `task-261017221322-websocket-close-diagnostics`   |
+| [task-261017221323-python-failure-classification](./task-261017221323-python-failure-classification/task.md) | Pythonの実ライブラリ例外を診断原因へ分類する | ✅ PASS | —                                                 |
+| [task-261017221323-python-websocket-lifecycle](./task-261017221323-python-websocket-lifecycle/task.md)       | Python音声サービスの接続終了を識別可能にする | ✅ PASS | `task-261017221323-python-failure-classification` |
+| [task-261017221324-pipeline-runtime-causes](./task-261017221324-pipeline-runtime-causes/task.md)             | パイプライン内部失敗の操作と原因を区別する   | ✅ PASS | `task-261017221322-websocket-close-diagnostics`   |
+| [task-261017221325-consul-discovery-causes](./task-261017221325-consul-discovery-causes/task.md)             | GoのConsul探索失敗を原因別に記録する         | ✅ PASS | `task-261017221322-pipeline-peer-log-fields`      |
 
 <!-- AUTOGEN:tasks END -->

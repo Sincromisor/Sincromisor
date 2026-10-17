@@ -1,12 +1,13 @@
 """共通JSONL設定でHTTP状態確認と音声パイプラインのWebSocket境界を起動する。"""
 
+import asyncio
 import logging
 import logging.config
 from logging import Logger
 from threading import Event
 
 import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket
 from fastapi.responses import JSONResponse
 from setproctitle import setproctitle
 from sincro_config import (
@@ -15,6 +16,8 @@ from sincro_config import (
     ServiceDiscoveryReporter,
     SincromisorLoggerConfig,
 )
+from sincro_config.websocket_diagnostics import WebSocketDiagnostics
+from starlette.websockets import WebSocketState
 from voice_synthesizer.models import VoiceSynthesizerProcessArgument
 from voice_synthesizer.VoiceSynthesizer import VoiceSynthesizerWorker
 
@@ -67,8 +70,10 @@ class VoiceSynthesizerProcess:
 
         @app.websocket("/api/v1/VoiceSynthesizer/synthesize")
         async def websocket_chat_endpoint(ws: WebSocket) -> None:
+            """接続単位の診断と後始末を所有し、要求処理の主原因を保持する。"""
             # 本文を持つ要求の処理はワーカーへ委ね、ここでは接続の生存期間を管理する。
-            self.__logger.info("Connected Websocket.")
+            diagnostic = WebSocketDiagnostics(self.__logger)
+            diagnostic.start()
             self.__sessions += 1
             voice_synthesizer: VoiceSynthesizerWorker | None = None
             try:
@@ -87,7 +92,8 @@ class VoiceSynthesizerProcess:
                 )
                 if voicevox_description is None:
                     raise RuntimeError("No SincroVoiceVox worker found.")
-                await ws.accept()
+                with diagnostic.operation("accept"):
+                    await ws.accept()
                 voice_synthesizer = VoiceSynthesizerWorker(
                     voicevox_host=voicevox_description.service_address,
                     voicevox_port=voicevox_description.service_port,
@@ -99,21 +105,30 @@ class VoiceSynthesizerProcess:
                     s3_access_key=self.__args.s3_access_key,
                     s3_secret_key=self.__args.s3_secret_key,
                 )
-                await voice_synthesizer.communicate(ws=ws)
-            except WebSocketDisconnect:
-                self.__logger.info("Disconnected WebSocket.")
-            except Exception:
-                self.__logger.exception("WebSocket processing failed.")
+                await voice_synthesizer.communicate(ws=ws, diagnostic=diagnostic)
+            except asyncio.CancelledError as error:
+                diagnostic.finish(error)
+                raise
+            except Exception as error:  # noqa: BLE001  # reason: 接続境界で安全な原因を記録し、他接続へ例外を波及させない。
+                diagnostic.finish(error)
+            else:
+                diagnostic.finish()
             finally:
                 if voice_synthesizer is not None:
-                    voice_synthesizer.close()
+                    try:
+                        voice_synthesizer.close()
+                    except Exception as error:  # noqa: BLE001  # reason: 接続境界で安全な原因を記録し、他接続へ例外を波及させない。
+                        diagnostic.cleanup_failed(error)
                 self.__sessions -= 1
-                try:
-                    await ws.close()
-                except RuntimeError:
-                    self.__logger.warning(
-                        "WebSocket is already closed.",
-                    )
+                # 切断済みの接続は再度closeせず、後始末の失敗も主原因と別に記録する。
+                if (
+                    ws.client_state != WebSocketState.DISCONNECTED
+                    and ws.application_state != WebSocketState.DISCONNECTED
+                ):
+                    try:
+                        await ws.close()
+                    except Exception as error:  # noqa: BLE001  # reason: 接続境界で安全な原因を記録し、他接続へ例外を波及させない。
+                        diagnostic.cleanup_failed(error)
 
         try:
             uvicorn.run(

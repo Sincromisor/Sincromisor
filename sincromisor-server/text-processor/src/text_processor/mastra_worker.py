@@ -5,6 +5,7 @@ from collections.abc import AsyncGenerator
 from contextlib import aclosing
 
 from fastapi import WebSocket
+from sincro_config.websocket_diagnostics import WebSocketDiagnostics
 from sincro_models import TextProcessorRequest, TextProcessorResult
 
 from .mastra_client import MastraClient
@@ -19,10 +20,26 @@ class MastraTextProcessorWorker(TextProcessorWorker):
         super().__init__()
         self.mastra_client = MastraClient(base_url, api_key, agent_id)
 
-    async def communicate(self, ws: WebSocket) -> None:
+    async def communicate(
+        self, ws: WebSocket, diagnostic: WebSocketDiagnostics | None = None
+    ) -> None:
         """受信・生成処理の回収後に、接続内で再利用したHTTPプールを閉じる。"""
-        async with self.mastra_client:
-            await super().communicate(ws)
+        diagnostic = diagnostic or WebSocketDiagnostics(self.logger)
+        processing_finished = False
+        try:
+            async with self.mastra_client:
+                try:
+                    await super().communicate(ws, diagnostic=diagnostic)
+                finally:
+                    processing_finished = True
+        except Exception as error:
+            # HTTPプールの終了失敗は接続処理の主原因と分け、既存の回収順序を保つ。
+            if processing_finished and error is not diagnostic.error:
+                diagnostic.cleanup_failed(error)
+                if diagnostic.error is not None:
+                    raise diagnostic.error
+                return
+            raise
 
     async def process_async(
         self,

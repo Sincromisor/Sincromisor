@@ -1,6 +1,10 @@
+"""要求を同期合成へ渡し、回収完了後にWebSocketへ返す接続単位の処理。"""
+
 import asyncio
+import logging
 
 from fastapi import WebSocket
+from sincro_config.websocket_diagnostics import WebSocketDiagnostics
 from sincro_models import (
     TextProcessorResult,
     VoiceSynthesizerRequest,
@@ -41,10 +45,25 @@ class VoiceSynthesizerWorker:
         """合成処理の終了後、接続が所有するキャッシュとHTTPプールを解放する。"""
         self.__vvox.close()
 
-    async def communicate(self, ws: WebSocket) -> None:
+    async def communicate(
+        self, ws: WebSocket, diagnostic: WebSocketDiagnostics | None = None
+    ) -> None:
         """本文を含む受信全体を出力せず、生成境界へ保持中のIDだけを渡す。"""
-        while pack := await ws.receive_bytes():
-            result = TextProcessorResult.from_msgpack(pack=pack)
+        diagnostic = diagnostic or WebSocketDiagnostics(
+            logging.getLogger("sincro.VoiceSynthesizerWorker")
+        )
+        while True:
+            with diagnostic.operation("receive"):
+                pack = await ws.receive_bytes()
+            if not pack:
+                break
+            with diagnostic.operation("decode"):
+                result = TextProcessorResult.from_msgpack(pack=pack)
+            diagnostic.ids = {
+                "session_id": result.session_id,
+                "sequence_id": result.sequence_id,
+                "speech_id": result.response_message.speech_id,
+            }
             if not result.voice_text:
                 continue
             request = VoiceSynthesizerRequest(
@@ -65,7 +84,8 @@ class VoiceSynthesizerWorker:
                 )
             )
             try:
-                voice = await asyncio.shield(pending)
+                with diagnostic.operation("process"):
+                    voice = await asyncio.shield(pending)
             except asyncio.CancelledError:
                 # スレッドは取消で止まらない。closeより先に回収し、結果は送らない。
                 cleanup = asyncio.gather(pending, return_exceptions=True)
@@ -77,4 +97,5 @@ class VoiceSynthesizerWorker:
                 raise
             # キャッシュの発話IDは保存時のままなので、送信する要求のIDへ戻す。
             voice.speech_id = request.speech_id
-            await ws.send_bytes(voice.to_msgpack())
+            with diagnostic.operation("send"):
+                await ws.send_bytes(voice.to_msgpack())
