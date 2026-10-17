@@ -1,0 +1,13 @@
+id: task-261018011035-synthesis-keepalive-investigation
+title: 音声合成WebSocketの生存確認タイムアウトを調査する
+category: failure-diagnostics
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-10-18
+closed_at: 2026-10-18
+legacy_ids: []
