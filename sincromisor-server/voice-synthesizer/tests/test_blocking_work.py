@@ -2,6 +2,7 @@
 
 import asyncio
 import io
+import logging
 import wave
 from importlib import import_module
 from threading import Event, get_ident
@@ -34,8 +35,13 @@ def request_pack():
     return result.to_msgpack()
 
 
-@pytest.mark.parametrize("outcome", ["success", "failure", "cancel"])
-def test_wait_does_not_block_and_cancel_joins(monkeypatch, outcome):
+@pytest.mark.parametrize(
+    "outcome", ["success", "failure", "cancel", "send_failure", "send_cancel"]
+)
+def test_wait_does_not_block_and_cancel_joins(monkeypatch, caplog, outcome):
+    monkeypatch.setenv("SINCRO_LOG_SYNTHESIS_ENABLED", "false")
+    caplog.set_level(logging.INFO)
+
     async def run():
         loop = asyncio.get_running_loop()
         started = asyncio.Event()
@@ -73,6 +79,10 @@ def test_wait_does_not_block_and_cancel_joins(monkeypatch, outcome):
             return packs.pop(0)
 
         async def send_bytes(pack):
+            if outcome == "send_failure":
+                raise ConnectionError("private-send-error")
+            if outcome == "send_cancel":
+                raise asyncio.CancelledError
             sent.append(pack)
 
         async def connection():
@@ -103,7 +113,11 @@ def test_wait_does_not_block_and_cancel_joins(monkeypatch, outcome):
                 assert voice.speech_id == 8
             else:
                 with pytest.raises(
-                    asyncio.CancelledError if outcome == "cancel" else ValueError
+                    asyncio.CancelledError
+                    if outcome in {"cancel", "send_cancel"}
+                    else ConnectionError
+                    if outcome == "send_failure"
+                    else ValueError
                 ):
                     await task
                 assert not sent
@@ -114,6 +128,36 @@ def test_wait_does_not_block_and_cancel_joins(monkeypatch, outcome):
             await asyncio.gather(task, return_exceptions=True)
 
     asyncio.run(run())
+    events = [r.msg for r in caplog.records if isinstance(r.msg, dict)]
+    assert events[0]["event"] == "synthesis_received"
+    assert [e["event"] for e in events] == (
+        ["synthesis_received", "synthesis_delivery"]
+        if outcome == "failure"
+        else ["synthesis_received", "synthesis_generated", "synthesis_delivery"]
+    )
+    assert events[-1]["outcome"] == (
+        "success"
+        if outcome == "success"
+        else "cancelled"
+        if outcome in {"cancel", "send_cancel"}
+        else "failed"
+    )
+    assert events[-1]["operation"] == (
+        "process" if outcome in {"failure", "cancel"} else "send"
+    )
+    assert all(
+        e["connection_id"] == events[0]["connection_id"] and e["connection_id"]
+        for e in events
+    )
+    assert all(
+        e["request_number"] == 1
+        and e["session_id"] == "fixture"
+        and e["sequence_id"] == 2
+        and e["speech_id"] == 8
+        for e in events
+    )
+    assert "人工音声" not in str(events)
+    assert "private-send-error" not in str(events)
 
 
 def test_cache_timeout_and_partial_initialization_cleanup(monkeypatch):

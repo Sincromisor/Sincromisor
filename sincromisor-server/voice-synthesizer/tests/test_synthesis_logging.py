@@ -247,7 +247,8 @@ def test_synthesis_setting(monkeypatch, value):
         assert "private-input" not in str(error.value)
 
 
-def test_worker_preserves_ids_and_skips_final(monkeypatch):
+def test_worker_preserves_ids_and_skips_final(monkeypatch, caplog):
+    caplog.set_level(logging.INFO)
     from sincro_models import (
         ChatHistory,
         ChatMessage,
@@ -284,7 +285,7 @@ def test_worker_preserves_ids_and_skips_final(monkeypatch):
     )
     result = TextProcessorResult.from_request(request, "assistant", "a", "a")
     result.append_response_message("人工本文")
-    packs = [result.to_msgpack()]
+    packs = [result.to_msgpack(), result.to_msgpack()]
     result.finalize()
     packs.extend([result.to_msgpack(), b""])
     sent = []
@@ -300,10 +301,13 @@ def test_worker_preserves_ids_and_skips_final(monkeypatch):
             SimpleNamespace(receive_bytes=receive_bytes, send_bytes=send_bytes)
         )
     )
-    assert len(calls) == 1
+    assert len(calls) == 2
     assert calls[0]["session_id"] == "session-a"
     assert calls[0]["sequence_id"] == 2
     assert calls[0]["vs_request"].message == "人工本文"
     assert calls[0]["vs_request"].style_id == 3
     assert voice.speech_id == 8
-    assert sent == [b"audio"]
+    assert sent == [b"audio", b"audio"]
+    events = [r.msg for r in caplog.records if isinstance(r.msg, dict)]
+    assert [e["request_number"] for e in events] == [1, 1, 1, 2, 2, 2]
+    assert len({e["connection_id"] for e in events}) == 1

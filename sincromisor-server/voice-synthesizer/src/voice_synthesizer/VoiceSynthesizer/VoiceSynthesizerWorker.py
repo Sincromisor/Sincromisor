@@ -4,6 +4,7 @@ import asyncio
 import logging
 
 from fastapi import WebSocket
+from sincro_config.runtime_diagnostics import failure_fields
 from sincro_config.websocket_diagnostics import WebSocketDiagnostics
 from sincro_models import (
     TextProcessorResult,
@@ -52,6 +53,7 @@ class VoiceSynthesizerWorker:
         diagnostic = diagnostic or WebSocketDiagnostics(
             logging.getLogger("sincro.VoiceSynthesizerWorker")
         )
+        request_number = 0
         while True:
             with diagnostic.operation("receive"):
                 pack = await ws.receive_bytes()
@@ -74,28 +76,70 @@ class VoiceSynthesizerWorker:
                 pre_phoneme_length=0.1,
                 post_phoneme_length=0.1,
             )
-            # 一要求ずつ完了を待ち、同期I/Oと音声変換だけをスレッドへ委ねる。
-            pending = asyncio.create_task(
-                asyncio.to_thread(
-                    self.__vvox.get_voice,
-                    vs_request=request,
-                    session_id=result.session_id,
-                    sequence_id=result.sequence_id,
-                )
-            )
+            # 連番はこの接続内だけの照合用であり、通信やキャッシュには追加しない。
+            request_number += 1
+            fields = {
+                "connection_id": diagnostic.connection_id,
+                **diagnostic.ids,
+                "request_number": request_number,
+            }
+            diagnostic.logger.info({"event": "synthesis_received", **fields})
+            operation = "process"
             try:
-                with diagnostic.operation("process"):
-                    voice = await asyncio.shield(pending)
-            except asyncio.CancelledError:
-                # スレッドは取消で止まらない。closeより先に回収し、結果は送らない。
-                cleanup = asyncio.gather(pending, return_exceptions=True)
-                while not cleanup.done():
-                    try:
-                        await asyncio.shield(cleanup)
-                    except asyncio.CancelledError:
-                        continue
+                # 一要求ずつ完了を待ち、同期I/Oと音声変換だけをスレッドへ委ねる。
+                pending = asyncio.create_task(
+                    asyncio.to_thread(
+                        self.__vvox.get_voice,
+                        vs_request=request,
+                        session_id=result.session_id,
+                        sequence_id=result.sequence_id,
+                    )
+                )
+                try:
+                    with diagnostic.operation("process"):
+                        voice = await asyncio.shield(pending)
+                except asyncio.CancelledError:
+                    # スレッドは取消で止まらない。closeより先に回収し、結果は送らない。
+                    cleanup = asyncio.gather(pending, return_exceptions=True)
+                    while not cleanup.done():
+                        try:
+                            await asyncio.shield(cleanup)
+                        except asyncio.CancelledError:
+                            continue
+                    if not pending.cancelled() and pending.exception() is None:
+                        diagnostic.logger.info(
+                            {"event": "synthesis_generated", **fields}
+                        )
+                    raise
+                diagnostic.logger.info({"event": "synthesis_generated", **fields})
+                # キャッシュの発話IDは保存時のままなので、送信する要求のIDへ戻す。
+                voice.speech_id = request.speech_id
+                operation = "send"
+                with diagnostic.operation("send"):
+                    await ws.send_bytes(voice.to_msgpack())
+            except (Exception, asyncio.CancelledError) as error:
+                outcome = (
+                    "cancelled"
+                    if isinstance(error, asyncio.CancelledError)
+                    else "failed"
+                )
+                diagnostic.logger.log(
+                    logging.INFO if outcome == "cancelled" else logging.WARNING,
+                    {
+                        "event": "synthesis_delivery",
+                        **fields,
+                        "operation": operation,
+                        "outcome": outcome,
+                        **failure_fields(error),
+                    },
+                )
                 raise
-            # キャッシュの発話IDは保存時のままなので、送信する要求のIDへ戻す。
-            voice.speech_id = request.speech_id
-            with diagnostic.operation("send"):
-                await ws.send_bytes(voice.to_msgpack())
+            # send_bytes完了だけを表す。RTCでの受信やブラウザー再生の完了ではない。
+            diagnostic.logger.info(
+                {
+                    "event": "synthesis_delivery",
+                    **fields,
+                    "operation": "send",
+                    "outcome": "success",
+                }
+            )
