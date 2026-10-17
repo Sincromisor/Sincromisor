@@ -18,11 +18,13 @@ const maxDiagnosticBytes = 16 << 10
 
 // browserDiagnosticは任意本文・contextを持たない端末申告であり、所有権の証明には使わない。
 type browserDiagnostic struct {
-	Event      string `json:"event"`
-	Reason     string `json:"reason"`
-	ClientTime string `json:"client_time"`
-	SessionID  string `json:"session_id,omitempty"`
-	Count      int    `json:"count"`
+	Event      string          `json:"event"`
+	Reason     string          `json:"reason"`
+	ClientTime string          `json:"client_time"`
+	SessionID  string          `json:"session_id,omitempty"`
+	Count      int             `json:"count"`
+	Operation  json.RawMessage `json:"operation,omitempty"`
+	HTTPStatus json.RawMessage `json:"http_status,omitempty"`
 }
 type browserDiagnostics struct {
 	ClientID string              `json:"client_id"`
@@ -108,7 +110,8 @@ func (s *Server) handleDiagnostics(w http.ResponseWriter, r *http.Request) {
 		if event.SessionID != "" {
 			attrs = append(attrs, "session_id", event.SessionID)
 		}
-		s.logger.Info("Browser diagnostic", attrs...)
+		signaling, _ := signalingDiagnosticAttrs(event)
+		s.logger.Info("Browser diagnostic", append(attrs, signaling...)...)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -124,6 +127,9 @@ func diagnosticDecodeError(w http.ResponseWriter, err error) {
 
 // validDiagnosticの語彙はフロント契約と対で更新する。自由文は受け付けない。
 func validDiagnostic(event browserDiagnostic) bool {
+	if _, valid := signalingDiagnosticAttrs(event); !valid {
+		return false
+	}
 	if !slices.Contains([]string{"microphone", "camera", "rtc", "rtc_telop", "rtc_text", "rtc_track", "signaling", "model", "render", "webgl", "unhandled_error", "unhandled_rejection", "vad_worker", "tracker_worker"}, event.Event) {
 		return false
 	}
@@ -140,4 +146,28 @@ func validDiagnostic(event browserDiagnostic) bool {
 	}
 	parsed, err := time.Parse(time.RFC3339Nano, event.ClientTime)
 	return err == nil && parsed.Year() >= 2000 && parsed.Year() <= 2100
+}
+
+// signalingDiagnosticAttrs は省略とnullを区別し、シグナリングだけの固定属性へ変換する。
+// 未知項目拒否は外側のdecoderが所有し、この境界では値の型・範囲を検査する。
+func signalingDiagnosticAttrs(event browserDiagnostic) ([]any, bool) {
+	if (len(event.Operation) > 0 || len(event.HTTPStatus) > 0) && event.Event != "signaling" {
+		return nil, false
+	}
+	var attrs []any
+	if len(event.Operation) > 0 {
+		var operation string
+		if json.Unmarshal(event.Operation, &operation) != nil || !slices.Contains([]string{"initial-offer", "update-offer", "candidate"}, operation) {
+			return nil, false
+		}
+		attrs = append(attrs, "operation", operation)
+	}
+	if len(event.HTTPStatus) > 0 {
+		var status int
+		if json.Unmarshal(event.HTTPStatus, &status) != nil || status < 100 || status > 599 {
+			return nil, false
+		}
+		attrs = append(attrs, "http_status", status)
+	}
+	return attrs, true
 }

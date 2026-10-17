@@ -1,4 +1,5 @@
 import { frontendLogger } from "../../shared/logging/appLogger";
+import { diagnosticReason } from "../../shared/logging/browserDiagnostics";
 import { ChatMessageService } from "../conversation/chat/model/chatMessageService";
 import { DebugConsoleManager } from "../debug/model/debugConsoleManager";
 import { replaceRtcAudioTrack, setRtcAudioMute } from "./rtcAudioTrackSender";
@@ -370,6 +371,10 @@ export class RTCTalkClient {
                 : `${target}への接続に失敗しました。${String(error)}`;
         this.chatMessageService.writeErrorMessage(message, true);
         this.rtcHealthCallback(message);
+        // HTTP失敗は再試行・復旧より前の通信境界で記録済み。その他の失敗だけ補う。
+        if (!(error instanceof RtcSignalingHttpError)) {
+            frontendLogger.diagnostic("signaling", diagnosticReason(error));
+        }
         frontendLogger.error("RTC generation failed terminally.", { error });
     }
 

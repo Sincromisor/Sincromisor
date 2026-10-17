@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 )
@@ -91,5 +92,80 @@ func TestBrowserDiagnosticLimits(t *testing.T) {
 	}
 	if send(diagnosticFixture) != 429 {
 		t.Fatal("頻度上限を超過した")
+	}
+}
+
+// TypeScriptの実送信処理と同じfixtureを受理し、選別した値がJSONへ残ることを確認する。
+func TestBrowserSignalingDiagnosticFixture(t *testing.T) {
+	data, err := os.ReadFile("testdata/browser-signaling-diagnostics.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	s := Server{logger: slog.New(slog.NewJSONHandler(&output, nil))}
+	req := httptest.NewRequest("POST", "http://example.com"+diagnosticsPath, bytes.NewReader(data))
+	req.Header.Set("Origin", "http://example.com")
+	req.Header.Set("Content-Type", "application/json")
+	res := httptest.NewRecorder()
+	s.handleDiagnostics(res, req)
+	if res.Code != 204 {
+		t.Fatal(res.Code, res.Body.String())
+	}
+	lines := strings.Split(strings.TrimSpace(output.String()), "\n")
+	if len(lines) != 6 {
+		t.Fatal(output.String())
+	}
+	for i, line := range lines {
+		var event map[string]any
+		if err := json.Unmarshal([]byte(line), &event); err != nil {
+			t.Fatal(err)
+		}
+		if event["diagnostic_event"] != "signaling" || event["session_id"] != "01K1AF2Y0H0000000000000001" {
+			t.Fatal(event)
+		}
+		expected := []string{"update-offer", "candidate", "candidate", "initial-offer", "initial-offer", "initial-offer"}[i]
+		if event["operation"] != expected {
+			t.Fatal(event)
+		}
+		status := []int{404, 404, 410, 429, 503, 0}[i]
+		if status == 0 {
+			if _, exists := event["http_status"]; exists {
+				t.Fatal(event)
+			}
+		} else if event["http_status"] != float64(status) {
+			t.Fatal(event)
+		}
+	}
+}
+
+func TestBrowserSignalingDiagnosticRejectsInvalidFields(t *testing.T) {
+	for _, addition := range []string{
+		`"operation":"private-token"`, `"operation":null`, `"operation":1`,
+		`"http_status":99`, `"http_status":600`, `"http_status":503.5`, `"http_status":null`, `"http_status":"503"`,
+		`"url":"private-token"`,
+	} {
+		for _, event := range []string{"signaling", "rtc"} {
+			var output bytes.Buffer
+			s := Server{logger: slog.New(slog.NewJSONHandler(&output, nil))}
+			body := strings.Replace(diagnosticFixture, "microphone", event, 1)
+			body = strings.Replace(body, `"count":1`, `"count":1,`+addition, 1)
+			req := httptest.NewRequest("POST", "http://example.com"+diagnosticsPath, strings.NewReader(body))
+			req.Header.Set("Origin", "http://example.com")
+			req.Header.Set("Content-Type", "application/json")
+			res := httptest.NewRecorder()
+			s.handleDiagnostics(res, req)
+			if res.Code != 400 || output.Len() != 0 {
+				t.Fatalf("%s %s: %d %s", event, addition, res.Code, output.String())
+			}
+		}
+	}
+	for _, addition := range []string{`"operation":"candidate"`, `"http_status":503`} {
+		var event browserDiagnostic
+		if err := json.Unmarshal([]byte(`{"event":"rtc",`+addition+`}`), &event); err != nil {
+			t.Fatal(err)
+		}
+		if _, valid := signalingDiagnosticAttrs(event); valid {
+			t.Fatal("other event accepted signaling fields")
+		}
 	}
 }

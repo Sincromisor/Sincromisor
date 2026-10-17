@@ -266,6 +266,8 @@ Consulの同一状態の出力更新の遅延は[公式実装のCheckUpdateInter
 管理者トークン、中央保存やVectorのURLを端末へ渡さない。追加の保存DB・受信サービス・公開ポートはない。
 `source=browser`とタブ限りの`client_id`、端末の`client_time`、RTCの`received_at`を区別し、収集側の`host`は受信サーバーのホストを表す。
 会話IDがない起動前の失敗も検索できる。任意本文や端末申告のhost/serviceは受け付けない。
+シグナリング診断だけに`operation`（`initial-offer` / `update-offer` / `candidate`）と取得済みの`http_status`を追加する。HTTP実行ごとの失敗を記録し、更新Offer・Candidateの404/410による復旧でも保持する。**破壊的変更**: 新フロントの追加項目を旧Goは拒否するため同時更新する。新Goは既存形式も受理する。
+
 有限キュー・再試行・端末喪失の限界は[共通枠組み](../frontend/app-shell.md#ブラウザーの障害診断)、受付上限は[RTC契約](../contracts/frontend-rtc.md#ブラウザー診断の受付)を参照する。
 
 ## 内部処理の失敗診断
