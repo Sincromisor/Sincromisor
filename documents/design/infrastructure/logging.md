@@ -167,7 +167,7 @@ Vectorはjournalの読取だけを持つ。Dockerソケットを使うobserver�
 
 `vector test`で`configs/vector.toml`と`configs/vector-tests.toml`を読み、正規化・識別子偽装・秘密属性の除去を確認する。
 `node --test scripts/tests/log-collector.test.mjs`は人工ログだけの隔離Composeを使う。
-製品の実ログ出力と複数ホスト間の到達・本文切替の最終確認は結合確認タスクで行う。
+`node --test scripts/tests/log-diagnostics.test.mjs`はGoの実WebSocket代役とPythonのHTTP合成・配送失敗代役から本番JSONLを生成し、同じjournal入力・Vector設定・VictoriaLogs検索へ通す。本文無効で切断原因、再接続、未受信・破棄件数、合成後の配送失敗を確認する。保存は専用tmpfsで、既存のサービス・ボリュームを変更しない。複数ホスト間の到達や実GPU推論はこの試験の対象外。
 
 2026-09-22に[Docker journald](https://docs.docker.com/engine/logging/drivers/journald/)、[非同期ログの破棄条件](https://docs.docker.com/engine/logging/configure/)、[Vector HTTP送信](https://vector.dev/docs/reference/configuration/sinks/http/)を確認した。固定版の[journal入力実装](https://github.com/vectordotdev/vector/blob/v0.58.0/src/sources/journald.rs)はinclude条件をORで評価し、中央受理後にcursorを更新する。
 
