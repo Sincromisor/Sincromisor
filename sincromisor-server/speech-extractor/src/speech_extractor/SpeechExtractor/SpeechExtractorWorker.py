@@ -117,18 +117,21 @@ class SpeechExtractorWorker:
         min_buffer_length: int | None = None,
     ) -> AsyncGenerator[np.ndarray]:
         target_length = min_buffer_length or self.MIN_BUFFER_LENGTH_SAMPLES
-        buffer: np.ndarray = np.zeros(0, dtype=self.voice_dtype)
+        chunks: list[np.ndarray] = []
+        sample_count = 0
 
         while True:
             np_frame: np.ndarray = np.frombuffer(
                 await ws.receive_bytes(),
                 dtype=self.voice_dtype,
             )
-            buffer = np.append(buffer, np_frame)
-            if buffer.size > target_length:
-                # buffer = nr.reduce_noise(y=buffer, sr=self.voice_sampling_rate)
-                yield buffer
-                buffer = np.zeros(0, dtype=self.voice_dtype)
+            chunks.append(np_frame)
+            sample_count += np_frame.size
+            if sample_count > target_length:
+                # 受信時は参照だけを保持し、従来と同じ判定単位で一度だけ連続化する。
+                yield np.concatenate(chunks)
+                chunks.clear()
+                sample_count = 0
 
     # ===== Chunk processing =====
     # 1チャンク分の判定と状態遷移を実行し、必要ならExtractorResultを送信する。
