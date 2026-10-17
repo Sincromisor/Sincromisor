@@ -1,6 +1,7 @@
 export type SincroMediaDeviceKind = "audioinput" | "videoinput";
 
-export type SincroMediaDeviceOption = {
+/** 列挙した入力機器。発行後は変更せず次の列挙結果で置き換える。 */
+export type SincroMediaDeviceOption = Readonly<{
     kind: SincroMediaDeviceKind;
     deviceId: string;
     groupId: string | undefined;
@@ -8,7 +9,7 @@ export type SincroMediaDeviceOption = {
     rawLabel: string;
     fallbackLabel: string;
     isLabelResolved: boolean;
-};
+}>;
 
 export type SincroMediaDeviceSelectionState = {
     selectedDeviceId: string | undefined;
@@ -18,15 +19,16 @@ export type SincroMediaDeviceSelectionState = {
     matchedDevice: SincroMediaDeviceOption | undefined;
 };
 
-export type SincroMediaDeviceSnapshot = {
+/** 一覧と取得状態をまとめた読み取り専用値。更新がない間は同じ参照を返す。 */
+export type SincroMediaDeviceSnapshot = Readonly<{
     isSupported: boolean;
-    audioInputs: SincroMediaDeviceOption[];
-    videoInputs: SincroMediaDeviceOption[];
+    audioInputs: readonly SincroMediaDeviceOption[];
+    videoInputs: readonly SincroMediaDeviceOption[];
     labelsResolved: boolean;
     isRefreshing: boolean;
     refreshError: string | undefined;
     lastUpdatedAt: number | undefined;
-};
+}>;
 
 type SincroMediaDeviceListener = (snapshot: SincroMediaDeviceSnapshot) => void;
 
@@ -62,14 +64,12 @@ export class SincroMediaDeviceService {
 
     private constructor() {}
 
+    /** UIの外部ストア購読へ現在値を渡す。取得による複製や通知はしない。 */
     getSnapshot(): SincroMediaDeviceSnapshot {
-        return {
-            ...this.snapshot,
-            audioInputs: [...this.snapshot.audioInputs],
-            videoInputs: [...this.snapshot.videoInputs],
-        };
+        return this.snapshot;
     }
 
+    /** 登録時に現在値を通知し、解除は当該購読だけを外す。 */
     subscribe(listener: SincroMediaDeviceListener): () => void {
         this.listeners.add(listener);
         listener(this.getSnapshot());
@@ -78,6 +78,7 @@ export class SincroMediaDeviceService {
         };
     }
 
+    /** 共有サービスがdevicechange監視を所有し、複数の開始要求をまとめる。 */
     start(): void {
         if (this.isWatching || !this.snapshot.isSupported || !navigator.mediaDevices) {
             return;
@@ -86,6 +87,7 @@ export class SincroMediaDeviceService {
         this.isWatching = true;
     }
 
+    /** 監視所有者による停止。個々の画面の購読解除からは呼ばない。 */
     stop(): void {
         if (!this.isWatching || !navigator.mediaDevices) {
             return;
@@ -94,6 +96,7 @@ export class SincroMediaDeviceService {
         this.isWatching = false;
     }
 
+    /** 同時取得を共有する。失敗時は一覧を保ち、エラーと取得状態だけを更新する。 */
     async refresh(): Promise<SincroMediaDeviceSnapshot> {
         if (!this.snapshot.isSupported || !navigator.mediaDevices?.enumerateDevices) {
             return this.getSnapshot();
@@ -148,6 +151,7 @@ export class SincroMediaDeviceService {
         };
     }
 
+    // 一覧は列挙成功時だけ置き換え、取得中・失敗時も過去の値を変更しない。
     private patchSnapshot(partial: Partial<SincroMediaDeviceSnapshot>): void {
         this.snapshot = {
             ...this.snapshot,
@@ -187,7 +191,7 @@ export function buildSincroMediaDeviceSelections(params: {
 }
 
 function resolveMediaDeviceSelection(
-    options: SincroMediaDeviceOption[],
+    options: readonly SincroMediaDeviceOption[],
     selectedDeviceId: string | undefined,
     availabilityKnown: boolean,
 ): SincroMediaDeviceSelectionState {
@@ -202,7 +206,7 @@ function resolveMediaDeviceSelection(
 }
 
 function resolveSelectedMediaDevice(
-    options: SincroMediaDeviceOption[],
+    options: readonly SincroMediaDeviceOption[],
     selectedDeviceId: string | undefined,
 ): SincroMediaDeviceOption | undefined {
     if (selectedDeviceId === undefined) {
