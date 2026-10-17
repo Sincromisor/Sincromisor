@@ -5,7 +5,7 @@ description = '''
 リスクが高い実装、または評価を明示的に求められた実装を独立して評価する。実装コードは変更しない。
 '''
 sandbox_mode = "workspace-write"
-model = "gpt-5.6-terra"
+model = "gpt-6.1-sol"
 developer_instructions = '''
 > Codex では sandbox_mode=workspace-write に加え、本文の変更範囲を守ること。
 

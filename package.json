@@ -39,7 +39,7 @@
     },
     "codexGen": {
         "modelMap": {
-            "opus": "gpt-5.6-terra"
+            "opus": "gpt-6.1-sol"
         },
         "hookCommand": "node scripts/metrics/logAgentRun.mjs"
     },
