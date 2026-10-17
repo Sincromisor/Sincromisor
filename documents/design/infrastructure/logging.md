@@ -218,6 +218,8 @@ llamaのJSONLの`time`は経過時間なので、中央の発生時刻にはDock
 
 **破壊的変更**: RTCとAgentServerの運用ログをテキストからJSONLへ変更する。RTC・Mastra APIや会話履歴の契約は変更しない。
 
+`pipeline_connect_failed`は`peer`、`connect_stage`（`resolve` / `dial` / `initialize` / `activate`）、安全な原因、`session_id`、`generation`、1起点の`attempt`、実際の`retry_delay_ms`を記録する。`pipeline_connect_result`は成功・失敗・取消、試行数と`duration_ms`を残し、`initial`で初回と再接続を区別する。公開前に終了イベントを受けた場合は後続の取消よりその最初の原因を優先する。
+
 ## 音声生成
 
 `SINCRO_LOG_SYNTHESIS_ENABLED`は対話設定と独立し、VoiceSynthesizerとVectorの再作成で反映する。

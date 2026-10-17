@@ -96,12 +96,12 @@ func (c *baseClient) establish(
 		var err error
 		initialPayload, err = initialize()
 		if err != nil {
-			return nil, nil, fmt.Errorf("encode %s initialization: %w", c.service, err)
+			return nil, nil, &ConnectError{Peer: c.service, Operation: "initialize", Err: err}
 		}
 	}
 	endpoint, err := c.resolver.Resolve(lifetimeCtx, c.discovery)
 	if err != nil {
-		return nil, nil, fmt.Errorf("resolve %s endpoint: %w", c.service, err)
+		return nil, nil, &ConnectError{Peer: c.service, Operation: "resolve", Err: err}
 	}
 	if endpoint.Source == discovery.EndpointSourceFallback {
 		c.logger.Warn("pipeline service discovery fell back",
@@ -118,21 +118,21 @@ func (c *baseClient) establish(
 	conn, rawConn, err := dialWebSocket(dialCtx, dialURL.String())
 	dialCancel()
 	if err != nil {
-		return nil, nil, fmt.Errorf("dial %s websocket: %w", c.service, err)
+		return nil, nil, &ConnectError{Peer: c.service, Operation: "dial", Err: err}
 	}
 	conn.SetReadLimit(c.readLimit)
 
 	if len(initialPayload) > 0 {
 		if int64(len(initialPayload)) > c.readLimit {
 			_ = conn.CloseNow()
-			return nil, nil, fmt.Errorf("initialize %s websocket: payload exceeds service limit", c.service)
+			return nil, nil, &ConnectError{Peer: c.service, Operation: "initialize", Err: errors.New("payload exceeds service limit")}
 		}
 		writeCtx, writeCancel := context.WithTimeout(lifetimeCtx, c.cfg.WriteTimeout)
 		err = conn.Write(writeCtx, websocket.MessageBinary, initialPayload)
 		writeCancel()
 		if err != nil {
 			_ = conn.CloseNow()
-			return nil, nil, fmt.Errorf("initialize %s websocket: %w", c.service, err)
+			return nil, nil, &ConnectError{Peer: c.service, Operation: "initialize", Err: err}
 		}
 	}
 	return conn, rawConn, nil

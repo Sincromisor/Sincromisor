@@ -13,8 +13,25 @@ import (
 
 // connectUntilRunningは1世代の接続試行回数を所有する。初期接続または一部の接続に失敗しても
 // 同じ世代を維持し、全接続を有効化できた場合だけループを抜けて試行回数を破棄する。
-func (c *Coordinator) connectUntilRunning(initial bool) error {
+func (c *Coordinator) connectUntilRunning(initial bool) (result error) {
 	attempt := uint(0)
+	started := time.Now()
+	c.mu.Lock()
+	sessionID, generation := c.sessionID, c.generation
+	c.mu.Unlock()
+	// 取消や復旧を試行単位の失敗と分け、初期接続も同じ経路で対応付ける。
+	defer func() {
+		outcome := "success"
+		if result != nil {
+			outcome = "failed"
+			if errors.Is(result, ErrClosed) || errors.Is(result, context.Canceled) {
+				outcome = "cancelled"
+			}
+		}
+		c.logger.Info("pipeline_connect_result", "stage", "pipeline_connect_result",
+			"session_id", sessionID, "generation", generation, "initial", initial,
+			"attempt", attempt, "duration_ms", time.Since(started).Milliseconds(), "outcome", outcome)
+	}()
 	for {
 		c.mu.Lock()
 		if c.state == StateClosed {
@@ -25,6 +42,7 @@ func (c *Coordinator) connectUntilRunning(initial bool) error {
 		sessionID, talkMode := c.sessionID, c.talkMode
 		c.mu.Unlock()
 
+		attempt++
 		set, err := c.factory.Connect(ctx, sessionID, talkMode)
 		c.mu.Lock()
 		closed := c.state == StateClosed
@@ -80,12 +98,21 @@ func (c *Coordinator) connectUntilRunning(initial bool) error {
 			}
 			_ = set.Close()
 		}
-		attempt++
 		delay, delayErr := c.retryDelay(attempt - 1)
 		if delayErr != nil {
 			_ = c.Close()
 			return delayErr
 		}
+		attrs := []any{"stage", "pipeline_connect_failed", "session_id", sessionID,
+			"generation", generation, "initial", initial, "attempt", attempt, "retry_delay_ms", delay.Milliseconds()}
+		var failure *pclient.ConnectError
+		if errors.As(err, &failure) {
+			attrs = append(attrs, failure.DiagnosticAttrs()...)
+		} else {
+			attrs = append(attrs, "connect_stage", "activate")
+			attrs = append(attrs, pclient.FailureAttrs(err)...)
+		}
+		c.logger.Warn("pipeline_connect_failed", attrs...)
 		if waitErr := <-c.wait(ctx, delay); waitErr != nil {
 			if initial && ctx.Err() != nil {
 				return ctx.Err()

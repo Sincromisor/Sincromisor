@@ -3,10 +3,12 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -137,8 +139,10 @@ func TestConnectCloseRaceAndDialTimeoutConverge(t *testing.T) {
 		if err != nil {
 			t.Fatalf("NewRecognizer() error = %v", err)
 		}
-		if err := client.Connect(context.Background()); err == nil {
-			t.Fatal("Connect() succeeded")
+		err = client.Connect(context.Background())
+		var failure *ConnectError
+		if !errors.As(err, &failure) || failure.Operation != "dial" || !strings.Contains(fmt.Sprint(failure.DiagnosticAttrs()), "reason timeout") {
+			t.Fatalf("dial timeout diagnosis = %v", err)
 		}
 		if _, ok := <-client.Results(); ok {
 			t.Fatal("Results channel remains open")
@@ -147,4 +151,34 @@ func TestConnectCloseRaceAndDialTimeoutConverge(t *testing.T) {
 			t.Fatal("Events channel remains open")
 		}
 	})
+}
+
+func TestConnectStageDiagnostics(t *testing.T) {
+	for _, stage := range []string{"resolve", "initialize", "dial"} {
+		t.Run(stage, func(t *testing.T) {
+			resolver := resolverFunc(func(context.Context, discovery.Service) (discovery.Endpoint, error) {
+				if stage == "resolve" {
+					return discovery.Endpoint{}, errors.New("secret-resolver")
+				}
+				return discovery.Endpoint{Host: "127.0.0.1", Port: 1, Source: discovery.EndpointSourceConsul}, nil
+			})
+			client, err := NewRecognizer(testConfig("chat"), resolver, testLogger())
+			if err != nil {
+				t.Fatal(err)
+			}
+			var initialize func() ([]byte, error)
+			if stage == "initialize" {
+				initialize = func() ([]byte, error) { return nil, errors.New("secret-initialization") }
+			}
+			err = client.connect(context.Background(), initialize)
+			var failure *ConnectError
+			if !errors.As(err, &failure) || failure.Peer != ServiceRecognizer || failure.Operation != stage {
+				t.Fatalf("diagnosis = %#v", failure)
+			}
+			if strings.Contains(fmt.Sprint(failure.DiagnosticAttrs()), "secret-") {
+				t.Fatal("cause exposed")
+			}
+			_ = client.Close()
+		})
+	}
 }
