@@ -1,0 +1,13 @@
+id: task-261017221326-agent-error-diagnostic-fields
+title: AgentServerの失敗ログに型と既知コードを残す
+category: failure-diagnostics
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-10-17
+closed_at: null
+legacy_ids: []

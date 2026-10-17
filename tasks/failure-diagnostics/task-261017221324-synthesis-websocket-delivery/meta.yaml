@@ -1,0 +1,15 @@
+id: task-261017221324-synthesis-websocket-delivery
+title: 合成完了とRTCへの音声送信結果を区別する
+category: failure-diagnostics
+status: open
+depends_on:
+  - task-261017221323-python-websocket-lifecycle
+  - task-261017221324-synthesis-operation-timing
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-10-17
+closed_at: null
+legacy_ids: []

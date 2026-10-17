@@ -14,6 +14,7 @@ func (c *Coordinator) onClientEvent(generation uint64, event pclient.Event) {
 	c.requestReset(generation, event.Service, string(event.Kind))
 }
 
+// peerは通信相手を表し、中央収集が付ける出力元のserviceとは区別する。
 // requestResetはprotocol、I/O、送信抑制の全失敗を一本化する境界である。causeにはerrorではなく
 // 運用上の分類だけを受け取り、ログへpipelineの内容を漏らさない。旧clientを閉じる前に世代を進め、
 // 並行して届いたcallbackを直ちに期限切れとして扱う。
@@ -30,7 +31,7 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, c
 	c.resetting = true
 	c.logger.Warn("pipeline_reset_requested",
 		"stage", "pipeline_reset_requested", "session_id", c.sessionID,
-		"service", string(service), "cause", cause, "generation", generation)
+		"peer", string(service), "cause", cause, "generation", generation)
 	if err := c.transitionLocked(StateResetting); err != nil {
 		c.mu.Unlock()
 		return

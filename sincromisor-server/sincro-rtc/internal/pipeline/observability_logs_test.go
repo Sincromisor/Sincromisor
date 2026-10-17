@@ -135,7 +135,7 @@ func TestPipelineResetLogsRecordAcceptedOriginWithoutPayloads(t *testing.T) {
 		_ = receive(t, coordinator.TextResults())
 		_ = receive(t, coordinator.SynthResults())
 		factory.setAt(t, 0).emit(pclient.Event{
-			Service: pclient.ServiceRecognizer, Kind: pclient.EventRemoteClose,
+			Service: pclient.ServiceSynthesizer, Kind: pclient.EventRemoteClose,
 			Err: errors.New("error-body-marker"),
 		})
 		waitFor(t, func() bool { return factory.count() == 2 })
@@ -144,7 +144,7 @@ func TestPipelineResetLogsRecordAcceptedOriginWithoutPayloads(t *testing.T) {
 		}
 
 		assertResetLogs(t, logs.String(), []map[string]any{{
-			"session_id": "session-reset-log", "service": string(pclient.ServiceRecognizer),
+			"session_id": "session-reset-log", "peer": string(pclient.ServiceSynthesizer),
 			"cause": string(pclient.EventRemoteClose), "generation": float64(1),
 		}})
 		assertLogDoesNotContain(t, logs.String(), "error-body-marker", "fixture recognized", "fixture response", "audio-payload-marker", "encoded-voice")
@@ -169,7 +169,7 @@ func TestPipelineResetLogsRecordAcceptedOriginWithoutPayloads(t *testing.T) {
 			t.Fatal(err)
 		}
 		assertResetLogs(t, logs.String(), []map[string]any{{
-			"session_id": "session-runtime-reset", "service": string(pclient.ServiceProcessor),
+			"session_id": "session-runtime-reset", "peer": string(pclient.ServiceProcessor),
 			"cause": resetCauseRuntimeError, "generation": float64(1),
 		}})
 	})
@@ -213,7 +213,7 @@ func assertResetLogs(t *testing.T, values string, want []map[string]any) {
 	for index, expected := range want {
 		for key := range got[index] {
 			switch key {
-			case "time", "level", "msg", "stage", "session_id", "service", "cause", "generation":
+			case "time", "level", "msg", "stage", "session_id", "peer", "cause", "generation":
 			default:
 				t.Fatalf("unexpected reset log field %q: %#v", key, got[index])
 			}

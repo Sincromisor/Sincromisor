@@ -1,0 +1,14 @@
+id: task-261017221325-consul-discovery-causes
+title: GoのConsul探索失敗を原因別に記録する
+category: failure-diagnostics
+status: open
+depends_on:
+  - task-261017221322-pipeline-peer-log-fields
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-10-17
+closed_at: null
+legacy_ids: []

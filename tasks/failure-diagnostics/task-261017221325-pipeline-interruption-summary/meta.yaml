@@ -1,0 +1,15 @@
+id: task-261017221325-pipeline-interruption-summary
+title: 再初期化で未完了になった音声要求と破棄数を残す
+category: failure-diagnostics
+status: open
+depends_on:
+  - task-261017221324-pipeline-runtime-causes
+  - task-261017221324-synthesis-websocket-delivery
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-10-17
+closed_at: null
+legacy_ids: []
