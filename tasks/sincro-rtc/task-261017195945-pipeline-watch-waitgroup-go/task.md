@@ -20,8 +20,8 @@ connectionSet.watchは隣接するWaitGroup.Add、go文、defer Doneで監視処
 
 ## 完了条件と確認方法
 
-- [ ] sincro-rtcディレクトリでgo test ./internal/pipeline/clientとgo test -race ./internal/pipeline/clientを実行する。
-- [ ] 接続構築中の失敗、公開後イベント、Closeによる終了待機、panic境界の既存試験で結果が変わらないことを確認する。
+- [x] sincro-rtcディレクトリでgo test ./internal/pipeline/clientとgo test -race ./internal/pipeline/clientを実行する。
+- [x] 接続構築中の失敗、公開後イベント、Closeによる終了待機、panic境界の既存試験で結果が変わらないことを確認する。
 
 変更したGoファイルをgofmtで整形する。確認にはgo.modの採用版を使う。
 
@@ -39,3 +39,7 @@ connectionSet.watchは隣接するWaitGroup.Add、go文、defer Doneで監視処
 2026-10-17参照。採用する範囲は各項目に記す。
 
 - [Go 1.25以降の起動と待合せ、およびpanicの制約](https://pkg.go.dev/sync#WaitGroup.Go)。
+
+## 実装・確認結果
+
+connectionSet.watchのAdd・go・DoneをWaitGroup.Goへ置換した。recover、構築途中のcancel、未公開イベント保持、Closeの待合せを維持した。実際の通知先はCoordinator.safeCallback経由であり、panic通知の再呼出しにも同じ境界が適用されることを確認した。Go 1.26.9のgo test ./internal/pipeline/clientおよびgo test -race ./internal/pipeline/clientはPASS。ローカルlistenを使うためsandbox外で実行した。コメント点検: PASS（監視の所有者と通知先のpanic境界を追記）。

@@ -50,10 +50,10 @@ func (f *setFactory) Connect(ctx context.Context, sessionID, talkMode string) (S
 	return set, nil
 }
 
+// watch は最初の終了イベントを届け、Close が待つ監視処理を所有する。
+// panic通知先も含むhandlerの境界は、呼び出し元のsafeCallbackが保護する。
 func (s *connectionSet) watch(service Service, events <-chan Event) {
-	s.wg.Add(1)
-	go func() {
-		defer s.wg.Done()
+	s.wg.Go(func() {
 		defer func() {
 			if recover() != nil {
 				s.mu.Lock()
@@ -85,7 +85,7 @@ func (s *connectionSet) watch(service Service, events <-chan Event) {
 		handler := s.handler
 		s.mu.Unlock()
 		handler(event)
-	}()
+	})
 }
 
 func (s *connectionSet) Extractor() ExtractorConnection     { return s.extractor }
