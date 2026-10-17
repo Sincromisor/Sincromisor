@@ -98,6 +98,6 @@ def test_failure_restores_inference_and_strategy(monkeypatch, failure):
         lambda **kwargs: OmegaConf.create({"strategy": "temporary"}),
     )
     with pytest.raises(ValueError, match=failure):
-        obj.transcribe_candidates(np.zeros(16, dtype=np.int16))
+        obj.decode_candidates(obj.encode(np.zeros(16, dtype=np.int16)))
     assert not obj.model.active
     assert obj.model.cfg.decoding.strategy == "original"

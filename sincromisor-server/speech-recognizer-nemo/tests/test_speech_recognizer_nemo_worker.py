@@ -19,15 +19,26 @@ from speech_recognizer_nemo.SpeechRecognizerNemo import (
 
 class FakeSpeechRecognizerNemo:
     def __init__(self) -> None:
+        self.encoded_refs = []
+        self.decode_refs = []
         self.last_candidates_kwargs: dict[str, object] | None = None
         self.last_nbest_kwargs: dict[str, object] | None = None
 
-    def transcribe_with_score(self, _voice: np.ndarray) -> list[tuple[str, float]]:
+    def encode(self, voice):
+        import weakref
+
+        encoded = np.copy(voice)
+        self.encoded_refs.append(weakref.ref(encoded))
+        return encoded
+
+    def decode_with_score(self, encoded) -> list[tuple[str, float]]:
+        self.decode_refs.append(self.encoded_refs[-1])
+        assert encoded is self.encoded_refs[-1]()
         return [("しんくろみそーる", 0.5), ("です", 1.0), ("</s>", 1.0)]
 
-    def transcribe_candidates(
+    def decode_candidates(
         self,
-        _voice: np.ndarray,
+        encoded,
         *,
         strategy: str | None = None,
         beam_size: int | None = None,
@@ -35,6 +46,8 @@ class FakeSpeechRecognizerNemo:
         boosting_tree_alpha: float = 0.0,
         allow_cuda_graphs: bool | None = None,
     ) -> list[tuple[str, float]]:
+        self.decode_refs.append(self.encoded_refs[-1])
+        assert encoded is self.encoded_refs[-1]()
         kwargs = {
             "strategy": strategy,
             "beam_size": beam_size,
@@ -140,8 +153,8 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
         worker.logger.addHandler(handler)
         try:
             for method in (
-                worker._SpeechRecognizerNemoWorker__export_voice,  # noqa: SLF001 - 保存境界の拒否を検証する。
-                worker._SpeechRecognizerNemoWorker__export_result,  # noqa: SLF001 - 保存境界の拒否を検証する。
+                worker._SpeechRecognizerNemoWorker__export_voice,
+                worker._SpeechRecognizerNemoWorker__export_result,
             ):
                 with (
                     patch.object(
@@ -660,3 +673,131 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
             correction_trace["context_biasing"]["decision_reason"],
             "no_deferred_candidates_for_context_biasing",
         )
+
+
+class EncodedReuseTests(unittest.TestCase):
+    def test_request_scoped_reuse_and_release(self):
+        # 既存の採否判定用代役で、実際に通ったデコードの入力同一性を確認する。
+        for mode in (
+            "no_retry",
+            "adopted",
+            "nbest",
+            "retry_failure",
+            "baseline_failure",
+        ):
+            with self.subTest(mode=mode):
+                fake = FakeSpeechRecognizerNemo()
+                original = fake.decode_candidates
+
+                def candidates(encoded, original=original, mode=mode, **kwargs):
+                    values = original(encoded, **kwargs)
+                    if mode == "retry_failure":
+                        raise ValueError("retry failed")
+                    if mode == "nbest" and kwargs.get("boosting_phrases"):
+                        return [("しんくろみそーるです", 0.5)]
+                    return values
+
+                fake.decode_candidates = candidates
+                with patch(
+                    "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
+                    return_value=fake,
+                ):
+                    worker = SpeechRecognizerNemoWorker(
+                        voice_log_dir=None,
+                        proper_noun_enable=False,
+                        proper_noun_context_biasing_enable=True,
+                        proper_noun_nbest_enable=True,
+                    )
+                worker.proper_noun_dictionary = ProperNounDictionary.load_from_csv(
+                    Path(__file__).parent / "fixtures" / "proper_nouns.csv"
+                )
+                worker.post_processor = FakeRerankAwareDeferredPostProcessor()
+                request = SpeechExtractorResult(
+                    session_id="fixture",
+                    speech_id=1,
+                    sequence_id=1,
+                    start_at=0,
+                    confirmed=mode != "no_retry",
+                    voice=np.zeros(8, dtype=np.int16),
+                )
+                if mode == "baseline_failure":
+                    fake.decode_with_score = lambda encoded: (_ for _ in ()).throw(
+                        ValueError("baseline")
+                    )
+                    with self.assertRaises(ValueError):
+                        worker.recognize(request, None)
+                else:
+                    result = worker.recognize(request, None)
+                    self.assertEqual(result.speech_id, 1)
+                self.assertEqual(len(fake.encoded_refs), 1)
+                self.assertIsNone(fake.encoded_refs[0]())
+                expected = {
+                    "no_retry": 1,
+                    "adopted": 2,
+                    "nbest": 3,
+                    "retry_failure": 3,
+                    "baseline_failure": 0,
+                }[mode]
+                self.assertEqual(len(fake.decode_refs), expected)
+                self.assertTrue(
+                    all(ref is fake.encoded_refs[0] for ref in fake.decode_refs)
+                )
+                if mode == "nbest":
+                    self.assertEqual(result.result_text(), "タブンネです")
+                if mode in ("retry_failure", "no_retry"):
+                    self.assertEqual(result.result_text(), "しんくろみそーるです")
+
+    def test_cancelled_execution_releases_request_encoding(self):
+        import asyncio
+        import threading
+
+        from speech_recognizer_nemo.recognizer_execution import RecognizerExecution
+
+        async def run():
+            loop = asyncio.get_running_loop()
+            started = asyncio.Event()
+            release = threading.Event()
+            fake = FakeSpeechRecognizerNemo()
+            original_decode = fake.decode_with_score
+
+            def decode(encoded):
+                loop.call_soon_threadsafe(started.set)
+                assert release.wait(5)
+                return original_decode(encoded)
+
+            fake.decode_with_score = decode
+            with patch(
+                "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
+                return_value=fake,
+            ):
+                execution = RecognizerExecution(
+                    lambda: SpeechRecognizerNemoWorker(voice_log_dir=None)
+                )
+            request = SpeechExtractorResult(
+                session_id="fixture",
+                speech_id=1,
+                sequence_id=1,
+                start_at=0,
+                confirmed=False,
+                voice=np.zeros(8, dtype=np.int16),
+            )
+            pending = asyncio.create_task(execution.recognize(request, None))
+            try:
+                await asyncio.wait_for(started.wait(), 2)
+                pending.cancel()
+                await asyncio.sleep(0)
+                self.assertFalse(pending.done())
+                self.assertIsNotNone(fake.encoded_refs[0]())
+                release.set()
+                with self.assertRaises(asyncio.CancelledError):
+                    await pending
+                self.assertIsNone(fake.encoded_refs[0]())
+                await execution.recognize(request, None)
+                self.assertEqual(len(fake.encoded_refs), 2)
+                self.assertTrue(all(ref() is None for ref in fake.encoded_refs))
+            finally:
+                release.set()
+                await asyncio.gather(pending, return_exceptions=True)
+                execution.close()
+
+        asyncio.run(run())
