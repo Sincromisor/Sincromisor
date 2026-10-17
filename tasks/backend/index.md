@@ -4,18 +4,17 @@
 
 ## タスク一覧（自動生成 / 全 23 件）
 
-### open（未完） — 6 件
+### open（未完） — 5 件
 
 | タスク                                                                                                           | タイトル                                                | 判定 | 依存                                              |
 | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ---- | ------------------------------------------------- |
 | [task-261017195943-synthesizer-blocking-work](./task-261017195943-synthesizer-blocking-work/task.md)             | 音声合成の同期処理をイベントループから分離する          | —    | `task-261017195943-voicevox-http-session`         |
 | [task-261017195944-nemo-encoded-audio-reuse](./task-261017195944-nemo-encoded-audio-reuse/task.md)               | 確定音声の候補再試行でNeMoのエンコード結果を再利用する  | —    | `task-261017195944-nemo-encode-decode-separation` |
-| [task-261017195944-recognizer-growing-buffer](./task-261017195944-recognizer-growing-buffer/task.md)             | 認識用の累積音声を容量付きバッファで保持する            | —    | —                                                 |
 | [task-261017195944-sudachi-tokenizer-reuse](./task-261017195944-sudachi-tokenizer-reuse/task.md)                 | Sudachiの分割モードを生成時に固定し解析領域を再利用する | —    | —                                                 |
 | [task-261017195944-synthesizer-model-serialization](./task-261017195944-synthesizer-model-serialization/task.md) | 音声合成モデルの変換をPydanticの標準処理へ集約する      | —    | —                                                 |
 | [task-261017195945-nemo-streaming-feasibility](./task-261017195945-nemo-streaming-feasibility/task.md)           | 現行ReazonSpeechでNeMoの逐次認識を利用できるか調査する  | —    | —                                                 |
 
-### done（完了） — 17 件
+### done（完了） — 18 件
 
 | タスク                                                                                                             | タイトル                                               | 判定    | 依存                                                                                 |
 | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ | ------- | ------------------------------------------------------------------------------------ |
@@ -36,5 +35,6 @@
 | [task-261017195943-voicevox-http-session](./task-261017195943-voicevox-http-session/task.md)                       | VOICEVOXのHTTP接続を再利用し要求待ちを制限する         | ✅ PASS | —                                                                                    |
 | [task-261017195944-extractor-chunk-buffer](./task-261017195944-extractor-chunk-buffer/task.md)                     | 音声区間抽出の受信バッファで繰り返す配列コピーを減らす | ✅ PASS | —                                                                                    |
 | [task-261017195944-nemo-encode-decode-separation](./task-261017195944-nemo-encode-decode-separation/task.md)       | NeMo認識を前処理・エンコード・デコードへ分ける         | ✅ PASS | —                                                                                    |
+| [task-261017195944-recognizer-growing-buffer](./task-261017195944-recognizer-growing-buffer/task.md)               | 認識用の累積音声を容量付きバッファで保持する           | ✅ PASS | —                                                                                    |
 
 <!-- AUTOGEN:tasks END -->
