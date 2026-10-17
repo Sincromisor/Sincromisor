@@ -1,4 +1,4 @@
-# ruff: noqa: PT009, PT027
+# ruff: noqa: PT009
 import logging
 import unittest
 from pathlib import Path
@@ -34,8 +34,13 @@ class FakeTokenizer:
     def __init__(self, mapping: dict[str, list[FakeMorpheme]]) -> None:
         self.mapping = mapping
 
-    def tokenize(self, text: str, _split_mode: object = None) -> list[FakeMorpheme]:
-        return self.mapping[text]
+    def tokenize(
+        self, text: str, *, out: list[FakeMorpheme] | None = None
+    ) -> list[FakeMorpheme]:
+        if out is None:
+            out = []
+        out[:] = self.mapping.get(text, [])
+        return out
 
 
 class RecognizerPostProcessorTest(unittest.TestCase):
@@ -151,3 +156,41 @@ class RecognizerPostProcessorTest(unittest.TestCase):
             result.deferred_matches[1].context_hint.left_surfaces,
             ("ポケモン", "です"),
         )
+
+
+def test_real_sudachi_reuses_output_without_mutating_results():
+    import warnings
+
+    from sudachipy import Dictionary, SplitMode
+
+    class PreviousTokenizer:
+        def __init__(self):
+            self.tokenizer = Dictionary(dict="full").tokenizer()
+
+        def tokenize(self, text, *, out=None):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DeprecationWarning)
+                return self.tokenizer.tokenize(text, mode=SplitMode.C)
+
+    dictionary = ProperNounDictionary.load_from_csv_with_logger(
+        Path(__file__).with_name("fixtures") / "proper_nouns.csv",
+        logging.getLogger("test"),
+    )
+    previous = RecognizerPostProcessor(dictionary, tokenizer=PreviousTokenizer())
+    current = RecognizerPostProcessor(dictionary)
+    output = current.morphemes
+    first = None
+    for text in [
+        "しんくろみそーるが好きです",
+        "タブンネはヒヤリングポケモンですたぶんね",
+        "",
+        "今日は晴れです",
+    ]:
+        expected = previous.apply([(text, 0.9)])
+        actual = current.apply([(text, 0.9)])
+        assert actual == expected
+        assert current.morphemes is output
+        if first is None:
+            first = actual
+            first_value = repr(actual)
+        assert repr(first) == first_value

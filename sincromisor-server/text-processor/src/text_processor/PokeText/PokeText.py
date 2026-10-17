@@ -8,13 +8,16 @@ PartOfSpeech = tuple[str, str, str, str, str, str]
 
 
 class PokeText:
-    def __init__(self, debug=False):
-        self.tokenizer: Tokenizer = Dictionary(dict="full").create()
-        self.split_mode = SplitMode.C
+    """同期処理で形態素を分かち書きへ変換し、解析領域はインスタンス内で再利用する。"""
+
+    def __init__(self, debug: bool = False) -> None:
+        self.tokenizer: Tokenizer = Dictionary(dict="full").tokenizer(mode=SplitMode.C)
+        self.morphemes: MorphemeList = self.tokenizer.tokenize("")
         self.debug: bool = debug
 
     def convert(self, text: str) -> list[str]:
-        result: MorphemeList = self.tokenizer.tokenize(text=text, mode=self.split_mode)
+        # 次回解析で上書きされる領域から、呼出し内で文字列へ取り出して返す。
+        result = self.tokenizer.tokenize(text=text, out=self.morphemes)
         text_buffer: str = ""
         i: int = 0
         while i < len(result):
@@ -88,13 +91,11 @@ class PokeText:
     ) -> bool:
         if target_pos is None:
             return False
-        if (
+        return (
             (pos0 is None or target_pos[0] == pos0)
             and (pos1 is None or target_pos[1] == pos1)
             and (pos2 is None or target_pos[2] == pos2)
-        ):
-            return True
-        return False
+        )
 
     # cur_idxの位置にある品詞と同じ品詞が続く回数と、継続している範囲のテキストをタプルで返す。
     # 例1: 副詞 -> 形容詞  = 0
@@ -102,7 +103,7 @@ class PokeText:
     def same_pos_count(self, ml: MorphemeList, cur_idx: int) -> tuple[int, str]:
         ref_pos = ml[cur_idx].part_of_speech()
         i = 1
-        text = ""  # ml[cur_idx].surface()
+        text = ""
         while cur_idx + i < len(ml):
             if ref_pos[0] != ml[cur_idx + i].part_of_speech()[0]:
                 break

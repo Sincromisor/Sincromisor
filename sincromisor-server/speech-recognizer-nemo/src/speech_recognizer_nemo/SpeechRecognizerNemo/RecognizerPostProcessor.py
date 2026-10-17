@@ -95,7 +95,10 @@ class RecognizerPostProcessor:
         self.tokenizer = (
             tokenizer if tokenizer is not None else self._create_tokenizer()
         )
-        self.split_mode = getattr(SudachiSplitMode, "C", None)
+        # 共有Workerは直列実行する。解析結果は_analyze_textで独立した値へ取り出す。
+        self.morphemes = (
+            self.tokenizer.tokenize("") if self.tokenizer is not None else None
+        )
         self.ambiguity_resolver = AmbiguityResolver()
 
     @property
@@ -184,16 +187,16 @@ class RecognizerPostProcessor:
 
     def _create_tokenizer(self) -> Any | None:
         """Sudachi が利用可能な環境では full 辞書で tokenizer を生成する。"""
-        if SudachiDictionary is None:
+        if SudachiDictionary is None or SudachiSplitMode is None:
             return None
-        return SudachiDictionary(dict="full").create()
+        return SudachiDictionary(dict="full").tokenizer(mode=SudachiSplitMode.C)
 
     def _analyze_text(self, text: str) -> list[_AnalyzedMorpheme]:
         """認識テキストを、辞書照合に必要な読み付き形態素列へ変換する。"""
         tokenizer = self.tokenizer
         if tokenizer is None:
             return []
-        tokenized = tokenizer.tokenize(text, self.split_mode)
+        tokenized = tokenizer.tokenize(text, out=self.morphemes)
         return [
             _AnalyzedMorpheme(
                 surface=morpheme.surface(),
