@@ -25,6 +25,7 @@ const (
 )
 
 // SubmitFuncは20 ms / 16 kHz / mono / s16leの1 frameをCoordinator境界へ渡す。
+// frameの所有権は受領側へ渡り、後続decodeで上書きされない。
 type SubmitFunc func([]byte) error
 
 // ProcessorはRTPを並べ替え、browser OpusをCoordinatorのPCM契約へ変換する。
@@ -115,9 +116,12 @@ type inputStream struct {
 	timestampNext uint64
 	buffered      map[uint64]orderedPacket
 	recent        map[uint64]struct{}
-	decoder       pionopus.Decoder
-	resampler     streamingResampler
-	framed        []int16
+	// 作業配列は逐次decodeだけが使い、SSRC切替時にstreamとともに破棄する。
+	pcm       [maxOpusFrameSamples * maxChannels]int16
+	mono      [maxOpusFrameSamples]int16
+	decoder   pionopus.Decoder
+	resampler streamingResampler
+	framed    []int16
 }
 
 // newInputStreamは新SSRCの最初のsequence/timestampをunwrap基準にし、codecと変換stateを初期化する。
@@ -216,13 +220,12 @@ func (s *inputStream) decode(payload []byte, observer Observer, submit SubmitFun
 		observer.ObserveInputEvent(InputEventDTX)
 		return nil
 	}
-	pcm := make([]int16, maxOpusFrameSamples*maxChannels)
-	samplesPerChannel, err := s.decoder.DecodeToInt16(payload, pcm)
+	samplesPerChannel, err := s.decoder.DecodeToInt16(payload, s.pcm[:])
 	if err != nil {
 		observeInputCodecError(observer)
 		return fmt.Errorf("decode opus packet: %w", err)
 	}
-	mono := downmixStereo(pcm[:samplesPerChannel*maxChannels])
+	mono := downmixStereo(s.pcm[:samplesPerChannel*maxChannels], s.mono[:])
 	s.framed = append(s.framed, s.resampler.process(mono)...)
 	for len(s.framed) >= pcmFrameSamples {
 		frame := make([]byte, pcmFrameBytes)
@@ -246,8 +249,9 @@ func (s *inputStream) decode(payload []byte, observer Observer, submit SubmitFun
 //
 // Opus decoderはmono bitstreamを設定済みstereo outputへ複製するため、ordering層でcodec modeを
 // parseせず同じ処理によりmono sampleをそのまま維持できる。
-func downmixStereo(interleaved []int16) []int16 {
-	mono := make([]int16, len(interleaved)/maxChannels)
+// monoは呼出側所有で必要標本数以上の容量を持ち、返却値は有効範囲だけを指す。
+func downmixStereo(interleaved, mono []int16) []int16 {
+	mono = mono[:len(interleaved)/maxChannels]
 	for index := range mono {
 		left := int32(interleaved[index*maxChannels])
 		right := int32(interleaved[index*maxChannels+1])
