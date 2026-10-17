@@ -177,7 +177,7 @@ Vectorはjournalの読取だけを持つ。Dockerソケットを使うobserver�
 通常ログも例外も物理的に1行とし、`timestamp`、`level`、`logger`、`event`、`message`を保持する。
 辞書メッセージと`extra`の属性はJSONの項目になる。未対応のオブジェクトは型名だけにし、モデル全体の暗黙の文字列化をしない。
 例外は型とスタックのファイル名・行番号・関数名だけを残し、例外値・ソース行・ローカル変数を出さない。
-第三者ロガー（NeMo、Uvicorn、HTTPクライアントなど）は要求URLや本文の混入を避けるため、本文を固定文へ置き換え、ロガー名・レベル・発生関数・行番号を残す。
+第三者ロガー（NeMo、Uvicorn、HTTPクライアントなど）は要求URLや本文の混入を避けるため、本文を固定文へ置き換え、ロガー名・レベル・発生関数・行番号を残す。Uvicorn/websocketsの既知loggerと固定雛形が一致する接続異常だけに`operation`と例外由来の`reason`を付ける。例外連鎖は最大4段、各段の位置は最大32フレームとし、引数・値・ソースは出さない。INFO設定で出ないkeepaliveの内部DEBUGログは収集せず、接続境界で取得できた切断情報を使う。
 起動時に既存ハンドラーを共通出力へ集約し、Python警告も同じ経路へ送る。
 
 `recognition_result`、`conversation_input`、`conversation_fragment`、`conversation_final`だけが対話本文の`text`を持つ。
