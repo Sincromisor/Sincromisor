@@ -6,8 +6,11 @@ import math
 import os
 import re
 import traceback
+from collections import deque
 from datetime import UTC, datetime
 from pathlib import Path
+
+from .runtime_diagnostics import failure_fields
 
 _RECORD_FIELDS = set(logging.makeLogRecord({}).__dict__) | {
     "message",
@@ -32,6 +35,7 @@ class JsonLogFormatter(logging.Formatter):
             }
         )
         fields.update(getattr(record, "fields", {}))
+        chain = self._exception_chain(record)
         internal = record.name.startswith("sincro.")
         if internal:
             message = (
@@ -47,6 +51,7 @@ class JsonLogFormatter(logging.Formatter):
                 "function": record.funcName,
                 "line": record.lineno,
             }
+            fields.update(self._library_failure(record, chain))
         fields.update(
             timestamp=datetime.fromtimestamp(record.created, UTC).isoformat(),
             level=record.levelname.lower(),
@@ -54,19 +59,73 @@ class JsonLogFormatter(logging.Formatter):
             message=message,
         )
         fields.setdefault("event", "log")
-        if record.exc_info and record.exc_info[0]:
-            fields["exception"] = {
-                "type": record.exc_info[0].__name__,
-                "frames": [
-                    {
-                        "file": Path(frame.filename).name,
-                        "line": frame.lineno,
-                        "function": frame.name,
-                    }
-                    for frame in traceback.extract_tb(record.exc_info[2])
-                ],
-            }
+        if chain:
+            locations = [self._exception_location(error) for error in chain]
+            fields["exception"] = locations[0]
+            if len(locations) > 1:
+                locations[0]["causes"] = locations[1:]
         return json.dumps(self._safe(fields), ensure_ascii=False, allow_nan=False)
+
+    @staticmethod
+    def _exception_chain(record: logging.LogRecord) -> list[BaseException]:
+        """原因を最大4段に制限し、循環と明示的に隠したcontextをたどらない。"""
+        chain: list[BaseException] = []
+        error = record.exc_info[1] if record.exc_info else None
+        while error is not None and len(chain) < 4:
+            if any(error is previous for previous in chain):
+                break
+            chain.append(error)
+            error = error.__cause__ or (
+                None if error.__suppress_context__ else error.__context__
+            )
+        return chain
+
+    @staticmethod
+    def _exception_location(error: BaseException) -> dict[str, object]:
+        """ソースを読まず、例外値を含まない位置だけを発生箇所側の最大32フレーム残す。"""
+        frames = deque(maxlen=32)
+        for frame, line in traceback.walk_tb(error.__traceback__):
+            frames.append(
+                {
+                    "file": Path(frame.f_code.co_filename).name,
+                    "line": line,
+                    "function": frame.f_code.co_name,
+                }
+            )
+        return {"type": type(error).__name__, "frames": list(frames)}
+
+    @staticmethod
+    def _library_failure(
+        record: logging.LogRecord, chain: list[BaseException]
+    ) -> dict[str, object]:
+        """採用版のloggerと未展開の固定雛形だけを認識し、argsは参照しない。"""
+        if record.name not in {
+            "uvicorn.error",
+            "websockets.server",
+            "websockets.client",
+            "websockets.protocol",
+        } or not isinstance(record.msg, str):
+            return {}
+        operations = {
+            "opening handshake failed": "open_handshake",
+            "closing handshake failed": "close_handshake",
+            "connection handler failed": "connection_handler",
+            "data transfer failed": "transfer",
+            "keepalive ping failed": "keepalive",
+        }
+        if record.name == "uvicorn.error":
+            operations["Exception in ASGI application\n"] = "asgi"
+            operations["Invalid UTF-8 sequence received from client."] = "decode"
+        operation = operations.get(record.msg)
+        if operation is None:
+            return {}
+        fields: dict[str, object] = {"operation": operation, "reason": "failed"}
+        for error in chain:
+            cause = failure_fields(error)
+            fields.update(cause)
+            if cause["reason"] != "failed":
+                break
+        return fields
 
     @classmethod
     def _safe(cls, value: object) -> object:

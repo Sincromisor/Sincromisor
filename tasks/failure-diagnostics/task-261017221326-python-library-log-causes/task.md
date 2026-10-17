@@ -25,8 +25,8 @@ JsonLogFormatterは第三者ログの本文をLibrary eventへ置換する。秘
 
 ## 完了条件
 
-- [ ] 採用版の既知異常の人工LogRecordが固定reasonへ変換され、未知ログは安全な固定形式を保つ。
-- [ ] 秘密を含むargs、例外値、連鎖を渡しても内容を出さず、取得できる例外位置を失わない。
+- [x] 採用版の既知異常の人工LogRecordが固定reasonへ変換され、未知ログは安全な固定形式を保つ。
+- [x] 秘密を含むargs、例外値、連鎖を渡しても内容を出さず、取得できる例外位置を失わない。
 
 ## 確認方法
 
@@ -37,3 +37,11 @@ JsonLogFormatterは第三者ログの本文をLibrary eventへ置換する。秘
 - [documents/design/infrastructure/logging.md](../../../documents/design/infrastructure/logging.md)
 
 変更したログ項目と意味だけを該当節へ反映する。音声・会話の通信形式や正常処理は変更しない。
+
+## 実施結果
+
+- `uv.lock`の採用版Uvicorn 0.54.0・websockets 17.2のsdistを一時領域へ取得し、ロックのSHA-256と一致することを確認した。ホスト仮想環境は0.52.4・17.1のため、採用版ソースも別途確認した。
+- Uvicorn `protocols/websockets/websockets_impl.py:117,262`の`uvicorn.error`とASGI例外、`websockets_sansio_impl.py:300`のUTF-8異常を対象にした。websockets `legacy/server.py:115,208,236,246`の開始・終了ハンドシェイクとハンドラー失敗、`legacy/protocol.py:998,1260`の転送・keepalive失敗、`asyncio/connection.py:849`のkeepalive失敗を確認した。Uvicornがlegacy実装へ渡すlogger名も認識する。
+- logger名と未展開雛形を完全一致で選別し、共通の例外分類を再利用した。未知ログ・DEBUGのkeepalive待機超過は固定形式のままにした。例外の原因と暗黙contextを最大4段、発生位置側の末尾32件に制限し、循環を止める。`walk_tb`でソースや値を展開しない。
+- `pytest -q sincromisor-server/sincro-config/tests/test_json_logging.py`: 21件PASS。実ハンドラー、既知/未知雛形、秘密入りargs・例外・連鎖、循環・段数、型と発生位置を確認した。Ruffは既存ファイル名に対するN999のみ除外して確認した。
+- 本番コードの変更理解範囲のコメントとログ設計を同期した。全体DEBUG化や全ライブラリの解析は行っていない。
