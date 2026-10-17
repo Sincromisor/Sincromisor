@@ -257,6 +257,7 @@ Consulの同一状態の出力更新の遅延は[公式実装のCheckUpdateInter
 ## 内部処理の失敗診断
 
 内容記録の有効・無効にかかわらず、コマンド・HTTP/SSE・保存・LLM/MCP・Consul登録の境界で操作、相手、結果と取得できるIDを記録する。例外の値ではなく型・既知コードを有限の `reason`へ変換する。音声変換のstderrは先頭64 KiBから既知原因語だけを採用し、原文や音声は中央へ送らない。未知原因は `failed` / `output_redacted`とし、推測で本文を採用しない。
+Pythonの共通分類は常に`exception_type`を残す。requestsの接続・読取待ちは`reason=timeout`と`timeout_phase=connect/read`で区別し、HTTP状態と許可したS3の`error_code`だけを補助属性にする。
 
 認識のローカル/S3保存は `recognition_storage`で書込成功・拒否・接続失敗を記録する。ファイル名やS3キーを複製せず、従来の保存形式と失敗時の処理を維持する。Pythonのサービス発見は登録開始・成功・失敗、正常候補なしとConsul接続不能を分け、再試行を継続する。
 

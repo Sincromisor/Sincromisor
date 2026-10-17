@@ -25,8 +25,8 @@
 
 ## 完了条件
 
-- [ ] ReadTimeoutとConnectTimeoutをtimeoutとして記録し、両者の段階を区別できる。
-- [ ] 既存のpermission_denied、not_found、disk_full、cancelledとHTTP状態の分類を維持し、未知例外でも本文を出さない。
+- [x] ReadTimeoutとConnectTimeoutをtimeoutとして記録し、両者の段階を区別できる。
+- [x] 既存のpermission_denied、not_found、disk_full、cancelledとHTTP状態の分類を維持し、未知例外でも本文を出さない。
 
 ## 確認方法
 
@@ -37,3 +37,9 @@
 - [documents/design/infrastructure/logging.md](../../../documents/design/infrastructure/logging.md)
 
 変更したログ項目と意味だけを該当節へ反映する。音声・会話の通信形式や正常処理は変更しない。
+
+## 実施結果
+
+共通分類で実例外の継承階層から接続・読取時間切れを判定し、例外型、HTTP応答の状態、既知のS3コードを記録した。依存追加はない。実requests、Redis、botocoreと標準例外を使う表形式試験を追加した。
+
+共通分類・JSONL・VoiceSynthesizer診断の対象pytestは26件成功した。変更PythonのRuff検査・整形確認、共通分類のtyも成功した。コメント点検: PASS。
