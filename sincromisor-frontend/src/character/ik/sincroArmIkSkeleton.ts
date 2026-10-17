@@ -1,5 +1,5 @@
 import type { VRM, VRMHumanBoneName } from "@pixiv/three-vrm";
-import type { Object3D } from "three/src/core/Object3D.js";
+import type { Object3D } from "three";
 import type { SincroArmSide } from "./sincroArmIkTypes";
 
 export type SincroArmIkVrmSource = {

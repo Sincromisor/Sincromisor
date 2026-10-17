@@ -1,6 +1,6 @@
 import type { VRM, VRMHumanBoneName } from "@pixiv/three-vrm";
-import type { Object3D } from "three/src/core/Object3D.js";
-import { MathUtils } from "three/src/math/MathUtils.js";
+import type { Object3D } from "three";
+import { MathUtils } from "three";
 import { CHARACTER_IDLE_MOTION_CONFIG, sineWave } from "./characterMotionConfig";
 
 /*

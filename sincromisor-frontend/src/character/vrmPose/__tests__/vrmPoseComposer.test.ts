@@ -1,5 +1,4 @@
-import { MathUtils } from "three/src/math/MathUtils.js";
-import { Quaternion } from "three/src/math/Quaternion.js";
+import { MathUtils, Quaternion } from "three";
 import { describe, expect, it } from "vitest";
 import type { MinimalAvatarMotionProfile } from "../../avatarProfile/minimalAvatarMotionProfile";
 import { composeVrmPose, LAYER_ORDER } from "../vrmPoseComposer";

@@ -1,4 +1,4 @@
-import type { Vector3 } from "three/src/math/Vector3.js";
+import type { Vector3 } from "three";
 import type { TemporalPartState } from "../temporal/temporalUpperBodyState";
 import type { SincroArmIkConstraintSnapshot } from "./sincroArmIkConstraint";
 import type { SincroArmIkRefinementResult } from "./sincroArmIkRefinement";

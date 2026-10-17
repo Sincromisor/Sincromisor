@@ -1,5 +1,4 @@
-import { Euler } from "three/src/math/Euler.js";
-import { Quaternion } from "three/src/math/Quaternion.js";
+import { Euler, Quaternion } from "three";
 
 // オイラー角を元に、ローパスフィルタ、
 // 球面線形補完をおこなったクオータニオンを扱うクラス

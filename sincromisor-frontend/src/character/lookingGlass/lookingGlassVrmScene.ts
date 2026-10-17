@@ -1,9 +1,13 @@
-import { DoubleSide, RepeatWrapping, SRGBColorSpace } from "three/src/constants.js";
-import { CircleGeometry } from "three/src/geometries/CircleGeometry.js";
-import { TextureLoader } from "three/src/loaders/TextureLoader.js";
-import { MeshStandardMaterial } from "three/src/materials/MeshStandardMaterial.js";
-import { Vector3 } from "three/src/math/Vector3.js";
-import { Mesh } from "three/src/objects/Mesh.js";
+import {
+    CircleGeometry,
+    DoubleSide,
+    Mesh,
+    MeshStandardMaterial,
+    RepeatWrapping,
+    SRGBColorSpace,
+    TextureLoader,
+    Vector3,
+} from "three";
 import { VRMScene, type VRMSceneOptions } from "../scene/vrmScene";
 import { LookingGlassXRController } from "./lookingGlassXrController";
 

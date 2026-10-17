@@ -1,4 +1,4 @@
-import { MathUtils } from "three/src/math/MathUtils.js";
+import { MathUtils } from "three";
 import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
 import { retargetSincroFaceExpressions } from "./sincroFaceExpressionRetargeter";
 import { retargetSincroFaceHeadPose } from "./sincroFaceHeadRetargeter";

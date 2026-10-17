@@ -1,5 +1,5 @@
 import type { VRM, VRMExpressionManager, VRMExpressionPresetName } from "@pixiv/three-vrm";
-import { MathUtils } from "three/src/math/MathUtils.js";
+import { MathUtils } from "three";
 import type { SincroFaceRetargetFrame } from "../retargeting/sincroFaceRetargeter";
 import {
     type CharacterMotionTuning,

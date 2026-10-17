@@ -1,4 +1,4 @@
-import { MathUtils } from "three/src/math/MathUtils.js";
+import { MathUtils } from "three";
 import type { SincroPoseArmTargetSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { SincroArmIkSolveResult, SincroArmIkSolver } from "../ik/sincroArmIkSolver";
 import { positiveOnly } from "./sincroPoseRetargetFrame";

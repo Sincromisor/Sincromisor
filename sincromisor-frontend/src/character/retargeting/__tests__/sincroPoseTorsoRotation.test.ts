@@ -1,6 +1,4 @@
-import { Euler } from "three/src/math/Euler.js";
-import { Quaternion } from "three/src/math/Quaternion.js";
-import { Vector3 } from "three/src/math/Vector3.js";
+import { Euler, Quaternion, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 import { normalizeSincroPoseLandmarkerResult } from "../../../features/gaze/poseTracking/sincroPoseTrackerNormalizer";
 import { createProfile } from "../../motionIntent/__tests__/fingerCurlPoseLayerTestFixtures";

@@ -1,6 +1,6 @@
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
-import type { Object3D } from "three/src/core/Object3D.js";
-import { Vector3 } from "three/src/math/Vector3.js";
+import type { Object3D } from "three";
+import { Vector3 } from "three";
 
 /**
  * production composer path が runtime で参照する optional humanoid bone capability。

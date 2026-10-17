@@ -1,6 +1,4 @@
-import type { Object3D } from "three/src/core/Object3D.js";
-import type { Euler } from "three/src/math/Euler.js";
-import type { Vector3 } from "three/src/math/Vector3.js";
+import type { Euler, Object3D, Vector3 } from "three";
 
 /** VRM内部更新後に腰だけを復元し、上半身の最終姿勢適用とは独立に配置を保つ。 */
 export class CharacterRootStabilizer {

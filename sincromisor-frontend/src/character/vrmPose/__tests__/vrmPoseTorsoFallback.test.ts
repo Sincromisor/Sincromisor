@@ -1,5 +1,5 @@
 import type { VRMHumanBoneName } from "@pixiv/three-vrm";
-import { MathUtils } from "three/src/math/MathUtils.js";
+import { MathUtils } from "three";
 import { describe, expect, it } from "vitest";
 import type { AvatarMotionProfile } from "../../avatarProfile/avatarMotionProfileTypes";
 import type { MinimalAvatarMotionProfile } from "../../avatarProfile/minimalAvatarMotionProfile";

@@ -1,4 +1,4 @@
-import { MathUtils } from "three/src/math/MathUtils.js";
+import { MathUtils } from "three";
 import { clamp01 } from "./sincroFaceRetargetMath";
 import {
     DEFAULT_SINCRO_FACE_RETARGET_CONFIG,

@@ -14,7 +14,7 @@ export type {
     TemporalArmIkSolverMeasurements,
 } from "./temporalArmSolverBridgeTypes";
 
-import { Vector3 } from "three/src/math/Vector3.js";
+import { Vector3 } from "three";
 import type { MinimalAvatarMotionProfile } from "../avatarProfile/minimalAvatarMotionProfile";
 import type { SincroArmSide } from "../ik/sincroArmIkTypes";
 import { temporalArmApplicationWeight } from "../temporal/temporalArmPrediction";

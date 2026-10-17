@@ -1,4 +1,4 @@
-import type { Object3D } from "three/src/core/Object3D.js";
+import type { Object3D } from "three";
 import type { SincroPoseRetargetFrame } from "../retargeting/sincroPoseRetargetTypes";
 import type { ArmSpeechExpressionProfile } from "./armBoneSpeechGesture";
 import { CHARACTER_ARM_REST_POSE, CHARACTER_IDLE_MOTION_CONFIG } from "./characterMotionConfig";

@@ -1,7 +1,6 @@
 import type { VRMExpressionPresetName } from "@pixiv/three-vrm";
-import type { Object3D } from "three/src/core/Object3D.js";
-import type { Euler } from "three/src/math/Euler.js";
-import { MathUtils } from "three/src/math/MathUtils.js";
+import type { Euler, Object3D } from "three";
+import { MathUtils } from "three";
 import type { CharacterInteractionState } from "./characterBehaviorState";
 
 export type EyeBoneName = "leftEye" | "rightEye";

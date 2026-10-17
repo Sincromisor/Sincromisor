@@ -1,8 +1,5 @@
+import { GridHelper, Scene, Vector3, WebGLRenderer } from "three";
 import { VRButton } from "three/addons/webxr/VRButton.js";
-import { GridHelper } from "three/src/helpers/GridHelper.js";
-import { Vector3 } from "three/src/math/Vector3.js";
-import { WebGLRenderer } from "three/src/renderers/WebGLRenderer.js";
-import { Scene } from "three/src/scenes/Scene.js";
 import { frontendLogger } from "../../shared/logging/appLogger";
 import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfileTypes";
 import type { SincroPoseRetargetConfig } from "../retargeting/sincroPoseRetargeter";

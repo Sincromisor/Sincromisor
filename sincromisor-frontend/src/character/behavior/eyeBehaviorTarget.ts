@@ -1,4 +1,4 @@
-import { MathUtils } from "three/src/math/MathUtils.js";
+import { MathUtils } from "three";
 import type { CharacterBehaviorSnapshot } from "./characterBehaviorState";
 import { EYE_BEHAVIOR_CONFIG, type EyeTarget } from "./eyeBehaviorValues";
 

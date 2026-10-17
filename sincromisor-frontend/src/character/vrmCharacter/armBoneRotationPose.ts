@@ -1,5 +1,5 @@
-import type { Object3D } from "three/src/core/Object3D.js";
-import { Quaternion } from "three/src/math/Quaternion.js";
+import type { Object3D } from "three";
+import { Quaternion } from "three";
 import type {
     SincroPoseRetargetedArm,
     SincroPoseRetargetFrame,

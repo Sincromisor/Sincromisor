@@ -1,4 +1,4 @@
-import { Quaternion } from "three/src/math/Quaternion.js";
+import { Quaternion } from "three";
 import {
     cloneSincroHandMotionSnapshot,
     DEFAULT_SINCRO_HAND_MOTION_SNAPSHOT,

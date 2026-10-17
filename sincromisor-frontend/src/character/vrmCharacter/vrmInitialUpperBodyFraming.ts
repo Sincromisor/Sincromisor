@@ -1,6 +1,5 @@
 import type { VRM } from "@pixiv/three-vrm";
-import { Box3 } from "three/src/math/Box3.js";
-import { Vector3 } from "three/src/math/Vector3.js";
+import { Box3, Vector3 } from "three";
 import type { VRMCamera } from "../scene/vrmCamera";
 
 const SIMPLE_VRM_AUTO_FRAMING_TARGET = {

@@ -1,10 +1,8 @@
 // reason: structure-threshold-exception VRM読込と毎フレーム制御の所有を保ち、今回の診断通知変更ではモデル初期化の分割へ範囲を広げない。
 import { type VRM, VRMLoaderPlugin, VRMMetaLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
+import type { Object3D, Scene } from "three";
+import { Timer, Vector3 } from "three";
 import { type GLTF, GLTFLoader, type GLTFParser } from "three/examples/jsm/loaders/GLTFLoader.js";
-import type { Object3D } from "three/src/core/Object3D.js";
-import { Timer } from "three/src/core/Timer.js";
-import { Vector3 } from "three/src/math/Vector3.js";
-import type { Scene } from "three/src/scenes/Scene.js";
 import { frontendLogger } from "../../shared/logging/appLogger";
 import { toMinimalAvatarMotionProfile } from "../avatarProfile/avatarMotionProfileClone";
 import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfileTypes";

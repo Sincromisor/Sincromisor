@@ -2,7 +2,7 @@
  * 追跡回復時の角度変化を、保存済みの適用角速度または姿勢変換の回転から計算する。
  * 実行中の姿勢やVRM本体は参照しない。
  */
-import { Quaternion } from "three/src/math/Quaternion.js";
+import { Quaternion } from "three";
 import type { SincroMotionDebugFrame } from "./motionDebugLogSchema";
 import {
     type AppliedMetricInput,

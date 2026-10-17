@@ -1,5 +1,4 @@
-import { MathUtils } from "three/src/math/MathUtils.js";
-import { Quaternion } from "three/src/math/Quaternion.js";
+import { MathUtils, Quaternion } from "three";
 import type { VrmPoseQuaternion } from "./vrmPoseTypes";
 
 export const DEFAULT_ANGULAR_VELOCITY_LIMIT_DEG_PER_SEC = 720;

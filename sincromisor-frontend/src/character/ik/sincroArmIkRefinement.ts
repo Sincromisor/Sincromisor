@@ -1,5 +1,5 @@
-import type { Vector3 } from "three/src/math/Vector3.js";
-import { Vector3 as ThreeVector3 } from "three/src/math/Vector3.js";
+import type { Vector3 } from "three";
+import { Vector3 as ThreeVector3 } from "three";
 
 export type SincroArmIkRefinementConfig = {
     enabled: boolean;

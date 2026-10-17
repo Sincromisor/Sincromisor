@@ -1,6 +1,6 @@
+import type { Vector3 } from "three";
+import { PerspectiveCamera } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { PerspectiveCamera } from "three/src/cameras/PerspectiveCamera.js";
-import type { Vector3 } from "three/src/math/Vector3.js";
 
 // simple-vrm の初期自動フレーミング調整値。
 // 役割ごとにまとめ、実機確認時に「どれを触るべきか」を分かりやすくする。

@@ -1,4 +1,4 @@
-import { MathUtils } from "three/src/math/MathUtils.js";
+import { MathUtils } from "three";
 import type { SincroArmIkConstraintSnapshot } from "../ik/sincroArmIkConstraint";
 import type { SincroArmIkQuaternion } from "../ik/sincroArmIkSolver";
 import type { SincroCcdIkProbeResult } from "../ik/sincroCcdIkProbe";

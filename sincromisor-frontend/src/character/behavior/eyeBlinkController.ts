@@ -1,5 +1,5 @@
 import type { VRMExpressionManager, VRMExpressionPresetName } from "@pixiv/three-vrm";
-import { MathUtils } from "three/src/math/MathUtils.js";
+import { MathUtils } from "three";
 import type {
     CharacterBehaviorSnapshot,
     CharacterInteractionState,

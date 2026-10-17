@@ -1,4 +1,4 @@
-import { Object3D } from "three/src/core/Object3D.js";
+import { Object3D } from "three";
 import { describe, expect, it, vi } from "vitest";
 import { normalizeSincroPoseLandmarkerResult } from "../../../features/gaze/poseTracking/sincroPoseTrackerNormalizer";
 import { SincroArmIkSolver } from "../../ik/sincroArmIkSolver";
