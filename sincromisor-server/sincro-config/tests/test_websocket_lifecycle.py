@@ -163,6 +163,12 @@ def test_service_entry_diagnostics(
                 raise RuntimeError("secret-close-cleanup")
 
     def run(app, **kwargs):
+        if service == "voice-synthesizer":
+            from voice_synthesizer.backpressure_websocket import (
+                BackpressureWebSocketProtocol,
+            )
+
+            assert kwargs["ws"] is BackpressureWebSocketProtocol
         endpoint = next(r.endpoint for r in app.routes if r.path.endswith(f"/{route}"))
 
         async def connections():
