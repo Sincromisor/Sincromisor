@@ -20,8 +20,8 @@ RecognizerPostProcessorとPokeTextはtokenizeの呼出しごとに分割モー�
 
 ## 完了条件と確認方法
 
-- [ ] 既存の認識後処理試験を通し、同じTokenizerで異なる文を連続解析しても先の補正結果が変化しないことを確認する。
-- [ ] 採用Sudachiとfull辞書で、PokeTextと固有名詞補正の代表入力について変更前後の結果を比較する。空文も確認し、modeの非推奨呼出しが対象2箇所に残らない。
+- [x] 既存の認識後処理試験を通し、同じTokenizerで異なる文を連続解析しても先の補正結果が変化しないことを確認する。
+- [x] 採用Sudachiとfull辞書で、PokeTextと固有名詞補正の代表入力について変更前後の結果を比較する。空文も確認し、modeの非推奨呼出しが対象2箇所に残らない。
 
 変更ファイルに対象を絞った整形・静的検査を行う。Pythonはロックに従う環境を使い、環境の再現方法は[task.md](../../../tasks/backend/task-261011152416-update-python-dependencies/task.md)を参照する。
 
@@ -40,3 +40,7 @@ RecognizerPostProcessorとPokeTextはtokenizeの呼出しごとに分割モー�
 
 - [生成時の分割モード設定](https://worksapplications.github.io/sudachi.rs/python/api/sudachipy.tokenizer.html)。
 - [解析結果領域の再利用](https://worksapplications.github.io/sudachi.rs/python/topics/out_param.html)。
+
+## 実装・確認結果
+
+PokeTextと認識後処理のTokenizerをSplitMode.Cで生成し、tokenizeのmode引数を削除した。Tokenizerごとに空文解析でMorphemeListを生成し、outへ渡して再利用する。外へ返す結果は文字列・値へ取り出し、次回解析で変更されない。採用Sudachi 0.7.0ではDictionary.createも非推奨のため、同じ機能のDictionary.tokenizerを利用した。full辞書による代表文・空文・連続解析の旧方式比較、既存補正・会話処理を含む42試験と対象Ruff・tyが成功した。対象2箇所に呼出時mode指定が残らないことを確認し、コメントを点検した。
