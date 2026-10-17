@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { frontendLogger } from "../../../shared/logging/appLogger";
 import { postRtcSignalingJson, type RtcRetryClock } from "../rtcSignalingHttp";
 
 function fakeClock(random = 0.5): RtcRetryClock {
@@ -44,6 +45,7 @@ describe("postRtcSignalingJson", () => {
 
     it("reuses one serialized body for 4 executions with 500/1000/2000 full-jitter caps", async () => {
         vi.useFakeTimers({ now: 0 });
+        const diagnostic = vi.spyOn(frontendLogger, "diagnostic");
         const fetchMock = vi
             .fn<typeof fetch>()
             .mockResolvedValueOnce(response(500))
@@ -69,6 +71,13 @@ describe("postRtcSignalingJson", () => {
             '{"immutable":true}',
         ]);
         expect(Date.now()).toBe(1_750);
+        expect(diagnostic.mock.calls).toEqual(
+            [500, 429, 503].map((http_status) => [
+                "signaling",
+                "failed",
+                { operation: "initial-offer", http_status },
+            ]),
+        );
     });
 
     it("uses Retry-After instead of jitter", async () => {
@@ -96,9 +105,12 @@ describe("postRtcSignalingJson", () => {
         ["initial-offer", 410],
         ["update-offer", 404],
         ["update-offer", 409],
+        ["candidate", 404],
+        ["update-offer", 410],
         ["candidate", 410],
         ["candidate", 413],
     ] as const)("preserves operation %s and terminal status %i", async (operation, status) => {
+        const diagnostic = vi.spyOn(frontendLogger, "diagnostic");
         const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(response(status));
 
         const request = postRtcSignalingJson({
@@ -113,6 +125,9 @@ describe("postRtcSignalingJson", () => {
             status,
         });
         expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(diagnostic.mock.calls).toEqual([
+            ["signaling", "failed", { operation, http_status: status }],
+        ]);
     });
 
     it("does not start another execution when Retry-After reaches the total deadline", async () => {
@@ -230,4 +245,22 @@ describe("postRtcSignalingJson", () => {
             expect(timeoutDurations).toEqual(expectedTimeouts);
         },
     );
+});
+
+it("HTTP状態のない通信失敗は再試行警告と重複させない", async () => {
+    vi.useFakeTimers();
+    const diagnostic = vi.spyOn(frontendLogger, "diagnostic");
+    const request = postRtcSignalingJson({
+        body: "private-body",
+        url: "private-url",
+        operation: "candidate",
+        retryClock: fakeClock(0),
+        fetch: vi
+            .fn<typeof fetch>()
+            .mockRejectedValueOnce(new Error("private-error"))
+            .mockResolvedValueOnce(response(200)),
+    });
+    await vi.runAllTimersAsync();
+    await request;
+    expect(diagnostic.mock.calls).toEqual([["signaling", "failed", { operation: "candidate" }]]);
 });

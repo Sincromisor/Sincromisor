@@ -1,7 +1,9 @@
+import { readFileSync } from "node:fs";
 import { afterEach, expect, it, vi } from "vitest";
 import { BrowserDiagnostics, diagnosticReason } from "../browserDiagnostics";
 
 afterEach(() => {
+    vi.restoreAllMocks();
     vi.useRealTimers();
     vi.unstubAllGlobals();
 });
@@ -58,4 +60,36 @@ it("Workerの同状態と例外本文を送らず、状態変化と回復だけ�
         "ready",
         "failed",
     ]);
+});
+
+it("操作とHTTP状態を分けて集約し、実送信JSONをGo契約fixtureと照合する", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-17T00:00:00Z") });
+    vi.stubGlobal("window", new EventTarget());
+    vi.spyOn(crypto, "randomUUID").mockReturnValue("ab36ef90-fcf8-44b9-9b15-a1e198ca50fd");
+    const fetcher = vi.fn().mockResolvedValue({ status: 204 });
+    vi.stubGlobal("fetch", fetcher);
+    const diagnostics = new BrowserDiagnostics();
+    diagnostics.start();
+    diagnostics.setSession("01K1AF2Y0H0000000000000001");
+    diagnostics.record("signaling", "failed", { operation: "update-offer", http_status: 404 });
+    diagnostics.record("signaling", "failed", { operation: "update-offer", http_status: 404 });
+    diagnostics.record("signaling", "failed", { operation: "candidate", http_status: 404 });
+    diagnostics.record("signaling", "failed", { operation: "candidate", http_status: 410 });
+    diagnostics.record("signaling", "failed", { operation: "initial-offer", http_status: 429 });
+    diagnostics.record("signaling", "failed", { operation: "initial-offer", http_status: 503 });
+    diagnostics.record("signaling", "failed", { operation: "initial-offer" });
+    diagnostics.record("rtc", "failed", { operation: "candidate" });
+    diagnostics.record("signaling", "failed", { http_status: 599.5 });
+    await vi.advanceTimersByTimeAsync(1000);
+    const sent = JSON.parse(fetcher.mock.calls[0][1].body);
+    const fixture = JSON.parse(
+        readFileSync(
+            new URL(
+                "../../../../../sincromisor-server/sincro-rtc/internal/signaling/testdata/browser-signaling-diagnostics.json",
+                import.meta.url,
+            ),
+            "utf8",
+        ),
+    );
+    expect(sent).toEqual(fixture);
 });

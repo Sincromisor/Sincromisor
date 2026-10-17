@@ -42,7 +42,13 @@ const SESSION_ID = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/i;
 const MAX_PENDING = 64;
 const ENDPOINT = "/api/v1/RTCSignalingServer/diagnostics";
 
-type Diagnostic = {
+/** HTTP境界で得た操作と状態だけを持つ。本文やURLは受け取らない。 */
+export type SignalingDiagnostic = {
+    operation?: "initial-offer" | "update-offer" | "candidate";
+    http_status?: number;
+};
+
+type Diagnostic = SignalingDiagnostic & {
     event: DiagnosticEvent;
     reason: string;
     client_time: string;
@@ -110,13 +116,28 @@ export class BrowserDiagnostics {
     }
 
     /** 直前と同じ診断は回数へ集約し、空の待ち行列には新規追加する。本体の応答は待たせない。 */
-    record(event: DiagnosticEvent, reason: string): void {
+    record(event: DiagnosticEvent, reason: string, signaling?: SignalingDiagnostic): void {
+        if (
+            signaling &&
+            (event !== "signaling" ||
+                (signaling.operation !== undefined &&
+                    !["initial-offer", "update-offer", "candidate"].includes(
+                        signaling.operation,
+                    )) ||
+                (signaling.http_status !== undefined &&
+                    (!Number.isInteger(signaling.http_status) ||
+                        signaling.http_status < 100 ||
+                        signaling.http_status > 599)))
+        )
+            return;
         const safeReason = REASONS.has(reason) ? reason : "unknown";
         const last = this.queue[this.queue.length - 1];
         if (
             last?.event === event &&
             last.reason === safeReason &&
-            last.session_id === this.sessionId
+            last.session_id === this.sessionId &&
+            last.operation === signaling?.operation &&
+            last.http_status === signaling?.http_status
         ) {
             last.count = Math.min(1000000, last.count + 1);
         } else if (this.queue.length + this.batch.length < MAX_PENDING) {
@@ -126,6 +147,8 @@ export class BrowserDiagnostics {
                 client_time: new Date().toISOString(),
                 session_id: this.sessionId,
                 count: 1,
+                operation: signaling?.operation,
+                http_status: signaling?.http_status,
             });
         } else {
             this.dropped = Math.min(1000000, this.dropped + 1);

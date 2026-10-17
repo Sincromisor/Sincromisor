@@ -154,6 +154,7 @@ type ExecuteRequestParams = {
     url: string;
 };
 
+/** 一回のHTTP実行と失敗診断を所有し、取消タイマーを必ず解除する。再試行は呼出元に委ねる。 */
 async function executeRequest(params: ExecuteRequestParams): Promise<Response> {
     const controller = new AbortController();
     const abortFromParent = () => controller.abort();
@@ -163,12 +164,22 @@ async function executeRequest(params: ExecuteRequestParams): Promise<Response> {
     // test注入とnativeの両方を同じundefined thisで呼び、browserのIllegal invocationを防ぐ。
     const fetchImplementation = params.fetchImplementation;
     try {
-        return await fetchImplementation(params.url, {
+        const response = await fetchImplementation(params.url, {
             body: params.body,
             headers: { "Content-Type": "application/json" },
             method: "POST",
             signal: controller.signal,
         });
+        // 復旧する404/410や再試行中の失敗も、HTTP実行ごとに一度だけ記録する。
+        if (!response.ok)
+            frontendLogger.diagnostic("signaling", "failed", {
+                operation: params.operation,
+                http_status: response.status,
+            });
+        return response;
+    } catch (error) {
+        frontendLogger.diagnostic("signaling", "failed", { operation: params.operation });
+        throw error;
     } finally {
         params.clock.clearTimeout(timeoutId);
         params.parentSignal?.removeEventListener("abort", abortFromParent);

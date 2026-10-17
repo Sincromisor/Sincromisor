@@ -305,8 +305,14 @@ CORSは追加しない。端末の申告は認証・所有権の証明ではな�
 | `event`               | `microphone`, `camera`, `rtc`, `rtc_telop`, `rtc_text`, `rtc_track`, `signaling`, `model`, `render`, `webgl`, `unhandled_error`, `unhandled_rejection`, `vad_worker`, `tracker_worker`                                                                             |
 | `reason`              | `unknown`, `permission_denied`, `not_found`, `not_readable`, `overconstrained`, `security`, `aborted`, `failed`, `ready`, `ended`, `connected`, `completed`, `disconnected`, `closed`, `lost`, `restored`, `idle`, `loading`, `running`, `fallback`, `unavailable` |
 | `client_time`         | 端末の発生時刻。RFC 3339、35文字以内、2000〜2100年。時刻精度は端末に依存する                                                                                                                                                                                       |
+| `operation`           | `signaling`だけで使える任意項目。`initial-offer` / `update-offer` / `candidate`。空・null・未知値は拒否                                                                                                                                                            |
+| `http_status`         | `signaling`だけで使える任意の整数100〜599。未取得は省略し、null・小数・文字列は拒否                                                                                                                                                                                |
 | `count`               | 同じ診断の連続回数。必須整数、1〜1000000                                                                                                                                                                                                                           |
 | `session_id`          | 検証済みAnswerのULID。任意で、省略・空・nullは会話IDなし。受信側で会話の所有者とは扱わない                                                                                                                                                                         |
+
+**破壊的変更**: 診断eventsに`operation`と`http_status`を追加する。新Goは項目のない既存形式も受理するが、新フロントの追加項目は旧Goの未知項目拒否に抵触するため同時更新が必要である。Offer/Candidate本体の通信形式は変えない。
+
+HTTP実行で失敗を得た時点で一度記録する。復旧する更新Offer・Candidateの404/410、再試行中の429/503、HTTP状態のない通信失敗も対象とする。集約キーへ操作とHTTP状態を含め、終端ログ・再試行警告では同じHTTP失敗を再記録しない。
 
 成功は空の204。メソッド違い405、別オリジン403、形式違い415、不正項目・件数400、サイズ超過413、頻度超過429を返す。
 受付はRTCプロセス全体で1分60要求まで。429は`Retry-After: 60`を返す。診断だけの制限で、会話APIの受付量とは分離する。

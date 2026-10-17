@@ -1,4 +1,9 @@
-import { BrowserDiagnostics, type DiagnosticEvent, diagnosticReason } from "./browserDiagnostics";
+import {
+    BrowserDiagnostics,
+    type DiagnosticEvent,
+    diagnosticReason,
+    type SignalingDiagnostic,
+} from "./browserDiagnostics";
 
 export type LogContext = Record<string, unknown>;
 
@@ -17,17 +22,15 @@ const DIAGNOSTIC_MESSAGES: Record<string, DiagnosticEvent | undefined> = {
     "Invalid telop channel payload.": "rtc_telop",
     "Invalid text channel payload.": "rtc_text",
     "Failed to bootstrap VRM page.": "render",
-    "RTC generation failed terminally.": "signaling",
-    "RTC signaling HTTP execution failed; retrying.": "signaling",
 };
 
 /** consoleと安全な端末診断の共通入口。任意contextは中央へ送らない。 */
 class FrontendLogger {
     readonly diagnostics = new BrowserDiagnostics();
 
-    /** 固定イベントと理由だけを非同期転送へ渡す。 */
-    diagnostic(event: DiagnosticEvent, reason: string): void {
-        this.diagnostics.record(event, reason);
+    /** 固定イベント・理由と、許可したシグナリング属性を非同期転送へ渡す。 */
+    diagnostic(event: DiagnosticEvent, reason: string, signaling?: SignalingDiagnostic): void {
+        this.diagnostics.record(event, reason, signaling);
     }
 
     debug(message: string, context?: LogContext): void {
