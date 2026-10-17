@@ -1,5 +1,6 @@
 import io
 import logging
+from contextlib import ExitStack
 from logging import Logger
 from time import perf_counter
 
@@ -9,7 +10,9 @@ from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 from botocore.response import StreamingBody
 from redis import Redis
+from redis.backoff import NoBackoff
 from redis.exceptions import RedisError
+from redis.retry import Retry
 from sincro_config import SincromisorLoggerConfig
 from sincro_config.runtime_diagnostics import failure_fields
 from sincro_models import VoiceSynthesizerRequest, VoiceSynthesizerResult
@@ -37,28 +40,39 @@ class VoiceCacheManager:
         """接続ごとのキャッシュクライアントと独立した生成ログ設定を準備する。"""
         self.log_synthesis = SincromisorLoggerConfig.synthesis_enabled()
         self.logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
-        self.redis: Redis = Redis(
-            host=redis_host,
-            port=redis_port,
-        )  # , decode_responses=True
-        self.s3_client: BaseClient = boto3.client(
-            "s3",
-            endpoint_url=f"http://{s3_host}:{s3_port}",
-            aws_access_key_id=s3_access_key,
-            aws_secret_access_key=s3_secret_key,
-            region_name="us-east-1",
-            config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
-        )
-        self.bucket_name: str = "voice-synthesizer"
-
-        self.vsynth: VoiceSynthesizer = VoiceSynthesizer(
-            host=voicevox_host,
-            port=voicevox_port,
-        )
+        # 初期化途中の失敗も含め、取得した接続を逆順に必ず解放する。
+        with ExitStack() as resources:
+            self.redis: Redis = Redis(
+                host=redis_host,
+                port=redis_port,
+                # VOICEVOXと同じ接続5秒・読取30秒。取消後の回収を無期限にしない。
+                socket_connect_timeout=5,
+                socket_timeout=30,
+                retry=Retry(NoBackoff(), 0),
+            )
+            resources.callback(self.redis.close)
+            self.s3_client: BaseClient = boto3.client(
+                "s3",
+                endpoint_url=f"http://{s3_host}:{s3_port}",
+                aws_access_key_id=s3_access_key,
+                aws_secret_access_key=s3_secret_key,
+                region_name="us-east-1",
+                config=Config(
+                    signature_version="s3v4", s3={"addressing_style": "path"}
+                ),
+            )
+            resources.callback(self.s3_client.close)
+            self.bucket_name: str = "voice-synthesizer"
+            self.vsynth: VoiceSynthesizer = VoiceSynthesizer(
+                host=voicevox_host,
+                port=voicevox_port,
+            )
+            resources.callback(self.vsynth.close)
+            self._resources = resources.pop_all()
 
     def close(self) -> None:
-        """接続終了を生成器へ伝え、HTTPプールを解放する。"""
-        self.vsynth.close()
+        """実行中のget_voiceを回収した接続所有者が、全クライアントを解放する。"""
+        self._resources.close()
 
     def get_voice(
         self,

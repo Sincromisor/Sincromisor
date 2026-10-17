@@ -26,9 +26,9 @@ VoiceSynthesizerWorker.communicateは同期のget_voiceを直接呼ぶ。Redis�
 
 ## 完了条件と確認方法
 
-- [ ] 同期処理を試験用イベントで待たせた間にも、同じイベントループの別コルーチンが進む。
-- [ ] 成功・生成失敗・親取消の試験で、同一要求の重複実行、終了前のクライアントclose、取消後の送信がない。
-- [ ] 実際のWorkerをローカルWebSocket経由で呼び、遅延させた接続先と切断を使って終了処理を確認する。既存音声合成の診断・ログ試験を通す。
+- [x] 同期処理を試験用イベントで待たせた間にも、同じイベントループの別コルーチンが進む。
+- [x] 成功・生成失敗・親取消の試験で、同一要求の重複実行、終了前のクライアントclose、取消後の送信がない。
+- [x] 実際のWorkerをローカルWebSocket経由で呼び、遅延させた接続先と切断を使って終了処理を確認する。既存音声合成の診断・ログ試験を通す。
 
 変更ファイルに対象を絞った整形・静的検査を行う。Pythonはロックに従う環境を使い、環境の再現方法は[task.md](../../../tasks/backend/task-261011152416-update-python-dependencies/task.md)を参照する。
 
@@ -46,3 +46,7 @@ VoiceSynthesizerWorker.communicateは同期のget_voiceを直接呼ぶ。Redis�
 2026-10-17参照。採用する範囲は各項目に記す。
 
 - [同期I/Oをイベントループ外で実行する方法](https://docs.python.org/3.14/library/asyncio-task.html#asyncio.to_thread)。
+
+## 実装・確認結果
+
+get_voiceを一要求ずつasyncio.to_threadへ渡し、取消が重なっても実処理を回収してからProcessのcloseへ戻るようにした。送受信・speech_id付替えはイベントループに残し、取消後は送信しない。ExitStackで合成Session・S3・Redisを逆順に解放し、構築途中の失敗も回収する。Redisの無期限待機を接続5秒・読取30秒・再試行なしへ変更した。S3は採用版の接続・読取60秒とlegacyの有限再試行を確認し既存値を維持した。外部変換は先行した認識直列実行タスクで追加済みの30秒制限を使う。イベントによる成功・失敗・重複取消、実WorkerとローカルWebSocket・遅延HTTP・実Opus変換の成功および切断時取消、既存ログ・診断・モデル互換・外部変換を含む38試験がPASS。Go互換試験はDockerへ既存Goモジュールキャッシュを読取専用で渡した。Ruff・ty・Markdown整形はPASS（既存CamelCaseファイル名N999を除外）。コメント点検: PASS（同期処理と接続資源の所有、取消時の回収、有限待機を点検）。先読みしないため通常の切断検出は次のWebSocket入出力時となる。
