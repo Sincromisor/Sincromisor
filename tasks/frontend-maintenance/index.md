@@ -30,11 +30,10 @@
 
 ## タスク一覧（自動生成 / 全 48 件）
 
-### open（未完） — 10 件
+### open（未完） — 9 件
 
 | タスク                                                                                                               | タイトル                                         | 判定 | 依存                                                |
 | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ---- | --------------------------------------------------- |
-| [task-261017151031-use-onnx-wasm-entry](./task-261017151031-use-onnx-wasm-entry/task.md)                             | 音声区間検出のONNX RuntimeをWASM専用版へ変更     | —    | —                                                   |
 | [task-261017151032-pause-hidden-debug-view](./task-261017151032-pause-hidden-debug-view/task.md)                     | 非表示の診断表示をActivityで休止                 | —    | `task-261017151032-separate-debug-tracking-dom`     |
 | [task-261017151032-separate-debug-tracking-dom](./task-261017151032-separate-debug-tracking-dom/task.md)             | 追跡映像と受信音声のDOMを診断表示から分離        | —    | `task-261017151032-stabilize-debug-subscription`    |
 | [task-261017151032-stabilize-chat-snapshot](./task-261017151032-stabilize-chat-snapshot/task.md)                     | チャット履歴を安定したスナップショットとして公開 | —    | —                                                   |
@@ -45,7 +44,7 @@
 | [task-261017151033-subscribe-media-device-store](./task-261017151033-subscribe-media-device-store/task.md)           | 機器一覧のReact同期を外部ストア購読へ移行        | —    | `task-261017151032-stabilize-media-device-snapshot` |
 | [task-261017151033-unify-scene-animation-loop](./task-261017151033-unify-scene-animation-loop/task.md)               | 通常描画とXR描画をThree.jsのループへ統一         | —    | —                                                   |
 
-### done（完了） — 38 件
+### done（完了） — 39 件
 
 | タスク                                                                                                                                 | タイトル                                              | 判定    | 依存                                                                                                                                                          |
 | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -87,5 +86,6 @@
 | [task-261010230551-fix-existing-type-and-settings-test-errors](./task-261010230551-fix-existing-type-and-settings-test-errors/task.md) | 既存の型エラーと設定テストの期待値不整合を修正する    | ✅ PASS | —                                                                                                                                                             |
 | [task-261011135956-sync-mediapipe-assets](./task-261011135956-sync-mediapipe-assets/task.md)                                           | MediaPipe素材の配置を同期して壊れたリンクの残留を防ぐ | ✅ PASS | —                                                                                                                                                             |
 | [task-261017151031-unify-three-imports](./task-261017151031-unify-three-imports/task.md)                                               | Three.jsの読み込み元を統一して重複配信を解消          | ✅ PASS | —                                                                                                                                                             |
+| [task-261017151031-use-onnx-wasm-entry](./task-261017151031-use-onnx-wasm-entry/task.md)                                               | 音声区間検出のONNX RuntimeをWASM専用版へ変更          | ✅ PASS | —                                                                                                                                                             |
 
 <!-- AUTOGEN:tasks END -->

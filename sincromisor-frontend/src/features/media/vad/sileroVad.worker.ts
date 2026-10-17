@@ -1,4 +1,4 @@
-import { InferenceSession, Tensor } from "onnxruntime-web";
+import { InferenceSession, Tensor } from "onnxruntime-web/wasm";
 import {
     linearResample,
     normalizePcmFrame,
