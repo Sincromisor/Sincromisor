@@ -307,12 +307,26 @@ CORSは追加しない。端末の申告は認証・所有権の証明ではな�
 | `client_time`         | 端末の発生時刻。RFC 3339、35文字以内、2000〜2100年。時刻精度は端末に依存する                                                                                                                                                                                       |
 | `operation`           | `signaling`だけで使える任意項目。`initial-offer` / `update-offer` / `candidate`。空・null・未知値は拒否                                                                                                                                                            |
 | `http_status`         | `signaling`だけで使える任意の整数100〜599。未取得は省略し、null・小数・文字列は拒否                                                                                                                                                                                |
+| `ice_summary`         | `rtc`だけで使える任意オブジェクト。下記8項目だけを許可し、null・未知キーは拒否                                                                                                                                                                                     |
 | `count`               | 同じ診断の連続回数。必須整数、1〜1000000                                                                                                                                                                                                                           |
 | `session_id`          | 検証済みAnswerのULID。任意で、省略・空・nullは会話IDなし。受信側で会話の所有者とは扱わない                                                                                                                                                                         |
 
 **破壊的変更**: 診断eventsに`operation`と`http_status`を追加する。新Goは項目のない既存形式も受理するが、新フロントの追加項目は旧Goの未知項目拒否に抵触するため同時更新が必要である。Offer/Candidate本体の通信形式は変えない。
 
 HTTP実行で失敗を得た時点で一度記録する。復旧する更新Offer・Candidateの404/410、再試行中の429/503、HTTP状態のない通信失敗も対象とする。集約キーへ操作とHTTP状態を含め、終端ログ・再試行警告では同じHTTP失敗を再記録しない。
+
+`ice_summary`は既存の失敗時getStats収集にだけ付ける。省略項目は取得不能を表し、選択ペアがない場合の値を推測で補わない。開始時の会話IDを保持し、非同期取得中に接続が変わっても、新しい会話IDを付けない。開始時にIDがなければ省略する。
+
+| 要約項目                             | 許可する値                                                                                                      |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `signaling_state`                    | `stable` / `closed` / `have-local-offer` / `have-local-pranswer` / `have-remote-offer` / `have-remote-pranswer` |
+| `gathering_state`                    | `new` / `gathering` / `complete`                                                                                |
+| `pair_state`                         | `frozen` / `waiting` / `in-progress` / `failed` / `succeeded`                                                   |
+| `local_type`, `remote_type`          | `host` / `srflx` / `prflx` / `relay`                                                                            |
+| `pair_count`, `succeeded_pair_count` | 0〜1000000の整数                                                                                                |
+| `rtt_ms`                             | ミリ秒。0以上の有限数                                                                                           |
+
+**破壊的変更**: 任意の`ice_summary`も新フロントとGoの同時更新が必要である。新Goは要約のない既存形式を受理するが、旧Goは新項目を拒否する。要約の内容が異なる診断は集約しない。IP・ポート・候補ID・SDP・userAgent・getStatsの任意属性は送信しない。
 
 成功は空の204。メソッド違い405、別オリジン403、形式違い415、不正項目・件数400、サイズ超過413、頻度超過429を返す。
 受付はRTCプロセス全体で1分60要求まで。429は`Retry-After: 60`を返す。診断だけの制限で、会話APIの受付量とは分離する。

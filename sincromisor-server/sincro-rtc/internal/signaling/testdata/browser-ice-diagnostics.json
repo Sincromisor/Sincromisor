@@ -1,0 +1,24 @@
+{
+	"client_id": "ab36ef90-fcf8-44b9-9b15-a1e198ca50fd",
+	"dropped": 0,
+	"failures": 0,
+	"events": [
+		{
+			"event": "rtc",
+			"reason": "failed",
+			"client_time": "2026-10-17T00:00:00.000Z",
+			"session_id": "01K1AF2Y0H0000000000000001",
+			"count": 1,
+			"ice_summary": {
+				"signaling_state": "stable",
+				"gathering_state": "complete",
+				"pair_state": "succeeded",
+				"local_type": "host",
+				"remote_type": "relay",
+				"pair_count": 2,
+				"succeeded_pair_count": 1,
+				"rtt_ms": 25
+			}
+		}
+	]
+}

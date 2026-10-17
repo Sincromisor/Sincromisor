@@ -1,8 +1,8 @@
 import {
     BrowserDiagnostics,
+    type DiagnosticDetails,
     type DiagnosticEvent,
     diagnosticReason,
-    type SignalingDiagnostic,
 } from "./browserDiagnostics";
 
 export type LogContext = Record<string, unknown>;
@@ -28,9 +28,9 @@ const DIAGNOSTIC_MESSAGES: Record<string, DiagnosticEvent | undefined> = {
 class FrontendLogger {
     readonly diagnostics = new BrowserDiagnostics();
 
-    /** 固定イベント・理由と、許可したシグナリング属性を非同期転送へ渡す。 */
-    diagnostic(event: DiagnosticEvent, reason: string, signaling?: SignalingDiagnostic): void {
-        this.diagnostics.record(event, reason, signaling);
+    /** 固定イベント・理由と、許可したイベント別属性を非同期転送へ渡す。 */
+    diagnostic(event: DiagnosticEvent, reason: string, details?: DiagnosticDetails): void {
+        this.diagnostics.record(event, reason, details);
     }
 
     debug(message: string, context?: LogContext): void {

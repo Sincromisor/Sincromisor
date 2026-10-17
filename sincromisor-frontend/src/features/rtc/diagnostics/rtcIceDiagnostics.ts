@@ -1,10 +1,11 @@
 import { frontendLogger } from "../../../shared/logging/appLogger";
+import { iceDiagnosticSummarySchema } from "../../../shared/logging/iceDiagnosticSummary";
 import type { DebugConsoleManager } from "../../debug/model/debugConsoleManager";
 import { normalizeRtcStatsRecord, type RtcStatsRecord } from "./rtcStatsRecords";
 
 type RtcIceDiagnosticsParams = {
     logger: Pick<DebugConsoleManager, "addRtcEventLog">;
-    peerConnection: RTCPeerConnection;
+    peerConnection: Pick<RTCPeerConnection, "getStats" | "signalingState" | "iceGatheringState">;
     reason: string;
     sessionId?: string;
 };
@@ -19,7 +20,11 @@ type IceDiagnostics = {
     remoteTypeCount: Record<string, number>;
 };
 
+/** 既存の失敗時統計を一度取り、中央へは選別した要約と開始時の会話だけを渡す。 */
 export async function captureIceFailureDiagnostics(params: RtcIceDiagnosticsParams): Promise<void> {
+    const sessionId = params.sessionId;
+    const signalingState = params.peerConnection.signalingState;
+    const gatheringState = params.peerConnection.iceGatheringState;
     try {
         const report = await params.peerConnection.getStats();
         const diagnostics = collectIceDiagnostics(report);
@@ -30,6 +35,27 @@ export async function captureIceFailureDiagnostics(params: RtcIceDiagnosticsPara
         const remote = selectedPair?.remoteCandidateId
             ? diagnostics.remoteCandidates.get(selectedPair.remoteCandidateId)
             : undefined;
+        // 端末表示用statsをそのまま渡さず、項目ごとに未知値・非有限値を省く。
+        const fields = iceDiagnosticSummarySchema.shape;
+        frontendLogger.diagnostics.record("rtc", "failed", {
+            session_id: sessionId,
+            ice_summary: {
+                signaling_state: fields.signaling_state.safeParse(signalingState).data,
+                gathering_state: fields.gathering_state.safeParse(gatheringState).data,
+                pair_state: fields.pair_state.safeParse(selectedPair?.state).data,
+                local_type: fields.local_type.safeParse(local?.candidateType).data,
+                remote_type: fields.remote_type.safeParse(remote?.candidateType).data,
+                pair_count: fields.pair_count.safeParse(diagnostics.pairTotal).data,
+                succeeded_pair_count: fields.succeeded_pair_count.safeParse(
+                    diagnostics.pairSucceeded,
+                ).data,
+                rtt_ms: fields.rtt_ms.safeParse(
+                    selectedPair?.currentRoundTripTime === undefined
+                        ? undefined
+                        : selectedPair.currentRoundTripTime * 1000,
+                ).data,
+            },
+        });
         const localType = local?.candidateType ?? "-";
         const remoteType = remote?.candidateType ?? "-";
         const pairState = selectedPair?.state ?? "-";
@@ -53,6 +79,7 @@ export async function captureIceFailureDiagnostics(params: RtcIceDiagnosticsPara
     }
 }
 
+/** 統計をペア数・選択候補・候補種別へ集約する。 */
 function collectIceDiagnostics(report: RTCStatsReport): IceDiagnostics {
     const diagnostics: IceDiagnostics = {
         selectedPairs: [],
@@ -69,6 +96,7 @@ function collectIceDiagnostics(report: RTCStatsReport): IceDiagnostics {
     return diagnostics;
 }
 
+/** selectedまたはnominatedのペアを統計順に保持し、要約には先頭を使う。 */
 function addIceDiagnosticStats(
     diagnostics: ReturnType<typeof collectIceDiagnostics>,
     stats: RTCStats,
@@ -88,6 +116,7 @@ function addIceDiagnosticStats(
     }
 }
 
+/** ローカルとリモートを分け、ペア参照用の候補と端末表示用の種別数を保持する。 */
 function addIceCandidateStats(
     diagnostics: ReturnType<typeof collectIceDiagnostics>,
     stats: RTCStats,

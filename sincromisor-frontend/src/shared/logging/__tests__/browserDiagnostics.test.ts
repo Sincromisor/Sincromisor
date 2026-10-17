@@ -93,3 +93,29 @@ it("操作とHTTP状態を分けて集約し、実送信JSONをGo契約fixture�
     );
     expect(sent).toEqual(fixture);
 });
+
+it("異なるICE要約を集約せず、不正な値を送らない", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("window", new EventTarget());
+    const fetcher = vi.fn().mockResolvedValue({ status: 204 });
+    vi.stubGlobal("fetch", fetcher);
+    const diagnostics = new BrowserDiagnostics();
+    diagnostics.start();
+    diagnostics.record("rtc", "failed", { ice_summary: { pair_count: 1 } });
+    diagnostics.record("rtc", "failed", { ice_summary: { pair_count: 1 } });
+    diagnostics.record("rtc", "failed", { ice_summary: { pair_count: 2 } });
+    diagnostics.record("rtc", "failed", { ice_summary: { rtt_ms: Infinity } });
+    diagnostics.record("rtc", "failed", { ice_summary: { pair_count: 1000001 } });
+    diagnostics.record("signaling", "failed", { ice_summary: { pair_count: 1 } });
+    await vi.advanceTimersByTimeAsync(1000);
+    const sent = JSON.parse(fetcher.mock.calls[0][1].body);
+    expect(
+        sent.events.map((event: { count: number; ice_summary: { pair_count: number } }) => [
+            event.count,
+            event.ice_summary.pair_count,
+        ]),
+    ).toEqual([
+        [2, 1],
+        [1, 2],
+    ]);
+});

@@ -268,6 +268,8 @@ Consulの同一状態の出力更新の遅延は[公式実装のCheckUpdateInter
 会話IDがない起動前の失敗も検索できる。任意本文や端末申告のhost/serviceは受け付けない。
 シグナリング診断だけに`operation`（`initial-offer` / `update-offer` / `candidate`）と取得済みの`http_status`を追加する。HTTP実行ごとの失敗を記録し、更新Offer・Candidateの404/410による復旧でも保持する。**破壊的変更**: 新フロントの追加項目を旧Goは拒否するため同時更新する。新Goは既存形式も受理する。
 
+ICE失敗時の`rtc`診断には固定8項目だけの`ice_summary`を付ける。状態、候補種別、ペア件数、取得済みRTTを使い、選択ペアがなければ関連値を省略する。非同期取得の開始時の会話IDを保持する。任意statsや端末アドレスは含めない。**破壊的変更**として新フロントとGoを同時更新する。
+
 有限キュー・再試行・端末喪失の限界は[共通枠組み](../frontend/app-shell.md#ブラウザーの障害診断)、受付上限は[RTC契約](../contracts/frontend-rtc.md#ブラウザー診断の受付)を参照する。
 
 ## 内部処理の失敗診断

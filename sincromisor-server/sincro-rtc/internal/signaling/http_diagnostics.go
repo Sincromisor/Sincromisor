@@ -25,6 +25,7 @@ type browserDiagnostic struct {
 	Count      int             `json:"count"`
 	Operation  json.RawMessage `json:"operation,omitempty"`
 	HTTPStatus json.RawMessage `json:"http_status,omitempty"`
+	IceSummary json.RawMessage `json:"ice_summary,omitempty"`
 }
 type browserDiagnostics struct {
 	ClientID string              `json:"client_id"`
@@ -111,7 +112,9 @@ func (s *Server) handleDiagnostics(w http.ResponseWriter, r *http.Request) {
 			attrs = append(attrs, "session_id", event.SessionID)
 		}
 		signaling, _ := signalingDiagnosticAttrs(event)
-		s.logger.Info("Browser diagnostic", append(attrs, signaling...)...)
+		ice, _ := iceDiagnosticAttrs(event)
+		attrs = append(attrs, signaling...)
+		s.logger.Info("Browser diagnostic", append(attrs, ice...)...)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -127,6 +130,9 @@ func diagnosticDecodeError(w http.ResponseWriter, err error) {
 
 // validDiagnosticの語彙はフロント契約と対で更新する。自由文は受け付けない。
 func validDiagnostic(event browserDiagnostic) bool {
+	if _, valid := iceDiagnosticAttrs(event); !valid {
+		return false
+	}
 	if _, valid := signalingDiagnosticAttrs(event); !valid {
 		return false
 	}

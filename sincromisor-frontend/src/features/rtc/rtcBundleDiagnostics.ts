@@ -50,7 +50,7 @@ export class RtcBundleDiagnostics {
         this.failureCaptured = false;
     }
 
-    /** 現generationの最初のICE failureだけをsession付きで採取する。 */
+    /** 現generationの最初のICE failureだけを採取し、await前のPCと会話IDを保持する。 */
     async captureFailure(reason: string): Promise<void> {
         if (this.failureCaptured) {
             return;
