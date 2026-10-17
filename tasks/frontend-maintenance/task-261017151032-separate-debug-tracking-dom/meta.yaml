@@ -1,0 +1,14 @@
+id: task-261017151032-separate-debug-tracking-dom
+title: 追跡映像と受信音声のDOMを診断表示から分離
+category: frontend-maintenance
+status: done
+depends_on:
+  - task-261017151032-stabilize-debug-subscription
+superseded_by: null
+review: APPROVED
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-10-17
+closed_at: 2026-10-17
+legacy_ids: []
