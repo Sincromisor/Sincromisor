@@ -6,16 +6,16 @@ from datetime import datetime
 from logging import Logger
 from pathlib import Path
 from time import perf_counter
+from traceback import clear_frames
 from typing import Any
 
-import numpy as np
 from sincro_config import SincromisorLoggerConfig
 from sincro_config.runtime_diagnostics import failure_fields
 from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
 
 from .ProperNounDictionary import ProperNounDictionary
 from .RecognizerPostProcessor import RecognizerPostProcessor
-from .SpeechRecognizerNemo import SpeechRecognizerNemo
+from .SpeechRecognizerNemo import EncodedAudio, SpeechRecognizerNemo
 from .SpeechRecognizerS3Client import SpeechRecognizerS3Client
 
 
@@ -95,20 +95,31 @@ class SpeechRecognizerNemoWorker:
     ) -> SpeechRecognizerResult:
         """抽出済み音声を認識し、必要なら固有名詞補正とログ出力まで行う。"""
         start_t = perf_counter()
-        raw_result = self.__transcribe_with_score(spe_result.voice)
-        sr_result = SpeechRecognizerResult(
-            session_id=spe_result.session_id,
-            speech_id=spe_result.speech_id,
-            sequence_id=spe_result.sequence_id,
-            start_at=spe_result.start_at,
-            confirmed=spe_result.confirmed,
-            result=raw_result,
-        )
-        correction_trace = self.__apply_proper_noun_postprocess(
-            sr_result=sr_result,
-            voice=spe_result.voice,
-            confirmed=spe_result.confirmed,
-        )
+        # 暫定・確定とも一要求内だけで所有し、保存や次要求へ持ち越さない。
+        encoded: EncodedAudio | None = None
+        try:
+            encoded = self.s2t.encode(spe_result.voice)
+            raw_result = self.s2t.decode_with_score(encoded)
+            sr_result = SpeechRecognizerResult(
+                session_id=spe_result.session_id,
+                speech_id=spe_result.speech_id,
+                sequence_id=spe_result.sequence_id,
+                start_at=spe_result.start_at,
+                confirmed=spe_result.confirmed,
+                result=raw_result,
+            )
+            correction_trace = self.__apply_proper_noun_postprocess(
+                sr_result=sr_result,
+                encoded=encoded,
+                confirmed=spe_result.confirmed,
+            )
+        except BaseException as error:
+            # 例外を保持するFutureやログへ、完了した推論フレームのテンソルを残さない。
+            clear_frames(error.__traceback__)
+            raise
+        finally:
+            # 取消時も実行側がここまで回収してから接続資源を閉じる。
+            del encoded
         ids = {
             "session_id": sr_result.session_id,
             "speech_id": sr_result.speech_id,
@@ -136,10 +147,6 @@ class SpeechRecognizerNemoWorker:
             s3_client.export_result_to_s3(sr_result)
             s3_client.export_voice_to_s3(spe_result)
         return sr_result
-
-    def __transcribe_with_score(self, voice: np.ndarray) -> list[tuple[str, float]]:
-        """baseline の認識結果を `(text, score)` 形式で取得する。"""
-        return self.s2t.transcribe_with_score(voice)
 
     def __load_proper_noun_dictionary(
         self,
@@ -282,7 +289,7 @@ class SpeechRecognizerNemoWorker:
         self,
         *,
         sr_result: SpeechRecognizerResult,
-        voice: np.ndarray,
+        encoded: EncodedAudio,
         confirmed: bool,
     ) -> dict[str, Any] | None:
         """固有名詞補正と、必要に応じた再デコード系の救済処理を適用する。"""
@@ -292,6 +299,7 @@ class SpeechRecognizerNemoWorker:
         try:
             post_process_result = self.post_processor.apply(sr_result.result)
         except Exception:
+            del encoded
             self.logger.warning("Proper noun post process failed.", exc_info=True)
             return None
 
@@ -302,7 +310,7 @@ class SpeechRecognizerNemoWorker:
 
         # 曖昧語が残っている場合だけ、重い再デコード系で解決可能かを順に試す。
         biasing_trace = self.__apply_confirmed_context_biasing(
-            voice=voice,
+            encoded=encoded,
             post_process_result=post_process_result,
         )
         if biasing_trace is not None:
@@ -315,7 +323,7 @@ class SpeechRecognizerNemoWorker:
                 correction_trace["decision_reason"] = biasing_trace["decision_reason"]
 
         nbest_trace = self.__apply_confirmed_nbest_reranking(
-            voice=voice,
+            encoded=encoded,
             post_process_result=post_process_result,
             current_result=tuple(sr_result.result),
             current_decode_path=correction_trace["decode_path"],
@@ -329,6 +337,8 @@ class SpeechRecognizerNemoWorker:
             else:
                 correction_trace["decision_reason"] = nbest_trace["decision_reason"]
 
+        # 失敗ログのtracebackから辿れる呼出元フレームにもテンソルを残さない。
+        del encoded
         # 補正の詳細は機能用保存だけに渡し、運用ログへの本文の重複出力を避ける。
         return correction_trace
 
@@ -391,7 +401,7 @@ class SpeechRecognizerNemoWorker:
     def __apply_confirmed_context_biasing(
         self,
         *,
-        voice: np.ndarray,
+        encoded: EncodedAudio,
         post_process_result: Any,
     ) -> dict[str, Any] | None:
         """辞書語を key phrase に使って再デコードし、曖昧語が解けるか確認する。"""
@@ -420,8 +430,8 @@ class SpeechRecognizerNemoWorker:
 
         start_t = perf_counter()
         try:
-            biasing_result = self.s2t.transcribe_candidates(
-                voice,
+            biasing_result = self.s2t.decode_candidates(
+                encoded,
                 strategy=self.context_biasing_config.strategy,
                 beam_size=self.context_biasing_config.beam_size,
                 boosting_phrases=list(key_phrases),
@@ -431,6 +441,9 @@ class SpeechRecognizerNemoWorker:
                 allow_cuda_graphs=False,
             )
         except Exception as exc:
+            # tracebackの行情報は保ち、失敗した再デコードのテンソル参照を外す。
+            clear_frames(exc.__traceback__)
+            del encoded
             self.logger.warning("Proper noun context biasing failed.", exc_info=True)
             return {
                 "enabled": True,
@@ -486,7 +499,7 @@ class SpeechRecognizerNemoWorker:
     def __apply_confirmed_nbest_reranking(
         self,
         *,
-        voice: np.ndarray,
+        encoded: EncodedAudio,
         post_process_result: Any,
         current_result: tuple[tuple[str, float], ...],
         current_decode_path: str,
@@ -519,12 +532,14 @@ class SpeechRecognizerNemoWorker:
 
         start_t = perf_counter()
         try:
-            nbest_result = self.s2t.transcribe_candidates(
-                voice,
+            nbest_result = self.s2t.decode_candidates(
+                encoded,
                 strategy=self.nbest_reranking_config.strategy,
                 beam_size=self.nbest_reranking_config.beam_size,
             )
         except Exception as exc:
+            clear_frames(exc.__traceback__)
+            del encoded
             self.logger.warning("Proper noun N-best reranking failed.", exc_info=True)
             return {
                 "enabled": True,

@@ -140,6 +140,10 @@ S3は接続5秒・読取り30秒・1試行、認識と合成で共有する外�
 
 ## 認識の段階
 
-SpeechRecognizerNemoは、16kHz音声の正規化と前後0.5秒の余白追加、特徴量前処理・エンコード、候補のデコードを分ける。encodeが返すテンソルと有効長をdecodeへ渡し、既存のtranscribe系入口は結果形式を維持する。入力のdtype・最小長・バッチ化、dither・pad_to・eval・凍結状態の準備と復元は採用NeMoの処理を使い、推論はtorch.inference_mode内で実行する。
+SpeechRecognizerNemoは、16kHz音声の正規化と前後0.5秒の余白追加、特徴量前処理・エンコード、候補のデコードを分ける。encodeが返すテンソルと有効長をdecodeへ渡し、音声からのtranscribe / transcribe_with_scoreは結果形式を維持する。入力のdtype・最小長・バッチ化、dither・pad_to・eval・凍結状態の準備と復元は採用NeMoの処理を使い、推論はtorch.inference_mode内で実行する。
 
 NeMoの非公開の準備・入力処理・復元メソッドに依存するため、NeMo更新時には一括transcribeとの実モデル比較が必要である。ライブラリ内部の処理は複製しない。
+
+一回のWorker.recognizeがエンコード結果と有効長を所有し、通常認識のdecode_with_scoreと必要な補強・N-bestのdecode_candidatesへ同じ値を渡す。再試行はデコードだけを行い、補強採用後のN-best省略や候補の順位付けは維持する。内部のtranscribe_candidatesはdecode_candidatesへ置換し、呼出元もエンコード済み入力へ揃えた。WebSocket契約は変更しない。
+
+各再デコードは設定をfinallyで復元し、Workerは通常認識と全再試行の終了後、保存処理より前にテンソル参照を解放する。参照はWorkerのフィールドや結果・追跡情報へ保持せず、別発話・別接続・暫定から確定への持越しを行わない。取消は共有実行器がWorkerの終了まで回収するため、設定復元と要求内参照の解放を飛ばさない。失敗をログやFutureが保持してもGPUテンソルを残さないよう、完了した例外フレームの局所変数と呼出元のエンコード参照を解放する。例外の型・メッセージ・行情報は維持する。

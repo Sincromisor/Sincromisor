@@ -20,6 +20,9 @@ from reazonspeech.nemo.asr.interface import (
     TranscribeResult,
 )
 
+# 一要求の通常認識と候補再試行で共有する、エンコーダー出力と有効長。
+type EncodedAudio = tuple[torch.Tensor, torch.Tensor]
+
 
 class SpeechRecognizerNemo:
     """NeMo / ReazonSpeech の推論呼び出しを、このサービス向けに薄く包む。"""
@@ -57,7 +60,7 @@ class SpeechRecognizerNemo:
             self.model._transcribe_on_end(config)  # noqa: SLF001  # reason: 採用NeMoと同じ復元を例外時も実行する。
 
     @torch.inference_mode()
-    def encode(self, audio: np.ndarray) -> tuple[torch.Tensor, torch.Tensor]:
+    def encode(self, audio: np.ndarray) -> EncodedAudio:
         """16kHz音声を従来どおり正規化・余白追加し、エンコーダー出力と有効長を返す。"""
         org_audio = AudioData(audio, 16000)  # ty: ignore[invalid-argument-type]  # reason: upstream waveform注釈はnp.float32だが実値はndarray / 解消条件: upstream修正後
         padded = pad_audio(norm_audio(org_audio), self.PAD_SECONDS).waveform
@@ -72,7 +75,7 @@ class SpeechRecognizerNemo:
             )
 
     @torch.inference_mode()
-    def decode(self, encoded: tuple[torch.Tensor, torch.Tensor]) -> TranscribeResult:
+    def decode(self, encoded: EncodedAudio) -> TranscribeResult:
         """同一音声のエンコード結果を、現在のデコード設定で候補へ変換する。"""
         with self._inference(encoded[0]):
             transcribe_output = self.model.decoding.rnnt_decoder_predictions_tensor(
@@ -134,9 +137,9 @@ class SpeechRecognizerNemo:
 
         return config
 
-    def transcribe_candidates(
+    def decode_candidates(
         self,
-        audio: np.ndarray,
+        encoded: EncodedAudio,
         *,
         strategy: str | None = None,
         beam_size: int | None = None,
@@ -144,7 +147,7 @@ class SpeechRecognizerNemo:
         boosting_tree_alpha: float = 0.0,
         allow_cuda_graphs: bool | None = None,
     ) -> list[tuple[str, float]]:
-        """一時的な decoding 設定で、候補テキストと score の一覧を返す。"""
+        """同一要求のエンコード結果を、一時的な設定で候補へ再デコードする。"""
         config = self.build_decoding_config(
             strategy=strategy,
             beam_size=beam_size,
@@ -158,19 +161,21 @@ class SpeechRecognizerNemo:
             # worker 側で baseline / context biasing / N-best を切り替えるため、
             # ここでのみ一時的に decoding config を入れ替える。
             self.model.change_decoding_strategy(config, verbose=False)
-            return self.transcribe_with_score(audio)
+            return self.decode_with_score(encoded)
         finally:
             # 次の推論へ設定が漏れないよう、元の config を必ず復元する。
             self.model.change_decoding_strategy(original_config, verbose=False)
 
-    # 音声認識結果を、次の形式で返す。
-    # [('認識したテキスト1', 0.0～1.0のスコア), ('認識したテキスト2', 0.0～1.0のスコア)]
     def transcribe_with_score(
         self,
         audio: np.ndarray,
     ) -> list[tuple[str, float]]:
         """認識結果を、後段で比較しやすい `(text, score)` 形式へ揃えて返す。"""
-        ts_result: TranscribeResult = self.transcribe(audio)
+        return self.decode_with_score(self.encode(audio))
+
+    def decode_with_score(self, encoded: EncodedAudio) -> list[tuple[str, float]]:
+        """認識候補の文字列とスコアだけを返し、テンソルを結果へ持ち出さない。"""
+        ts_result: TranscribeResult = self.decode(encoded)
         hypothesis = ts_result.hypothesis
 
         if isinstance(hypothesis, list):
