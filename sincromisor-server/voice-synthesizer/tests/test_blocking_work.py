@@ -17,6 +17,7 @@ from sincro_models import (
     ChatMessage,
     TextProcessorRequest,
     TextProcessorResult,
+    VoiceSynthesizerChunk,
 )
 from voice_synthesizer.VoiceSynthesizer import VoiceCacheManager, VoiceSynthesizerWorker
 
@@ -49,16 +50,25 @@ def test_wait_does_not_block_and_cancel_joins(monkeypatch, caplog, outcome):
         calls = []
         sent = []
         closed = []
-        voice = SimpleNamespace(speech_id=-1, to_msgpack=lambda: b"voice")
+        voice = VoiceSynthesizerChunk(
+            request_id=1,
+            speech_id=8,
+            sequence=0,
+            sample_offset=0,
+            final=False,
+            pcm=b"\0\1",
+            message="人工音声",
+            mora_queue=[],
+        )
 
-        def get_voice(**kwargs):
+        def stream_voice(request, context):
             calls.append(get_ident())
             loop.call_soon_threadsafe(started.set)
             assert release.wait(5)
             assert not closed
             if outcome == "failure":
                 raise ValueError("generation failed")
-            return voice
+            yield voice
 
         module = import_module(
             "voice_synthesizer.VoiceSynthesizer.VoiceSynthesizerWorker"
@@ -67,7 +77,7 @@ def test_wait_does_not_block_and_cancel_joins(monkeypatch, caplog, outcome):
             module,
             "VoiceCacheManager",
             lambda **kwargs: SimpleNamespace(
-                get_voice=get_voice, close=lambda: closed.append(True)
+                stream_voice=stream_voice, close=lambda: closed.append(True)
             ),
         )
         worker = VoiceSynthesizerWorker(
@@ -109,7 +119,7 @@ def test_wait_does_not_block_and_cancel_joins(monkeypatch, caplog, outcome):
             release.set()
             if outcome == "success":
                 await task
-                assert sent == [b"voice"]
+                assert sent == [voice.to_msgpack()]
                 assert voice.speech_id == 8
             else:
                 with pytest.raises(
@@ -131,9 +141,9 @@ def test_wait_does_not_block_and_cancel_joins(monkeypatch, caplog, outcome):
     events = [r.msg for r in caplog.records if isinstance(r.msg, dict)]
     assert events[0]["event"] == "synthesis_received"
     assert [e["event"] for e in events] == (
-        ["synthesis_received", "synthesis_delivery"]
-        if outcome == "failure"
-        else ["synthesis_received", "synthesis_generated", "synthesis_delivery"]
+        ["synthesis_received", "synthesis_generated", "synthesis_delivery"]
+        if outcome == "success"
+        else ["synthesis_received", "synthesis_delivery"]
     )
     assert events[-1]["outcome"] == (
         "success"
@@ -225,7 +235,7 @@ def test_real_worker_websocket_delayed_http_and_close(monkeypatch, disconnect):
         with wave.open(wav, "wb") as audio:
             audio.setnchannels(1)
             audio.setsampwidth(2)
-            audio.setframerate(24000)
+            audio.setframerate(48000)
             audio.writeframes(b"\0\0" * 2400)
 
         async def audio_query(request):
@@ -264,7 +274,7 @@ def test_real_worker_websocket_delayed_http_and_close(monkeypatch, disconnect):
 
         app = web.Application()
         app.router.add_post("/audio_query", audio_query)
-        app.router.add_post("/synthesis", synthesis)
+        app.router.add_post("/streaming_synthesis", synthesis)
         app.router.add_get("/ws", connection)
         runner = web.AppRunner(app)
         await runner.setup()
@@ -290,9 +300,11 @@ def test_real_worker_websocket_delayed_http_and_close(monkeypatch, disconnect):
                     release.set()
                     result = await asyncio.wait_for(ws.receive_bytes(), 5)
                     assert result
+                    final = VoiceSynthesizerChunk.from_msgpack(await ws.receive_bytes())
+                    assert final.final
                     await ws.close()
                     await asyncio.wait_for(finished.wait(), 5)
-                s3.put_object.assert_called_once()
+                assert s3.put_object.call_count == (0 if disconnect else 1)
                 redis.close.assert_called_once()
                 s3.close.assert_called_once()
                 assert closes == [True]

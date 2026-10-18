@@ -1,5 +1,8 @@
+"""完成音声のRedis/S3取得と保存を所有し、通常生成と逐次生成へ同じ保存境界を渡す。"""
+
 import io
 import logging
+from collections.abc import Iterator
 from contextlib import ExitStack
 from logging import Logger
 from time import perf_counter
@@ -15,7 +18,13 @@ from redis.exceptions import RedisError
 from redis.retry import Retry
 from sincro_config import SincromisorLoggerConfig
 from sincro_config.runtime_diagnostics import failure_fields
-from sincro_models import VoiceSynthesizerRequest, VoiceSynthesizerResult
+from sincro_models import (
+    VoiceSynthesizerChunk,
+    VoiceSynthesizerRequest,
+    VoiceSynthesizerResult,
+)
+from voice_synthesizer.stream_logging import stream_log
+from voice_synthesizer.voice_stream import StreamContext, stream_voice
 
 from .VoiceSynthesizer import VoiceSynthesizer
 
@@ -165,6 +174,41 @@ class VoiceCacheManager:
             }
         )
         return result
+
+    def stream_voice(
+        self, request: VoiceSynthesizerRequest, context: StreamContext
+    ) -> Iterator[VoiceSynthesizerChunk]:
+        """通常会話用の逐次PCMを返す。呼出元がiteratorと進行中の読取りを回収する。"""
+        with stream_log(self, request, context):
+            yield from stream_voice(self, request, context)
+
+    def load_cached_voice(
+        self, request: VoiceSynthesizerRequest, context: StreamContext
+    ) -> VoiceSynthesizerResult | None:
+        """完成音声をRedis、S3の順で読み、失敗時も正しい取得元を診断へ残す。"""
+        context.cache_source = "redis"
+        result = self.__get_voice_redis(request, context.ids)
+        if result is not None:
+            return result
+        context.cache_source = "s3"
+        result = self.__get_voice_s3(request, context.ids)
+        if result is None:
+            context.cache_source = "generated"
+        return result
+
+    def save_cached_voice(
+        self,
+        request: VoiceSynthesizerRequest,
+        result: VoiceSynthesizerResult,
+        context: StreamContext,
+    ) -> None:
+        """正常EOF後の完成音声だけを保存し、取消が来たら次の書込みへ進まない。"""
+        if context.cancelled.is_set():
+            raise InterruptedError("Synthesis cancelled")
+        self.__put_voice_redis(request, result, context.ids)
+        if context.cancelled.is_set():
+            raise InterruptedError("Synthesis cancelled")
+        self.__put_voice_s3(request, result, context.ids)
 
     def __cache_event(
         self,

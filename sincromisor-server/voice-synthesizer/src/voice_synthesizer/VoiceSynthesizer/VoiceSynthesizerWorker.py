@@ -1,7 +1,8 @@
-"""要求を同期合成へ渡し、回収完了後にWebSocketへ返す接続単位の処理。"""
+"""会話増分を接続内の要求番号へ結び、完成を待たずPCM区間を返す。"""
 
 import asyncio
 import logging
+from threading import Event
 
 from fastapi import WebSocket
 from sincro_config.runtime_diagnostics import failure_fields
@@ -10,6 +11,8 @@ from sincro_models import (
     TextProcessorResult,
     VoiceSynthesizerRequest,
 )
+from voice_synthesizer.stream_delivery import deliver_stream
+from voice_synthesizer.voice_stream import StreamContext
 
 from .VoiceCacheManager import VoiceCacheManager
 
@@ -71,12 +74,12 @@ class VoiceSynthesizerWorker:
             request = VoiceSynthesizerRequest(
                 speech_id=result.response_message.speech_id,
                 message=result.voice_text,
-                audio_format="audio/ogg;codecs=opus",
+                audio_format="audio/wav",
                 style_id=self.__voicevox_style_id,
                 pre_phoneme_length=0.1,
                 post_phoneme_length=0.1,
             )
-            # 連番はこの接続内だけの照合用であり、通信やキャッシュには追加しない。
+            # 接続内の各テキスト増分に番号を割り当て、同じ発話の別要求も区別する。
             request_number += 1
             fields = {
                 "connection_id": diagnostic.connection_id,
@@ -84,39 +87,11 @@ class VoiceSynthesizerWorker:
                 "request_number": request_number,
             }
             diagnostic.logger.info({"event": "synthesis_received", **fields})
-            operation = "process"
+            context = StreamContext(request_number, Event(), fields)
             try:
-                # 一要求ずつ完了を待ち、同期I/Oと音声変換だけをスレッドへ委ねる。
-                pending = asyncio.create_task(
-                    asyncio.to_thread(
-                        self.__vvox.get_voice,
-                        vs_request=request,
-                        session_id=result.session_id,
-                        sequence_id=result.sequence_id,
-                    )
-                )
-                try:
-                    with diagnostic.operation("process"):
-                        voice = await asyncio.shield(pending)
-                except asyncio.CancelledError:
-                    # スレッドは取消で止まらない。closeより先に回収し、結果は送らない。
-                    cleanup = asyncio.gather(pending, return_exceptions=True)
-                    while not cleanup.done():
-                        try:
-                            await asyncio.shield(cleanup)
-                        except asyncio.CancelledError:
-                            continue
-                    if not pending.cancelled() and pending.exception() is None:
-                        diagnostic.logger.info(
-                            {"event": "synthesis_generated", **fields}
-                        )
-                    raise
+                iterator = self.__vvox.stream_voice(request, context)
+                await deliver_stream(ws, iterator, context)
                 diagnostic.logger.info({"event": "synthesis_generated", **fields})
-                # キャッシュの発話IDは保存時のままなので、送信する要求のIDへ戻す。
-                voice.speech_id = request.speech_id
-                operation = "send"
-                with diagnostic.operation("send"):
-                    await ws.send_bytes(voice.to_msgpack())
             except (Exception, asyncio.CancelledError) as error:
                 outcome = (
                     "cancelled"
@@ -128,12 +103,14 @@ class VoiceSynthesizerWorker:
                     {
                         "event": "synthesis_delivery",
                         **fields,
-                        "operation": operation,
+                        "operation": context.operation,
                         "outcome": outcome,
                         **failure_fields(error),
                     },
                 )
-                raise
+                # 逐次生成では読取りと送信が交互に進むため、失敗した境界を保持する。
+                with diagnostic.operation(context.operation):
+                    raise
             # send_bytes完了だけを表す。RTCでの受信やブラウザー再生の完了ではない。
             diagnostic.logger.info(
                 {

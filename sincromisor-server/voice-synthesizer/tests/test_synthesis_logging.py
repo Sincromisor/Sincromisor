@@ -262,15 +262,15 @@ def test_worker_preserves_ids_and_skips_final(monkeypatch, caplog):
     calls = []
     voice = SimpleNamespace(speech_id=-1, to_msgpack=lambda: b"audio")
 
-    def get_voice(**kwargs):
-        calls.append(kwargs)
-        return voice
+    def stream_voice(request, context):
+        calls.append({"vs_request": request, **context.ids})
+        yield voice
 
     module = import_module("voice_synthesizer.VoiceSynthesizer.VoiceSynthesizerWorker")
     monkeypatch.setattr(
         module,
         "VoiceCacheManager",
-        lambda **kwargs: SimpleNamespace(get_voice=get_voice),
+        lambda **kwargs: SimpleNamespace(stream_voice=stream_voice),
     )
     worker = VoiceSynthesizerWorker(
         "unused", 1, 3, "unused", 1, "unused", 1, "fixture", "fixture"
@@ -306,7 +306,7 @@ def test_worker_preserves_ids_and_skips_final(monkeypatch, caplog):
     assert calls[0]["sequence_id"] == 2
     assert calls[0]["vs_request"].message == "人工本文"
     assert calls[0]["vs_request"].style_id == 3
-    assert voice.speech_id == 8
+    assert calls[0]["vs_request"].speech_id == 8
     assert sent == [b"audio", b"audio"]
     events = [r.msg for r in caplog.records if isinstance(r.msg, dict)]
     assert [e["request_number"] for e in events] == [1, 1, 1, 2, 2, 2]

@@ -31,7 +31,7 @@ def test_central_log_fixture(monkeypatch):
     with wave.open(wav, "wb") as audio:
         audio.setnchannels(1)
         audio.setsampwidth(2)
-        audio.setframerate(24000)
+        audio.setframerate(48000)
         audio.writeframes(b"\0\0" * 240)
     query = {
         "accent_phrases": [],
@@ -79,15 +79,6 @@ def test_central_log_fixture(monkeypatch):
             )
         ),
     )
-    # この確認は配送診断が対象。エンコーダー実行を追加せず、実HTTP/WAV生成の結果を使う。
-    get_voice = module.VoiceCacheManager.get_voice
-
-    def get_wav(self, vs_request, **ids):
-        return get_voice(
-            self, vs_request.model_copy(update={"audio_format": "audio/wav"}), **ids
-        )
-
-    monkeypatch.setattr(module.VoiceCacheManager, "get_voice", get_wav)
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -145,15 +136,12 @@ def test_central_log_fixture(monkeypatch):
     assert "private-" not in text
     assert "人工音声" not in text
     events = [json.loads(line) for line in text.splitlines()]
-    assert any(
-        e["event"] == "synthesis_processing" and e["outcome"] == "success"
-        for e in events
-    )
-    assert any(e["event"] == "synthesis_generated" for e in events)
+    assert any(e["event"] == "synthesis_received" for e in events)
     assert any(
         e["event"] == "synthesis_delivery"
-        and e["operation"] == "send"
         and e["outcome"] == "failed"
+        and e["operation"] == "send"
         for e in events
     )
     assert events[-1]["event"] == "websocket_finished"
+    assert events[-1]["operation"] == "send"

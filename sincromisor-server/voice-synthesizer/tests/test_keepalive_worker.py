@@ -11,7 +11,7 @@ from unittest.mock import Mock
 
 import pytest
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from sincro_models import TextProcessorResult, VoiceSynthesizerResult
+from sincro_models import TextProcessorResult, VoiceSynthesizerChunk
 from uvicorn import Config, Server
 from uvicorn.protocols.websockets.websockets_sansio_impl import WebSocketsSansIOProtocol
 from voice_synthesizer.backpressure_websocket import BackpressureWebSocketProtocol
@@ -52,18 +52,25 @@ async def serve_worker(monkeypatch, protocol_class):
             state.timeout_paused = self.read_paused
             super().keepalive_timeout()
 
-    def get_voice(*, vs_request, **kwargs):
+    def stream_voice(vs_request, context):
         time.sleep(0.12)
         state.generated.append(vs_request.speech_id)
-        return VoiceSynthesizerResult.from_msgpack(
-            (FIXTURES / "voice_synthesizer_result.msgpack").read_bytes()
+        yield VoiceSynthesizerChunk(
+            request_id=context.request_id,
+            speech_id=vs_request.speech_id,
+            sequence=0,
+            sample_offset=0,
+            final=False,
+            pcm=b"\0\1",
+            message="人工音声",
+            mora_queue=[],
         )
 
     module = import_module("voice_synthesizer.VoiceSynthesizer.VoiceSynthesizerWorker")
     monkeypatch.setattr(
         module,
         "VoiceCacheManager",
-        lambda **kwargs: SimpleNamespace(get_voice=get_voice, close=state.closed),
+        lambda **kwargs: SimpleNamespace(stream_voice=stream_voice, close=state.closed),
     )
     app = FastAPI()
 
@@ -142,7 +149,7 @@ async def exchange(state, *, corrected):
             assert len(received) < 8
             return
         for _ in range(8):
-            result = VoiceSynthesizerResult.from_msgpack(await ws.recv())
+            result = VoiceSynthesizerChunk.from_msgpack(await ws.recv())
             received.append(result.speech_id)
         assert received == state.generated == list(range(8))
         assert not state.protocol.read_paused

@@ -14,7 +14,7 @@ class VoiceSynthesizerMora(BaseModel):
 
 
 class VoiceSynthesizerResult(BaseModel):
-    """音声・クエリ・モーラ時刻を、キャッシュとRTCへの共通形式で保持する。"""
+    """完成音声とモーラを保存・診断用に保持する。通常会話の区間転送には使わない。"""
 
     # 発話ごとに割り振られるID。TextProcessorから引き継ぐ。
     # 音声を検知する度に割り当てられる。

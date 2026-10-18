@@ -1,3 +1,8 @@
+"""VOICEVOX HTTP接続を所有し、通常APIと逐次WAVの境界検証を提供する。"""
+
+from collections.abc import Generator
+from threading import Event
+
 import requests
 from sincro_models.VoiceVoxQuery import VoiceVoxQuery
 
@@ -36,6 +41,7 @@ class VoiceVox:
     # * +speaker+ - 話者ID。+speakers+メソッドで得られる。(default: 1)
     # * 戻り値 - クエリ連想配列
     def audio_query(self, text: str, style_id: int = 1) -> VoiceVoxQuery:
+        """本文をHTTPへ渡し、成功応答のJSONを型付き生成条件へ復元する。"""
         params: dict[str, str | int] = {self.style_id_key: style_id, "text": text}
         with self.session.post(
             url=f"{self.base_url}/audio_query",
@@ -90,6 +96,29 @@ class VoiceVox:
         ) as res:
             self.response_validator(res)
             return res.content
+
+    def query_synthesis_stream(
+        self, query: VoiceVoxQuery, style_id: int, cancelled: Event
+    ) -> Generator[bytes]:
+        """段階拡大WAVを逐次読む。反復終了・例外・close時にHTTP応答を解放する。"""
+        with self.session.post(
+            url=f"{self.base_url}/streaming_synthesis",
+            params={
+                self.style_id_key: style_id,
+                "segment_length": 0.3,
+                "max_segment_length": 2.4,
+            },
+            headers={"Content-Type": "application/json"},
+            data=query.model_dump_json(),
+            timeout=self.HTTP_TIMEOUT,
+            stream=True,
+        ) as response:
+            self.response_validator(response)
+            for part in response.iter_content(chunk_size=9600):
+                if cancelled.is_set():
+                    raise InterruptedError("Synthesis cancelled")
+                if part:
+                    yield part
 
     # とにかくテキストを音声に変換する。
     # * +text+ - 音声に変換する文字列。
