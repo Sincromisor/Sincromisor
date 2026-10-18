@@ -19,10 +19,12 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
 
 # curl: uvのインストール
 # git: ロックに含まれるReazonSpeechの取得に必要
+# 基底イメージの自動削除を解除し、取得済みdebを排他キャッシュへ保持する。
 RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean && \
     apt-get update \
-    && apt-get install -y curl git \
+    && apt-get install --no-install-recommends -y ca-certificates curl git \
     llvm-14-dev libsentencepiece-dev libprotobuf-dev python3-dev build-essential
 
 USER ${SINCRO_USER_ID}
@@ -104,11 +106,13 @@ ENV SINCRO_S3_SECRET_KEY=
 ENV SINCRO_RECOGNIZER_VOICE_LOG_DIR=
 
 # PyTorchのTriton演算は実行時にC拡張を生成するため、コンパイラーとPython開発用ヘッダーが必要。
+# 基底イメージの自動削除を解除し、取得済みdebを排他キャッシュへ保持する。
 RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean && \
     apt-get update && \
-    apt-get install -y \
-    libsentencepiece0 libprotobuf-c1 ffmpeg opus-tools curl gcc python3-dev
+    apt-get install --no-install-recommends -y \
+    libsentencepiece0 libprotobuf-c1 ffmpeg opus-tools ca-certificates curl gcc libc6-dev python3-dev
 
 RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     useradd -u 1001 -s /bin/bash -d ${SINCRO_USER_DIR} ${SINCRO_USER_ID} && \

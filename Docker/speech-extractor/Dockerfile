@@ -24,10 +24,12 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
 
 # curl: uvのインストール
 # git: ロックに含まれるReazonSpeechの取得に必要
+# 基底イメージの自動削除を解除し、取得済みdebを排他キャッシュへ保持する。
 RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean && \
     apt-get update \
-    && apt-get install -y curl git
+    && apt-get install --no-install-recommends -y ca-certificates curl git
 
 USER ${SINCRO_USER_ID}
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -36,12 +38,14 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 # 音声分類器の共有ライブラリもEGL/GLESへリンクするため、GPU未使用でも必要。
 # libegl1 / libgles2: libEGL.so.1 / libGLESv2.so.2
 # libgl1: libGL.so.1
-# libglib2.0-bin: libgthread-2.0.so.0
+# libglib2.0-0t64: libgthread-2.0.so.0
 USER root
+# 基底イメージの自動削除を解除し、取得済みdebを排他キャッシュへ保持する。
 RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean && \
     apt-get update \
-    && apt-get install -y libegl1 libgles2 libgl1 libglib2.0-bin
+    && apt-get install --no-install-recommends -y libegl1 libgles2 libgl1 libglib2.0-0t64
 
 USER ${SINCRO_USER_ID}
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
