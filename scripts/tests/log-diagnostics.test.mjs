@@ -231,18 +231,19 @@ test("切断・再接続・合成配送・部分受信の本番ログを中央�
 			service: "voice-synthesizer",
 			session_id: "fixture",
 			event: "synthesis_processing",
-			outcome: "success",
+			outcome: "cancelled",
 		});
-		const generated = find({
+		// 最初の区間で送信に失敗した要求を、全音声の生成成功として数えない。
+		const received = find({
 			session_id: "fixture",
-			event: "synthesis_generated",
+			event: "synthesis_received",
 			request_number: 1,
 			speech_id: 8,
 			sequence_id: 2,
 		});
 		find({
 			event: "synthesis_delivery",
-			connection_id: generated.connection_id,
+			connection_id: received.connection_id,
 			request_number: 1,
 			operation: "send",
 			outcome: "failed",
@@ -250,10 +251,17 @@ test("切断・再接続・合成配送・部分受信の本番ログを中央�
 		});
 		find({
 			event: "websocket_finished",
-			connection_id: generated.connection_id,
+			connection_id: received.connection_id,
 			operation: "send",
 			outcome: "failed",
 		});
+		assert.ok(
+			!rows.some(
+				(row) =>
+					row.connection_id === received.connection_id &&
+					row.event === "synthesis_generated",
+			),
+		);
 		for (const marker of [
 			"private-",
 			"secret-",
