@@ -1,3 +1,5 @@
+"""VOICEVOXの合成と音声変換を調停し、口形列の計算はmora_timingへ委ねる。"""
+
 import logging
 import wave
 from collections.abc import Iterator
@@ -10,11 +12,10 @@ from sincro_models import (
     VoiceSynthesizerMora,
     VoiceSynthesizerRequest,
     VoiceSynthesizerResult,
-    VoiceVoxAccentPhrase,
-    VoiceVoxMora,
     VoiceVoxQuery,
 )
 from sincro_models.audio_encoder import encode_audio
+from voice_synthesizer.mora_timing import build_mora_queue
 
 from .VoiceVox import VoiceVox
 
@@ -70,7 +71,7 @@ class VoiceSynthesizer(VoiceVox):
             query = self.query_filter(query)
         with self.__operation("synthesis", ids):
             wav: bytes = self.query_synthesis(query, style_id=vs_request.style_id)
-            mora_list: list[VoiceSynthesizerMora] = self.__parse_phrases(query)
+            mora_list: list[VoiceSynthesizerMora] = build_mora_queue(query)
             sp_time: float = self.__wav_speaking_time(wav)
         with self.__operation("encode", ids):
             enc_result: dict = self.encode(
@@ -106,79 +107,14 @@ class VoiceSynthesizer(VoiceVox):
             "audio_format": audio_format,
         }
 
-    # フレーズの間隔を指定した秒数で上書きする。
     def query_filter(self, query: VoiceVoxQuery, sec: float = 0.1) -> VoiceVoxQuery:
-        pidx = 0
-        while pidx < len(query.accent_phrases):
-            if query.accent_phrases[pidx].pause_mora:
-                pm: VoiceVoxMora | None = query.accent_phrases[pidx].pause_mora
-                assert pm is not None, "pause_mora should not be None"
-                pm.vowel_length = sec
-            pidx += 1
+        """合成前に句末休止の母音長を秒で上書きし、同じクエリを返す。"""
+        for phrase in query.accent_phrases:
+            if phrase.pause_mora is not None:
+                phrase.pause_mora.vowel_length = sec
         return query
 
-    # audio_queryで得られたクエリのaccent_phrasesから、
-    # モーラとその長さを時系列に抽出し、リストの形で返す。
-    # また、音声前後の無音時間も考慮する。
-    # 音声データの長さは
-    #   prePhonemeLength + accent_phrasesのmoraの長さ + postPhonemeLength
-    # に近い値となるはず(完全には一致しない模様)。
-    def __parse_phrases(self, query: VoiceVoxQuery) -> list[VoiceSynthesizerMora]:
-        mora_list = []
-
-        # 音声前の無音時間
-        mora_list.append(
-            VoiceSynthesizerMora(vowel=None, length=query.prePhonemeLength, text=None)
-        )
-
-        # クエリからフレーズをひとつずつ取り出す。
-        # 【例】
-        #  おはようございます。今日もいい天気ですね。
-        #  "おはようございます。", "今日も", "いい", "天気ですね。" に分割されている。
-        phrase: VoiceVoxAccentPhrase
-        for phrase in query.accent_phrases:
-            mora_list += self.__parse_phrase(phrase)
-
-        # 音声後の無音時間
-        mora_list.append(
-            VoiceSynthesizerMora(vowel=None, length=query.prePhonemeLength, text=None)
-        )
-        return mora_list
-
-    # 各フレーズからモーラの長さと母音を抽出し、リストの形で返す。
-    def __parse_phrase(
-        self, phrase: VoiceVoxAccentPhrase
-    ) -> list[VoiceSynthesizerMora]:
-        m_queue = []
-        # print(phrase)
-        # フレーズ中のモーラをひとつずつ取り出す。
-        mora: VoiceVoxMora
-        for mora in phrase.moras:
-            mo: VoiceSynthesizerMora = VoiceSynthesizerMora(
-                vowel=None, length=0, text=mora.text
-            )
-            if mora.vowel_length:
-                mo.vowel = mora.vowel
-                mo.length += mora.vowel_length
-            if mora.consonant_length:
-                mo.length += mora.consonant_length
-            m_queue.append(mo)
-
-        # フレーズ末尾の休止。
-        # フレーズごとに1回のみ存在する。
-        # 無い場合はphrase["pause_mora"]はNoneが入っている。
-        if phrase.pause_mora:
-            mo: VoiceSynthesizerMora = VoiceSynthesizerMora(
-                vowel=None, length=0, text=None
-            )
-            if phrase.pause_mora.vowel_length:
-                mo.length += phrase.pause_mora.vowel_length
-            if phrase.pause_mora.consonant_length:
-                mo.length += phrase.pause_mora.consonant_length
-            m_queue.append(mo)
-        return m_queue
-
-    # wavファイルの再生時間を計算する。
     def __wav_speaking_time(self, wav: bytes) -> float:
+        """モーラ長の合計ではなく、生成WAVのフレーム数から再生秒数を求める。"""
         with wave.open(BytesIO(wav), "rb") as w:
             return w.getnframes() / w.getframerate()
