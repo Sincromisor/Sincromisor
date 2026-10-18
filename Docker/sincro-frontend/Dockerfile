@@ -1,6 +1,7 @@
+# syntax=docker/dockerfile:1
 FROM hashicorp/consul:latest AS consul
 
-FROM node:26.11.1 AS builder
+FROM node:26.11.1 AS frontend-builder
 
 ARG SINCRO_USER_ID=sincromisor
 ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
@@ -21,9 +22,8 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} package.json package-lock.json 
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} scripts/check-node-version.mjs ${SINCRO_USER_DIR}/scripts/
 RUN npm install --global npm@11.20.0
 
-USER $SINCRO_USER_ID
+USER ${SINCRO_USER_ID}
 RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.npm,uid=1001,gid=1001 \
-    chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR} && \
     npm ci
 
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
@@ -32,11 +32,9 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./sincromisor-frontend/vite.config.js \
     ./sincromisor-frontend/postcss.config.js \
     ${SINCRO_USER_DIR}/sincromisor-frontend/
-
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./sincromisor-frontend/src \
     ${SINCRO_USER_DIR}/sincromisor-frontend/src
-
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./sincromisor-frontend/public \
     ${SINCRO_USER_DIR}/sincromisor-frontend/public
@@ -57,7 +55,7 @@ COPY --from=consul --chown=root:root \
     /bin/consul \
     /bin/consul
 
-COPY --from=builder --chown=root:root \
+COPY --from=frontend-builder --chown=root:root \
     /opt/sincromisor/sincromisor-frontend/dist /srv/sincromisor-frontend
 
 COPY --chown=root:root \
