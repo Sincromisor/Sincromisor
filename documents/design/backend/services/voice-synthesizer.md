@@ -28,6 +28,14 @@ Dockerビルドでは配布物の取得成功後にキャッシュを確定し�
 - 音声合成バックエンドを呼び出す。
 - `VoiceSynthesizerResult`としてGoパイプライン調停器へ返す。
 
+### 口形用モーラ列の生成
+
+`VoiceSynthesizer` はクエリ取得、句末休止長の調整、WAV生成、音声形式の変換を調停する。
+[mora_timing.py](../../../../sincromisor-server/voice-synthesizer/src/voice_synthesizer/mora_timing.py) は合成に使ったクエリを変更せず、口形用のモーラ列へ変換する。
+前無音、各句のモーラと休止、後無音の順に並べ、前後の無音はそれぞれ `prePhonemeLength` と `postPhonemeLength` を使う。
+各モーラの長さは母音長と子音長の合計秒数とし、休止は母音と表示文字を持たない。母音長がゼロの通常モーラも口形を表示しない。
+再生時間はWAVから取得し、モーラ長の合計と同一とは仮定しない。Go側が末尾無音を実PCM末尾へ収める。
+
 ## 運用ログ
 
 共通JSONLを使い、`SINCRO_LOG_SYNTHESIS_ENABLED`（既定`true`）で本文と生成条件の詳細を切り替える。
