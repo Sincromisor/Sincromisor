@@ -140,10 +140,20 @@ COPY --from=builder --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ${SINCRO_USER_DIR}/.python-version \
     ${SINCRO_USER_DIR}/
 
-# sincromisor-serverのソースコード一式をここでコピー
-COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./sincromisor-server \
+# 対象サービスと共通パッケージだけを配置し、他サービスの変更と依存同期を分離する。
+# builderには全メンバーの依存宣言だけがある。実行段階でもロック検証に使う。
+COPY --from=builder --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ${SINCRO_USER_DIR}/sincromisor-server \
     ${SINCRO_USER_DIR}/sincromisor-server
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-server/sincro-config \
+    ${SINCRO_USER_DIR}/sincromisor-server/sincro-config
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-server/sincro-models \
+    ${SINCRO_USER_DIR}/sincromisor-server/sincro-models
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-server/speech-recognizer-nemo \
+    ${SINCRO_USER_DIR}/sincromisor-server/speech-recognizer-nemo
 
 USER ${SINCRO_USER_ID}
 # ソース配置後もロックを検証してワークスペースを導入する。

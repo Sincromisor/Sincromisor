@@ -4,17 +4,16 @@
 
 ## タスク一覧（自動生成 / 全 43 件）
 
-### open（未完） — 5 件
+### open（未完） — 4 件
 
 | タスク                                                                                                                   | タイトル                                                | 判定 | 依存 |
 | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- | ---- | ---- |
-| [task-261018115343-docker-build-context-scope](./task-261018115343-docker-build-context-scope/task.md)                   | Dockerの不要なビルド入力とPythonのコピー範囲を削減する  | —    | —    |
 | [task-261018115343-frontend-build-cache-alignment](./task-261018115343-frontend-build-cache-alignment/task.md)           | フロントエンドとRTCの共通ビルドでキャッシュを再利用する | —    | —    |
 | [task-261018115344-agent-server-npm-build-cache](./task-261018115344-agent-server-npm-build-cache/task.md)               | AgentServerの依存導入にnpmキャッシュを追加する          | —    | —    |
 | [task-261018115344-image-build-update-isolation](./task-261018115344-image-build-update-isolation/task.md)               | VOICEVOXの再展開を抑えPythonのuv導入を固定する          | —    | —    |
 | [task-261018115344-image-publish-compose-compatibility](./task-261018115344-image-publish-compose-compatibility/task.md) | イメージ公開処理を現行Composeのビルド定義に対応させる   | —    | —    |
 
-### done（完了） — 38 件
+### done（完了） — 39 件
 
 | タスク                                                                                                                 | タイトル                                                        | 判定    | 依存                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -54,5 +53,6 @@
 | [task-260921221014-runtime-failure-diagnostics](./task-260921221014-runtime-failure-diagnostics/task.md)               | FFmpegと内部処理の失敗原因を安全に記録する                      | ✅ PASS | `task-260921212105-python-conversation-logs`, `task-260921212105-rtc-agent-json-logs`                                                                                                                                                                                                                                                                                                                                                                                    |
 | [task-261011201056-compose-logs-without-docker-socket](./task-261011201056-compose-logs-without-docker-socket/task.md) | ログ収集をComposeサービス群に限定しDockerソケット依存を削除する | ✅ PASS | —                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | [task-261018115343-apt-build-cache-retention](./task-261018115343-apt-build-cache-retention/task.md)                   | APTのビルドキャッシュ保持と導入パッケージを適正化する           | ✅ PASS | —                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| [task-261018115343-docker-build-context-scope](./task-261018115343-docker-build-context-scope/task.md)                 | Dockerの不要なビルド入力とPythonのコピー範囲を削減する          | ✅ PASS | —                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 <!-- AUTOGEN:tasks END -->

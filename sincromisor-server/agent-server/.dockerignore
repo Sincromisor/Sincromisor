@@ -1,0 +1,11 @@
+# このサービスはリポジトリルートと別のコンテキストを使う。
+node_modules
+.mastra
+.cache
+.npm
+dist
+coverage
+*.log
+.env
+.env.*
+.git
