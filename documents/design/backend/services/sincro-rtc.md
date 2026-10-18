@@ -17,22 +17,22 @@
 
 ## 責務境界
 
-| 境界             | 所有パッケージ                                                                                                                                                                                                                                                                                                                                | 責務                                                                                                                                                                     |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 起動処理         | [`cmd/sincro-rtc`](../../../../sincromisor-server/sincro-rtc/cmd/sincro-rtc)、[`internal/config`](../../../../sincromisor-server/sincro-rtc/internal/config)                                                                                                                                                                                  | 設定と外部実行ファイルを検証し、共有Pionネットワーク、各登録簿、HTTP提供を順に構築する。終了時は`draining`公開、Consul解除、共有資源、HTTPの順に終了処理を調停する。     |
-| シグナリング     | [`internal/signaling`](../../../../sincromisor-server/sincro-rtc/internal/signaling)、[`offer`](../../../../sincromisor-server/sincro-rtc/internal/signaling/offer)                                                                                                                                                                           | `config`、`offer`、`candidate`、`statuses`、静的配信を提供する。Offer登録簿は重複要求、候補収集、容量、完了値と終了を示す記録の期限を所有する。                          |
-| RTCセッション    | [`internal/rtc`](../../../../sincromisor-server/sincro-rtc/internal/rtc)、[`network`](../../../../sincromisor-server/sincro-rtc/internal/rtc/network)                                                                                                                                                                                         | ManagerとSessionがPeerConnection、トラック、ICE再接続、終了処理を所有する。ネットワークは全セッション共有のPion APIとUDP4ソケットを所有する。                            |
-| DataChannel      | [`internal/rtc/datachannel`](../../../../sincromisor-server/sincro-rtc/internal/rtc/datachannel)                                                                                                                                                                                                                                              | `text_ch`と`telop_ch`の送受信データ検証、有限キュー、送信、送信待ちデータ量超過時の終了判断を所有する。                                                                  |
-| 入出力音声       | [`internal/media/input`](../../../../sincromisor-server/sincro-rtc/internal/media/input)、[`output`](../../../../sincromisor-server/sincro-rtc/internal/media/output)、[`synthdecode`](../../../../sincromisor-server/sincro-rtc/internal/media/synthdecode)、[`playback`](../../../../sincromisor-server/sincro-rtc/internal/media/playback) | 入力RTPの並べ替え・Opus復号・PCM変換、合成音声コンテナのPCM復号、送信時計・Opus符号化・発話キュー、既定再生素材の成功時だけの共有を分担する。                            |
-| 会話パイプライン | [`internal/pipeline`](../../../../sincromisor-server/sincro-rtc/internal/pipeline)                                                                                                                                                                                                                                                            | 下流4サービスを同一世代で接続し、確認済み履歴、発話途中の状態、入力キュー、失敗時の一括再初期化を所有する。子パッケージがクライアント、探索、MessagePack境界を分担する。 |
-| 観測             | [`internal/observability`](../../../../sincromisor-server/sincro-rtc/internal/observability)                                                                                                                                                                                                                                                  | プロセス固有のPrometheus登録簿を構築し、送受信データを受け取らないRecorder境界と固定表示名語彙を提供する。稼働セッション数は作成と終了の所有権移動として記録する。       |
+| 境界             | 所有パッケージ                                                                                                                                                                                                                                                                                                                                | 責務                                                                                                                                                                         |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 起動処理         | [`cmd/sincro-rtc`](../../../../sincromisor-server/sincro-rtc/cmd/sincro-rtc)、[`internal/config`](../../../../sincromisor-server/sincro-rtc/internal/config)                                                                                                                                                                                  | 設定と外部実行ファイルを検証し、共有Pionネットワーク、各登録簿、HTTP提供を順に構築する。終了時は`draining`公開、Consul解除、共有資源、HTTPの順に終了処理を調停する。         |
+| シグナリング     | [`internal/signaling`](../../../../sincromisor-server/sincro-rtc/internal/signaling)、[`offer`](../../../../sincromisor-server/sincro-rtc/internal/signaling/offer)                                                                                                                                                                           | `config`、`offer`、`candidate`、`statuses`、静的配信を提供する。Offer登録簿は重複要求、候補収集、容量、完了値と終了を示す記録の期限を所有する。                              |
+| RTCセッション    | [`internal/rtc`](../../../../sincromisor-server/sincro-rtc/internal/rtc)、[`network`](../../../../sincromisor-server/sincro-rtc/internal/rtc/network)                                                                                                                                                                                         | ManagerとSessionがPeerConnection、トラック、ICE再接続、終了処理を所有する。ネットワークは全セッション共有のPion APIとUDP4ソケットを所有する。                                |
+| DataChannel      | [`internal/rtc/datachannel`](../../../../sincromisor-server/sincro-rtc/internal/rtc/datachannel)                                                                                                                                                                                                                                              | `text_ch`と`telop_ch`の送受信データ検証、有限キュー、送信、送信待ちデータ量超過時の終了判断を所有する。                                                                      |
+| 入出力音声       | [`internal/media/input`](../../../../sincromisor-server/sincro-rtc/internal/media/input)、[`output`](../../../../sincromisor-server/sincro-rtc/internal/media/output)、[`synthdecode`](../../../../sincromisor-server/sincro-rtc/internal/media/synthdecode)、[`playback`](../../../../sincromisor-server/sincro-rtc/internal/media/playback) | 入力RTPの並べ替え・Opus復号・PCM変換、会話PCM区間の検証・再バッファと完全音声コンテナのPCM復号、送信時計・Opus符号化・発話キュー、既定再生素材の成功時だけの共有を分担する。 |
+| 会話パイプライン | [`internal/pipeline`](../../../../sincromisor-server/sincro-rtc/internal/pipeline)                                                                                                                                                                                                                                                            | 下流4サービスを同一世代で接続し、確認済み履歴、発話途中の状態、入力キュー、失敗時の一括再初期化を所有する。子パッケージがクライアント、探索、MessagePack境界を分担する。     |
+| 観測             | [`internal/observability`](../../../../sincromisor-server/sincro-rtc/internal/observability)                                                                                                                                                                                                                                                  | プロセス固有のPrometheus登録簿を構築し、送受信データを受け取らないRecorder境界と固定表示名語彙を提供する。稼働セッション数は作成と終了の所有権移動として記録する。           |
 
 ## 代表的な処理の流れ
 
 1. 起動処理が設定を検証し、共有UDP4ソケット、観測先、パイプライン生成処理、RTC Manager、Offer登録簿、HTTPサーバーを構築する。
 2. シグナリングがOfferを受理し、RTC ManagerがSessionを作成してAnswerとセッションIDを返す。
 3. 通常モードの受信トラックは入力音声処理を経てPCMとなり、会話パイプラインが下流4サービスへ順に渡す。`echo`は同じ入力処理後に48 kHzへ変換してセッション所有の有界診断バッファへ追加し、既存の送信時計から返却する。`playback`は既定素材を初回Offer時だけ検証・復号して共有し、セッション所有の有限発話キューから繰り返す。どちらもCoordinatorや下流接続は生成しない。
-4. 応答テキストはDataChannel、合成音声は復号・送信音声処理を経て送信トラックへ戻る。
+4. 応答テキストはDataChannel、会話音声はPCM区間の検証・再生バッファ・送信音声処理を経て、全体受信を待たず送信トラックへ戻る。
 5. 終了時は新規Offerを拒否しながらConsul登録、Offer、Session、HTTP待受処理を定めた期限内に終了させる。
 
 ## 試験配置方針
@@ -89,3 +89,17 @@ FFmpegの起動確認と復号失敗は `audio_command_failure`として、`stag
 - [フロントエンドのRTC契約](../../contracts/frontend-rtc.md)
 - [音声パイプラインWebSocket契約](../../contracts/audio-pipeline-websocket.md)
 - [旧Python実装の履歴](../../archive/legacy-flat/backend_sincro_rtc.md)
+
+## 会話音声の逐次出力
+
+VoiceSynthesizerの区間モデルをGoのクライアントで復号し、Coordinatorの世代を付けてSessionへ渡す。
+Sessionは世代比較とキュー操作を同じ境界で適用し、`output.Processor`が要求ごとの連続サンプル位置・区間順序・
+完了・初期/再開バッファ・モーラ位置を所有する。通常の会話PCMはFFmpegによる全体復号を通さない。
+`playback`等の完成音声復号は `synthdecode`に残す。
+
+初期/再開バッファは300msとし、不足中は音声・モーラ位置を保ったまま連続トラックの無音を送る。
+終端受理後だけ末尾の20ms未満を無音で埋める。既存の8要求・120秒相当の未送信PCM上限を維持し、
+要求全体にも120秒の上限を設ける。遅延による中止後は同じ要求の遅着を終端まで検証して捨て、再生を復活させない。
+世代更新・接続終了ではこの受信状態と未送信音声・テロップをまとめて破棄する。
+区間の詳細は [音声パイプライン契約](../../contracts/audio-pipeline-websocket.md#合成音声の区間転送)、
+音声時計とテロップは [フロントRTC契約](../../contracts/frontend-rtc.md#返却音声とテロップの同期) を正本とする。

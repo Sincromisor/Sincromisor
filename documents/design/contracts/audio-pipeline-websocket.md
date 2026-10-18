@@ -47,12 +47,12 @@
 | SpeechRecognizer → Go                 | `SpeechRecognizerResult`              | text/scoreタプルの列                                      |
 | Go → TextProcessor                    | `TextProcessorRequest`                | 認識文とチャット履歴                                      |
 | TextProcessor → Go → VoiceSynthesizer | `TextProcessorResult`                 | 振り分けフィールドを復号し、元バイト列を変更せずTTSへ転送 |
-| VoiceSynthesizer → Go                 | `VoiceSynthesizerResult`              | 符号化済みの音声、モーラ時刻情報、音声形式                |
+| VoiceSynthesizer → Go                 | `VoiceSynthesizerChunk`               | 48kHz mono PCMの区間、要求識別、モーラ、完了              |
 
-`SpeechRecognizerResult`、`TextProcessorResult`、`VoiceSynthesizerResult`はGo利用側専用である。
+`SpeechRecognizerResult`、`TextProcessorResult`、`VoiceSynthesizerChunk`はGo利用側専用である。
 Goは音声認識処理結果から別モデルの `TextProcessorRequest`を生成するため、
 `SpeechRecognizerResult`を再符号化しない。`TextProcessorResult`と
-`VoiceSynthesizerResult`にもGo本番符号化APIを設けない。
+`VoiceSynthesizerChunk`にもGo本番符号化APIを設けない。
 
 ### フィールドのスキーマ
 
@@ -60,20 +60,41 @@ Goは音声認識処理結果から別モデルの `TextProcessorRequest`を生�
 その他の必須フィールドは `nil`を許さない。文字列の空、リストの空、
 バイナリの空はコーデック層で許可し、業務領域上の範囲や形式の妥当性は各クライアントが検証する。
 
-| モデル                             | フィールド                                                                                                                                                                                                                       |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SpeechExtractorInitializeRequest` | `session_id: string`、`start_at: float`、`voice_sampling_rate: int64`、`voice_sample_bytes: int64`、`voice_channels: int64`                                                                                                      |
-| `SpeechExtractorResult`            | `session_id: string`、`speech_id: int64`、`sequence_id: int64`、`start_at: float`、`confirmed: bool`、`voice: binary`、`voice_dtype: string`、`voice_sampling_rate: int64`、`voice_sample_bytes: int64`、`voice_channels: int64` |
-| `SpeechRecognizerResult`           | `session_id: string`、`speech_id: int64`、`sequence_id: int64`、`start_at: float`、`confirmed: bool`、`result: list<[string, float]>`                                                                                            |
-| `ChatMessage`                      | `speech_id: int64`、`message_id: string`、`message_type: string`、`speaker_id: string`、`speaker_name: string`、`expression_code: int64 \| nil`、`message: string`、`created_at: float`                                          |
-| `ChatHistory`                      | `messages: list<ChatMessage>`                                                                                                                                                                                                    |
-| `TextProcessorRequest`             | `session_id: string`、`sequence_id: int64`、`confirmed: bool`、`history: ChatHistory`、`request_message: ChatMessage`                                                                                                            |
-| `TextProcessorResult`              | `session_id: string`、`sequence_id: int64`、`confirmed: bool`、`history: ChatHistory`、`request_message: ChatMessage`、`response_message: ChatMessage`、`end_of_response: bool`、`voice_text: string \| nil`                     |
-| `VoiceSynthesizerResult`           | `speech_id: int64`、`message: string`、`query: map`、`mora_queue: list<Mora>`、`speaking_time: float`、`voice: binary`、`audio_format: string`。`Mora`は `vowel: string \| nil`、`length: float`、`text: string \| nil`を持つ    |
+| モデル                             | フィールド                                                                                                                                                                                                                                   |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SpeechExtractorInitializeRequest` | `session_id: string`、`start_at: float`、`voice_sampling_rate: int64`、`voice_sample_bytes: int64`、`voice_channels: int64`                                                                                                                  |
+| `SpeechExtractorResult`            | `session_id: string`、`speech_id: int64`、`sequence_id: int64`、`start_at: float`、`confirmed: bool`、`voice: binary`、`voice_dtype: string`、`voice_sampling_rate: int64`、`voice_sample_bytes: int64`、`voice_channels: int64`             |
+| `SpeechRecognizerResult`           | `session_id: string`、`speech_id: int64`、`sequence_id: int64`、`start_at: float`、`confirmed: bool`、`result: list<[string, float]>`                                                                                                        |
+| `ChatMessage`                      | `speech_id: int64`、`message_id: string`、`message_type: string`、`speaker_id: string`、`speaker_name: string`、`expression_code: int64 \| nil`、`message: string`、`created_at: float`                                                      |
+| `ChatHistory`                      | `messages: list<ChatMessage>`                                                                                                                                                                                                                |
+| `TextProcessorRequest`             | `session_id: string`、`sequence_id: int64`、`confirmed: bool`、`history: ChatHistory`、`request_message: ChatMessage`                                                                                                                        |
+| `TextProcessorResult`              | `session_id: string`、`sequence_id: int64`、`confirmed: bool`、`history: ChatHistory`、`request_message: ChatMessage`、`response_message: ChatMessage`、`end_of_response: bool`、`voice_text: string \| nil`                                 |
+| `VoiceSynthesizerChunk`            | `request_id: int64`、`speech_id: int64`、`sequence: int64`、`sample_offset: int64`、`final: bool`、`pcm: binary`、`message: string`、`mora_queue: list<Mora>`。`Mora`は `vowel: string \| nil`、`length: float`、`text: string \| nil`を持つ |
 
 すべてのPython整数はGoの符号付き `int64`範囲で受理する。負の値は通信上の
 表現として許可するが、`int64`を超える符号なし整数は拒否する。
 `voice`はMessagePack文字列へ暗黙変換せずバイナリだけを受理する。
+
+### 合成音声の区間転送
+
+`/api/v1/VoiceSynthesizer/synthesize`の返却は、完全な `VoiceSynthesizerResult`から
+`VoiceSynthesizerChunk`の列へ変更した。これはMessagePackの破壊的変更であり、PythonとGoを同時に更新する。
+エンドポイントと要求である `TextProcessorResult`は維持する。完成音声のキャッシュモデルは引き続き
+`VoiceSynthesizerResult`であり、ネットワーク上の区間とは分ける。
+
+- `request_id`は接続ごとに1から始まる合成要求の連番。`voice_text`がある入力だけを数える。
+  同じ `speech_id`に複数のテキスト増分がある場合も別要求となる。会話全体の終了を表す `end_of_response`とは独立する。
+- `sequence`は要求ごとに0から始まり、データ区間と完了区間を通して1ずつ増える。
+  `sample_offset`はその要求の先頭から数えたPCMサンプル位置で、前区間の末尾と一致しなければならない。
+- `pcm`は48kHz・mono・signed 16-bit little-endianの生PCM。WAVヘッダーやOpusファイルを含めない。
+  データ区間は非空の偶数バイトで、最大24,000サンプル（0.5秒）とする。要求全体は最大120秒とする。
+- `sequence=0`の先頭データ区間だけが `message`と要求全体の `mora_queue`を持ち、後続区間では空文字列と空リストにする。
+  モーラ位置は要求内のPCMサンプル位置から計算し、20msごとの出力位置で参照する。
+- `final=true`はPCMが空の終端区間で、`sample_offset`は総サンプル数を表す。
+  正常なWAV全体の受信・検証後にだけ送る。空音声、終端欠落、区間の逆行・重複・欠損、不正なメタデータを正常完了にしない。
+- Goは一要求を完了するまで次要求を混在させず、開始済み要求をもう一度開始しない。
+  世代変更では検証状態と未送信音声を破棄し、旧世代の遅着を拒否する。
+- 診断の `synthesis_received`等の合成件数はPCM区間数ではなく要求単位で数える。完了は終端の受理で判定する。
 
 ### 互換性確認用の固定データ
 
@@ -133,7 +154,7 @@ VoiceSynthesizerへ変更せず転送する。
 サービス名とサービス別の累積破棄件数だけを持ち、認識文、音声、チャット本文、原因エラーを含めない。
 
 ブラウザ入力は20 ms、16 kHz、モノラル、s16leの640-byteフレームだけを受ける。`running`以外では保存せず拒否し、
-`running`中は25フレーム（500 ms）の上限付きのキューで最古の未送信フレームだけを破棄する。テキスト / 合成済みの出力は
+`running`中は25フレーム（500 ms）の上限付きのキューで最古の未送信フレームだけを破棄する。テキスト / 合成区間の出力は
 各16件で順序を維持し、送信先の詰まりが5秒続いた場合は、通知せずに破棄するのではなく再初期化の理由にする。外部チャネルはセッション生存期間で
 交換せず世代情報で包んだ値を返し、再初期化同期点でバッファ済み旧要素を排出する。PCM容量超過も
 Coordinatorがキュー交換とは独立したセッション累積値として所有し、Extractorのサービス名と累積破棄件数だけを記録する。

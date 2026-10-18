@@ -78,6 +78,8 @@ export class TalkManager {
             };
             this.moraID += 1;
             this.addTelopChar(msg.speech_id, msg.text);
+        } else {
+            this.refreshMoraDeadline(msg);
         }
         this.emitEvent({ type: "telop_channel_message", message: msg });
     }
@@ -88,10 +90,28 @@ export class TalkManager {
             return undefined;
         }
         if (this.currentTelopChannelMessage.endTime < performance.now()) {
-            this.currentTelopChannelMessage = undefined;
+            // 再バッファ後の同じモーラを識別できるよう、最後の1件は期限後も保持する。
             return undefined;
         }
         return this.currentTelopChannelMessage;
+    }
+
+    /** 音声位置から残り時間を更新し、再開したモーラの口形だけを復帰させる。文字は追加しない。 */
+    private refreshMoraDeadline(msg: TelopChannelMessage): void {
+        const current = this.currentTelopChannelMessage;
+        if (
+            !current ||
+            current.mora.speech_id !== msg.speech_id ||
+            current.mora.text !== msg.text ||
+            current.mora.vowel !== msg.vowel
+        ) {
+            return;
+        }
+        const elapsed = msg.timestamp - current.mora.timestamp;
+        if (elapsed < 0 || elapsed >= current.mora.length) {
+            return;
+        }
+        current.endTime = performance.now() + (current.mora.length - elapsed) * 1000;
     }
 
     // 空文字のモーラは空白として残し、React表示用の発話単位履歴へ加える。
