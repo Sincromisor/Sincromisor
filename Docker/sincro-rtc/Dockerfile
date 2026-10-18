@@ -63,11 +63,12 @@ LABEL org.opencontainers.image.source=https://github.com/Sincromisor/Sincromisor
 ARG SINCRO_USER_ID=sincromisor
 ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
 
+# 基底イメージの自動削除を解除し、取得済みdebを排他キャッシュへ保持する。
 RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean && \
     apt-get update && \
-    apt-get install --no-install-recommends -y curl ffmpeg libopus0 && \
-    rm -rf /var/lib/apt/lists/* && \
+    apt-get install --no-install-recommends -y ca-certificates curl ffmpeg libopus0 && \
     useradd -u 1001 -s /bin/bash -d ${SINCRO_USER_DIR} ${SINCRO_USER_ID} && \
     mkdir ${SINCRO_USER_DIR} && \
     chown ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR}

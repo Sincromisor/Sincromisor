@@ -17,10 +17,12 @@ COPY --from=consul --chown=root:root --chmod=755 \
     /bin/consul \
     /bin/consul
 
+# 基底イメージの自動削除を解除し、取得済みdebを排他キャッシュへ保持する。
 RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean && \
     apt-get update && \
-    apt-get install -y curl p7zip libsndfile1 && \
+    apt-get install --no-install-recommends -y ca-certificates curl p7zip libsndfile1 && \
     useradd -s /bin/bash -d /opt/voicevox voicevox 
 
 # CPU/x64の配布物は1巻。取得途中のファイルを正常キャッシュとして再利用しない。

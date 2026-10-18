@@ -1,0 +1,13 @@
+id: task-261018115343-docker-build-context-scope
+title: Dockerの不要なビルド入力とPythonのコピー範囲を削減する
+category: infrastructure
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-10-18
+closed_at: null
+legacy_ids: []

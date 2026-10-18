@@ -27,18 +27,15 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
 
 # curl: uvのインストール
 # git: ロックに含まれるReazonSpeechの取得に必要
+# 基底イメージの自動削除を解除し、取得済みdebを排他キャッシュへ保持する。
 RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean && \
     apt-get update \
-    && apt-get install -y curl git
+    && apt-get install --no-install-recommends -y ca-certificates curl git
 
 USER ${SINCRO_USER_ID}
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-
-#USER root
-#RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
-#    --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
-#    apt-get install -y fdkaac opus-tools
 
 USER ${SINCRO_USER_ID}
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
