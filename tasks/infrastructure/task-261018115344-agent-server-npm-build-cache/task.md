@@ -8,9 +8,9 @@
 
 ## 完了条件
 
-- [ ] ビルド段階の `npm ci --no-audit --no-fund` が、実行ユーザーに対応するnpmキャッシュマウントを使う。
-- [ ] ロックファイルに基づく依存導入とMastraビルドが成功し、既存の依存上書き処理を維持する。
-- [ ] キャッシュは実行イメージへコピーせず、成果物の配置・非root実行・起動コマンドを維持する。
+- [x] ビルド段階の `npm ci --no-audit --no-fund` が、実行ユーザーに対応するnpmキャッシュマウントを使う。
+- [x] ロックファイルに基づく依存導入とMastraビルドが成功し、既存の依存上書き処理を維持する。
+- [x] キャッシュは実行イメージへコピーせず、成果物の配置・非root実行・起動コマンドを維持する。
 
 ## 変更範囲・実装方針
 
@@ -28,3 +28,13 @@
 
 公開契約は変わらず、設計文書の変更は原則不要。結果は本タスクへ記録する。
 容量確認・作成物の記録・後片付けは [Docker Compose管理ルール](../../../documents/rules/docker-compose.md) に従う。
+
+## 実装・確認結果
+
+Dockerfileの構文指定とroot用/root/.npmキャッシュマウントを追加した。npm ci --no-audit --no-fund、依存版、Mastraビルドと依存上書き処理、Composeのサブディレクトリコンテキストは維持した。
+
+ビルド段階・最終段階をビルドし、npmとMastraの処理成功、_cacacheの存在、.mastra/outputとstart.mjsの配置、UID 1000を確認した。最終段階の/root/.npm・/home/node/.npm・/app/.npmは存在せず、実行側へのコピー範囲にキャッシュが入らない。CMDは既存のnode start.mjsを維持した。コメント点検: PASS。
+
+defaultビルダー、unix:///var/run/docker.sock、linux/amd64、--output type=cacheonlyを使用した。新規イメージタグ・ID・永続コンテナはない。開始時のキャッシュ114.6GB、空き142GB。キャッシュは既存GCの下で通常ビルドに再利用する。
+
+終了時のキャッシュは115.6GB（約1.0GB増加）、空き141GBである。

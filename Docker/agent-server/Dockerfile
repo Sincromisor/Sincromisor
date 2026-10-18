@@ -1,8 +1,11 @@
+# syntax=docker/dockerfile:1
 FROM node:24.21.0-bookworm-slim AS build
 WORKDIR /app
 ENV MASTRA_TELEMETRY_DISABLED=true
 COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+# 依存導入はrootで実行するため、その取得キャッシュだけをビルド間で共有する。
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --no-audit --no-fund
 COPY tsconfig.json ./
 COPY src ./src
 COPY preserve-dependency-overrides.mjs ./
