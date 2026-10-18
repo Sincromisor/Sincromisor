@@ -9,9 +9,10 @@ import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { registry, targets } from "./image-publish-targets.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const registry = "ghcr.io/sincromisor/";
+
 const repository = "Sincromisor/Sincromisor";
 const [command = "plan", ...names] = process.argv.slice(2);
 
@@ -37,67 +38,8 @@ function packages() {
   ).flat();
 }
 
-/** 展開先のComposeから自作イメージだけを選ぶ。他社の配布物は再公開しない。 */
-function targets(source) {
-  // 開発端末の環境変数で公開構成が変わらないよう、サンプル設定だけを採用する。
-  const env = Object.fromEntries(
-    Object.entries(process.env).filter(
-      ([key]) =>
-        !key.startsWith("SINCRO_") &&
-        !key.startsWith("COMPOSE_") &&
-        key !== "DOCKER_DEFAULT_PLATFORM",
-    ),
-  );
-  const config = JSON.parse(
-    run(
-      "docker",
-      [
-        "compose",
-        "--project-directory",
-        source,
-        "--env-file",
-        join(source, "examples/compose.env"),
-        "-f",
-        join(source, "compose.yml"),
-        "--profile",
-        "full",
-        "config",
-        "--format",
-        "json",
-      ],
-      { env },
-    ),
-  );
-  const result = Object.entries(config.services)
-    .filter(([, service]) => service.build)
-    .map(([name, service]) => {
-      if (
-        typeof service.image !== "string" ||
-        !service.image.startsWith(registry) ||
-        !/^[a-z0-9-]+(?::latest)?$/.test(service.image.slice(registry.length))
-      ) {
-        throw new Error(`公開先が想定外: ${service.image}`);
-      }
-      // Composeに新しいビルド機能が加わったら、黙って省略せず対応を判断する。
-      if (
-        Object.keys(service.build).some(
-          (key) => !["context", "dockerfile", "args"].includes(key),
-        ) ||
-        service.build.context !== source
-      )
-        throw new Error(`未対応のビルド構成: ${name}`);
-      return {
-        name,
-        image: service.image.replace(/:latest$/, ""),
-        build: service.build,
-      };
-    });
-  if (!result.length) throw new Error("公開対象がありません");
-  return result;
-}
-
-/** 全イメージのビルドを完了してから呼び出し元へ戻す。latestはまだ変更しない。 */
-function buildImages(images, source, release) {
+/** 全イメージのビルドを完了してから呼び出し元へ戻す。Compose指定タグはまだ変更しない。 */
+function buildImages(images, release) {
   for (const { image, build } of images) {
     const args = Object.entries(build.args ?? {}).flatMap(([key, value]) => [
       "--build-arg",
@@ -120,18 +62,18 @@ function buildImages(images, source, release) {
         "--label",
         `org.opencontainers.image.created=${release.created}`,
         "-f",
-        join(source, build.dockerfile),
+        build.dockerfile,
         "-t",
         `${image}:${release.tag}`,
         ...args,
-        source,
+        build.context,
       ],
       { stdio: "inherit" },
     );
   }
 }
 
-/** 全履歴タグの送信成功後にlatestを更新し、配布先のダイジェスト一致を確認する。 */
+/** 全履歴タグの送信成功後にCompose指定タグを更新し、配布先のダイジェスト一致を確認する。 */
 function publishImages(images, tag) {
   // buildで作った全対象が揃うまで送信しない。別コミットや別アーキテクチャの混在も拒否する。
   const sha = run("git", ["rev-parse", "HEAD"]).trim();
@@ -149,7 +91,7 @@ function publishImages(images, tag) {
   for (const { image } of images)
     run("docker", ["push", `${image}:${tag}`], { stdio: "inherit" });
   // GHCRには複数イメージを一括切替する機能がない。失敗時は同じ履歴タグから再実行する。
-  for (const { image } of images) {
+  for (const { image, tag: composeTag } of images) {
     run(
       "docker",
       [
@@ -158,7 +100,7 @@ function publishImages(images, tag) {
         "create",
         "--prefer-index=false",
         "-t",
-        `${image}:latest`,
+        `${image}:${composeTag}`,
         `${image}:${tag}`,
       ],
       { stdio: "inherit" },
@@ -172,24 +114,28 @@ function publishImages(images, tag) {
         "--format",
         "{{json .Manifest.Digest}}",
       ]);
-    if (digest(`${image}:${tag}`) !== digest(`${image}:latest`))
+    if (digest(`${image}:${tag}`) !== digest(`${image}:${composeTag}`))
       throw new Error(`公開先の不一致: ${image}`);
     console.log(
-      `公開確認: ${image}:latest ${digest(`${image}:latest`).trim()}`,
+      `公開確認: ${image}:${composeTag} ${digest(`${image}:${composeTag}`).trim()}`,
     );
   }
-  // 保存済み認証を使わない取得で、匿名利用者にも公開されていることを確認する。
+  verifyAnonymous(images);
+}
+
+/** 保存済み認証を使わず、Compose指定タグを匿名利用者が取得できることを確認する。 */
+function verifyAnonymous(images) {
   const anonymous = mkdtempSync(join(tmpdir(), "sincromisor-anonymous-"));
   try {
-    for (const { image } of images) {
+    for (const { image, tag: composeTag } of images) {
       run("docker", [
         "--config",
         anonymous,
         "manifest",
         "inspect",
-        `${image}:latest`,
+        `${image}:${composeTag}`,
       ]);
-      console.log(`匿名取得確認: ${image}:latest`);
+      console.log(`匿名取得確認: ${image}:${composeTag}`);
     }
   } finally {
     rmSync(anonymous, { recursive: true, force: true });
@@ -264,9 +210,9 @@ function main() {
     ]);
     mkdirSync(source);
     run("tar", ["-xf", join(temp, "source.tar"), "-C", source]);
-    const images = targets(source);
+    const images = targets(source, run);
     console.log(
-      `ソース: ${sha}\n履歴タグ: ${tag}\n${images.map(({ image }) => image).join("\n")}`,
+      `ソース: ${sha}\n履歴タグ: ${tag}\n${images.map(({ name, image, tag }) => `${name}: ${image}:${tag}`).join("\n")}`,
     );
     if (command === "inventory" || command === "delete-retired") {
       const remote = packages();
@@ -286,7 +232,7 @@ function main() {
         );
     }
     if (command === "build" || command === "publish") {
-      buildImages(images, source, { sha, tag, created });
+      buildImages(images, { sha, tag, created });
       if (command === "publish") publishImages(images, tag);
     }
     if (command === "push") publishImages(images, tag);
