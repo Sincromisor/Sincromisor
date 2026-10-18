@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"runtime"
 	"testing"
@@ -65,6 +66,7 @@ func TestRealManagerAcceptsLegacyInitialOffer(t *testing.T) {
 	}
 	var answer rtc.Answer
 	decodeResponse(t, response, &answer)
+	assertLoopbackCandidates(t, answer.SDP)
 	if _, err := ulid.ParseStrict(answer.SessionID); err != nil || answer.Revision != 1 {
 		t.Fatalf("legacy answer identity = %q/%d", answer.SessionID, answer.Revision)
 	}
@@ -104,13 +106,20 @@ func TestRealManagerRejectsMalformedNonNullCandidate(t *testing.T) {
 
 func TestRealManagerGatherTimeoutReturns504AndRemovesSession(t *testing.T) {
 	baseline := runtime.NumGoroutine()
-	manager := newRealTestManager(t, "stun:127.0.0.1:9")
-	offers := newTestOfferRegistry(t, manager, 5*time.Millisecond)
+	// 実際のSTUN送信まで進めてから時間切れにする。初期化の遅さによる504では成功扱いしない。
+	blackhole, err := net.ListenPacket("udp4", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = blackhole.Close() })
+	stunURL := "stun:" + blackhole.LocalAddr().String()
+	manager := newRealTestManager(t, stunURL)
+	offers := newTestOfferRegistry(t, manager, time.Second)
 	server := New(
 		manager,
 		offers,
 		t.TempDir(),
-		"stun:127.0.0.1:9",
+		stunURL,
 		slog.New(slog.NewTextHandler(io.Discard, nil)),
 	)
 	offer := newRealBrowserOffer(t)
@@ -123,16 +132,24 @@ func TestRealManagerGatherTimeoutReturns504AndRemovesSession(t *testing.T) {
 	if response.Code != http.StatusGatewayTimeout {
 		t.Fatalf("status = %d, want 504; body=%s", response.Code, response.Body.String())
 	}
+	if err := blackhole.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := blackhole.ReadFrom(make([]byte, 1500)); err != nil {
+		t.Fatalf("no STUN request before gather timeout: %v", err)
+	}
 	waitForRegistryCount(t, manager, 0)
 	waitForSignalingCondition(t, 3*time.Second, func() bool {
 		return runtime.NumGoroutine() <= baseline+3
 	})
 }
 
+// newRealTestManager は実Managerの通信をテスト用APIへ閉じ込め、ネットワーク列挙をOffer期限の外で済ませる。
 func newRealTestManager(t *testing.T, stunURL string) *rtc.Manager {
 	t.Helper()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	manager, err := rtc.NewManager(stunURL, rtc.ManagerConfig{
+		API:             newSignalingTestAPI(t),
 		PipelineFactory: signalingBlockingFactory{},
 		InputObserver:   inputmedia.NewCounterObserver(),
 		Clock:           rtc.SystemClock{},
@@ -199,15 +216,22 @@ func createRealManagerSession(t *testing.T, server *Server) string {
 	}
 	var answer rtc.Answer
 	decodeResponse(t, response, &answer)
+	assertLoopbackCandidates(t, answer.SDP)
 	return answer.SessionID
 }
 
+// newRealBrowserOffer はサーバーと同じローカル候補を使い、収集失敗時もPeerConnectionを回収する。
 func newRealBrowserOffer(t *testing.T) string {
 	t.Helper()
-	client, err := webrtc.NewPeerConnection(webrtc.Configuration{})
+	client, err := newSignalingTestAPI(t).NewPeerConnection(webrtc.Configuration{})
 	if err != nil {
 		t.Fatalf("NewPeerConnection() error = %v", err)
 	}
+	t.Cleanup(func() {
+		if err := client.Close(); err != nil {
+			t.Errorf("client.Close() error = %v", err)
+		}
+	})
 	if _, err := client.AddTransceiverFromKind(
 		webrtc.RTPCodecTypeAudio,
 		webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly},
@@ -222,13 +246,18 @@ func newRealBrowserOffer(t *testing.T) string {
 	if err := client.SetLocalDescription(offer); err != nil {
 		t.Fatalf("SetLocalDescription() error = %v", err)
 	}
-	<-gatherComplete
+	select {
+	case <-gatherComplete:
+	case <-time.After(time.Second):
+		t.Fatal("browser ICE gathering did not complete")
+	}
 	local := client.LocalDescription()
 	if local == nil {
 		_ = client.Close()
 		t.Fatal("client local description is nil")
 	}
 	sdp := local.SDP
+	assertLoopbackCandidates(t, sdp)
 	if err := client.Close(); err != nil {
 		t.Fatalf("client.Close() error = %v", err)
 	}
