@@ -119,7 +119,7 @@ func (s *Session) textOutputLoop() {
 	}
 }
 
-// synthOutputLoop は受信PCM区間を同じ再生要求へ順次追加し、追加失敗ではセッションを終了する。
+// synthOutputLoop は再生に合わせてPCM区間を取り込み、不正な区間など追加失敗でセッションを終了する。
 func (s *Session) synthOutputLoop() {
 	for {
 		select {
@@ -143,13 +143,25 @@ func (s *Session) synthOutputLoop() {
 }
 
 // handleSynthChunkOutput はPCM区間を世代境界内で取り込み、音声の全体復号を挟まず再生時計へ渡す。
-// 取消時のPurgeと同じ境界を共有するため、旧世代の遅着区間は再生状態を作り直さない。
+// 先読み量に達したら音声枠の間隔で待つ。待機中は世代ロックを解放し、再試行時に世代を検査する。
+// 取消・出力終了では待機を解除し、Purge後に旧世代の区間で再生状態を作り直さない。
 func (s *Session) handleSynthChunkOutput(value pipeline.Output[protocol.SynthesizerChunk]) error {
-	_, err := s.applyGeneration(value.Generation, func() error { return s.output.EnqueueChunk(value.Value) })
-	if errors.Is(err, outputmedia.ErrOutputClosed) {
-		return nil
+	ticker := time.NewTicker(outputmedia.FrameDuration)
+	defer ticker.Stop()
+	for {
+		_, err := s.applyGeneration(value.Generation, func() error { return s.output.EnqueueChunk(value.Value) })
+		if errors.Is(err, outputmedia.ErrOutputClosed) {
+			return nil
+		}
+		if !errors.Is(err, outputmedia.ErrSpeechQueueFull) {
+			return err
+		}
+		select {
+		case <-s.ctx.Done():
+			return nil
+		case <-ticker.C:
+		}
 	}
-	return err
 }
 
 // handleSynthOutput は復号前後の世代を検査し、現世代の結果だけを発話キューへ追加する。

@@ -9,7 +9,7 @@ import (
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/protocol"
 )
 
-// StreamBufferSamples はEngine最初の0.3秒区間に合わせた初期・再開バッファ量である。
+// StreamBufferSamples はEngine最初の0.3秒区間に合わせた初期・再開バッファ量と先読みの停止点である。
 // 生成不足を完全には防げないため、不足時は音声位置を固定して同量まで再度待つ。
 const StreamBufferSamples = SampleRate * 3 / 10
 
@@ -24,8 +24,9 @@ type streamSpeech struct {
 }
 
 // EnqueueChunk は要求ごとに受信PCMを追記し、同じ再生項目の時刻とモーラ位置を維持する。
-// 単一区間と要求順序を再検証し、8要求・未再生120秒の上限超過時は追加を拒否する。
-// 通信取消はSessionの世代境界がPurgeへ集約し、ここでは待機や処理担当を作らない。
+// 単一区間と要求順序を再検証する。未再生PCMが初期バッファ量以上なら、状態を変えず
+// ErrSpeechQueueFullを返し、Sessionが再生時計に合わせて再試行する。終端は待たせない。
+// 8要求・120秒の安全上限と世代境界は維持し、ここでは待機や処理担当を作らない。
 func (p *Processor) EnqueueChunk(value protocol.SynthesizerChunk) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -35,6 +36,11 @@ func (p *Processor) EnqueueChunk(value protocol.SynthesizerChunk) error {
 	sequence := p.streamSequence
 	if err := sequence.Accept(value); err != nil {
 		return err
+	}
+	// 件数上限まで先読みすると長い要求の再生完了を待つことになる。300msから先読みを
+	// 抑えれば、一度の待機は最大0.5秒の受信区間程度に収まり、上流の配送期限を圧迫しない。
+	if !value.Final && p.queuedSamples >= StreamBufferSamples {
+		return ErrSpeechQueueFull
 	}
 	if value.Sequence == 0 {
 		if err := p.beginStream(value); err != nil {
