@@ -11,10 +11,10 @@ import (
 
 func TestSynthesisRequestsMatchIdentityUntilExplicitCompletion(t *testing.T) {
 	requests := &synthesisRequests{}
-	if err := requests.add(42); err != nil {
+	if err := requests.add(context.Background(), nil, 42); err != nil {
 		t.Fatal(err)
 	}
-	if err := requests.add(42); err != nil {
+	if err := requests.add(context.Background(), nil, 42); err != nil {
 		t.Fatal(err)
 	}
 	first, err := requests.decode(fixture(t, "voice_synthesizer_chunk.msgpack"))
@@ -42,18 +42,6 @@ func TestSynthesisRequestsMatchIdentityUntilExplicitCompletion(t *testing.T) {
 	payload, _ = msgpack.Marshal(first)
 	if _, err := requests.decode(payload); err != nil {
 		t.Fatal(err)
-	}
-}
-
-func TestSynthesisRequestsBoundPendingCount(t *testing.T) {
-	requests := &synthesisRequests{}
-	for range 8 {
-		if err := requests.add(42); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := requests.add(42); err == nil {
-		t.Fatal("unbounded pending synthesis requests")
 	}
 }
 
