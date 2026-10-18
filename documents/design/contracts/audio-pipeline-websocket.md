@@ -47,7 +47,7 @@
 | SpeechRecognizer → Go                 | `SpeechRecognizerResult`              | text/scoreタプルの列                                      |
 | Go → TextProcessor                    | `TextProcessorRequest`                | 認識文とチャット履歴                                      |
 | TextProcessor → Go → VoiceSynthesizer | `TextProcessorResult`                 | 振り分けフィールドを復号し、元バイト列を変更せずTTSへ転送 |
-| VoiceSynthesizer → Go                 | `VoiceSynthesizerChunk`               | 48kHz mono PCMの区間、要求識別、モーラ、完了              |
+| VoiceSynthesizer → Go                 | `VoiceSynthesizerChunk`               | 48kHzモノラル PCMの区間、要求識別、モーラ、完了           |
 
 `SpeechRecognizerResult`、`TextProcessorResult`、`VoiceSynthesizerChunk`はGo利用側専用である。
 Goは音声認識処理結果から別モデルの `TextProcessorRequest`を生成するため、
@@ -86,7 +86,7 @@ Goは音声認識処理結果から別モデルの `TextProcessorRequest`を生�
   同じ `speech_id`に複数のテキスト増分がある場合も別要求となる。会話全体の終了を表す `end_of_response`とは独立する。
 - `sequence`は要求ごとに0から始まり、データ区間と完了区間を通して1ずつ増える。
   `sample_offset`はその要求の先頭から数えたPCMサンプル位置で、前区間の末尾と一致しなければならない。
-- `pcm`は48kHz・mono・signed 16-bit little-endianの生PCM。WAVヘッダーやOpusファイルを含めない。
+- `pcm`は48kHz・モノラル・符号付き16ビットのリトルエンディアンの生PCM。WAVヘッダーやOpusファイルを含めない。
   データ区間は非空の偶数バイトで、最大24,000サンプル（0.5秒）とする。要求全体は最大120秒とする。
 - `sequence=0`の先頭データ区間だけが `message`と要求全体の `mora_queue`を持ち、後続区間では空文字列と空リストにする。
   モーラ位置は要求内のPCMサンプル位置から計算し、20msごとの出力位置で参照する。
