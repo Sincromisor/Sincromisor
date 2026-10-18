@@ -31,7 +31,7 @@ Sincromisor公開元を示す `org.opencontainers.image.revision`とは区別す
 
 `/streaming_synthesis`は固定長の `segment_length`と、段階拡大用の任意の `max_segment_length`を提供する。
 例えば `0.3`と `2.4`の指定では区間を0.3→0.6→1.2→2.4秒に拡大する。
-通常の会話では `/audio_query`から得たクエリを48kHz monoへ設定し、`/streaming_synthesis`を段階拡大で受信する。
+通常の会話では `/audio_query`から得たクエリを48kHzモノラルへ設定し、`/streaming_synthesis`を段階拡大で受信する。
 WAVの形式・宣言サイズ・受信サイズを検証し、生PCMを区間ごとにWebSocketへ送る。全体のOpus変換・保存を待たず、
 Goが順次バッファへ載せて20msごとにOpus符号化する。区間モデルは [音声パイプライン契約](../../contracts/audio-pipeline-websocket.md#合成音声の区間転送) を正本とする。
 完全音声を要求する既存の `get_voice`と `/synthesis`による生成も、キャッシュ・診断用の経路として保持する。
@@ -98,16 +98,16 @@ HTTPは接続5秒・読取り30秒とし、自動再試行は行わない。HTTP
 
 ## 逐次生成・キャッシュ・接続終了
 
-Workerは一要求ずつ処理し、同期iteratorから次のPCM区間を得る処理だけを `asyncio.to_thread`へ渡す。
+Workerは一要求ずつ処理し、同期イテレーターから次のPCM区間を得る処理だけを `asyncio.to_thread`へ渡す。
 次区間を先読みする無制限のキューは作らず、WebSocket送信を待ってから次の読取へ進む。
 送受信と要求・区間IDの管理は接続のイベントループが所有する。
 
-HTTP応答は同期iteratorが所有し、正常完了、受信失敗、取消後の回収で閉じる。
-親取消は実行中の同期I/Oを直接止めないため、取消を記録し、進行中の読取を回収してからiteratorとSessionを閉じる。
+HTTP応答は同期イテレーターが所有し、正常完了、受信失敗、取消後の回収で閉じる。
+親取消は実行中の同期I/Oを直接止めないため、取消を記録し、進行中の読取を回収してからイテレーターとSessionを閉じる。
 HTTP接続5秒・読取30秒の既存上限を維持し、WebSocket送信にも30秒の上限を設ける。
 切断や不正なWAVでは正常終端を送らず、Goの世代更新で未送信区間とモーラを破棄する。
 
-逐次生成用のキャッシュは `streaming-pcm-v1`で既存キーと区別し、48kHz monoの完全WAVとクエリ・モーラを
+逐次生成用のキャッシュは `streaming-pcm-v1`で既存キーと区別し、48kHzモノラルの完全WAVとクエリ・モーラを
 既存の `VoiceSynthesizerResult`形式で保持する。旧Opus等のエントリーは削除しない。
 要求全体120秒の上限内で蓄積し、Content-LengthとWAVサイズの整合、正常EOFと取消されていないことを確認してから保存する。
 途中失敗では保存しない。命中した完成WAVも同じPCM区間へ切り出すため、Goの再生経路は生成時と共通である。
