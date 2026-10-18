@@ -25,6 +25,18 @@
 - Goパイプライン調停器はSpeechExtractor / SpeechRecognizer / TextProcessor / VoiceSynthesizerの到達先を解決する。
 - Consulが使えない場合でも代替処理ホスト / ポートで開発継続できるようにする。
 
+## VOICEVOXの登録と終了
+
+`start-voicevox.sh`は `SincroVoiceVox`を内部ポート50021で登録する。
+非rootユーザーの `/home/voicevox/.local/voicevox-template.json`を原本に、同じディレクトリへ設定済みJSONを生成する。
+コンテナのIPは再作成まで固定とし、30秒間隔で同じ登録を更新する。コンテナ再作成時には新しいIPで登録する。
+HTTP死活確認は `/version`を使う。
+
+起動シェルはEngineと再登録ループの両方を所有する。TERM / INTでは再登録ループと待機用の子を止め、
+Engineを停止・回収してから登録を解除する。Engine異常終了または再登録失敗でも残りの子を回収し、
+終了コードをComposeへ伝える。Consul CLIは各呼出し3秒を上限とし、TERM後も終了しなければ1秒後に強制終了する。
+登録中の通信停止でEngineの停止や解除処理が無期限に待たされることを防ぐ。他サービスの共通IP監視処理は変更しない。
+
 ## フロントの再起動時の登録
 
 フロントの起動スクリプトは `frontend-template.json`を原本として保持し、

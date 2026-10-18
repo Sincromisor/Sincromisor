@@ -64,6 +64,13 @@ LLM設定と管理者が指定したトークンは `.env`から渡す。トー�
 
 プロジェクトのサービスは `pull_policy: build`で現在のソースから自動ビルドする。
 既存のビルドキャッシュを再利用し、起動前の手動ビルドを求めない。
+
+`sincro-voicevox`はリポジトリ内の `Docker/voicevox/Dockerfile`から固定したforkソースを取得してビルドする。
+サービス名、内部ポート50021、`full` / `backend`、`pull_policy: build`を維持し、ホストへは公開しない。
+死活確認は同梱PythonのHTTPクライアントで `/version`の成功を判定する。
+起動環境変数とConsul接続先は従来どおり `.env`から供給する。
+取得版と提供APIは [VoiceSynthesizer設計](../backend/services/voice-synthesizer.md#合成エンジン) を参照する。
+
 配布イメージを使う管理構成では `docker compose up -d --no-build --pull missing`を指定する。
 GHCRへの月次更新は[コンテナイメージの公開](image-publishing.md)を参照する。
 
