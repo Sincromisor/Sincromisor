@@ -13,10 +13,6 @@ ENV SINCRO_VOICEVOX_PORT=50021
 ENV SINCRO_CONSUL_AGENT_HOST=consul-agent-synthesizer
 ENV SINCRO_CONSUL_AGENT_PORT=8500
 
-COPY --from=consul --chown=root:root --chmod=755 \
-    /bin/consul \
-    /bin/consul
-
 # 基底イメージの自動削除を解除し、取得済みdebを排他キャッシュへ保持する。
 RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
@@ -41,6 +37,11 @@ RUN --mount=type=cache,target=/mnt,sharing=locked \
     chmod +x /opt/voicevox/run; \
     mkdir /opt/voicevox/.local; \
     chown voicevox:voicevox /opt/voicevox/.local
+
+# Consul更新だけでAPT導入や大きい配布物の展開をやり直さない。
+COPY --from=consul --chown=root:root --chmod=755 \
+    /bin/consul \
+    /bin/consul
 
 COPY --chown=root:root --chmod=755 \
     ./Docker/common/service-register.sh \

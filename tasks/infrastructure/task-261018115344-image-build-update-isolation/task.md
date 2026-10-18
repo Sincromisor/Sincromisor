@@ -8,10 +8,10 @@
 
 ## 完了条件
 
-- [ ] VOICEVOXではConsulの変更がAPT導入・VOICEVOX配布物の展開のキャッシュに影響しない順序になる。
-- [ ] 配布物の版、部分取得を正常キャッシュにしない処理、所有権、Consul登録と起動方法を維持する。
-- [ ] Pythonの4サービスは、互換性を確認した同一の固定版uvバイナリを公式配布イメージから導入し、版未固定インストーラーへの依存をなくす。
-- [ ] ロック検証、Python版、仮想環境、uvの配置と実行PATH、NeMoのビルド段階から実行段階への引継ぎが成立する。
+- [x] VOICEVOXではConsulの変更がAPT導入・VOICEVOX配布物の展開のキャッシュに影響しない順序になる。
+- [x] 配布物の版、部分取得を正常キャッシュにしない処理、所有権、Consul登録と起動方法を維持する。
+- [x] Pythonの4サービスは、互換性を確認した同一の固定版uvバイナリを公式配布イメージから導入し、版未固定インストーラーへの依存をなくす。
+- [x] ロック検証、Python版、仮想環境、uvの配置と実行PATH、NeMoのビルド段階から実行段階への引継ぎが成立する。
 
 ## 変更範囲・実装方針
 
@@ -30,3 +30,13 @@ curlやgitは実行・依存導入で使う箇所を確認し、インストー�
 
 通信契約は変更しない。uvの導入方法を説明する既存文書があれば同期し、採用版と理由を本タスクへ記録する。
 容量確認と作成物の扱いは [Docker Compose管理ルール](../../../documents/rules/docker-compose.md) に従う。APT保持設定の変更は別タスクの範囲とする。
+
+## 実装・確認結果
+
+VOICEVOXのConsulコピーを配布物展開後へ移した。配布物0.25.2、部分取得のtmpとrename、所有権、登録・起動方法は維持した。Consulコピー入力だけを検証用に変更した再ビルドでAPTと展開がCACHEDとなり、変更したConsulも実行できた。
+
+Python4サービスは公式イメージghcr.io/astral-sh/uv:0.13.1からuv・uvxを既存の.local/binへコピーする。同版は先行タスクのインストーラーでも使用され、ロックとPython 3.14に適合していたため採用した。[公式Docker手順](https://docs.astral.sh/uv/guides/integration/docker/)を2026-10-18に確認した。curlはHTTP死活確認、gitはロックのGit依存用に維持した。NeMoは.local内のuv・Pythonと.venvを引き継ぎ、不要となったインストーラーの.config記録のコピーを削除した。
+
+4イメージのビルド、uv 0.13.1、Python 3.14.8、uv sync --locked、uv run --no-syncで各サービス依存を確認した。NeMoのnemo.collections.asr読み込みとMediaPipe分類器初期化も成功した。最初の版表示検査はプラットフォーム名の付加で失敗したため、実際の出力を確認し版番号だけを比較する検査へ修正した。GPU推論・全サービス起動は未実施。Compose設計を同期し、コメント点検: PASS。
+
+defaultビルダー、unix:///var/run/docker.sock、linux/amd64、--output type=cacheonlyを使用した。新規イメージタグ・ID・永続コンテナはない。キャッシュは115.6GBから135.2GBへ約19.6GB増加、空き123GB。既存GC（空き94.06GiB確保、未使用60日等）の下で通常ビルドに再利用し、GC設定と既存資産は変更していない。
