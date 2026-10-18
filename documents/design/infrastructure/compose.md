@@ -68,6 +68,7 @@ LLM設定と管理者が指定したトークンは `.env`から渡す。トー�
 GHCRへの月次更新は[コンテナイメージの公開](image-publishing.md)を参照する。
 
 フロントエンドは `npm ci`、Pythonサービスは `uv sync --locked`で管理済みロックに従う。
+Pythonの4サービスは公式イメージ `ghcr.io/astral-sh/uv:0.13.1`のバイナリを既存の `.local/bin`へ配置する。
 依存宣言とロックが不整合ならビルドを失敗させる。Pythonはソース配置前に
 `--no-install-workspace`で外部依存だけを導入し、配置後に同じグループのワークスペースを導入する。
 起動時は `uv run --no-sync`でビルド済み環境を使う。

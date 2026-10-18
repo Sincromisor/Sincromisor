@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM ubuntu:24.04
 
 LABEL org.opencontainers.image.source=https://github.com/Sincromisor/Sincromisor
@@ -25,7 +26,7 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     mkdir ${SINCRO_USER_DIR}/sincromisor-server && \
     chown -R ${SINCRO_USER_ID}:${SINCRO_USER_ID} ${SINCRO_USER_DIR}
 
-# curl: uvのインストール
+# curl: ComposeのHTTP死活確認
 # git: ロックに含まれるReazonSpeechの取得に必要
 # 基底イメージの自動削除を解除し、取得済みdebを排他キャッシュへ保持する。
 RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
@@ -35,7 +36,9 @@ RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     && apt-get install --no-install-recommends -y ca-certificates curl git
 
 USER ${SINCRO_USER_ID}
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+# ビルドツールの更新で依存導入が変わらないよう、公式バイナリの版を固定する。
+COPY --from=ghcr.io/astral-sh/uv:0.13.1 --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    /uv /uvx ${SINCRO_USER_DIR}/.local/bin/
 
 USER ${SINCRO_USER_ID}
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
