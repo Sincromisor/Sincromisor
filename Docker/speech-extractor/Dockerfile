@@ -96,10 +96,20 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
 RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
     uv sync --locked --no-install-workspace --group speech-extractor
 
-# sincromisor-serverのソースコード一式をここでコピー
+# 対象サービスと共通パッケージだけを配置し、他サービスの変更と依存同期を分離する。
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./sincromisor-server \
-    ${SINCRO_USER_DIR}/sincromisor-server
+    ./sincromisor-server/sincro-config \
+    ${SINCRO_USER_DIR}/sincromisor-server/sincro-config
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-server/sincro-models \
+    ${SINCRO_USER_DIR}/sincromisor-server/sincro-models
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-server/speech-extractor \
+    ${SINCRO_USER_DIR}/sincromisor-server/speech-extractor
+# 分類器が作業ディレクトリから参照するYAMNetとライセンスを含める。
+COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+    ./sincromisor-server/assets/3rd_party \
+    ${SINCRO_USER_DIR}/sincromisor-server/assets/3rd_party
 
 # ソース配置後もロックを検証してワークスペースを導入する。
 RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
