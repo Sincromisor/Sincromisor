@@ -12,6 +12,7 @@ import (
 
 	pionopus "github.com/pion/opus"
 	"github.com/pion/webrtc/v4"
+	"github.com/pion/webrtc/v4/pkg/media"
 
 	outputmedia "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/output"
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline"
@@ -58,11 +59,20 @@ func TestLiveStreamingSynthesis(t *testing.T) {
 	defer client.Close()
 	manager := newTestManager(t)
 	defer manager.CloseAll(testCloseContext(t), "test_teardown")
-	browser, _, remoteTracks := newEchoBrowserPeer(t)
+	browser, input, remoteTracks := newEchoBrowserPeer(t)
 	defer browser.Close()
 	answer := negotiatePairWithMode(t, manager, browser, "echo")
 	session := activeSession(t, manager, answer.SessionID)
 	remote := waitEchoRemoteTrack(t, remoteTracks)
+	// 長い再生でも入力準備期限で閉じないよう、ブラウザーの音声トラックを無音で開始する。
+	if err := input.WriteSample(media.Sample{Data: []byte{0xf8, 0xff, 0xfe}, Duration: outputmedia.FrameDuration}); err != nil {
+		t.Fatal(err)
+	}
+	waitForCondition(t, 3*time.Second, func() bool {
+		session.lifecycle.mu.Lock()
+		defer session.lifecycle.mu.Unlock()
+		return session.lifecycle.audio != nil
+	})
 	firstAudio := make(chan time.Time, 1)
 	readError := make(chan error, 1)
 	go observeLiveAudio(remote, firstAudio, readError)
@@ -80,7 +90,10 @@ func TestLiveStreamingSynthesis(t *testing.T) {
 				t.Fatal("合成結果が完了通知前に閉じた")
 			}
 			if err := session.handleSynthChunkOutput(pipeline.Output[protocol.SynthesizerChunk]{Generation: 1, Value: chunk}); err != nil {
-				t.Fatal(err)
+				t.Fatalf("output request=%d sequence=%d offset=%d: %v", chunk.RequestID, chunk.Sequence, chunk.SampleOffset, err)
+			}
+			if err := session.ctx.Err(); err != nil {
+				t.Fatalf("RTC session closed during synthesis: %v", err)
 			}
 			chunks++
 			samples += int64(len(chunk.PCM) / 2)
@@ -110,6 +123,10 @@ func TestLiveStreamingSynthesis(t *testing.T) {
 	if !first.Before(terminal) {
 		t.Fatal("有声音の受信が合成完了通知より遅い")
 	}
+	waitForCondition(t, 2*time.Second, func() bool { return session.output.Stats().QueuedSpeeches == 0 })
+	if session.ctx.Err() != nil || session.output.Stats().SpeechAborted != 0 {
+		t.Fatal("末尾の再生までにセッションまたは音声が中断した")
+	}
 	// HTTP EOFとの比較はPythonログの受信完了時刻と同じホスト時計で行う。
 	// このテスト単独では、キャッシュ保存前のHTTP EOFを観測したとは扱わない。
 	t.Logf("STREAMING_LIVE first_audio_unix_ns=%d terminal_unix_ns=%d first_audio_ms=%d terminal_ms=%d chunks=%d samples=%d", first.UnixNano(), terminal.UnixNano(), first.Sub(started).Milliseconds(), terminal.Sub(started).Milliseconds(), chunks, samples)
@@ -124,7 +141,7 @@ func (r liveSynthResolver) Resolve(context.Context, discovery.Service) (discover
 	return discovery.Endpoint{Host: r.host, Port: r.port}, nil
 }
 
-// observeLiveAudio は無音フレームを除き、復号した最初の有声音の受信時刻を一度だけ返す。
+// observeLiveAudio は最初の有声音を一度だけ通知し、ブラウザー終了まで後続RTPも読み続ける。
 func observeLiveAudio(track *webrtc.TrackRemote, first chan<- time.Time, failures chan<- error) {
 	decoder, err := pionopus.NewDecoderWithOutput(outputmedia.SampleRate, 2)
 	if err != nil {
@@ -135,6 +152,7 @@ func observeLiveAudio(track *webrtc.TrackRemote, first chan<- time.Time, failure
 		failures <- err
 		return
 	}
+	observed := false
 	for {
 		packet, _, err := track.ReadRTP()
 		if err != nil {
@@ -146,9 +164,9 @@ func observeLiveAudio(track *webrtc.TrackRemote, first chan<- time.Time, failure
 			failures <- err
 			return
 		}
-		if stereoPeak(pcm) > 500 {
+		if !observed && stereoPeak(pcm) > 500 {
 			first <- time.Now()
-			return
+			observed = true
 		}
 	}
 }

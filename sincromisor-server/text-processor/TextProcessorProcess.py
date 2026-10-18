@@ -136,8 +136,13 @@ class TextProcessorProcess:
                         diagnostic.cleanup_failed(error)
 
         try:
+            # RTCは再生待ち中に結果受信とPongを遅らせるため、Pingは維持し期限だけ外す。
             uvicorn.run(
-                app, host=self.__args.host, port=self.__args.port, log_config=None
+                app,
+                host=self.__args.host,
+                port=self.__args.port,
+                log_config=None,
+                ws_ping_timeout=None,
             )
         except KeyboardInterrupt:
             pass
