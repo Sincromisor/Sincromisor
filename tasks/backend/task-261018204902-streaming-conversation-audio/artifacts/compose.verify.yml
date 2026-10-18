@@ -1,0 +1,81 @@
+# 製品のVOICEVOX定義を使い、Consulとキャッシュだけを隔離して結合確認する。
+name: streaming-task-261018204902
+services:
+  sincro-voicevox:
+    extends:
+      file: ../../../../compose/voice-synthesizer.yml
+      service: sincro-voicevox
+    pull_policy: never
+    logging: { driver: local, options: !reset {} }
+    deploy: !reset {}
+  consul-agent-synthesizer:
+    image: hashicorp/consul@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54
+    command: [agent, -dev, -client=0.0.0.0]
+    tmpfs: [/consul/data]
+    networks: [sincromisor-net]
+    healthcheck:
+      test: [CMD, consul, members]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+  redis:
+    image: redis:6-alpine
+    command: [redis-server, --save, "", --appendonly, "no"]
+    tmpfs: [/data]
+    networks: [sincromisor-net]
+  s3:
+    image: ghcr.io/sincromisor/minio:latest
+    command: [minio, server, /data]
+    tmpfs: [/data]
+    networks: [sincromisor-net]
+    environment:
+      # 隔離ネットワークの使い捨て検証用。実環境の認証情報は使わない。
+      MINIO_ROOT_USER: validation
+      MINIO_ROOT_PASSWORD: validation-only-password
+  register-cache:
+    image: hashicorp/consul@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54
+    tmpfs: [/consul/data]
+    entrypoint: [/bin/sh, -ec]
+    command:
+      - |
+        consul services register -name SincroRedis -address redis -port 6379
+        consul services register -name SincroS3 -address s3 -port 9000
+    environment:
+      CONSUL_HTTP_ADDR: http://consul-agent-synthesizer:8500
+    networks: [sincromisor-net]
+    depends_on:
+      consul-agent-synthesizer:
+        condition: service_healthy
+  synthesizer:
+    image: ${SINCRO_VERIFY_SYNTHESIZER_IMAGE:-ghcr.io/sincromisor/voice-synthesizer:latest}
+    user: "0:0" # 読取専用の検証ソースへアクセスする。
+    entrypoint: []
+    command: [uv, run, --no-sync, voice-synthesizer/VoiceSynthesizerProcess.py]
+    networks: [sincromisor-net]
+    environment:
+      SINCRO_LOG_SYNTHESIS_ENABLED: "false"
+      SINCRO_SYNTHESIZER_HOST: 0.0.0.0
+      SINCRO_SYNTHESIZER_PORT: "8005"
+      SINCRO_SYNTHESIZER_PUBLIC_BIND_HOST: synthesizer
+      SINCRO_SYNTHESIZER_PUBLIC_BIND_PORT: "8005"
+      SINCRO_SYNTHESIZER_VOICEVOX_DEFAULT_STYLE_ID: "0"
+      SINCRO_CONSUL_AGENT_HOST: consul-agent-synthesizer
+      SINCRO_CONSUL_AGENT_PORT: "8500"
+      SINCRO_S3_ACCESS_KEY: validation
+      SINCRO_S3_SECRET_KEY: validation-only-password
+    volumes:
+      - ${SINCRO_STREAMING_SOURCE:-../../../../sincromisor-server}/voice-synthesizer:/opt/sincromisor/sincromisor-server/voice-synthesizer:ro
+      - ${SINCRO_STREAMING_SOURCE:-../../../../sincromisor-server}/sincro-models:/opt/sincromisor/sincromisor-server/sincro-models:ro
+      - ${SINCRO_STREAMING_SOURCE:-../../../../sincromisor-server}/sincro-config:/opt/sincromisor/sincromisor-server/sincro-config:ro
+    depends_on:
+      sincro-voicevox:
+        condition: service_healthy
+      register-cache:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [CMD, curl, --fail, http://localhost:8005/api/v1/VoiceSynthesizer/statuses]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+networks:
+  sincromisor-net:

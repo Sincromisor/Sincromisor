@@ -1,0 +1,14 @@
+{
+  "first_audio_ms": 739,
+  "terminal_ms": 6999,
+  "chunks_including_final": 253,
+  "samples": 1205760,
+  "audio_seconds": 25.12,
+  "first_audio_unix_ns": 1792325000079963224,
+  "http_eof_unix_ns": 1792325006306290931,
+  "terminal_unix_ns": 1792325006340116836,
+  "audio_precedes_http_eof_ms": 6226.327707,
+  "clock": "同一LinuxホストのCLOCK_REALTIME。Go time.NowとPython time.time_ns",
+  "observation": "PythonでHTTP EOFとWAV検証が完了し、キャッシュを書き込む前。Engine内部の生成終了時刻ではない",
+  "result": "PASS"
+}
