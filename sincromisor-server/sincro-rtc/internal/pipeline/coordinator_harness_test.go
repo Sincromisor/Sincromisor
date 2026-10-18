@@ -10,6 +10,7 @@ import (
 	"time"
 
 	pclient "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/client"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/protocol"
 )
 
 func newTestCoordinator(t *testing.T, factory ClientSetFactory) *Coordinator {
@@ -288,4 +289,18 @@ func (f *blockingFactory) Connect(ctx context.Context, _, _ string) (ClientSet, 
 	f.once.Do(func() { close(f.entered) })
 	<-ctx.Done()
 	return nil, ctx.Err()
+}
+
+// receiveSynthesis は逐次結果の完了まで読み、先頭PCMと要求単位の完了を別々に確認する。
+func receiveSynthesis(t *testing.T, c *Coordinator) Output[protocol.SynthesizerChunk] {
+	t.Helper()
+	first := receive(t, c.SynthResults())
+	if first.Value.Sequence != 0 || first.Value.Final {
+		t.Fatal("synthesis did not start with PCM")
+	}
+	for {
+		if next := receive(t, c.SynthResults()); next.Value.Final {
+			return first
+		}
+	}
 }

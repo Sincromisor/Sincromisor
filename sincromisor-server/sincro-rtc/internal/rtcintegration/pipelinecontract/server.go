@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/protocol"
 	"github.com/coder/websocket"
 	"github.com/vmihailenco/msgpack/v5"
 
@@ -179,6 +180,7 @@ func (s *Set) serveProcessor(ctx context.Context, conn *websocket.Conn) {
 // Synthesizer は Processor が保存した bytes との完全一致を先に確認し、再 encode されていない
 // request だけへ fixture 音声を返す。
 func (s *Set) serveSynthesizer(ctx context.Context, conn *websocket.Conn) {
+	var requestID int64
 	for {
 		_, payload, err := conn.Read(ctx)
 		if err != nil {
@@ -208,8 +210,9 @@ func (s *Set) serveSynthesizer(ctx context.Context, conn *websocket.Conn) {
 			s.record(err)
 			return
 		}
-		response, patchErr := patchSynthesizerResult(
-			s.fixtures["voice_synthesizer_result.msgpack"], speechID,
+		requestID++
+		response, patchErr := patchSynthesizerChunk(
+			s.fixtures["voice_synthesizer_chunk.msgpack"], speechID, requestID,
 		)
 		if patchErr != nil {
 			s.record(patchErr)
@@ -217,6 +220,14 @@ func (s *Set) serveSynthesizer(ctx context.Context, conn *websocket.Conn) {
 		}
 		s.appendStage(discovery.ServiceSynthesizer, sessionID, speechID, sequenceID, history, finalSize, true)
 		if err := conn.Write(ctx, websocket.MessageBinary, response); err != nil {
+			return
+		}
+		terminal, marshalErr := msgpack.Marshal(protocol.SynthesizerChunk{RequestID: requestID, SpeechID: speechID, Sequence: 1, SampleOffset: synthesizedSamples, Final: true, PCM: []byte{}, MoraQueue: []protocol.SynthesizerMora{}})
+		if marshalErr != nil {
+			s.record(marshalErr)
+			return
+		}
+		if err := conn.Write(ctx, websocket.MessageBinary, terminal); err != nil {
 			return
 		}
 	}
@@ -231,15 +242,14 @@ func (s *Set) patchedIdentity(name, sessionID string, speechID, sequenceID int64
 	return msgpack.Marshal(value)
 }
 
-func patchSynthesizerResult(payload []byte, speechID int64) ([]byte, error) {
+func patchSynthesizerChunk(payload []byte, speechID, requestID int64) ([]byte, error) {
 	value, err := decodeMap(payload)
 	if err != nil {
 		return nil, err
 	}
 	value["speech_id"] = speechID
-	// protocol fixtureのvoiceはschema確認用の不正Oggなので、ブラウザーまで通す契約serviceは
-	// FFmpegでdecodeできる有限の非無音WAVへ差し替える。schema自体はcommit済みfixtureで検査済みである。
-	value["voice"] = synthesizedWAV()
-	value["audio_format"] = "audio/wav"
+	value["request_id"] = requestID
+	// 試験用の非無音PCMだけを置き換え、Python producerの区間スキーマを維持する。
+	value["pcm"] = synthesizedWAV()[44:]
 	return msgpack.Marshal(value)
 }

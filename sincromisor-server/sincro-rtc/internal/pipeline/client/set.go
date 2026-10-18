@@ -35,7 +35,7 @@ type ProcessorConnection interface {
 // SynthesizerConnection はCoordinatorから使うSynthesizerの接続境界である。
 type SynthesizerConnection interface {
 	SendResult(context.Context, protocol.ProcessorResult) error
-	Results() <-chan protocol.SynthesizerResult
+	Results() <-chan protocol.SynthesizerChunk
 	Events() <-chan Event
 }
 

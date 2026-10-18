@@ -60,7 +60,7 @@ func TestInterruptionCountsPartialResultsAndSeparatesGenerations(t *testing.T) {
 	for range 7 {
 		receive(t, sent)
 	}
-	waitFor(t, func() bool { return len(c.synthOut) == 4 && len(c.textOut) == 8 })
+	waitFor(t, func() bool { return len(c.synthOut) == 8 && len(c.textOut) == 8 })
 	c.requestReset(1, pclient.ServiceSynthesizer, "remote_close")
 	waitFor(t, func() bool {
 		c.mu.Lock()
@@ -71,7 +71,7 @@ func TestInterruptionCountsPartialResultsAndSeparatesGenerations(t *testing.T) {
 	if c.acceptSynthesisResult(oldWork) {
 		t.Fatal("accepted late result")
 	}
-	if err := c.publishSynth(1, protocol.SynthesizerResult{SpeechID: 1}); err != nil {
+	if err := c.publishSynth(1, protocol.SynthesizerChunk{SpeechID: 1}); err != nil {
 		t.Fatal(err)
 	}
 	if len(c.synthOut) != 0 {

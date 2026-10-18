@@ -163,10 +163,7 @@ func TestInvalidInputsAreRejectedBeforeWireWrite(t *testing.T) {
 		if err := client.Connect(context.Background()); err != nil {
 			t.Fatalf("Connect() error = %v", err)
 		}
-		valid, err := protocol.DecodeProcessorResult(fixture(t, "text_processor_result.msgpack"))
-		if err != nil {
-			t.Fatalf("DecodeProcessorResult() error = %v", err)
-		}
+		valid := processorResultWithPadding(t, 0)
 		invalid := []protocol.ProcessorResult{
 			{},
 			{SessionID: "fixture-session", Raw: []byte("not-msgpack")},

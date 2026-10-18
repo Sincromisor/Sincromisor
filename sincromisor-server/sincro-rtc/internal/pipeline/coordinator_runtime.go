@@ -106,10 +106,10 @@ func (c *Coordinator) safeCallback(stage string, run func()) {
 // 要素はgeneration付きで、Coordinatorだけが全producer join後にcloseする。
 func (c *Coordinator) TextResults() <-chan Output[protocol.ChatMessage] { return c.textOut }
 
-// SynthResults はcontainer decode前のencoded voiceとmora timingを発話順に返す。
+// SynthResults はPCM区間と要求単位の完了通知を受信順に返す。メタデータは先頭区間だけに含む。
 //
 // session lifetime channelはresetしても交換せず、Coordinatorだけがcloseする。
-func (c *Coordinator) SynthResults() <-chan Output[protocol.SynthesizerResult] { return c.synthOut }
+func (c *Coordinator) SynthResults() <-chan Output[protocol.SynthesizerChunk] { return c.synthOut }
 
 // GenerationChanges は初回running generationとreset advanceを単調増加で通知する。
 //

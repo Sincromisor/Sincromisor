@@ -132,11 +132,11 @@ type ProcessorResult struct {
 // SynthesizerMora は synthesized voice と同期する mora の最小 timing 情報である。
 type SynthesizerMora struct {
 	// Vowel は母音表現であり、nil は producer が値を持たないことを意味する。empty string は有効である。
-	Vowel *string
+	Vowel *string `msgpack:"vowel"`
 	// Length は mora の再生時間を秒で表す。
-	Length float64
+	Length float64 `msgpack:"length"`
 	// Text は mora の表示 text であり、nil は producer が値を持たないことを意味する。empty string は有効である。
-	Text *string
+	Text *string `msgpack:"text"`
 }
 
 // SynthesizerResult は VoiceSynthesizer から受け取る音声同期用の限定 DTO である。

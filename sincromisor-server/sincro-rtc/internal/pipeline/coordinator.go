@@ -38,7 +38,7 @@ type RecognizerClient = pclient.RecognizerConnection
 // ProcessorClient はhistory付きrequestとstreaming result/eventのgeneration側境界である。
 type ProcessorClient = pclient.ProcessorConnection
 
-// SynthesizerClient はProcessor raw bytesとencoded voice result/eventのgeneration側境界である。
+// SynthesizerClient はProcessor raw bytesとPCM区間/result eventのgeneration側境界である。
 type SynthesizerClient = pclient.SynthesizerConnection
 
 // ClientSet は同じattemptで作られ、公開と逆順Closeを一括で行う4 clientの所有境界である。
@@ -53,7 +53,7 @@ type ClientSetFactory = pclient.SetFactory
 type Output[T any] struct {
 	// Generation はValueを生成したclient setとtransient stateの識別子である。
 	Generation uint64
-	// Value は順序を維持して公開されたtextまたはencoded voice resultである。
+	// Value は順序を維持して公開されたtextまたはPCM区間である。
 	Value T
 }
 
@@ -110,7 +110,7 @@ type Coordinator struct {
 	closeOnce  sync.Once
 
 	textOut           chan Output[protocol.ChatMessage]
-	synthOut          chan Output[protocol.SynthesizerResult]
+	synthOut          chan Output[protocol.SynthesizerChunk]
 	generationChanges chan uint64
 	wg                sync.WaitGroup
 }
@@ -143,7 +143,7 @@ func newCoordinatorWithHooks(factory ClientSetFactory, logger *slog.Logger, jitt
 	return &Coordinator{
 		factory: factory, logger: logger, jitter: jitter, wait: waiter, state: StateIdle,
 		textOut:           make(chan Output[protocol.ChatMessage], outputQueueCapacity),
-		synthOut:          make(chan Output[protocol.SynthesizerResult], outputQueueCapacity),
+		synthOut:          make(chan Output[protocol.SynthesizerChunk], outputQueueCapacity),
 		generationChanges: make(chan uint64, 1),
 		staleDrops:        make(map[pclient.Service]uint64),
 		closeDone:         make(chan struct{}),

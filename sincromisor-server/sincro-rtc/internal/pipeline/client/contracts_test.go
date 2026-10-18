@@ -118,8 +118,8 @@ func TestTypedClientsUseFixedEndpointsAndBinaryContracts(t *testing.T) {
 	})
 
 	t.Run("synthesizer forwards processor Raw unchanged", func(t *testing.T) {
-		response := fixture(t, "voice_synthesizer_result.msgpack")
-		wantRequest := fixture(t, "text_processor_result.msgpack")
+		response := fixture(t, "voice_synthesizer_chunk.msgpack")
+		wantRequest := processorResultWithPadding(t, 0).Raw
 		server, endpoint := websocketServer(t, func(ctx context.Context, conn *websocket.Conn, request *http.Request) {
 			if request.URL.Path != "/api/v1/VoiceSynthesizer/synthesize" {
 				t.Errorf("path = %q", request.URL.Path)
@@ -145,7 +145,7 @@ func TestTypedClientsUseFixedEndpointsAndBinaryContracts(t *testing.T) {
 		if err := client.Connect(context.Background()); err != nil {
 			t.Fatalf("Connect() error = %v", err)
 		}
-		result := make(chan protocol.SynthesizerResult, 1)
+		result := make(chan protocol.SynthesizerChunk, 1)
 		go func() { result <- <-client.Results() }()
 		processor, err := protocol.DecodeProcessorResult(wantRequest)
 		if err != nil {

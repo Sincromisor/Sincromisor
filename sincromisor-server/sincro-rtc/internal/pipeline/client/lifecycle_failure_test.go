@@ -212,6 +212,7 @@ func processorResultWithPadding(t *testing.T, paddingBytes int) protocol.Process
 		t.Fatalf("decode processor fixture map: %v", err)
 	}
 	root["future_padding"] = make([]byte, paddingBytes)
+	root["voice_text"] = "固定された応答文"
 	payload, err := msgpack.Marshal(root)
 	if err != nil {
 		t.Fatalf("encode padded processor result: %v", err)

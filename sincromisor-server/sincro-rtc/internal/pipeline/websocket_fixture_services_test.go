@@ -54,7 +54,7 @@ func newFixtureWebSocketHarness(t *testing.T) *fixtureWebSocketHarness {
 		"recognizer_result.msgpack",
 		"text_processor_request.msgpack",
 		"text_processor_result.msgpack",
-		"voice_synthesizer_result.msgpack",
+		"voice_synthesizer_chunk.msgpack",
 	} {
 		payload, err := os.ReadFile("protocol/testdata/" + name)
 		if err != nil {
@@ -134,7 +134,9 @@ func (h *fixtureWebSocketHarness) serveExtractor(ctx context.Context, conn *webs
 		}
 		fixture, decodeErr := protocol.DecodeExtractorResult(h.fixtures["extractor_result.msgpack"])
 		if decodeErr != nil {
-			h.recordError(decodeErr)
+			h.mu.Lock()
+			h.errs = append(h.errs, decodeErr)
+			h.mu.Unlock()
 			return
 		}
 		h.mu.Lock()
@@ -268,6 +270,7 @@ func (h *fixtureWebSocketHarness) processorResponse(requestPayload []byte) ([]by
 }
 
 func (h *fixtureWebSocketHarness) serveSynthesizer(ctx context.Context, conn *websocket.Conn) {
+	var requestID int64
 	for {
 		_, payload, err := conn.Read(ctx)
 		if err != nil {
@@ -282,7 +285,26 @@ func (h *fixtureWebSocketHarness) serveSynthesizer(ctx context.Context, conn *we
 		}
 		h.synthRequests++
 		h.mu.Unlock()
-		if err = conn.Write(ctx, websocket.MessageBinary, h.fixtures["voice_synthesizer_result.msgpack"]); err != nil {
+		requestID++
+		chunk, decodeErr := protocol.DecodeSynthesizerChunk(h.fixtures["voice_synthesizer_chunk.msgpack"])
+		if decodeErr != nil {
+			h.mu.Lock()
+			h.errs = append(h.errs, decodeErr)
+			h.mu.Unlock()
+			return
+		}
+		chunk.RequestID = requestID
+		request, requestErr := protocol.DecodeProcessorResult(payload)
+		if requestErr != nil {
+			return
+		}
+		chunk.SpeechID = request.ResponseMessage.SpeechID
+		initial, _ := msgpack.Marshal(chunk)
+		if err = conn.Write(ctx, websocket.MessageBinary, initial); err != nil {
+			return
+		}
+		terminal, _ := msgpack.Marshal(protocol.SynthesizerChunk{RequestID: requestID, SpeechID: chunk.SpeechID, Sequence: 1, SampleOffset: int64(len(chunk.PCM) / 2), Final: true, PCM: []byte{}, MoraQueue: []protocol.SynthesizerMora{}})
+		if err = conn.Write(ctx, websocket.MessageBinary, terminal); err != nil {
 			return
 		}
 	}

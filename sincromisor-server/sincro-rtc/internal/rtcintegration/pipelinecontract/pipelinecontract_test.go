@@ -130,6 +130,7 @@ func runTurn(t *testing.T, coordinator *pipeline.Coordinator) {
 	receive(t, coordinator.TextResults())
 	receive(t, coordinator.TextResults())
 	receive(t, coordinator.SynthResults())
+	receive(t, coordinator.SynthResults())
 }
 
 func turnPCMFrames() [][]byte {

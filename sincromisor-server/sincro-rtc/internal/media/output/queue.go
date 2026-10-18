@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/synthdecode"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/protocol"
 )
 
 const (
@@ -26,12 +27,15 @@ var (
 	ErrOutputClosed = errors.New("output processor is closed")
 )
 
+// queuedSpeech のoffsetは保持中PCM内の位置である。逐次受信では消費済み先頭を切り離すため、
+// 要求先頭からの時刻はstream.playedに別途保持する。streamがnilなら完成音声として扱う。
 type queuedSpeech struct {
 	message      string
 	speech       synthdecode.DecodedSpeech
 	offset       int
 	mora         int
 	lastMoraSent int
+	stream       *streamSpeech
 }
 
 // Stats はpayloadを保持しないoutbound queue/clockのsession累積観測値である。
@@ -57,6 +61,11 @@ type Processor struct {
 	sendMu        sync.Mutex
 	queue         []*queuedSpeech
 	queuedSamples int
+	// 以下の逐次受信状態もmuで守る。incomingは再生終了・中止後もterminal検証まで参照を保つ。
+	streamSequence    protocol.ChunkSequence
+	incoming          *queuedSpeech
+	streamLastSpeech  int64
+	streamLastSamples uint64
 	// echoPCMはセッション専用の48 kHzモノラル音声。最新1秒を上限としPurge/Closeで解放する。
 	echoPCM        []int16
 	encoder        outputEncoder
@@ -187,7 +196,7 @@ func (p *Processor) Enqueue(message string, speech synthdecode.DecodedSpeech) er
 	return nil
 }
 
-// Purge はgeneration barrierより前に取り込んだ未送信発話をすべて破棄する。
+// Purge はgeneration barrierより前の未送信発話と要求連番を破棄し、新接続の先頭を受理可能にする。
 func (p *Processor) Purge() {
 	p.sendMu.Lock()
 	defer p.sendMu.Unlock()
@@ -196,6 +205,10 @@ func (p *Processor) Purge() {
 	p.queue = nil
 	p.queuedSamples = 0
 	p.echoPCM = nil
+	p.incoming = nil
+	p.streamSequence = protocol.ChunkSequence{}
+	p.streamLastSamples = 0
+	p.streamLastSpeech = 0
 	p.mu.Unlock()
 	if count > 0 {
 		p.observer.QueueDepthDelta("speech", -float64(count))
@@ -234,6 +247,10 @@ func (p *Processor) Close() error {
 	p.queue = nil
 	p.queuedSamples = 0
 	p.echoPCM = nil
+	p.incoming = nil
+	p.streamSequence = protocol.ChunkSequence{}
+	p.streamLastSamples = 0
+	p.streamLastSpeech = 0
 	p.mu.Unlock()
 	if count > 0 {
 		p.observer.QueueDepthDelta("speech", -float64(count))

@@ -2,10 +2,11 @@ package output
 
 import (
 	"fmt"
-	medialog "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media"
 	"math"
 
 	pionmedia "github.com/pion/webrtc/v4/pkg/media"
+
+	medialog "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media"
 )
 
 // writeFrame は一枠の符号化・テロップ投入・RTP送信を行い、失敗操作と発話IDを返す。
@@ -78,36 +79,39 @@ func (p *Processor) nextFrame() ([]int16, *TelopPayload, *int64) {
 		return frame, nil, nil
 	}
 	item := p.queue[0]
+	if item.stream != nil && !streamReady(item) {
+		p.mu.Unlock()
+		return frame, nil, nil
+	}
 	start := item.offset
+	position := start
+	if item.stream != nil {
+		position = item.stream.played
+	}
 	end := start + frameSamples
 	if end > len(item.speech.PCM) {
 		end = len(item.speech.PCM)
 	}
 	copy(frame, item.speech.PCM[start:end])
-	var payload *TelopPayload
-	for item.mora < len(item.speech.Mora) && item.speech.Mora[item.mora].EndSample <= uint64(start) {
-		item.mora++
-	}
-	if item.mora < len(item.speech.Mora) {
-		mora := item.speech.Mora[item.mora]
-		if mora.StartSample <= uint64(start) && uint64(start) < mora.EndSample {
-			newText := item.lastMoraSent != item.mora
-			payload = &TelopPayload{
-				SpeechID:  item.speech.SpeechID,
-				Timestamp: float64(start) / SampleRate,
-				Message:   item.message,
-				Vowel:     stringValue(mora.Vowel),
-				Text:      stringValue(mora.Text),
-				Length:    float64(mora.EndSample-mora.StartSample) / SampleRate,
-				NewText:   newText,
-			}
-			item.lastMoraSent = item.mora
-		}
-	}
+	payload := speechTelop(item, position)
 	consumed := end - start
 	item.offset = end
+	if item.stream != nil {
+		item.stream.played += consumed
+		if !item.stream.complete && len(item.speech.PCM)-end < frameSamples {
+			item.stream.ready = false
+		}
+		if payload != nil {
+			payload.Timestamp += float64(item.stream.base) / SampleRate
+		}
+	}
 	p.queuedSamples -= consumed
-	if item.offset == len(item.speech.PCM) {
+	if item.offset == len(item.speech.PCM) && item.stream != nil {
+		// 要求の時刻はstream.playedに保持済み。terminal待機中も消費済みPCMを残さない。
+		item.speech.PCM = nil
+		item.offset = 0
+	}
+	if item.offset == len(item.speech.PCM) && (item.stream == nil || item.stream.complete) {
 		p.queue = p.queue[1:]
 		p.mu.Unlock()
 		p.observer.QueueDepthDelta("speech", -1)
@@ -122,4 +126,29 @@ func stringValue(value *string) string {
 		return ""
 	}
 	return *value
+}
+
+// speechTelop は受信区間と独立した要求内のサンプル位置から、現在のモーラと先頭表示を求める。
+func speechTelop(item *queuedSpeech, position int) *TelopPayload {
+	var payload *TelopPayload
+	for item.mora < len(item.speech.Mora) && item.speech.Mora[item.mora].EndSample <= uint64(position) {
+		item.mora++
+	}
+	if item.mora < len(item.speech.Mora) {
+		mora := item.speech.Mora[item.mora]
+		if mora.StartSample <= uint64(position) && uint64(position) < mora.EndSample {
+			newText := item.lastMoraSent != item.mora
+			payload = &TelopPayload{
+				SpeechID:  item.speech.SpeechID,
+				Timestamp: float64(position) / SampleRate,
+				Message:   item.message,
+				Vowel:     stringValue(mora.Vowel),
+				Text:      stringValue(mora.Text),
+				Length:    float64(mora.EndSample-mora.StartSample) / SampleRate,
+				NewText:   newText,
+			}
+			item.lastMoraSent = item.mora
+		}
+	}
+	return payload
 }

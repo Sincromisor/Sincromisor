@@ -150,12 +150,15 @@ func (c *Coordinator) synthLoop(work *generationWork, synth SynthesizerClient) {
 			if !ok {
 				return
 			}
-			if !c.acceptSynthesisResult(work) {
+			if !c.isCurrentGeneration(work.number, pclient.ServiceSynthesizer) {
 				continue
+			}
+			if value.Final {
+				c.acceptSynthesisResult(work)
 			}
 			c.logger.Info("pipeline stage reached",
 				"stage", "synthesizer_result_received", "session_id", c.sessionID,
-				"speech_id", value.SpeechID, "confirmed", true)
+				"speech_id", value.SpeechID, "confirmed", value.Final, "request_id", value.RequestID, "chunk_sequence", value.Sequence)
 			if err := c.publishSynth(work.number, value); err != nil {
 				c.runtimeFailure(work, pclient.ServiceSynthesizer, "publish_audio", "backpressure_timeout", "speech_id", value.SpeechID)
 				return
@@ -186,9 +189,9 @@ func (c *Coordinator) publishText(
 	return publish(c, generation, service, c.textOut, Output[protocol.ChatMessage]{Generation: generation, Value: value})
 }
 
-func (c *Coordinator) publishSynth(generation uint64, value protocol.SynthesizerResult) error {
+func (c *Coordinator) publishSynth(generation uint64, value protocol.SynthesizerChunk) error {
 	return publish(c, generation, pclient.ServiceSynthesizer, c.synthOut,
-		Output[protocol.SynthesizerResult]{Generation: generation, Value: value})
+		Output[protocol.SynthesizerChunk]{Generation: generation, Value: value})
 }
 
 // publishと再初期化はoutputMuを外部向けの世代境界として共有する。生成側は境界内で状態を再確認し、

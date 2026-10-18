@@ -41,8 +41,8 @@ func TestGenerationNotificationAlonePurgesAudioTextAndTelop(t *testing.T) {
 	}
 
 	accepted, err := session.applyGeneration(1, func() error {
-		if err := output.Enqueue("old", synthdecode.DecodedSpeech{
-			SpeechID: 1, PCM: make([]int16, audiomedia.SampleRate/50),
+		if err := output.EnqueueChunk(protocol.SynthesizerChunk{
+			RequestID: 1, SpeechID: 1, PCM: make([]byte, 1920), MoraQueue: []protocol.SynthesizerMora{}, Message: "old",
 		}); err != nil {
 			return err
 		}
@@ -79,6 +79,27 @@ func TestGenerationNotificationAlonePurgesAudioTextAndTelop(t *testing.T) {
 	})
 	if accepted || err != nil || dispatcher.Stats().TextQueued != 0 {
 		t.Fatalf("stale envelope result = %v, %v, queue %d", accepted, err, dispatcher.Stats().TextQueued)
+	}
+	chunk := protocol.SynthesizerChunk{RequestID: 1, SpeechID: 2, PCM: make([]byte, 1920), MoraQueue: []protocol.SynthesizerMora{}}
+	if err := session.handleSynthChunkOutput(pipeline.Output[protocol.SynthesizerChunk]{Generation: 2, Value: chunk}); err != nil {
+		t.Fatal(err)
+	}
+	// 古い接続の途中区間・完了は新世代の要求連番と口形を変更しない。
+	chunk.Sequence = 1
+	chunk.SampleOffset = 960
+	chunk.PCM = []byte{}
+	chunk.Final = true
+	if err := session.handleSynthChunkOutput(pipeline.Output[protocol.SynthesizerChunk]{Generation: 1, Value: chunk}); err != nil {
+		t.Fatal(err)
+	}
+	if output.Stats().QueuedSpeeches != 1 || output.Stats().QueuedSamples != 960 {
+		t.Fatal("stale chunk changed current stream")
+	}
+	if accepted, err := session.applyGeneration(3, nil); !accepted || err != nil {
+		t.Fatal("generation 3 not applied")
+	}
+	if output.Stats().QueuedSpeeches != 0 || output.Stats().QueuedSamples != 0 {
+		t.Fatal("pending streamed PCM survived generation reset")
 	}
 }
 

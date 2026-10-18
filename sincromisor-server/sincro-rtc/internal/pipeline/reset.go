@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	pclient "github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/client"
+	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/protocol"
 )
 
 // resetCauseRuntimeError は処理ループの失敗を有限なclient EventKind値と区別する。
@@ -87,7 +88,7 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, c
 	c.work, c.set = nil, nil
 	c.generation = next
 	discardedText := drain(c.textOut)
-	discardedAudio := drain(c.synthOut)
+	discardedAudio := drainSynthesis(c.synthOut)
 	c.notifyGeneration(next)
 	c.mu.Unlock()
 	c.outputMu.Unlock()
@@ -193,4 +194,20 @@ func (c *Coordinator) runtimeFailure(work *generationWork, peer pclient.Service,
 	}
 	attrs := []any{"operation", operation, "reason", reason}
 	c.requestReset(work.number, peer, resetCauseRuntimeError, append(attrs, ids...)...)
+}
+
+// drainSynthesis は区間数ではなく破棄した合成要求数を返し、既存の中断診断の単位を保つ。
+func drainSynthesis(values <-chan Output[protocol.SynthesizerChunk]) int {
+	requests := make(map[int64]struct{})
+	for {
+		select {
+		case value, ok := <-values:
+			if !ok {
+				return len(requests)
+			}
+			requests[value.Value.RequestID] = struct{}{}
+		default:
+			return len(requests)
+		}
+	}
 }
