@@ -33,7 +33,7 @@ func newFakeSet(t *testing.T, sessionID string, speechID, sequenceID int64) *fak
 	extractor := &fakeExtractor{results: make(chan protocol.ExtractorResult, 1), events: make(chan pclient.Event, 1)}
 	recognizer := &fakeRecognizer{results: make(chan protocol.RecognizerResult, 1), events: make(chan pclient.Event, 1)}
 	processor := &fakeProcessor{results: make(chan protocol.ProcessorResult, 1), events: make(chan pclient.Event, 1)}
-	synth := &fakeSynth{results: make(chan protocol.SynthesizerResult, 1), events: make(chan pclient.Event, 1)}
+	synth := &fakeSynth{results: make(chan protocol.SynthesizerChunk, 2), events: make(chan pclient.Event, 1)}
 	extractor.onPCM = func(frame []byte) {
 		fixture.SessionID, fixture.SpeechID, fixture.SequenceID = sessionID, speechID, sequenceID
 		fixture.Confirmed = true
@@ -63,12 +63,14 @@ func newFakeSet(t *testing.T, sessionID string, speechID, sequenceID int64) *fak
 			VoiceText: &voiceText, Raw: []byte{0x81, 0xa1, 0x78, 0x01},
 		}
 	}
+	var requestID int64
 	synth.onResult = func(value protocol.ProcessorResult) {
-		synth.results <- protocol.SynthesizerResult{
-			SpeechID: value.ResponseMessage.SpeechID, Message: *value.VoiceText,
-			MoraQueue: []protocol.SynthesizerMora{{Length: 0.1}}, SpeakingTime: 0.1,
-			Voice: []byte("encoded-voice"), AudioFormat: "audio/wav",
+		requestID++
+		synth.results <- protocol.SynthesizerChunk{
+			RequestID: requestID, SpeechID: value.ResponseMessage.SpeechID, Message: *value.VoiceText,
+			MoraQueue: []protocol.SynthesizerMora{{Length: 0.1}}, PCM: make([]byte, 9600),
 		}
+		synth.results <- protocol.SynthesizerChunk{RequestID: requestID, SpeechID: value.ResponseMessage.SpeechID, Sequence: 1, SampleOffset: 4800, Final: true, PCM: []byte{}, MoraQueue: []protocol.SynthesizerMora{}}
 	}
 	return &fakeSet{extractor: extractor, recognizer: recognizer, processor: processor, synth: synth}
 }
@@ -152,7 +154,7 @@ func (c *fakeProcessor) Events() <-chan pclient.Event             { return c.eve
 
 type fakeSynth struct {
 	sendError  error
-	results    chan protocol.SynthesizerResult
+	results    chan protocol.SynthesizerChunk
 	events     chan pclient.Event
 	onResult   func(protocol.ProcessorResult)
 	lastResult protocol.ProcessorResult
@@ -166,5 +168,5 @@ func (c *fakeSynth) SendResult(_ context.Context, value protocol.ProcessorResult
 	c.onResult(value)
 	return nil
 }
-func (c *fakeSynth) Results() <-chan protocol.SynthesizerResult { return c.results }
-func (c *fakeSynth) Events() <-chan pclient.Event               { return c.events }
+func (c *fakeSynth) Results() <-chan protocol.SynthesizerChunk { return c.results }
+func (c *fakeSynth) Events() <-chan pclient.Event              { return c.events }

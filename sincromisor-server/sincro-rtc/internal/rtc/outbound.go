@@ -119,7 +119,7 @@ func (s *Session) textOutputLoop() {
 	}
 }
 
-// synthOutputLoop は合成結果を発話順に復号・追加し、追加失敗ではセッションを終了する。
+// synthOutputLoop は受信PCM区間を同じ再生要求へ順次追加し、追加失敗ではセッションを終了する。
 func (s *Session) synthOutputLoop() {
 	for {
 		select {
@@ -132,7 +132,7 @@ func (s *Session) synthOutputLoop() {
 				}
 				return
 			}
-			err := s.handleSynthOutput(output)
+			err := s.handleSynthChunkOutput(output)
 			if err != nil {
 				s.logger.Error("outbound speech enqueue failed", "session_id", s.id, "reason", "output_backpressure")
 				_ = s.Close("output_backpressure")
@@ -140,6 +140,16 @@ func (s *Session) synthOutputLoop() {
 			}
 		}
 	}
+}
+
+// handleSynthChunkOutput はPCM区間を世代境界内で取り込み、音声の全体復号を挟まず再生時計へ渡す。
+// 取消時のPurgeと同じ境界を共有するため、旧世代の遅着区間は再生状態を作り直さない。
+func (s *Session) handleSynthChunkOutput(value pipeline.Output[protocol.SynthesizerChunk]) error {
+	_, err := s.applyGeneration(value.Generation, func() error { return s.output.EnqueueChunk(value.Value) })
+	if errors.Is(err, outputmedia.ErrOutputClosed) {
+		return nil
+	}
+	return err
 }
 
 // handleSynthOutput は復号前後の世代を検査し、現世代の結果だけを発話キューへ追加する。

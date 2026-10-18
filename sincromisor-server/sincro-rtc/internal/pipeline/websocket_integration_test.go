@@ -1,7 +1,6 @@
 package pipeline
 
 import (
-	"bytes"
 	"context"
 	"testing"
 
@@ -161,7 +160,7 @@ func runWebSocketTurn(t *testing.T, coordinator *Coordinator, generation uint64)
 	}
 	user := receive(t, coordinator.TextResults())
 	assistant := receive(t, coordinator.TextResults())
-	voice := receive(t, coordinator.SynthResults())
+	voice := receiveSynthesis(t, coordinator)
 	if user.Generation != generation || assistant.Generation != generation || voice.Generation != generation {
 		t.Fatalf("turn output generations = %d/%d/%d, want %d",
 			user.Generation, assistant.Generation, voice.Generation, generation)
@@ -169,8 +168,8 @@ func runWebSocketTurn(t *testing.T, coordinator *Coordinator, generation uint64)
 	if user.Value.Message != "固定文" || assistant.Value.Message != "固定された応答文" {
 		t.Fatalf("fixture text outputs = %q / %q", user.Value.Message, assistant.Value.Message)
 	}
-	if len(voice.Value.Voice) == 0 || !bytes.HasPrefix(voice.Value.Voice, []byte("OggS")) {
-		t.Fatal("fixture synthesized voice is not Ogg")
+	if len(voice.Value.PCM) == 0 || voice.Value.Final {
+		t.Fatal("fixture synthesized chunk has no PCM")
 	}
 }
 

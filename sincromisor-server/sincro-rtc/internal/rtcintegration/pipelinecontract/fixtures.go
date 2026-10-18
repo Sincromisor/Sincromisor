@@ -18,6 +18,7 @@ var fixtureNames = []string{
 	"text_processor_request.msgpack",
 	"text_processor_result.msgpack",
 	"voice_synthesizer_result.msgpack",
+	"voice_synthesizer_chunk.msgpack",
 }
 
 func loadFixtures(dir string) (map[string][]byte, map[string]any, error) {

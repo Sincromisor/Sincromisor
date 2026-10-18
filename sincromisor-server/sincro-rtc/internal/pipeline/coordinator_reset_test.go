@@ -42,7 +42,7 @@ func TestCoordinatorResetIsSingleFlightAndPreservesConfirmedHistory(t *testing.T
 	}
 	_ = receive(t, coordinator.TextResults())
 	_ = receive(t, coordinator.TextResults())
-	_ = receive(t, coordinator.SynthResults())
+	_ = receiveSynthesis(t, coordinator)
 
 	first := factory.setAt(t, 0)
 	first.emit(pclient.Event{Service: pclient.ServiceRecognizer, Kind: pclient.EventRemoteClose, Err: errors.New("closed")})
@@ -63,7 +63,7 @@ func TestCoordinatorResetIsSingleFlightAndPreservesConfirmedHistory(t *testing.T
 	}
 	secondUser := receive(t, coordinator.TextResults())
 	_ = receive(t, coordinator.TextResults())
-	_ = receive(t, coordinator.SynthResults())
+	_ = receiveSynthesis(t, coordinator)
 	if secondUser.Generation != 2 {
 		t.Fatalf("post-reset generation = %d, want 2", secondUser.Generation)
 	}
@@ -143,7 +143,7 @@ func TestCoordinatorKeepsExtractorIdentityAcrossReset(t *testing.T) {
 			}
 			_ = receive(t, coordinator.TextResults())
 			_ = receive(t, coordinator.TextResults())
-			_ = receive(t, coordinator.SynthResults())
+			_ = receiveSynthesis(t, coordinator)
 			factory.setAt(t, 0).emit(pclient.Event{
 				Service: pclient.ServiceRecognizer,
 				Kind:    pclient.EventRemoteClose,

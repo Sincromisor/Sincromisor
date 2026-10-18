@@ -126,26 +126,9 @@ func decodeSynthesizerResult(root map[string]any) (SynthesizerResult, error) {
 		return result, err
 	}
 
-	items, err := requiredList(root, model, "mora_queue")
+	result.MoraQueue, err = decodeMoraQueue(root, model)
 	if err != nil {
 		return result, err
-	}
-	result.MoraQueue = make([]SynthesizerMora, len(items))
-	for index, item := range items {
-		path := fmt.Sprintf("mora_queue[%d]", index)
-		moraMap, ok := item.(map[string]any)
-		if !ok || moraMap == nil {
-			return result, fieldError(model, path, "expected map")
-		}
-		if result.MoraQueue[index].Vowel, err = requiredOptionalString(moraMap, model, path+".vowel"); err != nil {
-			return result, err
-		}
-		if result.MoraQueue[index].Length, err = requiredFloat(moraMap, model, path+".length"); err != nil {
-			return result, err
-		}
-		if result.MoraQueue[index].Text, err = requiredOptionalString(moraMap, model, path+".text"); err != nil {
-			return result, err
-		}
 	}
 	if result.SpeakingTime, err = requiredFloat(root, model, "speaking_time"); err != nil {
 		return result, err

@@ -37,7 +37,7 @@ func TestPipelineStageLogsRecordProgressWithoutPayloads(t *testing.T) {
 	}
 	_ = receive(t, coordinator.TextResults())
 	_ = receive(t, coordinator.TextResults())
-	_ = receive(t, coordinator.SynthResults())
+	_ = receiveSynthesis(t, coordinator)
 	if err := coordinator.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +134,7 @@ func TestPipelineResetLogsRecordAcceptedOriginWithoutPayloads(t *testing.T) {
 		}
 		_ = receive(t, coordinator.TextResults())
 		_ = receive(t, coordinator.TextResults())
-		_ = receive(t, coordinator.SynthResults())
+		_ = receiveSynthesis(t, coordinator)
 		factory.setAt(t, 0).emit(pclient.Event{
 			Service: pclient.ServiceSynthesizer, Kind: pclient.EventRemoteClose,
 			Operation: "read", Err: websocket.CloseError{Code: 1011, Reason: "error-body-marker"},
@@ -284,9 +284,9 @@ func TestRuntimeFailureLogsIdentifyOperationAndPeer(t *testing.T) {
 				set.extractor.results <- protocol.ExtractorResult{SessionID: "runtime-session", SpeechID: 7, SequenceID: 1}
 			case "publish_audio":
 				for range outputQueueCapacity {
-					c.synthOut <- Output[protocol.SynthesizerResult]{}
+					c.synthOut <- Output[protocol.SynthesizerChunk]{}
 				}
-				set.synth.results <- protocol.SynthesizerResult{SpeechID: 7}
+				set.synth.results <- protocol.SynthesizerChunk{SpeechID: 7}
 			}
 			waitFor(t, func() bool { return factory.count() == 2 })
 			_ = c.Close()

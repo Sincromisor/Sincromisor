@@ -3,14 +3,14 @@ package pipelinecontract
 import "encoding/binary"
 
 const (
-	synthesizedSampleRate = 24_000
+	synthesizedSampleRate = 48_000
 	synthesizedSamples    = synthesizedSampleRate / 10
 )
 
 // synthesizedWAV は固定応答のspeaking_timeとモーラ合計に一致する0.1秒のmono PCM WAVを組み立てる。
 //
-// 固定振幅を反転した非無音であり、音質ではなくFFmpeg、Pion、Web Audioの
-// 実decode/playback経路を決定的に通すことだけを責務とする。
+// 固定振幅を反転した非無音であり、音質ではなくPion、Web Audioの
+// 実playback経路を決定的に通すことだけを責務とする。
 func synthesizedWAV() []byte {
 	const headerSize = 44
 	dataSize := synthesizedSamples * 2

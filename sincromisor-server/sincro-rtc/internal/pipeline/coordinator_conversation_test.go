@@ -25,7 +25,7 @@ func TestCoordinatorRunsFixtureBackedFourStageConversation(t *testing.T) {
 
 	user := receive(t, coordinator.TextResults())
 	assistant := receive(t, coordinator.TextResults())
-	voice := receive(t, coordinator.SynthResults())
+	voice := receiveSynthesis(t, coordinator)
 	if user.Generation != 1 || assistant.Generation != 1 || voice.Generation != 1 {
 		t.Fatalf("outputs used wrong generation: user=%d assistant=%d voice=%d",
 			user.Generation, assistant.Generation, voice.Generation)
@@ -33,7 +33,7 @@ func TestCoordinatorRunsFixtureBackedFourStageConversation(t *testing.T) {
 	if user.Value.Message != "fixture recognized" || assistant.Value.Message != "fixture response" {
 		t.Fatalf("unexpected text outputs: user=%q assistant=%q", user.Value.Message, assistant.Value.Message)
 	}
-	if string(voice.Value.Voice) != "encoded-voice" || voice.Value.SpeakingTime <= 0 {
+	if len(voice.Value.PCM) != 9600 || voice.Value.RequestID != 1 {
 		t.Fatalf("unexpected synthesized output: %+v", voice.Value)
 	}
 
@@ -71,7 +71,7 @@ func TestCoordinatorSendsInitialPartialProcessorRequestWithEmptyHistory(t *testi
 	}
 	_ = receive(t, coordinator.TextResults())
 	_ = receive(t, coordinator.TextResults())
-	_ = receive(t, coordinator.SynthResults())
+	_ = receiveSynthesis(t, coordinator)
 	request := set.processor.lastRequest
 	if request.Confirmed || request.History.Messages == nil || len(request.History.Messages) != 0 {
 		t.Fatalf("initial partial processor request = %+v", request)

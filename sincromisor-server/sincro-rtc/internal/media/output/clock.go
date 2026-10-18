@@ -66,10 +66,12 @@ func (p *Processor) Run(ctx context.Context) error {
 	}
 }
 
+// hasActiveSpeech は再生中の音声だけを遅延中止の対象にする。初期・再開の受信待機は
+// 音声サンプルが進んでいないため、出力時計が遅れても発話の中断へ数えない。
 func (p *Processor) hasActiveSpeech() bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	return len(p.queue) > 0 || len(p.echoPCM) > 0
+	return len(p.echoPCM) > 0 || (len(p.queue) > 0 && (p.queue[0].stream == nil || p.queue[0].stream.ready))
 }
 
 // skipSamplePositionsは送らない20 ms slotをlogical clockと次Pion sampleのdrop metadataへ累積する。
@@ -89,7 +91,16 @@ func (p *Processor) abortCurrentSpeech(lag time.Duration) {
 		return
 	}
 	item := p.queue[0]
+	if item.stream != nil {
+		// 受信状態はterminalまで残し、後続区間を検証して破棄する。
+		item.stream.dropped = true
+	}
 	p.queuedSamples -= len(item.speech.PCM) - item.offset
+	// 再生項目を外した後も受信側がterminal照合に参照するため、PCM自体はここで解放する。
+	if item.stream != nil {
+		item.speech.PCM = nil
+		item.offset = 0
+	}
 	p.queue = p.queue[1:]
 	p.mu.Unlock()
 	p.observer.QueueDepthDelta("speech", -1)
