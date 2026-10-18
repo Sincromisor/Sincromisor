@@ -17,6 +17,7 @@ from sincro_models import (
     SpeechRecognizerResult,
     TextProcessorRequest,
     TextProcessorResult,
+    VoiceSynthesizerChunk,
     VoiceSynthesizerMora,
     VoiceSynthesizerResult,
     VoiceVoxQuery,
@@ -52,6 +53,12 @@ FIXTURE_METADATA = {
         "consumer": "Go RTC pipeline / VoiceSynthesizer",
         "wire_direction": "Python -> Go -> Python unchanged",
         "major_fields": ["response_message", "end_of_response", "voice_text"],
+    },
+    "voice_synthesizer_chunk.msgpack": {
+        "producer": "VoiceSynthesizer",
+        "consumer": "Go RTC pipeline",
+        "wire_direction": "Python -> Go",
+        "major_fields": ["request_id", "sequence", "sample_offset", "final", "pcm"],
     },
     "voice_synthesizer_result.msgpack": {
         "producer": "VoiceSynthesizer",
@@ -159,6 +166,19 @@ def build_payloads() -> dict[str, bytes]:
             response_message=response_message,
             end_of_response=False,
             voice_text=None,
+        ).to_msgpack(),
+        "voice_synthesizer_chunk.msgpack": VoiceSynthesizerChunk(
+            request_id=1,
+            speech_id=42,
+            sequence=0,
+            sample_offset=0,
+            final=False,
+            pcm=b"\x00\x10" * 4800,
+            message="固定された応答文",
+            mora_queue=[
+                VoiceSynthesizerMora(vowel="o", length=0.05, text="コ"),
+                VoiceSynthesizerMora(vowel=None, length=0.05, text=None),
+            ],
         ).to_msgpack(),
         "voice_synthesizer_result.msgpack": VoiceSynthesizerResult(
             speech_id=42,

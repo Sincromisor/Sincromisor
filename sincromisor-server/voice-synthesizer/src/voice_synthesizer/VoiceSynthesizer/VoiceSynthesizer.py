@@ -2,10 +2,11 @@
 
 import logging
 import wave
-from collections.abc import Iterator
+from collections.abc import Generator, Iterator
 from contextlib import contextmanager
 from io import BytesIO
-from time import perf_counter
+from threading import Event
+from time import perf_counter, time_ns
 
 from sincro_config.runtime_diagnostics import failure_fields
 from sincro_models import (
@@ -16,6 +17,7 @@ from sincro_models import (
 )
 from sincro_models.audio_encoder import encode_audio
 from voice_synthesizer.mora_timing import build_mora_queue
+from voice_synthesizer.wav_stream import iter_pcm
 
 from .VoiceVox import VoiceVox
 
@@ -41,7 +43,7 @@ class VoiceSynthesizer(VoiceVox):
         }
         try:
             yield
-        except Exception as error:
+        except (Exception, GeneratorExit) as error:
             fields.update(failure_fields(error), outcome="failed")
             if isinstance(error, self.ProtocolError):
                 fields.update(http_status=error.status_code, reason="http_failure")
@@ -90,6 +92,37 @@ class VoiceSynthesizer(VoiceVox):
             voice=enc_result["voice"],
             # 音声データフォーマット(audio/aac, audio/ogg;codecs=opus, audio/wavのいずれか)
             audio_format=enc_result["audio_format"],
+        )
+
+    def generate_pcm(
+        self,
+        request: VoiceSynthesizerRequest,
+        cancelled: Event,
+        ids: dict[str, object],
+    ) -> Generator[tuple[VoiceVoxQuery, bytes]]:
+        """48kHz monoの区間を返し、全WAV検証後の時刻だけを安全な診断へ残す。"""
+        with self.__operation("audio_query", ids):
+            query = self.audio_query(request.message, request.style_id)
+            query.prePhonemeLength = request.pre_phoneme_length
+            query.postPhonemeLength = request.post_phoneme_length
+            query.outputSamplingRate = 48_000
+            query.outputStereo = False
+            query = self.query_filter(query)
+        if cancelled.is_set():
+            raise InterruptedError("Synthesis cancelled")
+        with self.__operation("streaming_synthesis", ids):
+            parts = self.query_synthesis_stream(query, request.style_id, cancelled)
+            try:
+                for pcm in iter_pcm(parts):
+                    yield query, pcm
+            finally:
+                parts.close()
+        logging.getLogger("sincro.VoiceSynthesizer").info(
+            {
+                "event": "synthesis_engine_complete",
+                "completed_unix_ns": time_ns(),
+                **ids,
+            }
         )
 
     def encode(

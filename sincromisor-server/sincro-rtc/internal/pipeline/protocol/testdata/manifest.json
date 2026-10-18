@@ -59,6 +59,20 @@
     "sha256": "29719b251058bbd11e4303632997befcc1b78180376075ef3f92bdf0efa52835",
     "wire_direction": "Python -> Go -> Python unchanged"
   },
+  "voice_synthesizer_chunk.msgpack": {
+    "byte_length": 9772,
+    "consumer": "Go RTC pipeline",
+    "major_fields": [
+      "request_id",
+      "sequence",
+      "sample_offset",
+      "final",
+      "pcm"
+    ],
+    "producer": "VoiceSynthesizer",
+    "sha256": "358debe16d248e73be37f0b125d93085f5b7c1ebe92514bc14d2330b54433cb8",
+    "wire_direction": "Python -> Go"
+  },
   "voice_synthesizer_result.msgpack": {
     "byte_length": 2632,
     "consumer": "Go RTC pipeline",

@@ -119,13 +119,13 @@ def test_worker_two_requests_use_one_session(endpoint, monkeypatch, fail):
     create = Mock(return_value=session)
     monkeypatch.setattr(requests, "Session", create)
 
-    def get_voice(manager, **_kwargs):
+    def stream_voice(manager, request, context):
         manager.vsynth.version()
         if fail:
             state.status = 503
-        return SimpleNamespace(speech_id=-1, to_msgpack=lambda: b"audio")
+        yield SimpleNamespace(to_msgpack=lambda: b"audio")
 
-    monkeypatch.setattr(module.VoiceCacheManager, "get_voice", get_voice)
+    monkeypatch.setattr(module.VoiceCacheManager, "stream_voice", stream_voice)
     request = TextProcessorRequest(
         session_id="a",
         history=ChatHistory(),
