@@ -1,0 +1,13 @@
+id: task-261018215553-synthesis-request-backpressure
+title: 音声合成の未完了要求上限で待機し会話切断を防ぐ
+category: backend
+status: done
+depends_on: []
+superseded_by: null
+review: APPROVED
+reviewed_sha: 88a169a6
+verdict: PASS
+attempts: 1
+created_at: 2026-10-18
+closed_at: 2026-10-18
+legacy_ids: []
