@@ -1,0 +1,14 @@
+id: task-261018214345-deploy-streaming-audio
+title: 逐次音声対応を検証環境とVPSへ配備する
+category: deployment
+status: done
+depends_on:
+  - task-261018215553-synthesis-request-backpressure
+superseded_by: null
+review: APPROVED
+reviewed_sha: 88a169a6
+verdict: PASS
+attempts: 2
+created_at: 2026-10-18
+closed_at: 2026-10-18
+legacy_ids: []

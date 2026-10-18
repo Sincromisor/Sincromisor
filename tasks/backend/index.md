@@ -2,9 +2,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 25 件）
+## タスク一覧（自動生成 / 全 26 件）
 
-### done（完了） — 25 件
+### done（完了） — 26 件
 
 | タスク                                                                                                             | タイトル                                                | 判定    | 依存                                                                                 |
 | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------ |
@@ -33,5 +33,6 @@
 | [task-261017195945-nemo-streaming-feasibility](./task-261017195945-nemo-streaming-feasibility/task.md)             | 現行ReazonSpeechでNeMoの逐次認識を利用できるか調査する  | ✅ PASS | —                                                                                    |
 | [task-261018011615-synthesis-keepalive-backpressure](./task-261018011615-synthesis-keepalive-backpressure/task.md) | 音声合成WebSocketの受信停止と生存確認の競合を修正する   | ✅ PASS | `task-261018011035-synthesis-keepalive-investigation`                                |
 | [task-261018204902-streaming-conversation-audio](./task-261018204902-streaming-conversation-audio/task.md)         | 会話音声を逐次合成・転送して生成完了前に再生する        | ✅ PASS | —                                                                                    |
+| [task-261018215553-synthesis-request-backpressure](./task-261018215553-synthesis-request-backpressure/task.md)     | 音声合成の未完了要求上限で待機し会話切断を防ぐ          | ✅ PASS | —                                                                                    |
 
 <!-- AUTOGEN:tasks END -->
