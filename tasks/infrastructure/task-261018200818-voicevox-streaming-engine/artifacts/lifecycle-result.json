@@ -1,0 +1,44 @@
+[
+  {
+    "case": "term",
+    "exit_code": 0,
+    "stop_seconds": 0.032,
+    "deregistered": true,
+    "remaining_children": []
+  },
+  {
+    "case": "int",
+    "exit_code": 0,
+    "stop_seconds": 0.043,
+    "deregistered": true,
+    "remaining_children": []
+  },
+  {
+    "case": "engine-failure",
+    "exit_code": 9,
+    "stop_seconds": 0.124,
+    "deregistered": true,
+    "remaining_children": []
+  },
+  {
+    "case": "registration-failure",
+    "exit_code": 7,
+    "stop_seconds": 0.181,
+    "deregistered": true,
+    "remaining_children": []
+  },
+  {
+    "case": "registration-in-flight",
+    "exit_code": 0,
+    "stop_seconds": 3.004,
+    "deregistered": true,
+    "remaining_children": []
+  },
+  {
+    "case": "registration-timeout",
+    "exit_code": 124,
+    "stop_seconds": 3.167,
+    "deregistered": true,
+    "remaining_children": []
+  }
+]

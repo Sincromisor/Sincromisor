@@ -8,9 +8,34 @@
 
 ## 合成エンジン
 
-ComposeはVOICEVOX ENGINE 0.25.2のLinux CPU/x64配布物を使う。
-Dockerビルドでは配布物の取得成功後にキャッシュを確定し、HTTPエラーや中断後の一時ファイルは再利用しない。
-既存のスタイルID、音声クエリ、WAV、口形同期用モーラ情報の契約を維持する。
+Composeは [Sincromisor/voicevox_engine](https://github.com/Sincromisor/voicevox_engine) の
+`563a6889263a3b8caa6852497a2f83fa25d88801`を固定取得し、Linux CPU/x64用にビルドする。
+ビルド入口は `Docker/voicevox/Dockerfile`で、外部のローカル作業コピーは不要である。
+
+| 構成要素                     | 固定版                                              |
+| ---------------------------- | --------------------------------------------------- |
+| Python / uv                  | 3.14.6 / 0.13.1、forkの `uv.lock`で依存を固定       |
+| Core / VOICEVOX ONNX Runtime | 0.17.0 / 1.23.2、配布物のSHA-256を検証              |
+| モデル                       | VVM 0.17.0の `0.vvm`、SHA-256を検証                 |
+| 公式リソース                 | 0.25.2の `a831d3834f517a9093ccb34e96527801708068bb` |
+
+`0.vvm`で既定のスタイルID `0`を提供する。他のモデルのスタイルを使う場合は、同じ固定版の
+モデルとチェックサムをDockerfileへ追加してから切り替える。
+Engine、Core、ランタイムのライセンス、Python依存の同梱情報、公式リソースの利用規約を最終イメージに保持する。
+辞書はビルド時に取得し、UID 10001の非rootユーザーで起動する。
+
+実際に取得したEngineのSHAは `/opt/voicevox_engine/ENGINE_REVISION`と
+`dev.sincromisor.voicevox.engine.revision`ラベルで確認する。
+`/engine_manifest`の版にも同じSHAを含める。上流由来の `/version`は `latest`を返すため識別には使わない。
+Sincromisor公開元を示す `org.opencontainers.image.revision`とは区別する。
+
+`/streaming_synthesis`は固定長の `segment_length`と、段階拡大用の任意の `max_segment_length`を提供する。
+例えば `0.3`と `2.4`の指定では区間を0.3→0.6→1.2→2.4秒に拡大する。
+VoiceSynthesizerは引き続き `/audio_query`と `/synthesis`でWAV全体を受け取り、変換・保存・返却する。
+このコンテナの置換だけでは会話再生の開始時間は短縮しない。
+音声クエリ、WAV、口形同期用モーラ情報、キャッシュ、MessagePackの契約は維持する。
+
+ビルド・HTTP・利用側の再現手順は [導入タスク](../../../../tasks/infrastructure/task-261018200818-voicevox-streaming-engine/task.md) に記録する。
 
 ## 対象範囲
 

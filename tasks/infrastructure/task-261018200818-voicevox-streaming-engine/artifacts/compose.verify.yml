@@ -1,0 +1,49 @@
+# 製品のVOICEVOX定義を使い、Consulとキャッシュだけを隔離して結合確認する。
+name: voicevox-task-261018200818
+services:
+  sincro-voicevox:
+    extends:
+      file: ../../../../compose/voice-synthesizer.yml
+      service: sincro-voicevox
+    pull_policy: never
+    logging: { driver: local, options: !reset {} }
+    deploy: !reset {}
+  consul-agent-synthesizer:
+    image: hashicorp/consul@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54
+    command: [agent, -dev, -client=0.0.0.0]
+    tmpfs: [/consul/data]
+    networks: [sincromisor-net]
+    healthcheck:
+      test: [CMD, consul, members]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+  redis:
+    image: redis:6-alpine
+    command: [redis-server, --save, "", --appendonly, "no"]
+    tmpfs: [/data]
+    networks: [sincromisor-net]
+  s3:
+    image: ghcr.io/sincromisor/minio:latest
+    command: [minio, server, /data]
+    tmpfs: [/data]
+    networks: [sincromisor-net]
+    environment:
+      # 隔離ネットワークの使い捨て検証用。実環境の認証情報は使わない。
+      MINIO_ROOT_USER: validation
+      MINIO_ROOT_PASSWORD: validation-only-password
+  verify:
+    image: ${SINCRO_VERIFY_SYNTHESIZER_IMAGE:-ghcr.io/sincromisor/voice-synthesizer:latest}
+    user: "0:0" # ホスト側ソースが所有者だけに読める場合も、読取専用で検証する。
+    entrypoint: []
+    command: [uv, run, --no-sync, python, /verify/integration.py]
+    networks: [sincromisor-net]
+    environment:
+      SINCRO_LOG_SYNTHESIS_ENABLED: "false"
+    volumes:
+      - .:/verify:ro
+      # 現在の利用側コードを導入済み環境で動かす。
+      - ../../../../sincromisor-server/voice-synthesizer/src:/opt/sincromisor/sincromisor-server/voice-synthesizer/src:ro
+    profiles: [verify]
+networks:
+  sincromisor-net:

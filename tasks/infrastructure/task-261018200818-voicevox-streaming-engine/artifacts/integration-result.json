@@ -1,0 +1,8 @@
+{
+  "cache_miss": true,
+  "audio_format": "audio/ogg;codecs=opus",
+  "voice_bytes": 55697,
+  "moras": 82,
+  "speaking_time": 10.176,
+  "redis_and_s3_saved": true
+}

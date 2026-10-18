@@ -1,0 +1,294 @@
+{
+  "validated_date": "2026-10-18",
+  "source_repository": "https://github.com/Sincromisor/voicevox_engine",
+  "source_commit": "563a6889263a3b8caa6852497a2f83fa25d88801",
+  "source_branch": "sincromisor/streaming-synthesis",
+  "upstream_commit": "14a699f8abd5fe9f9f34e28f3deb4a3c2021503b",
+  "environment": {
+    "architecture": "linux/amd64",
+    "cpu": "AMD Ryzen 5 3600",
+    "threads": 4,
+    "python": "3.14.6",
+    "core": "0.17.0",
+    "onnxruntime": "1.23.2",
+    "vvm": "0.17.0/0.vvm",
+    "resource": "0.25.2"
+  },
+  "metrics": "HTTP要求から最初のPCM受信と全体受信完了まで。audio_query時間を除く。summaryは中央値。extra_buffer_sは到着列から計算する追加開始待ち時間で、実際の再生計測ではない。",
+  "summary": [
+    {
+      "case": "short",
+      "mode": "normal",
+      "n": 3,
+      "first_pcm_s": 0.18253931800063583,
+      "total_s": 0.18297650200111093,
+      "audio_s": 0.5226666666666666,
+      "minimum_start_s": 0.18253931800063583,
+      "extra_buffer_s": 0.0,
+      "max_extra_buffer_s": 0.0
+    },
+    {
+      "case": "short",
+      "mode": "fixed-0.3",
+      "n": 3,
+      "first_pcm_s": 0.14756150399989565,
+      "total_s": 0.25431733799996437,
+      "audio_s": 0.5226666666666666,
+      "minimum_start_s": 0.14756150399989565,
+      "extra_buffer_s": 0.0,
+      "max_extra_buffer_s": 0.0
+    },
+    {
+      "case": "short",
+      "mode": "fixed-1.0",
+      "n": 3,
+      "first_pcm_s": 0.20209750899812207,
+      "total_s": 0.2025988259993028,
+      "audio_s": 0.5226666666666666,
+      "minimum_start_s": 0.20209750899812207,
+      "extra_buffer_s": 0.0,
+      "max_extra_buffer_s": 0.0
+    },
+    {
+      "case": "short",
+      "mode": "ramp-2.4",
+      "n": 3,
+      "first_pcm_s": 0.1471032940025907,
+      "total_s": 0.2610155170004873,
+      "audio_s": 0.5226666666666666,
+      "minimum_start_s": 0.1471032940025907,
+      "extra_buffer_s": 0.0,
+      "max_extra_buffer_s": 0.0
+    },
+    {
+      "case": "medium",
+      "mode": "normal",
+      "n": 3,
+      "first_pcm_s": 2.5213932959995873,
+      "total_s": 2.524781798998447,
+      "audio_s": 10.826666666666666,
+      "minimum_start_s": 2.5213932959995873,
+      "extra_buffer_s": 0.0,
+      "max_extra_buffer_s": 0.0
+    },
+    {
+      "case": "medium",
+      "mode": "fixed-0.3",
+      "n": 3,
+      "first_pcm_s": 0.1947760630027915,
+      "total_s": 4.983302651999111,
+      "audio_s": 10.826666666666666,
+      "minimum_start_s": 0.1947760630027915,
+      "extra_buffer_s": 0.0,
+      "max_extra_buffer_s": 0.0
+    },
+    {
+      "case": "medium",
+      "mode": "fixed-1.0",
+      "n": 3,
+      "first_pcm_s": 0.33333714100081124,
+      "total_s": 3.120647749001364,
+      "audio_s": 10.826666666666666,
+      "minimum_start_s": 0.33333714100081124,
+      "extra_buffer_s": 0.0,
+      "max_extra_buffer_s": 0.0
+    },
+    {
+      "case": "medium",
+      "mode": "ramp-2.4",
+      "n": 3,
+      "first_pcm_s": 0.1944214560026012,
+      "total_s": 2.9068413580025663,
+      "audio_s": 10.826666666666666,
+      "minimum_start_s": 0.1944214560026012,
+      "extra_buffer_s": 0.0,
+      "max_extra_buffer_s": 0.0
+    },
+    {
+      "case": "long",
+      "mode": "normal",
+      "n": 3,
+      "first_pcm_s": 7.64961539000069,
+      "total_s": 7.6615286670021305,
+      "audio_s": 32.8,
+      "minimum_start_s": 7.64961539000069,
+      "extra_buffer_s": 0.0,
+      "max_extra_buffer_s": 0.0
+    },
+    {
+      "case": "long",
+      "mode": "fixed-0.3",
+      "n": 3,
+      "first_pcm_s": 0.43241904499882367,
+      "total_s": 15.485203125001135,
+      "audio_s": 32.8,
+      "minimum_start_s": 0.43241904499882367,
+      "extra_buffer_s": 0.0,
+      "max_extra_buffer_s": 0.0
+    },
+    {
+      "case": "long",
+      "mode": "fixed-1.0",
+      "n": 3,
+      "first_pcm_s": 0.5931680309986405,
+      "total_s": 10.006724992999807,
+      "audio_s": 32.8,
+      "minimum_start_s": 0.5931680309986405,
+      "extra_buffer_s": 0.0,
+      "max_extra_buffer_s": 0.0
+    },
+    {
+      "case": "long",
+      "mode": "ramp-2.4",
+      "n": 3,
+      "first_pcm_s": 0.471590555000148,
+      "total_s": 8.712095006998425,
+      "audio_s": 32.8,
+      "minimum_start_s": 0.471590555000148,
+      "extra_buffer_s": 0.0,
+      "max_extra_buffer_s": 0.5373976663348925
+    },
+    {
+      "case": "format-48000-True-offset-0",
+      "mode": "fixed-0.3",
+      "n": 1,
+      "first_pcm_s": 0.20050997900034417,
+      "total_s": 5.196373773000232,
+      "audio_s": 10.826666666666666,
+      "minimum_start_s": 0.20050997900034417,
+      "extra_buffer_s": 0.0,
+      "max_extra_buffer_s": 0.0
+    },
+    {
+      "case": "format-48000-True-offset-0",
+      "mode": "ramp-2.4",
+      "n": 1,
+      "first_pcm_s": 0.19780757400076254,
+      "total_s": 3.068536259001121,
+      "audio_s": 10.826666666666666,
+      "minimum_start_s": 0.19780757400076254,
+      "extra_buffer_s": 0.0,
+      "max_extra_buffer_s": 0.0
+    },
+    {
+      "case": "format-44100-False-offset-0.5",
+      "mode": "fixed-0.3",
+      "n": 1,
+      "first_pcm_s": 0.17238370600171038,
+      "total_s": 4.779838959999324,
+      "audio_s": 10.325328798185941,
+      "minimum_start_s": 0.17238370600171038,
+      "extra_buffer_s": 0.0,
+      "max_extra_buffer_s": 0.0
+    },
+    {
+      "case": "format-44100-False-offset-0.5",
+      "mode": "ramp-2.4",
+      "n": 1,
+      "first_pcm_s": 0.20521437299976242,
+      "total_s": 2.794123109000793,
+      "audio_s": 10.325328798185941,
+      "minimum_start_s": 0.20521437299976242,
+      "extra_buffer_s": 0.0,
+      "max_extra_buffer_s": 0.0
+    },
+    {
+      "case": "concurrent-2",
+      "mode": "fixed-0.3",
+      "n": 6,
+      "first_pcm_s": 0.3091869879990554,
+      "total_s": 9.819628041501346,
+      "audio_s": 10.826666666666666,
+      "minimum_start_s": 0.3091869879990554,
+      "extra_buffer_s": 0.0,
+      "max_extra_buffer_s": 0.0
+    },
+    {
+      "case": "concurrent-2",
+      "mode": "ramp-2.4",
+      "n": 6,
+      "first_pcm_s": 0.30453268499695696,
+      "total_s": 5.5061285515002965,
+      "audio_s": 10.826666666666666,
+      "minimum_start_s": 0.3834599596664726,
+      "extra_buffer_s": 0.07459836516664167,
+      "max_extra_buffer_s": 0.16915072033617395
+    }
+  ],
+  "waveform_comparisons": [
+    {
+      "case": "short",
+      "mode": "normal",
+      "max_abs_pcm16_difference": 0
+    },
+    {
+      "case": "short",
+      "mode": "fixed-0.3",
+      "max_abs_pcm16_difference": 1
+    },
+    {
+      "case": "short",
+      "mode": "fixed-1.0",
+      "max_abs_pcm16_difference": 0
+    },
+    {
+      "case": "short",
+      "mode": "ramp-2.4",
+      "max_abs_pcm16_difference": 1
+    },
+    {
+      "case": "medium",
+      "mode": "normal",
+      "max_abs_pcm16_difference": 0
+    },
+    {
+      "case": "medium",
+      "mode": "fixed-0.3",
+      "max_abs_pcm16_difference": 1
+    },
+    {
+      "case": "medium",
+      "mode": "fixed-1.0",
+      "max_abs_pcm16_difference": 0
+    },
+    {
+      "case": "medium",
+      "mode": "ramp-2.4",
+      "max_abs_pcm16_difference": 1
+    },
+    {
+      "case": "long",
+      "mode": "normal",
+      "max_abs_pcm16_difference": 0
+    },
+    {
+      "case": "long",
+      "mode": "fixed-0.3",
+      "max_abs_pcm16_difference": 1
+    },
+    {
+      "case": "long",
+      "mode": "fixed-1.0",
+      "max_abs_pcm16_difference": 1
+    },
+    {
+      "case": "long",
+      "mode": "ramp-2.4",
+      "max_abs_pcm16_difference": 1
+    }
+  ],
+  "checks": {
+    "tests_passed": 44,
+    "snapshots_passed": 13,
+    "sample_text": "こんにちは。今日は、2026年 10月18日です。",
+    "sample_duration_seconds": 5.376,
+    "user_confirmed_sample": true
+  },
+  "limitations": [
+    "GPUとSincromisor接続は未検証。",
+    "実測値は性能の合格値ではない。",
+    "段階拡大の長文で最大約0.54秒、2件同時要求で最大約0.17秒の追加開始待ちを要するケースがあった。",
+    "通常のブラウザー再生は未検証。",
+    "独自ビルドの検証イメージは旧上流基点のラベルを持つ。製品への導入時は実Engineの参照コミットと区別する。"
+  ]
+}
