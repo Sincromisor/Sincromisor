@@ -241,7 +241,7 @@ llamaのJSONLの`time`は経過時間なので、中央の発生時刻にはDock
 
 合成ワーカーの`synthesis_received`、`synthesis_generated`、`synthesis_delivery`は、接続IDと接続内の`request_number`、保持する会話・系列・発話IDで照合する。連番は他プロセスと共有せず、音声の通信形式へ追加しない。配送結果は`operation=process/send`と`outcome=success/failed/cancelled`を持つ。生成中に取り消された場合も同期処理を回収し、生成できた結果は生成完了として残すが送信しない。送信成功は`send_bytes`の完了を表し、RTCの受信やブラウザーの再生完了を保証しない。本文設定によらず記録する。
 
-固定VOICEVOX ENGINE 0.25.2にはアクセスログの本文だけを止める起動設定がない。
+固定VOICEVOX ENGINE 0.26.0にはアクセスログの本文だけを止める起動設定がない。
 無効時はVectorが`sincro-voicevox`のイベント全体を共通メタデータと固定メッセージへ置換し、認識できるアクセス行からHTTPメソッドと状態だけを残す。
 URLエンコード本文も任意の別属性も中央へ残さない。代わりにエンジン内部の詳細診断も失われる。
 Dockerのローカル原本には要求URLが残り、ホストjournalの保持期限・容量による削除まで管理者が読める。設定は既存原本・中央保存・Redis/S3キャッシュを削除しない。

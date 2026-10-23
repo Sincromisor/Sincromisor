@@ -1,0 +1,81 @@
+diff --git a/voicevox_engine/app/routers/tts_pipeline.py b/voicevox_engine/app/routers/tts_pipeline.py
+index 1058712..b4da4bd 100644
+--- a/voicevox_engine/app/routers/tts_pipeline.py
++++ b/voicevox_engine/app/routers/tts_pipeline.py
+@@ -420,6 +420,13 @@ def generate_tts_pipeline_router(
+             float,
+             Query(gt=0, description="一度に合成する音声の長さ"),
+         ] = 0.3,
++        max_segment_length: Annotated[
++            float | None,
++            Query(
++                gt=0,
++                description="指定するとsegment_lengthから区間を2倍ずつ伸ばす上限秒数。省略時は固定長。連続再生を保証するものではありません。",
++            ),
++        ] = None,
+         enable_interrogative_upspeak: Annotated[
+             bool,
+             Query(
+@@ -437,6 +444,7 @@ def generate_tts_pipeline_router(
+                 start_offset=start_offset,
+                 segment_length=segment_length,
+                 enable_interrogative_upspeak=enable_interrogative_upspeak,
++                max_segment_length=max_segment_length,
+             )
+         except TalkInvalidInputError as e:
+             raise HTTPException(status_code=400, detail=str(e)) from e
+diff --git a/voicevox_engine/tts_pipeline/tts_engine.py b/voicevox_engine/tts_pipeline/tts_engine.py
+index e9b7fe5..643928c 100644
+--- a/voicevox_engine/tts_pipeline/tts_engine.py
++++ b/voicevox_engine/tts_pipeline/tts_engine.py
+@@ -396,8 +396,20 @@ class TTSEngine:
+         start_offset: float,
+         segment_length: float,
+         enable_interrogative_upspeak: bool,
++        max_segment_length: float | None = None,
+     ) -> tuple[int, Iterator[NDArray[np.float32]]]:
+         """音声合成用のクエリ・スタイルID・開始位置・セグメント長・疑問文語尾自動調整フラグに基づいて、生成音声全体のサンプル数と音声波形の同期ストリームを生成する"""
++        # 0フレームへの丸めを拒否し、区間生成が進まない入力を防ぐ。
++        if not math.isfinite(segment_length) or _to_frame(segment_length) <= 0:
++            raise TalkInvalidInputError(
++                "segment_lengthは1フレーム以上の有限の長さを指定してください"
++            )
++        if max_segment_length is not None and (
++            not math.isfinite(max_segment_length) or max_segment_length < segment_length
++        ):
++            raise TalkInvalidInputError(
++                "max_segment_lengthはsegment_length以上の有限の長さを指定してください"
++            )
+         start_offset_frames = _to_frame(start_offset)
+         phoneme, f0 = _query_to_decoder_feature(query, enable_interrogative_upspeak)
+ 
+@@ -418,12 +430,11 @@ class TTSEngine:
+         def wave_generator() -> Iterator[NDArray[np.float32]]:
+             # render_start/render_endはマージンを除いた有効部分の開始/終了位置
+             # slice_start/slice_endはマージンを含む全体の開始/終了位置
+-            valid_segment_frames = _to_frame(segment_length)  # 一度に生成するフレーム数
+-            for render_start in range(
+-                margin_width, len(audio_feature) - margin_width, valid_segment_frames
+-            ):
++            current_segment_length = segment_length
++            render_start = margin_width
++            while render_start < len(audio_feature) - margin_width:
+                 render_end = min(
+-                    render_start + valid_segment_frames,
++                    render_start + _to_frame(current_segment_length),
+                     len(audio_feature) - margin_width,
+                 )
+                 slice_start = render_start - margin_width
+@@ -436,6 +447,12 @@ class TTSEngine:
+                     margin_width * 256 : -margin_width * 256
+                 ]
+                 yield raw_wave
++                render_start = render_end
++                # 先頭を早く返した後は区間を伸ばし、余白の重複推論を減らす。
++                if max_segment_length is not None:
++                    current_segment_length = min(
++                        current_segment_length * 2, max_segment_length
++                    )
+ 
+         return raw_wave_stream_to_output_wave(
+             query, raw_wave_length, wave_generator(), self._core.default_sampling_rate

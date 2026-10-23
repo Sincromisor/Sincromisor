@@ -47,7 +47,7 @@ def main() -> None:
             Path("ENGINE_REVISION").read_text().strip(),
             "LGPL_LICENSE",
         ),
-        ("VOICEVOX CORE", "0.17.0", "/opt/voicevox/licenses/core/**/LICENSE"),
+        ("VOICEVOX CORE", "0.17.1", "/opt/voicevox/licenses/core/**/LICENSE"),
         ("VOICEVOX ONNX Runtime", "1.23.2", "/opt/voicevox/onnxruntime/TERMS.txt"),
         (
             "VOICEVOX ONNX Runtime notices",

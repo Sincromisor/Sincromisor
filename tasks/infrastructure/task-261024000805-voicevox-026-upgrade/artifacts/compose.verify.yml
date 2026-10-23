@@ -1,0 +1,9 @@
+# 既存の隔離検証環境を再利用し、更新イメージと今回の検証だけを差し替える。
+services:
+  sincro-voicevox:
+    image: sincromisor-local/voicevox:task-261024000805
+  verify:
+    image: sincromisor-update/voice-synthesizer:20261018-streaming-88a169a6
+    command: [uv, run, --no-sync, python, /upgrade/verify-upgrade.py]
+    volumes:
+      - ../../task-261024000805-voicevox-026-upgrade/artifacts:/upgrade:ro

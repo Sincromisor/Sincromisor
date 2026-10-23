@@ -1,0 +1,7 @@
+{
+  "engine": "0.26.0+sincromisor.7ebc23342bd812f5a72816330f62f110ccca8bdc.3dfbff49ffd8",
+  "core_library": "0.17.1",
+  "uid": 10001,
+  "licenses": 36,
+  "consul": "passing"
+}
