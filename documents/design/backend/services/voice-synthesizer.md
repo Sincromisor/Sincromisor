@@ -8,16 +8,18 @@
 
 ## 合成エンジン
 
-Composeは [Sincromisor/voicevox_engine](https://github.com/Sincromisor/voicevox_engine) の
-`563a6889263a3b8caa6852497a2f83fa25d88801`を固定取得し、Linux CPU/x64用にビルドする。
+Composeは公式 [VOICEVOX ENGINE 0.26.0](https://github.com/VOICEVOX/voicevox_engine/releases/tag/0.26.0) の
+`7ebc23342bd812f5a72816330f62f110ccca8bdc`を固定取得し、Linux CPU/x64用にビルドする。
+公式版にない段階拡大は `Docker/voicevox/streaming-ramp.patch`で追加し、適用不整合はビルド時に拒否する。
+2026-10-24に公式リリース・ソースを確認し、既存の逐次合成契約を維持する範囲で採用した。
 ビルド入口は `Docker/voicevox/Dockerfile`で、外部のローカル作業コピーは不要である。
 
 | 構成要素                     | 固定版                                              |
 | ---------------------------- | --------------------------------------------------- |
-| Python / uv                  | 3.14.6 / 0.13.1、forkの `uv.lock`で依存を固定       |
-| Core / VOICEVOX ONNX Runtime | 0.17.0 / 1.23.2、配布物のSHA-256を検証              |
+| Python / uv                  | 3.14.6 / 0.13.1、公式Engineの `uv.lock`で依存を固定 |
+| Core / VOICEVOX ONNX Runtime | 0.17.1 / 1.23.2、配布物のSHA-256を検証              |
 | モデル                       | VVM 0.17.0の `0.vvm`、SHA-256を検証                 |
-| 公式リソース                 | 0.25.2の `a831d3834f517a9093ccb34e96527801708068bb` |
+| 公式リソース                 | 0.26.0の `37c265375e05313486ebf2024b1679d6952a53d8` |
 
 `0.vvm`で既定のスタイルID `0`を提供する。他のモデルのスタイルを使う場合は、同じ固定版の
 モデルとチェックサムをDockerfileへ追加してから切り替える。
@@ -26,7 +28,9 @@ Engine、Core、ランタイムのライセンス、Python依存の同梱情報�
 
 実際に取得したEngineのSHAは `/opt/voicevox_engine/ENGINE_REVISION`と
 `dev.sincromisor.voicevox.engine.revision`ラベルで確認する。
-`/engine_manifest`の版にも同じSHAを含める。上流由来の `/version`は `latest`を返すため識別には使わない。
+イメージ内の `engine_manifest.json`の版には `0.26.0+sincromisor.`に続けて同じSHAとパッチSHA-256の先頭12桁を含める。
+パッチの完全なSHA-256は `/opt/voicevox_engine/STREAMING_PATCH_SHA256`に保持する。上流由来の `/version`は `latest`を返し、HTTPの `/engine_manifest`には版の項目がないため識別には使わない。
+`/core_versions`も話者メタ情報由来の `0.17.0`を返す。Core実体の版は共有ライブラリーの `voicevox_get_version()`で `0.17.1`と確認する。
 Sincromisor公開元を示す `org.opencontainers.image.revision`とは区別する。
 
 `/streaming_synthesis`は固定長の `segment_length`と、段階拡大用の任意の `max_segment_length`を提供する。
@@ -36,7 +40,8 @@ WAVの形式・宣言サイズ・受信サイズを検証し、生PCMを区間�
 Goが順次バッファへ載せて20msごとにOpus符号化する。区間モデルは [音声パイプライン契約](../../contracts/audio-pipeline-websocket.md#合成音声の区間転送) を正本とする。
 完全音声を要求する既存の `get_voice`と `/synthesis`による生成も、キャッシュ・診断用の経路として保持する。
 
-ビルド・HTTP・利用側の再現手順は [導入タスク](../../../../tasks/infrastructure/task-261018200818-voicevox-streaming-engine/task.md) に記録する。
+ビルド・HTTP・利用側の再現手順と移行判断は [更新タスク](../../../../tasks/infrastructure/task-261024000805-voicevox-026-upgrade/task.md) に記録する。
+上流が同等の段階拡大を提供した場合は、引数・入力拒否・波形連続性の回帰試験を確認してパッチを除去する。
 
 ## 対象範囲
 

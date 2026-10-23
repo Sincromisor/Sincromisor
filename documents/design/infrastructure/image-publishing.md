@@ -5,7 +5,7 @@
 月1回および起動障害修正の公開時に、リポジトリのルートから `node scripts/publish-images.mjs publish`を実行する。
 スクリプトはGitの現在のコミットを一時展開し、Composeの自作イメージを `ghcr.io/sincromisor`へ公開する。
 対象は `linux/amd64`。公開元は `compose.yml`と `examples/compose.env`で決まり、運用中の `.env`、未追跡ファイル、辞書、キャッシュは含めない。
-VOICEVOXもローカルコンテキスト内のDockerfileを入力とし、固定forkの取得はDockerビルド内で行う。
+VOICEVOXもローカルコンテキスト内のDockerfileを入力とし、固定した公式Engineの取得とローカルパッチ適用はDockerビルド内で行う。
 Engineの実コミットは `dev.sincromisor.voicevox.engine.revision`に保持し、公開処理が付与する
 Sincromisorソースの `org.opencontainers.image.revision`と区別する。
 
