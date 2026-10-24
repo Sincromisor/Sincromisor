@@ -1,10 +1,6 @@
 import { SettingsButton } from "../../../features/settings/react/primitives/settingsActionControls";
-import {
-    SettingsStatusCard,
-    SettingsSummaryGrid,
-} from "../../../features/settings/react/shell/settingsShell";
 import { LookingGlassSettingsSection } from "./components/lookingGlassSettingsSection";
-import type { SincroControlPanelPageProps, SincroPanelState } from "./sincroControlPanelTypes";
+import type { SincroControlPanelPageProps } from "./sincroControlPanelTypes";
 
 /** Looking Glassの実行状態・開始停止・次回設定を専用カテゴリへまとめる。 */
 export function LookingGlassControlPage({ panelState }: SincroControlPanelPageProps) {
@@ -12,12 +8,13 @@ export function LookingGlassControlPage({ panelState }: SincroControlPanelPagePr
 
     return (
         <>
-            <LookingGlassStatusSummary panelState={panelState} />
-            <LookingGlassActionButtons panelState={panelState} />
+            <div className="settingsPrimitiveFieldStack">
+                <LookingGlassStatusSummary panelState={panelState} />
+                <LookingGlassActionButtons panelState={panelState} />
+            </div>
             <LookingGlassSettingsSection
                 settings={settings}
                 onApplySettings={panelState.applySettings}
-                showSectionTitle={false}
             />
         </>
     );
@@ -33,41 +30,21 @@ function LookingGlassStatusSummary({ panelState }: SincroControlPanelPageProps) 
         active: "表示中",
         error: "開始・表示に失敗",
     };
-    const lookingGlassStatusText = stateLabels[lookingGlass.state];
-    const applyLabel = lookingGlassConfigStatus.reloadRecommended
-        ? "停止・再開始が必要"
+    const applyHint = lookingGlassConfigStatus.reloadRecommended
+        ? "変更を反映するには、停止して再開始してください。"
         : lookingGlassConfigStatus.pendingForNextSession
-          ? "次回起動で反映"
-          : "変更の反映待ちなし";
-    const applyDetail = lookingGlassConfigStatus.reloadRecommended
-        ? "停止してから Looking Glass をもう一度開始すると反映されます。"
-        : lookingGlassConfigStatus.changedKeys.length > 0
-          ? "変更した表示設定は、次回のLooking Glass開始時に反映されます。"
+          ? "変更は次回開始時に反映します。"
           : undefined;
 
     return (
-        <SettingsSummaryGrid>
-            <SettingsStatusCard
-                label="表示状態"
-                value={lookingGlassStatusText}
-                detail={[lookingGlass.message, lookingGlass.code].filter(Boolean).join(" / ")}
-                tone={getLookingGlassStatusTone(panelState)}
-            />
-            <SettingsStatusCard
-                label="反映タイミング"
-                value={applyLabel}
-                detail={applyDetail}
-                tone={lookingGlassConfigStatus.reloadRecommended ? "warn" : "neutral"}
-            />
-        </SettingsSummaryGrid>
+        <div className="settingsPrimitiveConnectionStatus" role="status">
+            <strong>{stateLabels[lookingGlass.state]}</strong>
+            {lookingGlass.message || lookingGlass.code ? (
+                <div>{[lookingGlass.message, lookingGlass.code].filter(Boolean).join(" / ")}</div>
+            ) : null}
+            {applyHint ? <div>{applyHint}</div> : null}
+        </div>
     );
-}
-
-function getLookingGlassStatusTone(panelState: SincroPanelState): "neutral" | "good" | "warn" {
-    if (panelState.lookingGlass.state === "active") {
-        return "good";
-    }
-    return panelState.lookingGlass.state === "error" ? "warn" : "neutral";
 }
 
 function LookingGlassActionButtons({ panelState }: SincroControlPanelPageProps) {

@@ -23,7 +23,7 @@ export const settingHelp = {
     lgTargetY:
         "Looking Glass 表示時の注視高さ（Y）です。キャラクターの顔位置に合わせて微調整すると見やすくなります。",
     lgTargetZ:
-        "Looking Glass 表示時の注視奥行き（Z）です。ピンボケや前後の見え方が不自然な場合に、少しずつ調整してください。",
+        "Looking Glass 表示時の注視奥行き（Z）です。ピンボケや前後の見え方が不自然な場合は、注視する範囲と合わせて少しずつ調整してください。",
     lgTargetDiam:
         "Looking Glass の注視範囲（target diameter）です。焦点が合いにくい時は小さめ/大きめに振って見え方を確認してください。",
     lgDepthiness:
