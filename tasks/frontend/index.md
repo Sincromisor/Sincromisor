@@ -4,14 +4,13 @@
 
 ## タスク一覧（自動生成 / 全 27 件）
 
-### open（未完） — 2 件
+### open（未完） — 1 件
 
 | タスク                                                                                                             | タイトル                                   | 判定 | 依存 |
 | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------ | ---- | ---- |
-| [task-261024195953-simplify-startup-vrm-selection](./task-261024195953-simplify-startup-vrm-selection/task.md)     | 起動前のVRM選択を一つの操作領域にまとめる  | —    | —    |
 | [task-261024201946-align-home-test-saved-experience](./task-261024201946-align-home-test-saved-experience/task.md) | トップの遷移確認を体験の保存仕様に合わせる | —    | —    |
 
-### done（完了） — 25 件
+### done（完了） — 26 件
 
 | タスク                                                                                                             | タイトル                                                 | 判定    | 依存                                                 |
 | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- | ------- | ---------------------------------------------------- |
@@ -40,5 +39,6 @@
 | [task-261024195952-simplify-settings-field-labels](./task-261024195952-simplify-settings-field-labels/task.md)     | 共通設定を項目名と入力で理解できる表示に整理する         | ✅ PASS | —                                                    |
 | [task-261024195953-simplify-home-secondary-labels](./task-261024195953-simplify-home-secondary-labels/task.md)     | トップページの冗長な補助ラベルを整理する                 | ✅ PASS | —                                                    |
 | [task-261024195953-simplify-looking-glass-guidance](./task-261024195953-simplify-looking-glass-guidance/task.md)   | Looking Glass設定の状態表示と反映案内を整理する          | ✅ PASS | —                                                    |
+| [task-261024195953-simplify-startup-vrm-selection](./task-261024195953-simplify-startup-vrm-selection/task.md)     | 起動前のVRM選択を一つの操作領域にまとめる                | ✅ PASS | —                                                    |
 
 <!-- AUTOGEN:tasks END -->
