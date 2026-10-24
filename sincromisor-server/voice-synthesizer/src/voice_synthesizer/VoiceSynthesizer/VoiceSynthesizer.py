@@ -2,7 +2,7 @@
 
 import logging
 import wave
-from collections.abc import Generator, Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from io import BytesIO
 from threading import Event
@@ -32,7 +32,7 @@ class VoiceSynthesizer(VoiceVox):
         self.port: int = port
 
     @contextmanager
-    def __operation(self, stage: str, ids: dict[str, object]) -> Iterator[None]:
+    def __operation(self, stage: str, ids: dict[str, object]) -> Generator[None]:
         """生成の一段階を計測する。失敗原因は値を文字列化せず、例外をそのまま返す。"""
         started = perf_counter()
         fields: dict[str, object] = {

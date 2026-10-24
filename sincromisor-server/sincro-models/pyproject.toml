@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.14,<3.15"
 dependencies = [
     "sincro-config",
-    "pydantic>=2.14.0",
+    "pydantic>=2.14.1",
     "msgpack>=1.2.3",
     "numpy>=2.5.4,<3",
     "python-ulid>=4.0.1",
@@ -17,7 +17,7 @@ dependencies = [
 # group を解決するため、既存 root virtualenv に依存しない検証 tool をここでも明示する。
 dev = [
     "pytest>=9.1.1",
-    "ruff>=0.17.0",
+    "ruff>=0.17.2",
 ]
 
 [tool.uv.sources]

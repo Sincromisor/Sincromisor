@@ -1,7 +1,7 @@
 """接続内だけの識別子と処理段階を記録し、ワーカーの主原因を後始末から分離する。"""
 
 import asyncio
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from logging import Logger
 from uuid import uuid4
@@ -28,7 +28,7 @@ class WebSocketDiagnostics:
         )
 
     @contextmanager
-    def operation(self, stage: str) -> Iterator[None]:
+    def operation(self, stage: str) -> Generator[None]:
         """並行受信と応答処理でも、最初に失敗した操作と当時のIDだけを保持する。"""
         try:
             yield
