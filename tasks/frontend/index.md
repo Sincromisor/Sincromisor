@@ -2,9 +2,17 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 38 件）
+## タスク一覧（自動生成 / 全 42 件）
 
-### done（完了） — 38 件
+### open（未完） — 3 件
+
+| タスク                                                                                                       | タイトル                                 | 判定 | 依存                                            |
+| ------------------------------------------------------------------------------------------------------------ | ---------------------------------------- | ---- | ----------------------------------------------- |
+| [task-261025054927-settings-shared-layout](./task-261025054927-settings-shared-layout/task.md)               | 設定本文と固定操作欄の幅と余白を統一する | —    | `task-261025054927-settings-alignment-contract` |
+| [task-261025054927-startup-action-alignment](./task-261025054927-startup-action-alignment/task.md)           | 起動前の戻る導線と開始操作を整列する     | —    | `task-261025054927-settings-shared-layout`      |
+| [task-261025054928-settings-alignment-regression](./task-261025054928-settings-alignment-regression/task.md) | 設定画面の整列をPlaywrightで回帰確認する | —    | `task-261025054927-startup-action-alignment`    |
+
+### done（完了） — 39 件
 
 | タスク                                                                                                                 | タイトル                                                 | 判定    | 依存                                                 |
 | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ------- | ---------------------------------------------------- |
@@ -46,5 +54,6 @@
 | [task-261024223622-recover-settings-save-failure](./task-261024223622-recover-settings-save-failure/task.md)           | 設定の自動保存失敗を検知して保存を再試行できるようにする | ✅ PASS | —                                                    |
 | [task-261024223622-remove-synthetic-welcome-history](./task-261024223622-remove-synthetic-welcome-history/task.md)     | 開始時の架空の会話と固定音声案内を取り除く               | ✅ PASS | —                                                    |
 | [task-261024223622-separate-audio-diagnostic-entry](./task-261024223622-separate-audio-diagnostic-entry/task.md)       | 通常体験の選択と音声診断の導線を分ける                   | ✅ PASS | —                                                    |
+| [task-261025054927-settings-alignment-contract](./task-261025054927-settings-alignment-contract/task.md)               | 設定画面の整列と操作配置の設計を定める                   | ✅ PASS | —                                                    |
 
 <!-- AUTOGEN:tasks END -->
