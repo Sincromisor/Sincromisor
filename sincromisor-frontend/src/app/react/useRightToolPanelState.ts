@@ -60,3 +60,12 @@ export function hideRightToolSettingsPanel(): void {
 export function toggleRightToolSettingsPanel(): void {
     rightToolPanelService.toggleSettingsPanel();
 }
+
+/** 会話履歴も通常の右側パネルと同じ排他表示へ結ぶ。 */
+export function toggleRightToolHistoryPanel(): void {
+    rightToolPanelService.toggleHistoryPanel();
+}
+/** 履歴だけを閉じ、他のパネルへ切り替わった後の状態を壊さない。 */
+export function hideRightToolHistoryPanel(): void {
+    rightToolPanelService.hideHistoryPanel();
+}

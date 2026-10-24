@@ -1,4 +1,6 @@
 import { type ReactElement, useEffect, useRef } from "react";
+import { ChatAnnouncer } from "../../features/conversation/chat/react/chatAnnouncer";
+import { ConversationHistoryView } from "../../features/conversation/chat/react/conversationHistoryView";
 import { SincroChatView } from "../../features/conversation/chat/react/sincroChatView";
 import { SincroTelopView } from "../../features/conversation/telop/react/sincroTelopView";
 import { DebugConsole } from "../../features/debug/react/debugConsole";
@@ -7,6 +9,7 @@ import { ConfigurationDialog } from "../../features/dialog/react/configurationDi
 import type { SincroVRMRoots } from "../bootstrap/sincroVrmInitializer";
 import {
     hideRightToolDebugPanel,
+    hideRightToolHistoryPanel,
     hideRightToolSettingsPanel,
     useRightToolPanelState,
 } from "../react/useRightToolPanelState";
@@ -30,7 +33,8 @@ export function SincroPageAppShell({ controlPanel, onCharacterMounted }: SincroP
             <div id="sincroBody" className="sincroPageShell sincroPageShell--modern">
                 <SincroShellHeader />
                 <SincroVideoPlaceholders />
-                <SincroChatRegion />
+                <ChatAnnouncer />
+                <SincroChatRegion hidden={rightToolState.activePanel === "history"} />
                 <SincroCharacterRegion onMounted={onCharacterMounted} />
                 <SincroBackgroundRegion />
                 <SincroFooterRegion />
@@ -82,9 +86,9 @@ function SincroVideoPlaceholders() {
     );
 }
 
-function SincroChatRegion() {
+function SincroChatRegion({ hidden }: { hidden: boolean }) {
     return (
-        <div id="sincroChatContainer">
+        <div id="sincroChatContainer" hidden={hidden}>
             <div id="sincroChatBox">
                 <SincroChatView />
             </div>
@@ -145,6 +149,15 @@ type SincroRightToolFramesProps = {
 function SincroRightToolFrames({ activePanel, controlPanel }: SincroRightToolFramesProps) {
     return (
         <>
+            <RightToolFrame
+                id="sincroHistoryPanelContainer"
+                isOpen={activePanel === "history"}
+                title="会話履歴"
+                onClose={hideRightToolHistoryPanel}
+                variant="history"
+            >
+                <ConversationHistoryView isVisible={activePanel === "history"} />
+            </RightToolFrame>
             <RightToolFrame
                 id="sincroDebugConsoleContainer"
                 isOpen={activePanel === "debug"}

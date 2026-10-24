@@ -1,5 +1,5 @@
-/** 右側パネルは設定と診断のどちらか一方だけを表示する。 */
-export type RightToolPanelKind = "none" | "settings" | "debug";
+/** 右側パネルは設定・診断・会話履歴のいずれか一つだけを表示する。 */
+export type RightToolPanelKind = "none" | "settings" | "debug" | "history";
 
 /** Reactが購読するパネル選択とメニュー開閉の同時点状態。 */
 export type RightToolPanelState = {
@@ -102,6 +102,19 @@ export class SincroAppRightToolPanelService {
             return;
         }
         this.showSettingsPanel();
+    }
+
+    /** 通常メニューから会話履歴を開閉し、他のパネルと同時表示しない。 */
+    toggleHistoryPanel(): void {
+        this.updateState({
+            activePanel: this.state.activePanel === "history" ? "none" : "history",
+            menuOpen: false,
+        });
+    }
+
+    /** 履歴が表示中の場合だけ閉じる。 */
+    hideHistoryPanel(): void {
+        if (this.state.activePanel === "history") this.closeAllPanels();
     }
 
     private emitChange(): void {

@@ -2,7 +2,7 @@ import type { PointerEvent, ReactNode } from "react";
 import { OverlayCloseButton } from "./overlayCloseButton";
 import "./overlay.css";
 
-type RightToolFrameVariant = "settings" | "debug";
+type RightToolFrameVariant = "settings" | "debug" | "history";
 
 type RightToolFrameProps = {
     id: string;
@@ -15,7 +15,11 @@ type RightToolFrameProps = {
 };
 
 function closeButtonIdForVariant(variant: RightToolFrameVariant): string {
-    return variant === "settings" ? "reactSettingsPanelClose" : "debugConsoleClose";
+    return variant === "settings"
+        ? "reactSettingsPanelClose"
+        : variant === "debug"
+          ? "debugConsoleClose"
+          : "historyPanelClose";
 }
 
 // 右側ツール領域の fixed layer / surface / scroll / close chrome をまとめて所有する。
