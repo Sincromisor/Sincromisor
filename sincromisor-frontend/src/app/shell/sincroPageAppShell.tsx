@@ -83,7 +83,9 @@ function SincroShellHeader() {
                         />
                     </div>
                     <div id="sincroHeaderBox__textGroup">
-                        <div id="sincroHeaderBox__text">{settings.titleText}</div>
+                        <div id="sincroHeaderBox__text">
+                            {settings.titleText === "" ? "Sincromisor" : settings.titleText}
+                        </div>
                     </div>
                 </div>
                 <div id="sincroHeaderBox__toolChrome">
