@@ -133,3 +133,7 @@ Use case: precise-object-edit. Edit the supplied full-body dark-brown-haired too
 - `documents/design/frontend/app-shell.md`
 - `documents/design/archive/legacy-flat/frontend_ui.md`
 - `documents/design/archive/legacy-flat/frontend_migration_react.md`
+
+## 開始前のデータ利用
+
+開始前の概要・詳細に、音声の接続先への送信と、通常体験での認識音声・文章のサーバー保存を示す。「データの扱い」から、会話履歴のサーバー保存、カメラ映像のブラウザー内追跡、VRM・設定のブラウザー保存を確認できる。概要の「カメラを使う」で追跡とカメラ選択を無効化でき、開始せずトップへ戻る導線を維持する。
