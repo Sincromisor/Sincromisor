@@ -85,7 +85,7 @@ Pythonは全メンバーの依存宣言を保持し、ソースは対象サー�
 依存を変更するときは開発環境で `npm install`または `uv lock`を実行し、
 依存宣言とロックの差分を一緒に確認・コミットしてから再ビルドする。
 
-標準構成のS3にはSeaweedFSを使う。旧`compose/minio.yml`は標準のincludeに含まれず、公式MinIOイメージの公開配布を取得できないため、そのままの再ビルドはできない。
+S3には検証用構成を含めSeaweedFSを使う。MinIOは利用対象から除外し、旧Compose・Docker定義は削除済みである。
 
 音声認識モデルの指定は `SINCRO_RECOGNIZER_MODEL=nemo`のみ対応する。
 以前の `nue`指定は非互換となり、ビルドでは依存導入前に拒否する。配布イメージも `nemo`を選ぶ。

@@ -105,10 +105,10 @@ GHCRに複数パッケージの一括切替はないため、Compose指定タグ
 
 ```sh
 node scripts/publish-images.mjs inventory
-node scripts/publish-images.mjs delete-retired minio sincro-client
+node scripts/publish-images.mjs delete-retired retired-image
 ```
 
-`inventory`で名前、公開範囲、所属リポジトリ、現行対象かを確認してから、廃止済みの名前だけを指定する。
+`inventory`で名前、公開範囲、所属リポジトリ、現行対象かを確認してから、例の `retired-image`を廃止済みの名前へ置き換えて指定する。
 `delete-retired`は指定したパッケージとその全バージョンを削除する。
 現行Composeの対象、所属が不明なもの、他リポジトリのものは拒否し、指定した全対象の検証後に削除を始める。
 一部の削除だけ成功して停止した場合は、再度一覧を取得し、残っている名前だけで実行する。

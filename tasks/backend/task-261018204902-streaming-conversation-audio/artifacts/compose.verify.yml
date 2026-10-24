@@ -24,14 +24,30 @@ services:
     tmpfs: [/data]
     networks: [sincromisor-net]
   s3:
-    image: ghcr.io/sincromisor/minio:latest
-    command: [minio, server, /data]
+    image: chrislusf/seaweedfs:4.48
+    # Master・Volume・Filer・S3を使い捨て領域にまとめ、既存の接続先を維持する。
+    command:
+      - server
+      - -s3
+      - -ip=s3
+      - -ip.bind=0.0.0.0
+      - -dir=/data
+      - -s3.port=9000
+      - -volume.max=1
+      - -master.volumeSizeLimitMB=32
     tmpfs: [/data]
     networks: [sincromisor-net]
     environment:
       # 隔離ネットワークの使い捨て検証用。実環境の認証情報は使わない。
-      MINIO_ROOT_USER: validation
-      MINIO_ROOT_PASSWORD: validation-only-password
+      AWS_ACCESS_KEY_ID: validation
+      AWS_SECRET_ACCESS_KEY: validation-only-password
+    volumes:
+      - ../../../../Docker/seaweedfs/healthcheck.sh:/healthcheck.sh:ro
+    healthcheck:
+      test: [CMD, sh, /healthcheck.sh, "http://127.0.0.1:9000/status"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
   register-cache:
     image: hashicorp/consul@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54
     tmpfs: [/consul/data]
@@ -45,6 +61,8 @@ services:
     networks: [sincromisor-net]
     depends_on:
       consul-agent-synthesizer:
+        condition: service_healthy
+      s3:
         condition: service_healthy
   synthesizer:
     image: ${SINCRO_VERIFY_SYNTHESIZER_IMAGE:-ghcr.io/sincromisor/voice-synthesizer:latest}

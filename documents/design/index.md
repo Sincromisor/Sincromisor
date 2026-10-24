@@ -69,7 +69,7 @@
 - [Consul](infrastructure/consul.md)
     - サービス発見と代替処理設定
 - [保存領域](infrastructure/storage.md)
-    - Redis、SeaweedFS、旧MinIOの扱い
+    - Redis、SeaweedFS、保存データと認証の扱い
 
 ## 設計判断
 
@@ -99,7 +99,7 @@
 
 - 音声認識はNeMoのみ対応する。実装は [`sincromisor-server/speech-recognizer-nemo/`](../../sincromisor-server/speech-recognizer-nemo/)にある。
 - Babylon.jsの旧ページと関連実装・依存は削除済み。現行描画はThree.js + VRM 1.0を使う。
-- MinIOはSeaweedFSへ移行済み。旧設定の `compose/minio.yml`と `Docker/minio/`は残るが、通常のCompose構成には含めない。現在の保存領域は[保存領域の設計](infrastructure/storage.md)を参照する。
+- MinIOは利用対象から除外し、旧Compose・Docker定義も削除済み。S3には検証用構成を含めSeaweedFSを使う。現在の保存領域は[保存領域の設計](infrastructure/storage.md)を参照する。
 
 ## 保管領域
 

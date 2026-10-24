@@ -107,7 +107,7 @@ curl --fail --data-urlencode 'query=_time:1h host:fixture service:fixture' \
 
 Vector 0.60.0のnative journald入力はDockerが付けたプロジェクト・サービスラベルを読み、新規・再作成・削除済みコンテナも原本が残る範囲で回収する。
 RTC、フロントCaddy、音声処理、AgentServer、llama-server、VOICEVOX、Redis、SeaweedFS、Consul、bandog、初期化コンテナをサービス名の除外なしで対象にする。
-任意選択のMediaMTX・旧MinIOも同じプロジェクトなら対象である。
+任意選択のMediaMTXも同じプロジェクトなら対象である。
 Vector自身・転送Caddy・Consulも同じjournal入力で一度だけ回収する。`internal_logs`との二重入力や標準出力への再送先は設けない。Vector自身の任意本文・属性は捨て、`vector_runtime`の固定理由だけを残す。
 
 `configs/vector.toml`が正規化と送信の正本である。
