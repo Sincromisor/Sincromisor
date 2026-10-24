@@ -228,6 +228,7 @@ export class SincroAppController {
         // 購読直後にスナップショットを送ることで、React 側は初回描画時の「空状態」を減らせる。
         const unsubscribe = this.eventHub.subscribe(listener);
         listener({ type: "media_state", state: { ...this.lifecycle.mediaState } });
+        listener({ type: "audio_input_state", state: this.lifecycle.audioInputState });
         emitSincroAppControllerInitialSnapshot({
             listener,
             lifecycleState: this.lifecycleState,
@@ -242,6 +243,7 @@ export class SincroAppController {
                     lifecycleState: this.lifecycleState,
                     iceConnectionState: this.iceConnectionState,
                     signalingState: this.signalingState,
+                    audioInputState: this.lifecycle.audioInputState,
                 }),
         });
         return unsubscribe;
@@ -255,6 +257,11 @@ export class SincroAppController {
     /** 設定を保持した明示開始。重複操作と非同期結果はライフサイクル所有者が制御する。 */
     start(): void {
         this.lifecycle.start();
+    }
+
+    /** 設定と稼働中のカメラを保ったまま、失敗した音声取得だけを再試行する。 */
+    retryAudioInput(): void {
+        this.lifecycle.retryAudioInput();
     }
 
     /** 診断・再接続用のRTC停止。機器全体の終了とは区別する。 */
@@ -382,9 +389,15 @@ export class SincroAppController {
         }
     }
 
-    // 実配信は EventHub に委譲し、本体は emit 順序制御に集中する。
+    // 状態を保持してから配信し、音声取得結果と接続表示を同じ通知回に揃える。
     private emitEvent(event: SincroAppEvent): void {
         if (event.type === "media_state") this.lifecycle?.updateMediaState(event.state);
+        if (event.type === "audio_input_state" && this.lifecycle) {
+            this.lifecycle.audioInputState = event.state;
+            this.eventHub.emit(event);
+            this.emitDerivedConnectionState();
+            return;
+        }
         this.eventHub.emit(event);
     }
 
@@ -450,6 +463,7 @@ export class SincroAppController {
                 lifecycleState: this.lifecycleState,
                 iceConnectionState: this.iceConnectionState,
                 signalingState: this.signalingState,
+                audioInputState: this.lifecycle.audioInputState,
             }),
         );
     }

@@ -48,13 +48,14 @@ export function SincroPageAppShell({ controlPanel, onCharacterMounted }: SincroP
     );
 }
 
-// 題名も設定パネルと同じ購読で描画し、有効な制御処理の差し替えに追従する。
+// 題名と常設操作を描画し、その下端をパネル・重要通知の配置へ共有する。
 function SincroShellHeader() {
     const { settings } = useSincroAppControllerSettingsState();
     const headerRef = useRef<HTMLDivElement>(null);
     useLayoutEffect(() => {
         const node = headerRef.current;
-        const root = node?.parentElement;
+        // 重要通知は本文の兄弟にも配置されるため、計測値を文書全体へ公開する。
+        const root = node?.ownerDocument.documentElement;
         if (!node || !root) return;
         // 文字拡大・狭幅の折り返し後も、パネル操作を常設ヘッダーの下へ配置する。
         const measure = () =>

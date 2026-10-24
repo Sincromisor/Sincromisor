@@ -30,7 +30,15 @@ export type PanelLearnedVadState = {
 };
 
 export type PanelConnectionState = {
-    value: "idle" | "starting" | "connecting" | "connected" | "degraded" | "stopping" | "stopped";
+    value:
+        | "idle"
+        | "starting"
+        | "connecting"
+        | "connected"
+        | "degraded"
+        | "input_failed"
+        | "stopping"
+        | "stopped";
     detail: string;
 };
 
