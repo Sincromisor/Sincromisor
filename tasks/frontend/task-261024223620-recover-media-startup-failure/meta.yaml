@@ -1,14 +1,14 @@
 id: task-261024223620-recover-media-startup-failure
 title: 入力機器の取得失敗を状態へ反映し再試行できるようにする
 category: frontend
-status: open
+status: done
 depends_on:
   - task-261024223620-end-experience-and-release-media
 superseded_by: null
 review: APPROVED
 reviewed_sha: d5eb90b4c0a546f37b459bfec871f767a71cb9d7
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 1
 created_at: 2026-10-24
-closed_at: null
+closed_at: 2026-10-25
 legacy_ids: []
