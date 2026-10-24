@@ -4,12 +4,11 @@
 
 ## タスク一覧（自動生成 / 全 38 件）
 
-### open（未完） — 8 件
+### open（未完） — 7 件
 
 | タスク                                                                                                                 | タイトル                                                 | 判定 | 依存                                                 |
 | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ---- | ---------------------------------------------------- |
 | [task-261024223620-recover-media-startup-failure](./task-261024223620-recover-media-startup-failure/task.md)           | 入力機器の取得失敗を状態へ反映し再試行できるようにする   | —    | `task-261024223620-end-experience-and-release-media` |
-| [task-261024223621-announce-conversation-speakers](./task-261024223621-announce-conversation-speakers/task.md)         | 会話の話者と新着を支援技術へ伝える                       | —    | —                                                    |
 | [task-261024223621-make-conversation-history-readable](./task-261024223621-make-conversation-history-readable/task.md) | 会話履歴を読み返せる操作を設ける                         | —    | —                                                    |
 | [task-261024223621-restore-dialog-panel-focus](./task-261024223621-restore-dialog-panel-focus/task.md)                 | ダイアログと設定パネルのフォーカス移動を整える           | —    | —                                                    |
 | [task-261024223622-preserve-title-editing-state](./task-261024223622-preserve-title-editing-state/task.md)             | タイトル入力中の空欄を既定値で上書きしない               | —    | —                                                    |
@@ -17,7 +16,7 @@
 | [task-261024223622-remove-synthetic-welcome-history](./task-261024223622-remove-synthetic-welcome-history/task.md)     | 開始時の架空の会話と固定音声案内を取り除く               | —    | —                                                    |
 | [task-261024223622-separate-audio-diagnostic-entry](./task-261024223622-separate-audio-diagnostic-entry/task.md)       | 通常体験の選択と音声診断の導線を分ける                   | —    | —                                                    |
 
-### done（完了） — 30 件
+### done（完了） — 31 件
 
 | タスク                                                                                                             | タイトル                                                 | 判定    | 依存                                                 |
 | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- | ------- | ---------------------------------------------------- |
@@ -51,5 +50,6 @@
 | [task-261024223620-clarify-media-data-use](./task-261024223620-clarify-media-data-use/task.md)                     | 開始前に音声と映像の扱いを判断できるようにする           | ✅ PASS | —                                                    |
 | [task-261024223620-end-experience-and-release-media](./task-261024223620-end-experience-and-release-media/task.md) | 機器の使用状態と体験を終了する操作を通常画面に設ける     | ✅ PASS | —                                                    |
 | [task-261024223620-keep-important-notices-visible](./task-261024223620-keep-important-notices-visible/task.md)     | 重要な通知をキャラクターに隠れない位置へ表示する         | ✅ PASS | —                                                    |
+| [task-261024223621-announce-conversation-speakers](./task-261024223621-announce-conversation-speakers/task.md)     | 会話の話者と新着を支援技術へ伝える                       | ✅ PASS | —                                                    |
 
 <!-- AUTOGEN:tasks END -->

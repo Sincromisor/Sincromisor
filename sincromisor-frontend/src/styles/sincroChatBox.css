@@ -71,7 +71,7 @@ div#sincroChatBox {
         z-index: 5;
     }
 
-    div.sincroMessage {
+    .sincroMessage {
         & {
             position: relative;
             display: grid;
@@ -142,7 +142,7 @@ div#sincroChatBox {
         }
     }
 
-    div.sincroUserMessage {
+    .sincroUserMessage {
         & {
             align-self: flex-end;
             grid-template-columns: minmax(0, 1fr) var(--chatBoxAvatarGap) var(--chatBoxIconSize);
@@ -168,8 +168,8 @@ div#sincroChatBox {
         }
     }
 
-    div.sincroSystemMessage,
-    div.sincroResetMessage {
+    .sincroSystemMessage,
+    .sincroResetMessage {
         & {
             align-self: flex-start;
             grid-template-columns: var(--chatBoxIconSize) var(--chatBoxAvatarGap) minmax(0, 1fr);
@@ -190,14 +190,14 @@ div#sincroChatBox {
         }
     }
 
-    div.sincroResetMessage {
+    .sincroResetMessage {
         & .sincroMessage__text {
             border-color: rgba(189, 202, 220, 0.18);
             color: var(--chatBoxMessageMutedTextColor);
         }
     }
 
-    div.sincroErrorMessage {
+    .sincroErrorMessage {
         & {
             align-self: flex-start;
             grid-template-columns: var(--chatBoxIconSize) var(--chatBoxAvatarGap) minmax(0, 1fr);
@@ -232,7 +232,7 @@ div#sincroChatBox {
             --chatBoxBottomInset: clamp(86px, 13dvh, 118px);
         }
 
-        div.sincroMessage {
+        .sincroMessage {
             & {
                 max-width: 100%;
                 min-width: min(200px, 100%);
@@ -264,7 +264,7 @@ div#sincroChatBox {
             font-size: 13px;
         }
 
-        div.sincroMessage {
+        .sincroMessage {
             & {
                 width: fit-content;
                 max-width: calc(100% - 6px);
@@ -277,9 +277,25 @@ div#sincroChatBox {
             }
         }
 
-        div.sincroUserMessage {
+        .sincroUserMessage {
             align-self: flex-end;
             max-width: calc(100% - 28px);
         }
     }
+}
+
+.sincroMessage__speaker {
+    font-size: 0.85em;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+.sincroMessage__text > p { margin: 0; }
+/* 視覚表示の履歴と分け、新着の要約だけを支援技術へ渡す。 */
+.sincroChatAnnouncement {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
