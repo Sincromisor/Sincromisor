@@ -36,6 +36,8 @@ it("DOMなしで履歴を保持し、同一ID更新・件数制限・文字列�
     expect(markup).not.toContain("同じエラー");
     expect(service.getSnapshot().importantNotice?.message.message).toBe("同じエラー");
     expect(markup).toContain("リセット");
+    expect(markup).toContain("<article");
+    expect(markup).toContain("Glorious AI");
     unsubscribe();
     listener.mockClear();
     service.writeSystemMessage("購読解除後");

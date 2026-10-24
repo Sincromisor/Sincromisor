@@ -1,5 +1,8 @@
+import { useId } from "react";
 import type { ChatMessageViewRecord } from "../../../../app/controller";
 import type { ChatMessage } from "../../../rtc/rtcMessage";
+import { chatSpeakerName } from "./chatAnnouncementQueue";
+import { ChatAnnouncer } from "./chatAnnouncer";
 import { useChatSnapshot } from "./useChatSnapshot";
 
 function messageTypeToClassName(messageType: string): string {
@@ -30,6 +33,7 @@ export function SincroChatView() {
 
     return (
         <>
+            <ChatAnnouncer />
             {messages
                 .filter((record) => record.message.message_type !== "error")
                 .map((record) => (
@@ -50,8 +54,10 @@ function ChatMessageItem({
     record: ChatMessageViewRecord;
     systemIconUrl: string;
 }) {
+    const speakerId = useId();
     return (
-        <div
+        <article
+            aria-labelledby={speakerId}
             id={`msg${record.message.message_id}`}
             className={`${messageTypeToClassName(record.message.message_type)} sincroMessage`}
             // 既存CSSでは初期opacity=0のため、React描画では明示的に表示状態にする。
@@ -64,16 +70,17 @@ function ChatMessageItem({
                     alt=""
                 />
             </div>
-            {canRenderHtml(record) ? (
-                // 明示的に許可したシステム・リセットメッセージだけHTMLとして描画する。
-                <p
-                    className="sincroMessage__text"
-                    // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted_html は system/reset の既存互換HTMLだけを許可している。
-                    dangerouslySetInnerHTML={{ __html: record.message.message }}
-                />
-            ) : (
-                <p className="sincroMessage__text">{record.message.message}</p>
-            )}
-        </div>
+            <div className="sincroMessage__text">
+                <div id={speakerId} className="sincroMessage__speaker">
+                    {chatSpeakerName(record)}
+                </div>
+                {canRenderHtml(record) ? (
+                    // biome-ignore lint/security/noDangerouslySetInnerHtml: system/resetの既存trusted_htmlだけを描画する。
+                    <p dangerouslySetInnerHTML={{ __html: record.message.message }} />
+                ) : (
+                    <p>{record.message.message}</p>
+                )}
+            </div>
+        </article>
     );
 }
