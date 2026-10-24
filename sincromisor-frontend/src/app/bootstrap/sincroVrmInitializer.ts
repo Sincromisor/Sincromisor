@@ -51,8 +51,6 @@ export class SincroVRMInitializer {
         this.appController.setStartHooks({
             beforeStart: () => {
                 if (!this.initialized) throw new Error("VRM page is not initialized.");
-                // 既存 UX を崩さないよう、挨拶メッセージは初回 start 前に注入する。
-                this.writeWelcomeMessagesOnce();
             },
             afterStart: () => {
                 // scene 起動や dialog close は RTC 開始後の副作用として hook 側へ寄せる。
@@ -122,16 +120,7 @@ export class SincroVRMInitializer {
             });
     }
 
-    /** 診断では会話例や合成音声の案内を作らず、RTCの実際の接続状態だけを表示する。 */
-    private writeWelcomeMessagesOnce(): void {
-        if (["echo", "playback"].includes(this.appController.getSettingsSnapshot().talkMode)) {
-            return;
-        }
-        this.appController.chat.writeUnknownUserMessage("こんにちは!");
-        this.appController.chat.writeSystemMessage("こんにちは～!");
-        this.appController.chat.writeSystemMessage("音声は「VOICEVOX 四国めたん」でお送りします。");
-    }
-
+    /** 初回だけシーンを生成し、会話を書き込まず開始前ダイアログを閉じる。 */
     private startUiSideEffectsOnce(): void {
         if (this.appUiStarted) {
             return;
