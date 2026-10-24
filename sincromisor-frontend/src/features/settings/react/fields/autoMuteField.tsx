@@ -5,7 +5,6 @@ import {
     SettingsToggleGrid,
 } from "../primitives/settingsPrimitives";
 import type { ToggleGroupProps } from "./settingsFieldTypes";
-import { settingHelp } from "./settingsHelp";
 
 type CharacterDisplayTogglesProps = ToggleGroupProps & {
     uiHints: {
@@ -28,9 +27,8 @@ export function AutoMuteField({
             <SettingsToggleGrid density={gridDensity}>
                 <SettingsToggle
                     density={toggleDensity}
-                    label="自動でミュートする"
+                    label="顔の向きでマイクを自動ミュート"
                     disabledReason={uiHints.enableAutoMuteReason}
-                    help={settingHelp.enableAutoMute}
                     checked={!!settings.enableAutoMute}
                     disabled={uiState.enableAutoMuteDisabled}
                     onChange={(checked) => onApplySettings({ enableAutoMute: checked })}

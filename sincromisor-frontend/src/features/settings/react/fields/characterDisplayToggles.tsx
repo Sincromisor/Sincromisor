@@ -32,16 +32,15 @@ export function CharacterDisplayToggles({
                     density={toggleDensity}
                     label="3Dキャラクターを表示"
                     disabledReason={uiHints.enableCharacterReason}
-                    description={settingHelp.enableCharacter}
                     checked={!!settings.enableCharacter}
                     disabled={uiState.enableCharacterDisabled}
                     onChange={(checked) => onApplySettings({ enableCharacter: checked })}
                 />
             </SettingsToggleGrid>
             <SettingsRange
-                label="上半身モーション"
+                label="会話中の上半身の動き"
                 disabledReason="3Dキャラクター表示をオンにすると調整できます。"
-                description={settingHelp.characterMotionScale}
+                help={settingHelp.characterMotionScale}
                 {...sincroAppNumericSettingConstraints.characterMotionScale}
                 step="any"
                 value={settings.characterMotionScale}

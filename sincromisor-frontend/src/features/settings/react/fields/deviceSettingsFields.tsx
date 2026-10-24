@@ -52,9 +52,6 @@ export function DeviceSelectionHint({
             `選択中の${kindLabel}は現在見つかりません。別のデバイスへ切り替えるか、既定デバイスを選んでください。`,
         );
     }
-    if (selection.isAvailable && selection.matchedDevice) {
-        messages.push(`選択中: ${selection.matchedDevice.label}`);
-    }
     if (unavailableReason) {
         messages.push(unavailableReason);
     }
