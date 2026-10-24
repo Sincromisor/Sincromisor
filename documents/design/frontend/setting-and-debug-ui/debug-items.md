@@ -187,21 +187,20 @@
 
 キーは `sincroMotion.poseRetarget`内。既定値の正本は[姿勢変換設定](../../../../sincromisor-frontend/src/character/retargeting/sincroPoseRetargetTypes.ts)の `DEFAULT_SINCRO_POSE_RETARGET_CONFIG`。画面上は追跡状態による入力無効化を行わず、モデルの窓口を通じて接続されたシーンへ適用する。
 
-| 画面上の項目・キー                                           | 選択肢・範囲 / 刻み                                | 既定値        |
-| ------------------------------------------------------------ | -------------------------------------------------- | ------------- |
-| `IK Mode` / `armIkMode`                                      | `world_3d_ik` / `screen_space_ik` / `feature_only` | `world_3d_ik` |
-| `Composer Gesture` / `composerSemanticFingerApplicationMode` | `composer`（semantic/finger composer）/ `off`      | `composer`    |
-| `Intensity` / `intensityScale`                               | `0〜1.2 / 0.05`、百分率表示                        | `0.68`        |
-| `Min Confidence` / `minConfidence`                           | `0〜1 / 0.05`                                      | `0.45`        |
-| `Smoothing` / `smoothingMs`                                  | `40〜800 / 10` ms                                  | `155`         |
-| `Neutral Return` / `returnToNeutralMs`                       | `80〜2000 / 20` ms                                 | `520`         |
-| `IK Strength` / `armIkStrength`                              | `0〜1 / 0.05`、百分率表示                          | `1.0`         |
-| `IK Target Scale` / `armIkTargetScale`                       | `0.2〜1.5 / 0.05`                                  | `1.0`         |
-| `Max Lift` / `armIkMaxLiftRad`                               | `0〜π/2 / 0.02` rad、表示は度                      | 34度相当      |
-| `Max Open` / `armIkMaxOpenRad`                               | `0〜π/2 / 0.02` rad、表示は度                      | 28度相当      |
-| `Max Flex` / `armIkMaxForearmFlexRad`                        | `0〜π/2 / 0.02` rad、表示は度                      | 38度相当      |
+| 画面上の項目・キー                     | 選択肢・範囲 / 刻み                                | 既定値        |
+| -------------------------------------- | -------------------------------------------------- | ------------- |
+| `IK Mode` / `armIkMode`                | `world_3d_ik` / `screen_space_ik` / `feature_only` | `world_3d_ik` |
+| `Intensity` / `intensityScale`         | `0〜1.2 / 0.05`、百分率表示                        | `0.68`        |
+| `Min Confidence` / `minConfidence`     | `0〜1 / 0.05`                                      | `0.45`        |
+| `Smoothing` / `smoothingMs`            | `40〜800 / 10` ms                                  | `155`         |
+| `Neutral Return` / `returnToNeutralMs` | `80〜2000 / 20` ms                                 | `520`         |
+| `IK Strength` / `armIkStrength`        | `0〜1 / 0.05`、百分率表示                          | `1.0`         |
+| `IK Target Scale` / `armIkTargetScale` | `0.2〜1.5 / 0.05`                                  | `1.0`         |
+| `Max Lift` / `armIkMaxLiftRad`         | `0〜π/2 / 0.02` rad、表示は度                      | 34度相当      |
+| `Max Open` / `armIkMaxOpenRad`         | `0〜π/2 / 0.02` rad、表示は度                      | 28度相当      |
+| `Max Flex` / `armIkMaxForearmFlexRad`  | `0〜π/2 / 0.02` rad、表示は度                      | 38度相当      |
 
-姿勢変換の11入力は変更した項目だけをページ別に保存する。一般設定の「姿勢同期」は強度の基準で、診断側で明示的に変更した保存強度だけを後から適用する。通常の姿勢同期操作は同値でも診断側の強度上書きを解除し、診断側の変更を一般設定の保存値として扱わない。`Composer Gesture`は意味に基づく動作・指の層の診断用切り戻しであり、腕・体幹・全面適用の旧切り戻し入力は存在しない。
+姿勢変換の10入力は変更した項目だけをページ別に保存する。一般設定の「姿勢同期」は強度の基準で、診断側で明示的に変更した保存強度だけを後から適用する。通常の姿勢同期操作は同値でも診断側の強度上書きを解除し、診断側の変更を一般設定の保存値として扱わない。姿勢合成の切り戻し入力は存在しない。保存済みの旧切り戻し設定は読み捨て、他の姿勢調整は復元する。
 
 ## 通信状態と統計
 

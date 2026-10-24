@@ -11,19 +11,17 @@ import {
     parseMotionIntentState,
 } from "../motionIntent/motionIntentState";
 import { createSemanticMotionPoseLayer } from "../motionIntent/semanticMotionPoseLayer";
-import type { ComposerSemanticFingerApplicationMode } from "../retargeting/sincroPoseRetargetTypes";
 import type { TemporalUpperBodyState } from "../temporal/temporalUpperBodyState";
 import type { VrmPoseLayer } from "../vrmPose/vrmPoseTypes";
 
 /**
- * production composer に semantic / finger layer を追加するための snapshot-only 入力。
+ * 本番の姿勢合成へ意味に基づく動作・指の層を追加するためのスナップショット入力。
  *
- * `intent` は parser 境界で検証されるため `unknown` のまま受け、失敗時は警告を残し、指の保持期限だけは評価する。
- * `hand` は低次元 `SincroHandMotionSnapshot` に限定し、Gesture Recognizer raw result、MediaPipe raw landmark、
- * VRM Object3D、raw bone node はこの境界へ入れない。
+ * `intent` は解析時に検証するため `unknown` のまま受け、失敗時は警告を残し、指の保持期限だけは評価する。
+ * `hand` は低次元 `SincroHandMotionSnapshot` に限定し、Gesture RecognizerやMediaPipeの未加工の結果、
+ * VRM Object3D、元のボーンノードはこの境界へ入れない。
  */
 export type SincroVrmPoseComposerSemanticFingerInput = {
-    mode: ComposerSemanticFingerApplicationMode;
     /** 管理側でHandの観測時計へ写した時刻。指側で独自採時しない。 */
     mediaTimeMs?: number;
     /** Handの実観測時刻。同じ観測の再描画では更新しない。 */
@@ -39,19 +37,19 @@ export type SincroVrmPoseComposerSemanticFingerInput = {
 /**
  * 合成サービスがフレーム間で指を短時間保持するための状態。
  *
- * VRM初期化と切り戻しフラグの変更時は `SincroVrmPoseComposerService.reset()` で破棄する。
- * semantic preset は前回 state を参照せず、保持した出力を観測へ昇格せず、Hand欠損時も実観測からの期限を評価する。
+ * VRM初期化時は `SincroVrmPoseComposerService.reset()` で破棄する。
+ * 意味に基づく動作のプリセットは前回状態を参照しない。保持した指の出力を観測へ昇格せず、Hand欠損時も実観測からの期限を評価する。
  */
 export type SincroVrmPoseComposerSemanticFingerState = {
     previousFinger: Partial<Record<"left" | "right", FingerCurlObservation>>;
 };
 
 /**
- * semantic / finger layer 生成の observable result。
+ * 意味に基づく動作・指の層と、生成時の診断結果。
  *
- * `layers` は composer へ渡せる layer だけを含み、invalid intent、Minimal profile、Hand 欠損、missing
- * finger chain などの抑制理由は `warnings` に短い診断文字列として残す。`previousFinger` は次 frame の
- * short hold 用 state であり、result が空でも caller が lifecycle に応じて保持 / reset を判断する。
+ * `layers` は合成可能な層だけを含み、無効意図、最小プロファイル、Hand欠損、指ボーンの欠損などの
+ * 抑制理由を `warnings` に残す。`previousFinger` は次フレームの短時間保持に使い、
+ * 結果が空でも呼び出し側が保持・破棄を判断する。
  */
 export type SincroVrmPoseComposerSemanticFingerLayerResult = {
     layers: VrmPoseLayer[];
@@ -62,10 +60,9 @@ export type SincroVrmPoseComposerSemanticFingerLayerResult = {
 /**
  * 本番の最終姿勢へ合成する意味に基づく動作・指の層を保存済みスナップショットだけから作る。
  *
- * 入力は parsed 可能な `MotionIntentState`、低次元 Hand snapshot、完成版 `AvatarMotionProfile` に限定する。
- * Gesture Recognizer raw result、MediaPipe raw landmark、VRM Object3D、raw bone node は受け取らないため、
- * replay と live の composer input が同じ contract で説明できる。invalid intent、Minimal profile、
- * Hand欠損では警告を残し、指を期限付きで保持して中立へ戻す。
+ * 完成版 `AvatarMotionProfile` がある場合は常に層生成を試みる。最小プロファイルでは警告だけを返す。
+ * 再生と実時間処理で同じ入力契約を使い、無効な意図やHand欠損には警告を残す。
+ * 意図の解析結果に関わらず指は観測時刻から期限を評価し、保持期限後は中立へ戻す。
  */
 export function createSemanticFingerComposerLayers(
     profile: AvatarMotionProfile | MinimalAvatarMotionProfile,
@@ -74,9 +71,6 @@ export function createSemanticFingerComposerLayers(
 ): SincroVrmPoseComposerSemanticFingerLayerResult {
     if (input === undefined) {
         return { layers: [], warnings: [], previousFinger: state.previousFinger };
-    }
-    if (input.mode !== "composer") {
-        return { layers: [], warnings: ["semantic_finger_application_off"], previousFinger: {} };
     }
     if (profile.schemaVersion !== "sincro.avatar-motion-profile.v1") {
         return {

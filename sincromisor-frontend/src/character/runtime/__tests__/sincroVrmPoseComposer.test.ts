@@ -60,30 +60,7 @@ describe("SincroVrmPoseComposerService", () => {
         );
     });
 
-    it("keeps semantic and finger layers out when the rollback flag is off", () => {
-        const service = new SincroVrmPoseComposerService();
-        const result = compose(service, {
-            frame: createActiveFrame(),
-            profile: FULL_PROFILE,
-            semanticFinger: {
-                mode: "off",
-                intent: createIntent("peace"),
-                hand: createHand({ index: 0.1, middle: 0.1, ring: 0.8, little: 0.8 }),
-            },
-            deltaSeconds: 1 / 60,
-        });
-
-        expect(result.status).toBe("available");
-        expect(result.result?.ownedBones).toContain("leftUpperArm");
-        expect(result.result?.ownedBones).toContain("spine");
-        expect(result.result?.suppressedLayers.every((layer) => layer.kind !== "semantic")).toBe(
-            true,
-        );
-        expect(result.result?.suppressedLayers.every((layer) => layer.id !== "finger")).toBe(true);
-        expect(result.warnings).toContain("semantic_finger_application_off");
-    });
-
-    it("adds semantic and finger layers only from valid intent, hand, and full profile snapshots", () => {
+    it("有効なスナップショットから明示的な有効化なしで意味に基づく動作と指の層を追加する", () => {
         const service = new SincroVrmPoseComposerService();
         const intent = createIntent("peace");
         intent.arms.left.confidence = 0.6;
@@ -91,7 +68,6 @@ describe("SincroVrmPoseComposerService", () => {
             frame: createActiveFrame(),
             profile: FULL_PROFILE,
             semanticFinger: {
-                mode: "composer",
                 mediaTimeMs: 1000,
                 poseMediaTimeMs: 1000,
                 intent,
@@ -118,7 +94,6 @@ describe("SincroVrmPoseComposerService", () => {
             frame: createActiveFrame(),
             profile: FULL_PROFILE,
             semanticFinger: {
-                mode: "composer",
                 mediaTimeMs: 1000,
                 poseMediaTimeMs: 1000,
                 intent: { schemaVersion: "sincro.motion-intent.v1", rawLandmarks: [] },
@@ -130,7 +105,6 @@ describe("SincroVrmPoseComposerService", () => {
             frame: createActiveFrame(),
             profile: COMPLETE_PROFILE,
             semanticFinger: {
-                mode: "composer",
                 mediaTimeMs: 1000,
                 poseMediaTimeMs: 1000,
                 intent: createIntent("thumbsUp"),
@@ -157,7 +131,6 @@ describe("SincroVrmPoseComposerService", () => {
             frame: createActiveFrame(),
             profile: FULL_PROFILE,
             semanticFinger: {
-                mode: "composer",
                 mediaTimeMs: 1000,
                 poseMediaTimeMs: 1000,
                 intent,
@@ -183,7 +156,6 @@ describe("SincroVrmPoseComposerService", () => {
             frame: createActiveFrame(),
             profile,
             semanticFinger: {
-                mode: "composer",
                 mediaTimeMs: 1000,
                 poseMediaTimeMs: 1000,
                 intent: createIntent("tracking"),

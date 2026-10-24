@@ -53,7 +53,6 @@ export type SincroPoseRetargetRuntimeInput = {
 };
 
 export type {
-    ComposerSemanticFingerApplicationMode,
     SincroPoseArmIkMode,
     SincroPoseArmSolverPrimarySource,
     SincroPoseArmSolverSource,

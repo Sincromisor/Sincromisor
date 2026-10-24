@@ -60,7 +60,6 @@ export function recomputeMotionReplay(input: MotionReplayComparisonInput) {
             deltaSeconds: previousTimeMs === undefined ? 1 / 60 : (time - previousTimeMs) / 1000,
             mediaTimeMs: time,
             semanticFinger: {
-                mode: "composer",
                 intent: state.intent,
                 hand,
                 mediaTimeMs: time,

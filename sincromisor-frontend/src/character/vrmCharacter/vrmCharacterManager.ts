@@ -16,7 +16,6 @@ import { FaceMorphController } from "../behavior/faceMorphController";
 import { HeadBoneController } from "../behavior/headBoneController";
 import { SincroFaceRetargeter } from "../retargeting/sincroFaceRetargeter";
 import {
-    DEFAULT_SINCRO_POSE_RETARGET_CONFIG,
     type SincroPoseRetargetConfig,
     SincroPoseRetargeter,
 } from "../retargeting/sincroPoseRetargeter";
@@ -81,8 +80,6 @@ export class VRMCharacterManager {
     private readonly sincroFaceRetargeter = new SincroFaceRetargeter();
     private readonly sincroPoseRetargeter = new SincroPoseRetargeter();
     private readonly poseComposer = new SincroVrmPoseComposerService();
-    private composerSemanticFingerApplicationMode =
-        DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerSemanticFingerApplicationMode;
     private sincroMotionPipelineState: SincroMotionPipelineState =
         createDefaultSincroMotionPipelineState();
     private latestBehaviorSnapshot?: CharacterBehaviorSnapshot;
@@ -268,7 +265,6 @@ export class VRMCharacterManager {
             frame: sincroPose,
             profile: avatarMotionProfile,
             semanticFinger: {
-                mode: this.composerSemanticFingerApplicationMode,
                 intent: this.latestBehaviorSnapshot.sincroMotionPipeline?.intent,
                 hand: this.latestBehaviorSnapshot.sincroMotionPipeline?.hand,
                 mediaTimeMs: clock.handTimeMs,
@@ -332,28 +328,10 @@ export class VRMCharacterManager {
     }
 
     /**
-     * Debug Console などから pose retarget 設定を runtime へ反映する。
-     *
-     * 意味に基づく動作・指の切り戻しフラグ変更時だけ、合成サービスの前回姿勢を破棄し、
-     * 前 mode の angular velocity clamp 基準や finger previous hold を次 frame に持ち越さない。arm、
-     * torso / shoulder、full normalized pose application の staged rollback flags は削除済みである。
-     * retargeter config は常に転送するが、VRM normalized pose や expression はここでは書き込まない。
+     * 診断操作などの姿勢調整を姿勢変換処理へ渡す。合成サービスの前回姿勢と指の保持状態は維持する。
+     * VRMの姿勢や表情への書き込みは毎フレームの更新処理に委ねる。
      */
     setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
-        const nextComposerSemanticFingerApplicationMode =
-            config.composerSemanticFingerApplicationMode ??
-            this.composerSemanticFingerApplicationMode;
-        if (
-            nextComposerSemanticFingerApplicationMode !== this.composerSemanticFingerApplicationMode
-        ) {
-            /*
-                semantic / finger layer の有効/無効を切り替える frame では、前 mode で生成された
-                composer final pose を angular velocity clamp の previous として使わず、finger previous hold も
-                破棄する。full application 自体は常時 production path のため、ここで別 mode state は持たない。
-            */
-            this.poseComposer.reset();
-            this.composerSemanticFingerApplicationMode = nextComposerSemanticFingerApplicationMode;
-        }
         this.sincroPoseRetargeter.setConfig(config);
     }
 

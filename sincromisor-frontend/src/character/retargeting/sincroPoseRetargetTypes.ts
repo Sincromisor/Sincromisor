@@ -33,18 +33,6 @@ export type SincroPoseArmSolverSource = {
 
 export type SincroPoseArmIkMode = "feature_only" | "screen_space_ik" | "world_3d_ik";
 
-/**
- * semantic pose / finger curl layer の composer input 接続を切り替える developer rollback flag。
- *
- * `"composer"` は保存済み `MotionIntentState`、低次元 Hand snapshot、完成版 `AvatarMotionProfile` が
- * valid な frame だけ semantic / finger layer を dry-run composer へ追加する。`"off"` は arm / torso
- * flag とは独立に semantic / finger layer だけを外し、既存 tracking / torso composer 検証を維持する。
- * 通常設定UIには含めない。診断操作としてページ別に保存し、全設定初期化で解除する。
- * 所有者は motion runtime であり、semantic / finger regression の rollback 手順が不要になった時点で
- * flag と `semantic_finger_application_off` warning を同時に削除する。
- */
-export type ComposerSemanticFingerApplicationMode = "off" | "composer";
-
 export type SincroPoseRetargetedArm = {
     /** 欠損予測が期限へ近づく間、腕を下ろす代替層へ連続的に戻す重み。 */
     trackingWeight?: number;
@@ -97,6 +85,7 @@ export type SincroPoseRetargetFrame = {
     rightArm: SincroPoseRetargetedArm;
 };
 
+/** 姿勢変換と腕IKの調整値。意味に基づく動作・指の層生成は合成サービスが入力から判断する。 */
 export type SincroPoseRetargetConfig = {
     intensityScale: number;
     minConfidence: number;
@@ -116,17 +105,9 @@ export type SincroPoseRetargetConfig = {
     armIkMaxForearmFlexRad: number;
     armIkMode: SincroPoseArmIkMode;
     shoulderAnchorOffsetRad: number;
-    /**
-     * semantic / finger の composer layer 接続を切り替える developer rollback flag。
-     *
-     * 既定の `"composer"` は production semantic/finger application stage を有効にし、valid snapshot が
-     * 揃わない frame では warning 付きで layer を追加しない。`"off"` は MotionIntent / Hand 推定自体は
-     * observe-only に残したまま composer input から semantic / finger layer だけを外す。
-     * Debug Console 限定の rollback hook であり、semantic / finger layer の rollback 不要化と同時に削除する。
-     */
-    composerSemanticFingerApplicationMode: ComposerSemanticFingerApplicationMode;
 };
 
+/** 本番の姿勢変換に使う既定値。角度はラジアン、追従と中立復帰の時間はミリ秒。 */
 export const DEFAULT_SINCRO_POSE_RETARGET_CONFIG: SincroPoseRetargetConfig = {
     intensityScale: 0.68,
     minConfidence: 0.45,
@@ -146,7 +127,6 @@ export const DEFAULT_SINCRO_POSE_RETARGET_CONFIG: SincroPoseRetargetConfig = {
     armIkMaxForearmFlexRad: MathUtils.degToRad(38.0),
     armIkMode: "world_3d_ik",
     shoulderAnchorOffsetRad: MathUtils.degToRad(2.4),
-    composerSemanticFingerApplicationMode: "composer",
 };
 
 export const NEUTRAL_ARM_IK_CONSTRAINT: SincroArmIkConstraintSnapshot = {

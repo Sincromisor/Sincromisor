@@ -16,7 +16,6 @@ export type SincroPoseTuningConfig = Pick<
     | "armIkMaxOpenRad"
     | "armIkMaxForearmFlexRad"
     | "armIkMode"
-    | "composerSemanticFingerApplicationMode"
 >;
 
 /** UI・保存・シーンから独立した姿勢調整の正本。アプリと検証ページがそれぞれ所有する。 */
@@ -59,8 +58,6 @@ export function createDefaultSincroPoseTuningConfig(): SincroPoseTuningConfig {
         armIkMaxOpenRad: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMaxOpenRad,
         armIkMaxForearmFlexRad: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMaxForearmFlexRad,
         armIkMode: DEFAULT_SINCRO_POSE_RETARGET_CONFIG.armIkMode,
-        composerSemanticFingerApplicationMode:
-            DEFAULT_SINCRO_POSE_RETARGET_CONFIG.composerSemanticFingerApplicationMode,
     };
 }
 
@@ -101,9 +98,6 @@ export function normalizeSincroPoseTuning(
             Math.PI / 2,
         ),
         armIkMode: config.armIkMode ?? current.armIkMode,
-        composerSemanticFingerApplicationMode:
-            config.composerSemanticFingerApplicationMode ??
-            current.composerSemanticFingerApplicationMode,
     };
 }
 

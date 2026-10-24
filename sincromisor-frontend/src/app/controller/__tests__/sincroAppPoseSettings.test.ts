@@ -102,7 +102,6 @@ it("保存した視線・姿勢調整を接続前から保持し、同値の通�
     active.debug.applySincroPoseRetargetConfig({
         intensityScale: 0.9,
         armIkMaxLiftRad: angle,
-        composerSemanticFingerApplicationMode: "off",
     });
     active.debug.applyCharacterGazeTrackingTuning({
         ...active.presets.stable,
@@ -122,7 +121,6 @@ it("保存した視線・姿勢調整を接続前から保持し、同値の通�
             intensityScale: 0.9,
             smoothingMs: 175,
             armIkMaxLiftRad: angle,
-            composerSemanticFingerApplicationMode: "off",
         }),
     );
     expect(active.app.getSettingsSnapshot().sincroPoseRetargetScale).toBe(0.4);
