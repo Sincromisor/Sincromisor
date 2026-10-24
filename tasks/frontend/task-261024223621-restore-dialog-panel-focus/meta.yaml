@@ -1,0 +1,13 @@
+id: task-261024223621-restore-dialog-panel-focus
+title: ダイアログと設定パネルのフォーカス移動を整える
+category: frontend
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-10-24
+closed_at: null
+legacy_ids: []

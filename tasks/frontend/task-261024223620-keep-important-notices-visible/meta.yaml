@@ -1,0 +1,13 @@
+id: task-261024223620-keep-important-notices-visible
+title: 重要な通知をキャラクターに隠れない位置へ表示する
+category: frontend
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-10-24
+closed_at: null
+legacy_ids: []

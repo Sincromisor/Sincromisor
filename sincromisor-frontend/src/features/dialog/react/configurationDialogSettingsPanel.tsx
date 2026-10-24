@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { SettingsShell } from "../../settings/react/shell/settingsShell";
+import { StartupMediaNotice } from "./components/startupMediaNotice";
 import { ConfigurationDialogOverview } from "./configurationDialogOverview";
 import "./configurationDialogSettings.css";
 import { ConfigurationDialogSettingsFooter } from "./configurationDialogSettingsFooter";
@@ -55,6 +56,7 @@ export function ConfigurationDialogSettingsPanel() {
                     responsiveMode="container"
                     initialPageId="experience"
                     pages={pages}
+                    scrollEnd={<StartupMediaNotice settings={state.settings} />}
                     footer={
                         <ConfigurationDialogSettingsFooter
                             currentController={currentController}
