@@ -444,88 +444,109 @@ describe("TrackerRuntime", () => {
         runtime.stopFaceTracking("test_done");
     });
 
-    it("publishes worker lost gesture snapshots without switching to main-thread fallback", async () => {
-        const { video } = createFakeVideo();
-        const workerClient = new SincroTrackerWorkerClient();
-        const imageBitmap = createFakeImageBitmap();
-        const gestureSnapshots: SincroGestureMotionSnapshot[] = [];
-        let scheduled = false;
-        let fallbackCalled = false;
-        vi.stubGlobal("createImageBitmap", async () => imageBitmap);
-        vi.spyOn(workerClient, "detect").mockResolvedValue({
-            face: createFaceSnapshot({ timestampMs: 1000, source: "full-frame" }),
-            pose: createFreshPose(1000),
-            hand: createDetectedHandSnapshot(1000),
-            gesture: createSincroGestureFallbackSnapshot({
-                reason: "gesture init failed",
-                nowMs: 1000,
-                warnings: ["model_not_loaded"],
-            }),
-            stats: workerClient.getStats(),
-        });
+    it.each(["result", "cancelled", "late-frame"])(
+        "Workerの結果・中断で代替追跡しない (%s)",
+        async (mode) => {
+            const { video } = createFakeVideo();
+            const workerClient = new SincroTrackerWorkerClient();
+            const imageBitmap = createFakeImageBitmap();
+            const gestureSnapshots: SincroGestureMotionSnapshot[] = [];
+            let scheduled = false;
+            let enabled = true;
+            let fallbackCalled = false;
+            const closeFrame = vi.spyOn(imageBitmap, "close");
+            vi.stubGlobal("createImageBitmap", async () => {
+                if (mode === "late-frame") enabled = false;
+                return imageBitmap;
+            });
+            vi.spyOn(workerClient, "detect").mockResolvedValue({
+                face: createFaceSnapshot({ timestampMs: 1000, source: "full-frame" }),
+                pose: createFreshPose(1000),
+                hand: createDetectedHandSnapshot(1000),
+                gesture: createSincroGestureFallbackSnapshot({
+                    reason: "gesture init failed",
+                    nowMs: 1000,
+                    warnings: ["model_not_loaded"],
+                }),
+                stats: workerClient.getStats(),
+            });
 
-        await runTrackerRuntimeWorkerPipeline({
-            videoElement: video,
-            callbacks: {
-                onFaceMotion: () => {},
-                onGestureMotion: (snapshot) => {
-                    gestureSnapshots.push(snapshot);
+            if (mode === "cancelled") {
+                vi.mocked(workerClient.detect).mockRejectedValue(
+                    new DOMException("disposed", "AbortError"),
+                );
+            }
+            await runTrackerRuntimeWorkerPipeline({
+                videoElement: video,
+                callbacks: {
+                    onFaceMotion: () => {},
+                    onGestureMotion: (snapshot) => {
+                        gestureSnapshots.push(snapshot);
+                    },
                 },
-            },
-            workerClient,
-            timing: {
-                source: "request-video-frame-callback",
-                receivedAtPerformanceMs: 1000,
-                mediaTimeMs: 1000,
-                videoCurrentTimeMs: 1000,
-                droppedPresentedFrames: 0,
-            },
-            plan: {
-                runFace: true,
-                runPose: true,
-                hasFreshPoseForOptionalPass: true,
-                runHand: true,
-                runGesture: true,
-                runFaceRoi: false,
-            },
-            handTrackingEnabled: true,
-            gestureTrackingRequested: true,
-            gestureTrackingEnabled: true,
-            faceRoiTrackingEnabled: false,
-            handRoiPaused: false,
-            faceRoiPaused: false,
-            frameLoopIsEnabled: () => true,
-            markFrameLoopStopped: () => {},
-            scheduleFrame: () => {
-                scheduled = true;
-            },
-            markPoseInference: () => {},
-            markHandInference: () => {},
-            markGestureInference: () => {},
-            markFaceRoiInference: () => {},
-            setLatestPoseSnapshot: () => {},
-            applyPosePerformanceGate: () => {},
-            recordRoiFrame: () => ({
-                pauseState: "active",
-                fallbackCount: 0,
-                skippedFrames: 0,
-                consecutiveOverBudgetFrames: 0,
-                reasonCodes: [],
-            }),
-            withBudget: (input) => input.stats,
-            switchToMainThreadFallback: async () => {
-                fallbackCalled = true;
-            },
-        });
+                workerClient,
+                timing: {
+                    source: "request-video-frame-callback",
+                    receivedAtPerformanceMs: 1000,
+                    mediaTimeMs: 1000,
+                    videoCurrentTimeMs: 1000,
+                    droppedPresentedFrames: 0,
+                },
+                plan: {
+                    runFace: true,
+                    runPose: true,
+                    hasFreshPoseForOptionalPass: true,
+                    runHand: true,
+                    runGesture: true,
+                    runFaceRoi: false,
+                },
+                handTrackingEnabled: true,
+                gestureTrackingRequested: true,
+                gestureTrackingEnabled: true,
+                faceRoiTrackingEnabled: false,
+                handRoiPaused: false,
+                faceRoiPaused: false,
+                frameLoopIsEnabled: () => enabled,
+                markFrameLoopStopped: () => {},
+                scheduleFrame: () => {
+                    scheduled = true;
+                },
+                markPoseInference: () => {},
+                markHandInference: () => {},
+                markGestureInference: () => {},
+                markFaceRoiInference: () => {},
+                setLatestPoseSnapshot: () => {},
+                applyPosePerformanceGate: () => {},
+                recordRoiFrame: () => ({
+                    pauseState: "active",
+                    fallbackCount: 0,
+                    skippedFrames: 0,
+                    consecutiveOverBudgetFrames: 0,
+                    reasonCodes: [],
+                }),
+                withBudget: (input) => input.stats,
+                switchToMainThreadFallback: async () => {
+                    fallbackCalled = true;
+                },
+            });
 
-        expect(gestureSnapshots[0]).toMatchObject({
-            source: "lost",
-            fallbackReason: "gesture init failed",
-            warnings: ["gesture_skipped", "model_not_loaded"],
-        });
-        expect(fallbackCalled).toBe(false);
-        expect(scheduled).toBe(true);
-    });
+            if (mode !== "result") {
+                expect(gestureSnapshots).toHaveLength(0);
+            } else {
+                expect(gestureSnapshots[0]).toMatchObject({
+                    source: "lost",
+                    fallbackReason: "gesture init failed",
+                    warnings: ["gesture_skipped", "model_not_loaded"],
+                });
+            }
+            expect(fallbackCalled).toBe(false);
+            expect(scheduled).toBe(mode === "result");
+            if (mode === "late-frame") {
+                expect(workerClient.detect).not.toHaveBeenCalled();
+                expect(closeFrame).toHaveBeenCalled();
+            }
+        },
+    );
 });
 
 class FakeMediaStream {

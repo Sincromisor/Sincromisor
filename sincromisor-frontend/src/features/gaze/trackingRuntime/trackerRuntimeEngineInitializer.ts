@@ -1,6 +1,6 @@
 /**
- * Face / Pose / Hand / Gesture tracker の MediaPipe 初期化を TrackerRuntime から分離する lifecycle 境界。
- * 初期化例外は user-facing fallback 判断に使える短い detail へ変換し、callback publish や DOM cleanup は caller に残す。
+ * 追跡エンジンを初期化し、Workerの障害時にはメインスレッドへ切り替える。
+ * 利用者の中断は呼出元へ返し、映像の接続・終了と通知はTrackerRuntimeへ残す。
  */
 import { frontendLogger } from "../../../shared/logging/appLogger";
 import type { SincroFaceTracker } from "../faceTracking/sincroFaceTracker";
@@ -26,6 +26,7 @@ type TrackerRuntimeEngineInitializerOptions = {
     onGestureInitializationFallback: (reason: string, nowMs: number) => void;
 };
 
+/** Workerを選んだ場合はtrueを返す。中断は代替初期化せず拒否し、終了を呼出元へ委ねる。 */
 export async function initializeTrackerRuntimeEngine(
     options: TrackerRuntimeEngineInitializerOptions,
 ): Promise<boolean> {
@@ -39,6 +40,8 @@ export async function initializeTrackerRuntimeEngine(
             );
             return true;
         } catch (error) {
+            // 利用者による終了は処理方式の障害ではないため、代替の初期化を始めない。
+            if (error instanceof DOMException && error.name === "AbortError") throw error;
             frontendLogger.warn(
                 "Sincro tracker worker initialization failed. Falling back to main-thread tracking.",
                 { error },
