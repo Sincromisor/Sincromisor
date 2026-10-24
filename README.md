@@ -137,6 +137,8 @@ Google Chromeの設定を変えると、Chromium Embedded Frameworkにも反映�
 
 ## フロントエンドの開発
 
+開発環境の準備・日常操作・会話確認は[ローカル開発の手順](documents/design/infrastructure/local-development.md)、分散配置の更新・確認・復旧は[VPSへの配備手順](documents/design/infrastructure/vps-deployment.md)を参照する。
+
 Node.js 26.12.1とnpm 11.21.1を用意し、リポジトリルートで`npm ci`を一度実行する。採用版は`.node-version`と`package.json`に定義し、`npm run check:runtime`と導入時の検査で不一致を検出する。AgentServerは独立管理を維持する。
 
 日常操作はルートの`npm run dev`、`npm run build`、`npm test`、`npm run check`、`npm run format`を使う。Markdown全体の検査・整形は`check:md`・`format:md`、ブラウザー操作は`npm run browser -- <引数>`を使う。CLIのグローバル導入は不要。自動テスト用Chromiumは必要時だけ`npm run browser:install`で`work/playwright-browsers`へ取得し、`npm run browser:test -- <引数>`で同じ保存先を使う。実機用Chromeは別途用意し、[専用プロファイルの手順](documents/rules/playwright-cli.md)に従う。

@@ -66,6 +66,10 @@
 
 - [Docker Compose](infrastructure/compose.md)
     - Docker Composeプロファイル、環境変数受け渡し、ローカル起動
+- [ローカル開発の手順](infrastructure/local-development.md)
+    - 初回準備、ViteとComposeの使い分け、分散環境の下流、更新と確認
+- [VPSへの配備手順](infrastructure/vps-deployment.md)
+    - 配布・直接転送、ソースと静的配信の同期、完了確認、復旧
 - [コンテナイメージの公開](infrastructure/image-publishing.md)
     - GHCRへの月次更新、認証、旧構成の整理、失敗時の再開
 - [Consul](infrastructure/consul.md)

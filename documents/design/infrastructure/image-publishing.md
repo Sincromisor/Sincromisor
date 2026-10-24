@@ -69,16 +69,19 @@ node scripts/publish-images.mjs publish
 
 1. `git rev-parse HEAD`と `docker compose config --services`でソースと対象を確認する。選択したサービスだけを更新対象とし、各ホストの役割を実施記録へ列挙する。
 2. 更新前に `docker compose ps -a`を確認する。対象コンテナごとに `docker inspect --format '{{.Image}} {{json .Config.Cmd}}' <コンテナID>`でイメージIDと起動コマンドを保存し、対応する既存履歴タグまたはローカルの復旧用タグを確保する。復旧完了まで旧イメージを削除しない。
-3. `docker compose pull <対象サービス...>`で取得する。取得失敗時は再作成へ進まない。自作イメージは `docker image inspect --format '{{json .RepoDigests}}' <イメージ参照>`を公開時の配布ダイジェストと照合する。異なれば公開途中または別の更新なので停止する。
+3. `docker compose pull --policy always <対象サービス...>`で取得する。`pull_policy: build`のサービスも配布物を取得するため、ポリシーを明示する。直接転送したローカル専用タグにはこの取得を使わない。取得失敗時は再作成へ進まない。自作イメージは `docker image inspect --format '{{json .RepoDigests}}' <イメージ参照>`を公開時の配布ダイジェストと照合する。異なれば公開途中または別の更新なので停止する。
 4. `docker compose up -d --no-build --pull never <対象サービス...>`で反映する。イメージが同一でも起動設定を確実に反映する必要がある対象には `--force-recreate`を加える。依存サービスが起動対象へ加わるため、先に構成を確認する。
 5. `docker compose ps -a`と対象サービスのログを確認する。常駐サービスの稼働・死活確認と、一回限りの準備処理の終了コード0を区別する。実コンテナのイメージIDと `Config.Cmd`を再取得し、Python4サービスには `--no-sync`が含まれることを確認する。
 6. 各サービスのConsul登録と死活確認、ブラウザからのRTC接続、発話から認識・応答・音声再生までの主要経路を確認する。確認できない段階があれば、そのホストを確認済みにしない。
 
 失敗時は、対象、時刻、終了コード、必要なログを保存してから復旧する。秘密情報と会話内容を公開ログへ含めない。
 ホスト内の一時的なCompose上書きファイルで対象サービスの `image`に保存した復旧用タグを指定し、
-`docker compose -f compose.yml -f <復旧用ファイル> up -d --no-build --pull never <対象サービス...>`を実行する。
+現在選択しているComposeファイル一式に復旧用ファイルを最後に重ね、`up -d --no-build --pull never <対象サービス...>`を実行する。
+`-f`は `.env`の `COMPOSE_FILE`を置き換えるため、分散用・管理用・既存のイメージ上書きも必要な順序で列挙する。
 設定も変更した場合は更新前のComposeと設定へ戻し、同じ死活確認と主要経路を確認する。
 復旧で共有のCompose指定タグを書き換えず、保存領域の削除や `down -v`は行わない。
+
+分散配置の切替順序、RTC同梱フロントとホスト静的配信の同期は[VPS配備](vps-deployment.md)を参照する。
 
 ## 保守実施記録
 
