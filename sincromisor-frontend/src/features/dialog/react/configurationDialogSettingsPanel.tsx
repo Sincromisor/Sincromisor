@@ -82,7 +82,7 @@ export function ConfigurationDialogSettingsPanel() {
                 />
             ) : (
                 <section
-                    className="configurationDialogReactSettingsPanel__summary"
+                    className="settingsShell is-containerResponsive configurationDialogReactSettingsPanel__summary"
                     aria-label="開始前の確認"
                 >
                     <h1 id="configuration-dialog-title">開始前の確認</h1>
@@ -90,13 +90,15 @@ export function ConfigurationDialogSettingsPanel() {
                         state={state}
                         onOpenFilePicker={handleOpenVrmFilePicker}
                     />
-                    <ConfigurationDialogSettingsFooter
-                        currentController={currentController}
-                        dialogUiState={dialogUiState}
-                        startApp={startApp}
-                        showDetails={showDetails}
-                        onToggleDetails={() => setShowDetails(true)}
-                    />
+                    <div className="settingsShell__footer">
+                        <ConfigurationDialogSettingsFooter
+                            currentController={currentController}
+                            dialogUiState={dialogUiState}
+                            startApp={startApp}
+                            showDetails={showDetails}
+                            onToggleDetails={() => setShowDetails(true)}
+                        />
+                    </div>
                 </section>
             )}
         </fieldset>

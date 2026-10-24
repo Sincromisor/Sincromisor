@@ -1,14 +1,14 @@
 id: task-261025054927-settings-shared-layout
 title: 設定本文と固定操作欄の幅と余白を統一する
 category: frontend
-status: open
+status: done
 depends_on:
   - task-261025054927-settings-alignment-contract
 superseded_by: null
 review: null
 reviewed_sha: null
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 1
 created_at: 2026-10-25
-closed_at: null
+closed_at: 2026-10-25
 legacy_ids: []

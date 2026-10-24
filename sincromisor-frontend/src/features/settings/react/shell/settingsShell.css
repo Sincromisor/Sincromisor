@@ -31,12 +31,9 @@
         --settings-shell-tab-active-border-right-color: transparent;
         --settings-shell-tab-active-border-bottom-color: transparent;
         --settings-shell-tab-active-shadow: inset 3px 0 0 var(--sincro-overlay-tab-accent, rgba(159, 210, 255, 0.72));
-        --settings-shell-detail-max-width: 840px;
         --settings-shell-page-gap: var(--sincro-space-450);
-        --settings-shell-page-padding: var(--sincro-space-550) var(--sincro-space-600);
-        --settings-shell-page-radius: var(--sincro-radius-600);
-        --settings-shell-page-border-top-color: var(--settings-shell-border);
-        --settings-shell-page-border-left-color: transparent;
+        --settings-shell-page-padding: var(--sincro-space-500);
+        --settings-shell-page-radius: var(--sincro-radius-200);
         display: grid;
         min-height: 0;
         min-width: 0;
@@ -65,9 +62,6 @@
         --settings-shell-nav-gap: var(--sincro-space-250);
         --settings-shell-nav-padding: 0 var(--sincro-space-250);
         --settings-shell-nav-align-self: start;
-        --settings-shell-detail-max-width: none;
-        --settings-shell-page-border-top-color: transparent;
-        --settings-shell-page-border-left-color: var(--settings-shell-border);
         --settings-shell-tab-grid-gap: var(--sincro-overlay-tab-gap, var(--sincro-space-100));
         --settings-shell-tab-section-title-grid-column: 1 / -1;
         --settings-shell-tab-section-title-padding-inline: 4px;
@@ -226,6 +220,15 @@
         background: var(--sincro-color-select-option-background);
     }
 
+    /* スクロールバーは表面の内側に置き、本文と固定操作欄の外寸を揃える。 */
+    .settingsShell__detail,
+    .settingsShell__footer {
+        min-width: 0;
+        border: 1px solid var(--settings-shell-border);
+        border-radius: var(--settings-shell-page-radius);
+        background: var(--settings-shell-surface);
+    }
+
     .settingsShell__detail {
         height: 100%;
         min-height: 0;
@@ -234,12 +237,12 @@
         z-index: 1;
         min-width: 0;
         display: grid;
-        gap: var(--sincro-space-400);
-        max-width: var(--settings-shell-detail-max-width);
     }
 
     .settingsShell__detailScroll {
         min-height: 0;
+        min-width: 0;
+        padding: var(--settings-shell-page-padding);
         overflow-y: auto;
         overflow-x: hidden;
         scrollbar-gutter: stable;
@@ -249,15 +252,9 @@
     }
 
     .settingsShell__pageSurface {
+        min-width: 0;
         display: grid;
         gap: var(--settings-shell-page-gap);
-        padding: var(--settings-shell-page-padding);
-        border: 1px solid var(--settings-shell-border);
-        border-top-color: var(--settings-shell-page-border-top-color);
-        border-left-color: var(--settings-shell-page-border-left-color);
-        border-radius: var(--settings-shell-page-radius);
-        background: var(--settings-shell-surface);
-        box-shadow: none;
     }
 
     .settingsShell__pageDescription {
@@ -313,12 +310,8 @@
         gap: var(--sincro-space-450);
     }
 
-    .settingsShell__pageFooter,
     .settingsShell__footer {
-        padding: var(--sincro-space-450) var(--sincro-space-550);
-        border: 1px solid var(--settings-shell-border);
-        border-radius: var(--settings-shell-page-radius);
-        background: var(--settings-shell-surface);
+        padding: var(--settings-shell-page-padding);
     }
 
     @container settings-shell (max-width: 720px) {
@@ -328,9 +321,6 @@
             --settings-shell-nav-gap: var(--sincro-space-250);
             --settings-shell-nav-padding: 0 var(--sincro-space-250);
             --settings-shell-nav-align-self: end;
-            --settings-shell-detail-max-width: none;
-            --settings-shell-page-border-top-color: transparent;
-            --settings-shell-page-border-left-color: var(--settings-shell-border);
             --settings-shell-tab-grid-gap: var(--sincro-overlay-tab-gap, var(--sincro-space-100));
             --settings-shell-tab-section-title-grid-column: 1 / -1;
             --settings-shell-tab-section-title-padding-inline: 4px;
@@ -350,7 +340,6 @@
             --settings-shell-tab-section-title-margin-top: var(--sincro-space-050);
             --settings-shell-tab-active-shadow: inset 0 3px 0 var(--sincro-overlay-tab-accent, rgba(159, 210, 255, 0.76));
             --settings-shell-page-gap: var(--sincro-space-350);
-            --settings-shell-page-padding: var(--sincro-space-450);
             gap: 0;
         }
 
@@ -360,9 +349,9 @@
     }
 
     @container settings-shell (max-width: 560px) {
-        .settingsShell.is-containerResponsive .settingsShell__layout {
+        /* 本文だけでなく固定操作欄と概要の表面にも同じ余白を適用する。 */
+        .settingsShell.is-containerResponsive > * {
             --settings-shell-page-padding: var(--sincro-space-400);
-            --settings-shell-page-radius: var(--sincro-radius-500);
         }
 
         .settingsShell.is-containerResponsive .settingsShell__pageHeader,
@@ -376,7 +365,6 @@
 
         .settingsShell.is-containerResponsive.settingsShell--compactNavigation .settingsShell__layout {
             --settings-shell-nav-padding: 0 var(--sincro-space-150);
-            --settings-shell-page-padding: var(--sincro-space-350);
         }
     }
 }

@@ -12,18 +12,6 @@
         font-size: 1.36rem;
     }
 
-    .configurationDialogReactSettingsPanel__overview {
-        display: grid;
-        align-content: start;
-        gap: var(--sincro-space-400);
-        min-height: 0;
-        overflow-y: auto;
-        overflow-wrap: anywhere;
-        width: min(100%, 760px);
-        justify-self: center;
-        padding: var(--sincro-space-300);
-    }
-
     .configurationDialogReactSettingsPanel__overview h2 {
         margin: 0;
         font-size: 1rem;
@@ -190,7 +178,6 @@
     }
 
     .configurationDialogReactSettingsPanel .settingsShell--startupDialog {
-        --settings-startup-dialog-content-max-width: calc(216px + var(--sincro-space-550) + 760px);
         --settings-shell-surface: var(--sincro-surface-overlay-panel-soft);
         --settings-shell-surface-strong: var(--sincro-surface-overlay-panel);
         --settings-shell-gap: var(--sincro-space-400);
@@ -217,67 +204,6 @@
 
     .configurationDialogReactSettingsPanel .settingsShell--startupDialog .settingsShell__description {
         max-width: 56rem;
-    }
-
-    .configurationDialogReactSettingsPanel .settingsShell--startupDialog .settingsShell__layout {
-        width: min(100%, var(--settings-startup-dialog-content-max-width));
-        max-width: var(--settings-startup-dialog-content-max-width);
-        margin-inline: auto;
-        gap: 0;
-        min-height: 0;
-        align-items: start;
-    }
-
-    .configurationDialogReactSettingsPanel .settingsShell--startupDialog .settingsShell__nav {
-        position: static;
-        top: auto;
-        min-height: 0;
-        overflow: visible;
-    }
-
-    .configurationDialogReactSettingsPanel .settingsShell--startupDialog .settingsShell__detail {
-        height: 100%;
-        width: 100%;
-        min-height: 0;
-        max-width: none;
-        overflow: hidden;
-        box-sizing: border-box;
-        justify-self: stretch;
-    }
-
-    /* dialog 全体ではなく設定本文だけをスクロールさせ、footer の開始ボタンを見失わないようにする。 */
-    .configurationDialogReactSettingsPanel .settingsShell--startupDialog .settingsShell__detailScroll {
-        height: 100%;
-        width: 100%;
-        min-height: 0;
-        display: grid;
-        align-content: start;
-        justify-items: stretch;
-        gap: var(--sincro-space-400);
-        overflow-y: auto;
-        overflow-x: hidden;
-        scrollbar-gutter: stable;
-        box-sizing: border-box;
-    }
-
-    .configurationDialogReactSettingsPanel .settingsShell--startupDialog .settingsShell__pageSurface {
-        width: 100%;
-        min-width: 0;
-        max-width: none;
-        box-sizing: border-box;
-        gap: var(--sincro-space-400);
-    }
-
-    .configurationDialogReactSettingsPanel .settingsShell--startupDialog .settingsShell__pageFooter {
-        width: 100%;
-        min-width: 0;
-        max-width: none;
-        box-sizing: border-box;
-    }
-
-    .configurationDialogReactSettingsPanel .settingsShell--startupDialog .settingsShell__pageSurface,
-    .configurationDialogReactSettingsPanel .settingsShell--startupDialog .settingsShell__footer {
-        background: var(--settings-shell-surface);
     }
 
     /* 共有 settings section の inline style（暗色前提）を前提に、dialog 側でも文字色継承を揃える。 */
