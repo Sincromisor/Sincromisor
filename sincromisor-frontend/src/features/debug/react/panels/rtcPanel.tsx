@@ -8,6 +8,7 @@ type RtcPanelProps = DebugPanelProps & {
     snapshot: DebugConsoleSnapshot;
 };
 
+/** 通信指標と履歴をRTCタブの本文として表示する。 */
 export function RtcPanel({ snapshot, isActive }: RtcPanelProps) {
     return (
         <section
@@ -18,7 +19,6 @@ export function RtcPanel({ snapshot, isActive }: RtcPanelProps) {
             aria-labelledby="debug-console-tab-rtc"
             hidden={!isActive}
         >
-            <h3>RTC</h3>
             <RtcMetricGrid snapshot={snapshot} />
             <RtcTrendGraphs snapshot={snapshot} />
         </section>

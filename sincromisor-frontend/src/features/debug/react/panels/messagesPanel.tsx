@@ -6,6 +6,7 @@ type MessagesPanelProps = DebugPanelProps & {
     snapshot: DebugConsoleSnapshot;
 };
 
+/** 受信ログと通信イベントをMessagesタブの本文として表示する。 */
 export function MessagesPanel({ snapshot, isActive }: MessagesPanelProps) {
     return (
         <section
@@ -16,7 +17,6 @@ export function MessagesPanel({ snapshot, isActive }: MessagesPanelProps) {
             aria-labelledby="debug-console-tab-messages"
             hidden={!isActive}
         >
-            <h3>Messages</h3>
             <div className="channelGrid">
                 <LogViewer id="textChannel" title="text_ch" value={snapshot.rtc.textChannelLog} />
                 <LogViewer

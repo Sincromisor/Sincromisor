@@ -290,14 +290,6 @@ div#debugConsole .debugCard {
     border-top-color: transparent;
 }
 
-div#debugConsole .debugCard h3 {
-    margin: 0 0 8px;
-    font-size: 13px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--debug-accent);
-}
-
 div#debugConsole .debugCard--status {
     grid-area: panel;
 }

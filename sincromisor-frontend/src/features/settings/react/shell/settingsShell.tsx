@@ -8,6 +8,7 @@ import "./settingsShell.css";
 export type SettingsShellPage = {
     id: string;
     label: string;
+    /** 狭幅でタブが非表示でも本文を識別できるアクセシブル名。 */
     title: string;
     description?: string;
     content: ReactNode;
@@ -161,20 +162,13 @@ function SettingsShellPageDetail({
                     id={getSettingsShellPanelId(tabIdPrefix, activePage.id)}
                     className="settingsShell__pageSurface"
                     role="tabpanel"
-                    aria-labelledby={`${tabIdPrefix}-page-title`}
+                    aria-label={activePage.title}
                     // biome-ignore lint/a11y/noNoninteractiveTabindex: Tabキーで操作のないカテゴリの本文にも進めるようにする。
                     tabIndex={0}
                 >
-                    <header className="settingsShell__pageHeader">
-                        <h2 id={`${tabIdPrefix}-page-title`} className="settingsShell__pageTitle">
-                            {activePage.title}
-                        </h2>
-                        {activePage.description ? (
-                            <p className="settingsShell__pageDescription">
-                                {activePage.description}
-                            </p>
-                        ) : null}
-                    </header>
+                    {activePage.description ? (
+                        <p className="settingsShell__pageDescription">{activePage.description}</p>
+                    ) : null}
                     <div className="settingsShell__content">{activePage.content}</div>
                 </div>
                 {activePage.footer ? (

@@ -8,6 +8,7 @@ type SincroMotionPanelProps = DebugPanelProps & {
     manager: DebugConsoleManager;
 };
 
+/** 顔と姿勢の診断をSincroタブ内の別々の情報群として表示する。 */
 export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionPanelProps) {
     const face = snapshot.sincroMotion.face;
     const pose = snapshot.sincroMotion.pose;
@@ -25,7 +26,6 @@ export function SincroMotionPanel({ snapshot, manager, isActive }: SincroMotionP
             aria-labelledby="debug-console-tab-sincro"
             hidden={!isActive}
         >
-            <h3>Sincro Motion</h3>
             <div className="sincroMotionGrid">
                 <SincroMotionFaceSection face={face} tracker={tracker} />
                 <SincroMotionPoseSection

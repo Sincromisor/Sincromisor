@@ -6,6 +6,7 @@ type SdpPanelProps = DebugPanelProps & {
     snapshot: DebugConsoleSnapshot;
 };
 
+/** 送受信のSDPをSDPタブの本文として表示する。 */
 export function SdpPanel({ snapshot, isActive }: SdpPanelProps) {
     return (
         <section
@@ -16,7 +17,6 @@ export function SdpPanel({ snapshot, isActive }: SdpPanelProps) {
             aria-labelledby="debug-console-tab-sdp"
             hidden={!isActive}
         >
-            <h3>SDP</h3>
             <div className="sdpGrid">
                 <LogViewer id="offerSDP" title="Offer SDP" value={snapshot.rtc.offerSdp} />
                 <LogViewer id="answerSDP" title="Answer SDP" value={snapshot.rtc.answerSdp} />

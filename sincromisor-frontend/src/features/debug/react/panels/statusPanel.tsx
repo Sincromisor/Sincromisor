@@ -7,6 +7,7 @@ type StatusPanelProps = DebugPanelProps & {
     snapshot: DebugConsoleSnapshot;
 };
 
+/** 接続・音声・追跡の要約をStatusタブの本文として表示する。 */
 export function StatusPanel({ snapshot, isActive }: StatusPanelProps) {
     return (
         <section
@@ -17,7 +18,6 @@ export function StatusPanel({ snapshot, isActive }: StatusPanelProps) {
             aria-labelledby="debug-console-tab-status"
             hidden={!isActive}
         >
-            <h3>Status</h3>
             <div className="debugSummaryGrid">
                 <DebugMetricGrid className="statusGrid" items={buildStatusItems(snapshot)} />
             </div>

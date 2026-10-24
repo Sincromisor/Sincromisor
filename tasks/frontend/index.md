@@ -2,9 +2,19 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 20 件）
+## タスク一覧（自動生成 / 全 26 件）
 
-### done（完了） — 20 件
+### open（未完） — 5 件
+
+| タスク                                                                                                           | タイトル                                         | 判定 | 依存 |
+| ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ---- | ---- |
+| [task-261024195952-simplify-experience-guidance](./task-261024195952-simplify-experience-guidance/task.md)       | 体験選択の説明と再接続案内の重複を整理する       | —    | —    |
+| [task-261024195952-simplify-settings-field-labels](./task-261024195952-simplify-settings-field-labels/task.md)   | 共通設定を項目名と入力で理解できる表示に整理する | —    | —    |
+| [task-261024195953-simplify-home-secondary-labels](./task-261024195953-simplify-home-secondary-labels/task.md)   | トップページの冗長な補助ラベルを整理する         | —    | —    |
+| [task-261024195953-simplify-looking-glass-guidance](./task-261024195953-simplify-looking-glass-guidance/task.md) | Looking Glass設定の状態表示と反映案内を整理する  | —    | —    |
+| [task-261024195953-simplify-startup-vrm-selection](./task-261024195953-simplify-startup-vrm-selection/task.md)   | 起動前のVRM選択を一つの操作領域にまとめる        | —    | —    |
+
+### done（完了） — 21 件
 
 | タスク                                                                                                             | タイトル                                                 | 判定    | 依存                                                 |
 | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- | ------- | ---------------------------------------------------- |
@@ -28,5 +38,6 @@
 | [task-261010185549-reorganize-settings-and-startup](./task-261010185549-reorganize-settings-and-startup/task.md)   | 設定項目を利用目的別に再編し起動前の導線を整理する       | ✅ PASS | `task-261010185542-fix-settings-layout-and-controls` |
 | [task-261011151020-unify-frontend-development-tools](./task-261011151020-unify-frontend-development-tools/task.md) | フロントエンド開発ツールをnpm workspacesで一元管理する   | ✅ PASS | —                                                    |
 | [task-261011152416-update-frontend-dependencies](./task-261011152416-update-frontend-dependencies/task.md)         | フロントエンドの実行時依存と開発依存を更新する           | ✅ PASS | `task-261011151020-unify-frontend-development-tools` |
+| [task-261024195952-remove-redundant-panel-headings](./task-261024195952-remove-redundant-panel-headings/task.md)   | 設定と開発者ツールで選択中カテゴリの重複見出しを整理する | ✅ PASS | —                                                    |
 
 <!-- AUTOGEN:tasks END -->
