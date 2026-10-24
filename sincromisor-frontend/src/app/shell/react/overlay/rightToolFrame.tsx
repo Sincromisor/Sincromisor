@@ -62,6 +62,7 @@ export function RightToolFrame({
                         onClick={onClose}
                     />
                 </div>
+                <div id={`${variant}ImportantNoticeRoot`} className="rightToolFrame__notice" />
                 <div className="rightToolFrame__scroll">{children}</div>
             </section>
         </div>

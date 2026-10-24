@@ -1,11 +1,6 @@
-import { useSyncExternalStore } from "react";
 import type { ChatMessageViewRecord } from "../../../../app/controller";
-import {
-    SincroAppController,
-    subscribeActiveSincroAppController,
-} from "../../../../app/controller";
 import type { ChatMessage } from "../../../rtc/rtcMessage";
-import type { ChatMessageSnapshot } from "../model/chatMessageService";
+import { useChatSnapshot } from "./useChatSnapshot";
 
 function messageTypeToClassName(messageType: string): string {
     const name = messageType.charAt(0).toUpperCase() + messageType.slice(1);
@@ -31,40 +26,21 @@ function canRenderHtml(record: ChatMessageViewRecord): boolean {
 
 /** 保持済み履歴と以後の通知から、共通チャット欄を描画する。 */
 export function SincroChatView() {
-    const { messages, systemIconUrl } = useSincroChatViewState();
+    const { messages, systemIconUrl } = useChatSnapshot();
 
     return (
         <>
-            {messages.map((record) => (
-                <ChatMessageItem
-                    key={record.message.message_id}
-                    record={record}
-                    systemIconUrl={systemIconUrl}
-                />
-            ))}
+            {messages
+                .filter((record) => record.message.message_type !== "error")
+                .map((record) => (
+                    <ChatMessageItem
+                        key={record.message.message_id}
+                        record={record}
+                        systemIconUrl={systemIconUrl}
+                    />
+                ))}
         </>
     );
-}
-
-const emptySnapshot: ChatMessageSnapshot = {
-    messages: [],
-    systemIconUrl: "../images/icon-system.webp",
-};
-
-function getChatSnapshot(): ChatMessageSnapshot {
-    return SincroAppController.getCurrent()?.chat.getSnapshot() ?? emptySnapshot;
-}
-
-// 有効制御の差し替え時は旧サービス購読を外し、共有履歴の現在値から表示し直す。
-function subscribeChatSnapshot(listener: () => void): () => void {
-    return subscribeActiveSincroAppController((controller) => {
-        listener();
-        return controller?.chat.subscribeSnapshot(listener);
-    });
-}
-
-function useSincroChatViewState(): ChatMessageSnapshot {
-    return useSyncExternalStore(subscribeChatSnapshot, getChatSnapshot, getChatSnapshot);
 }
 
 function ChatMessageItem({

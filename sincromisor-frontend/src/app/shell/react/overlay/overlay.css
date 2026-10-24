@@ -108,6 +108,8 @@
     }
 
     .rightToolFrame__surface {
+        display: flex;
+        flex-direction: column;
         position: absolute;
         top: calc(var(--right-tool-frame-top) + var(--right-tool-frame-surface-offset-top));
         right: var(--right-tool-frame-side);
@@ -152,7 +154,26 @@
         z-index: 2;
     }
 
+    .rightToolFrame__notice {
+        flex: 0 0 auto;
+    }
+
+    .rightToolFrame__notice .sincroImportantNotice {
+        padding-right: 60px;
+    }
+
+    /* 機器使用・終了の常設操作より下に通知とパネルを収める。 */
+    .rightToolFrame:has(.sincroImportantNotice) {
+        --right-tool-frame-top: 150px;
+    }
+
+    .rightToolFrame:has(.sincroImportantNotice) .rightToolFrame__chrome {
+        top: 12px;
+    }
+
     .rightToolFrame__scroll {
+        min-height: 0;
+        flex: 1 1 auto;
         max-height: inherit;
         box-sizing: border-box;
         overflow: auto;
@@ -224,7 +245,7 @@
         height: 100%;
         min-height: 0;
         display: grid;
-        grid-template-rows: minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
     }
 
     .startupDialogFrame__popLayer {

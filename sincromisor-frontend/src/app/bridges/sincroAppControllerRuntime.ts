@@ -96,6 +96,7 @@ export function createSincroAppRuntimeBundle(params: {
                 chatMessageService.writeSystemMessage(message, isHTML),
             setSystemIcon: (iconUrl) => chatMessageService.setSystemIcon(iconUrl),
             getSnapshot: () => chatMessageService.getSnapshot(),
+            dismissImportantNotice: () => chatMessageService.dismissImportantNotice(),
             subscribeSnapshot: (listener) => chatMessageService.subscribeSnapshot(listener),
         },
         debugBridge: {
