@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { DebugConsoleManager } from "../../../features/debug/model/debugConsoleManager";
+import { SincroFaceTracker } from "../../../features/gaze/faceTracking/sincroFaceTracker";
+import type { SincroTrackerWorkerOutputMessage } from "../../../features/gaze/trackingRuntime/sincroTrackerWorkerTypes";
 import { TrackerRuntime } from "../../../features/gaze/trackingRuntime/trackerRuntime";
 import { UserMediaAudioProcessor } from "../../../features/media/vad/userMediaAudioProcessor";
 import { SincroAppSettingsModel } from "../../settings/sincroAppSettingsModel";
@@ -226,4 +228,69 @@ it("RTC終了の例外でも音声・カメラ・処理器を解放して失敗�
     expect(TrackerRuntime.prototype.stopFaceTracking).toHaveBeenCalledWith(
         "sincro_face_tracking_stopped",
     );
+});
+
+it("本番WorkerClientの初期化待ちを終了し、カメラの取得列を明示再開始へ進める", async () => {
+    const workers: WaitingWorker[] = [];
+    class WaitingWorker {
+        onmessage?: (event: MessageEvent<SincroTrackerWorkerOutputMessage>) => void;
+        onerror?: (event: ErrorEvent) => void;
+        postMessage = vi.fn();
+        terminate = vi.fn();
+        constructor() {
+            workers.push(this);
+        }
+        ready() {
+            this.onmessage?.(
+                new MessageEvent("message", { data: { type: "status", status: "ready" } }),
+            );
+        }
+    }
+    vi.stubGlobal("Worker", WaitingWorker);
+    vi.stubGlobal("createImageBitmap", vi.fn());
+    vi.stubGlobal(
+        "MediaStream",
+        class {
+            addTrack() {}
+        },
+    );
+    vi.stubGlobal("HTMLMediaElement", { HAVE_CURRENT_DATA: 2 });
+    const video = {
+        readyState: 0,
+        setAttribute() {},
+        pause() {},
+        addEventListener() {},
+        removeEventListener() {},
+        videoWidth: 640,
+        videoHeight: 480,
+    };
+    vi.stubGlobal("document", { querySelector: () => video });
+    vi.mocked(TrackerRuntime.prototype.startFaceTracking).mockRestore();
+    vi.mocked(TrackerRuntime.prototype.stopFaceTracking).mockRestore();
+    const fallback = vi
+        .spyOn(SincroFaceTracker.prototype, "initVision")
+        .mockRejectedValue(new Error("cancel must not initialize fallback"));
+    const value = app();
+    value.start();
+    await settle();
+    expect(workers).toHaveLength(1);
+    value.endExperience();
+    await settle();
+    expect(workers[0].terminate).toHaveBeenCalled();
+    expect(raw.every((track) => track.readyState === "ended")).toBe(true);
+    value.start();
+    await settle();
+    expect(workers).toHaveLength(2);
+    expect(raw).toHaveLength(4);
+    // 終了済みWorkerの遅延readyは、新しい初期化の完了として受理しない。
+    workers[0].ready();
+    await settle();
+    expect(fallback).not.toHaveBeenCalled();
+    workers[1].ready();
+    await settle();
+    expect(raw.slice(-2).every((track) => track.readyState === "live")).toBe(true);
+    value.endExperience();
+    await settle();
+    expect(workers[1].terminate).toHaveBeenCalled();
+    expect(raw.every((track) => track.readyState === "ended")).toBe(true);
 });

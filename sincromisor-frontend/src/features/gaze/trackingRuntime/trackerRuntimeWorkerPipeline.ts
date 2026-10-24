@@ -1,9 +1,7 @@
 /**
- * ImageBitmap transfer を使う Worker 推論 pipeline。
- *
- * video frame の transfer cost を Worker stats へ渡し、Worker detect / transfer failure は例外で止めず
- * main-thread fallback へ切り替える。callback は tracker snapshot と stats の publish に限定し、VRM
- * 適用や motion-debug recording は caller 側の責務に残す。
+ * 映像フレームをImageBitmapでWorkerへ転送し、推論結果と転送時間を呼出元へ返す。
+ * 推論・転送障害はメインスレッドへ切り替え、利用者による中断はそのまま完了する。
+ * VRMへの適用と診断記録は呼出元の責務に残す。
  */
 
 import type { SincroPoseMotionSnapshot } from "../poseTracking/sincroPoseMotionSnapshot";
@@ -20,12 +18,9 @@ import type { TrackerRuntimeRoiFrameInput } from "./trackerRuntimeStats";
 import type { TrackerRuntimeCallbacks, TrackerVideoFrameTiming } from "./trackerRuntimeTypes";
 
 /**
- * 1 video frame を Worker へ送り、Face / Pose / Hand / ROI の結果を runtime callbacks へ publish する。
- *
- * frame loop が停止済み、または callbacks が解放済みの場合は推論結果を捨てて loop を stopped 扱いにする。
- * Hand が cadence / ROI pause / Pose stale により実行されなかった frame では lost/skip snapshot を publish
- * し、後段 reliability が「未実行」と「未検出」を区別できるようにする。失敗時の observable output は
- * `switchToMainThreadFallback(error)` であり、この関数は Worker 失敗を caller へ再 throw しない。
+ * 一つの映像フレームを推論し、顔・姿勢・手・注目領域の結果をコールバックへ通知する。
+ * 停止済みなら結果を破棄し、頻度制御や姿勢の古さで手を処理しない場合は未実行の結果を通知する。
+ * 利用者の中断は通知せず完了する。それ以外の障害は代替追跡へ渡し、呼出元へ再throwしない。
  */
 export async function runTrackerRuntimeWorkerPipeline(input: {
     videoElement: HTMLVideoElement;
@@ -69,6 +64,12 @@ export async function runTrackerRuntimeWorkerPipeline(input: {
     try {
         const transferStartedAtMs = performance.now();
         const frame = await createImageBitmap(input.videoElement);
+        // 転送準備中に終了した旧フレームは、現在のWorkerへ送らずここで解放する。
+        if (!input.frameLoopIsEnabled()) {
+            frame.close();
+            input.markFrameLoopStopped();
+            return;
+        }
         const transferTimeMs = performance.now() - transferStartedAtMs;
         const result = await input.workerClient.detect(
             frame,
@@ -138,7 +139,10 @@ export async function runTrackerRuntimeWorkerPipeline(input: {
         );
         input.scheduleFrame();
     } catch (error) {
-        // Worker detect / transfer failure は同期推論停止ではなく main-thread fallback の起点にする。
+        // 体験終了で拒否された推論は、代替エンジンを起動せず完了させる。
+        if (!input.frameLoopIsEnabled()) return;
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        // Workerの推論・転送障害時は、メインスレッドでの追跡へ切り替える。
         await input.switchToMainThreadFallback(error);
     }
 }

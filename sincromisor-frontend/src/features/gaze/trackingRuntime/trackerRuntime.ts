@@ -110,12 +110,16 @@ export class TrackerRuntime {
         }
         const generation = ++this.startGeneration;
         this.resetStartState(callbacks, targetInferenceFps, poseOptions);
-        const useWorkerTracking = await this.initializeTrackerEngine(true);
-        // エンジン初期化中に終了した場合は映像と推論ループを再開しない。
-        if (generation !== this.startGeneration) {
-            this.workerClient.dispose();
-            return;
+        let useWorkerTracking: boolean;
+        try {
+            useWorkerTracking = await this.initializeTrackerEngine(true);
+        } catch (error) {
+            // 終了で中断した旧開始だけを完了させ、現在の開始失敗は呼出元へ返す。
+            if (generation !== this.startGeneration) return;
+            throw error;
         }
+        // エンジン初期化中に終了した場合は映像と推論ループを再開しない。
+        if (generation !== this.startGeneration) return;
         this.state.useWorkerTracking = useWorkerTracking;
         attachTrackerVideoTrack(this.videoElement, videoTrack);
         this.frameLoop.enable();
@@ -370,6 +374,7 @@ export class TrackerRuntime {
         plan: ReturnType<typeof createTrackerRuntimePredictionPlan>,
         callbacks: TrackerRuntimeCallbacks,
     ): WorkerPipelineInput {
+        const generation = this.startGeneration;
         return {
             ...this.createStateUpdateCallbacks(),
             videoElement: this.videoElement,
@@ -383,8 +388,11 @@ export class TrackerRuntime {
             faceRoiTrackingEnabled: this.state.faceRoiTrackingEnabled,
             handRoiPaused: this.roiBudget.handIsPaused(),
             faceRoiPaused: this.roiBudget.faceRoiIsPaused(),
-            frameLoopIsEnabled: () => this.frameLoop.enabled,
-            markFrameLoopStopped: () => this.frameLoop.markStopped(),
+            // 旧フレームの後着で、再開始した追跡の状態やWorkerを操作しない。
+            frameLoopIsEnabled: () => generation === this.startGeneration && this.frameLoop.enabled,
+            markFrameLoopStopped: () => {
+                if (generation === this.startGeneration) this.frameLoop.markStopped();
+            },
             scheduleFrame: () => this.frameLoop.schedule(),
             applyPosePerformanceGate: (snapshot, nowMs, frameTiming) =>
                 this.applyPosePerformanceGate(snapshot, nowMs, frameTiming),

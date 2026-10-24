@@ -1,7 +1,4 @@
-/**
- * main thread から Tracker Worker の初期化、detect、stop、dispose を直列化する client lifecycle 境界。
- * Worker failure は caller が main-thread fallback へ落とせるよう status / error message に変換し、DOM や tracker instance は保持しない。
- */
+/** Tracker Workerの通信と待機結果を所有し、終了時は待機も中断して呼出元へ返す。 */
 import { frontendLogger } from "../../../shared/logging/appLogger";
 import type { SincroFaceMotionSnapshot } from "../faceTracking/sincroFaceMotionSnapshot";
 import type { SincroGestureMotionSnapshot } from "../gestureTracking/sincroGestureMotionSnapshot";
@@ -23,14 +20,12 @@ type DetectResult = {
     mediapipe?: TrackerRuntimeMediaPipeRawResult;
     stats: SincroTrackerWorkerStats;
 };
-
 type PendingDetect = {
     requestId: number;
     sentAtMs: number;
     resolve: (result: DetectResult) => void;
     reject: (reason: Error) => void;
 };
-
 const DEFAULT_STATS: SincroTrackerWorkerStats = {
     mode: "worker",
     status: "idle",
@@ -58,6 +53,7 @@ export class SincroTrackerWorkerClient {
         return typeof Worker !== "undefined" && typeof createImageBitmap === "function";
     }
 
+    /** readyまで共有して待機する。disposeはAbortError、Worker障害は元のエラーで拒否する。 */
     async init(
         poseEnabled: boolean,
         handEnabled: boolean,
@@ -69,11 +65,7 @@ export class SincroTrackerWorkerClient {
         }
         this.ensureWorker();
         if (!this.initPromise) {
-            this.stats = {
-                ...this.stats,
-                status: "loading",
-                fallbackReason: undefined,
-            };
+            this.stats = { ...this.stats, status: "loading", fallbackReason: undefined };
             this.publishStats();
             this.initPromise = new Promise<void>((resolve, reject) => {
                 this.pendingInitResolve = resolve;
@@ -167,7 +159,11 @@ export class SincroTrackerWorkerClient {
         this.publishStats();
     }
 
+    /** 初期化・推論の待機を中断してからWorkerを終了し、再開始を妨げない。 */
     dispose(): void {
+        const cancelled = new DOMException("Sincro tracker worker disposed", "AbortError");
+        this.pendingInitReject?.(cancelled);
+        this.pendingDetect?.reject(cancelled);
         this.worker?.postMessage({ type: "dispose" });
         this.worker?.terminate();
         this.worker = undefined;
@@ -197,9 +193,12 @@ export class SincroTrackerWorkerClient {
             throw error;
         }
         this.worker = worker;
-        worker.onmessage = (event: MessageEvent<SincroTrackerWorkerOutputMessage>) =>
-            this.handleWorkerMessage(event.data);
+        // 終了したWorkerの後着通知を、新しい初期化待機へ渡さない。
+        worker.onmessage = (event: MessageEvent<SincroTrackerWorkerOutputMessage>) => {
+            if (this.worker === worker) this.handleWorkerMessage(event.data);
+        };
         worker.onerror = (event: ErrorEvent) => {
+            if (this.worker !== worker) return;
             this.handleWorkerFailure(new Error(event.message));
         };
     }
