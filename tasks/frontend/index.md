@@ -4,17 +4,16 @@
 
 ## タスク一覧（自動生成 / 全 38 件）
 
-### open（未完） — 5 件
+### open（未完） — 4 件
 
 | タスク                                                                                                             | タイトル                                                 | 判定 | 依存                                                 |
 | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- | ---- | ---------------------------------------------------- |
 | [task-261024223620-recover-media-startup-failure](./task-261024223620-recover-media-startup-failure/task.md)       | 入力機器の取得失敗を状態へ反映し再試行できるようにする   | —    | `task-261024223620-end-experience-and-release-media` |
-| [task-261024223622-preserve-title-editing-state](./task-261024223622-preserve-title-editing-state/task.md)         | タイトル入力中の空欄を既定値で上書きしない               | —    | —                                                    |
 | [task-261024223622-recover-settings-save-failure](./task-261024223622-recover-settings-save-failure/task.md)       | 設定の自動保存失敗を検知して保存を再試行できるようにする | —    | —                                                    |
 | [task-261024223622-remove-synthetic-welcome-history](./task-261024223622-remove-synthetic-welcome-history/task.md) | 開始時の架空の会話と固定音声案内を取り除く               | —    | —                                                    |
 | [task-261024223622-separate-audio-diagnostic-entry](./task-261024223622-separate-audio-diagnostic-entry/task.md)   | 通常体験の選択と音声診断の導線を分ける                   | —    | —                                                    |
 
-### done（完了） — 33 件
+### done（完了） — 34 件
 
 | タスク                                                                                                                 | タイトル                                                 | 判定    | 依存                                                 |
 | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ------- | ---------------------------------------------------- |
@@ -51,5 +50,6 @@
 | [task-261024223621-announce-conversation-speakers](./task-261024223621-announce-conversation-speakers/task.md)         | 会話の話者と新着を支援技術へ伝える                       | ✅ PASS | —                                                    |
 | [task-261024223621-make-conversation-history-readable](./task-261024223621-make-conversation-history-readable/task.md) | 会話履歴を読み返せる操作を設ける                         | ✅ PASS | —                                                    |
 | [task-261024223621-restore-dialog-panel-focus](./task-261024223621-restore-dialog-panel-focus/task.md)                 | ダイアログと設定パネルのフォーカス移動を整える           | ✅ PASS | —                                                    |
+| [task-261024223622-preserve-title-editing-state](./task-261024223622-preserve-title-editing-state/task.md)             | タイトル入力中の空欄を既定値で上書きしない               | ✅ PASS | —                                                    |
 
 <!-- AUTOGEN:tasks END -->

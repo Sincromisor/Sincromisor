@@ -54,7 +54,8 @@ export class SincroAppSettingsModel {
     }
 
     /**
-     * 操作可能な設定をまとめて反映する。空の題名を補正し、機器選択の表示状態を更新してから一度通知する。
+     * 操作可能な設定をまとめて反映し、機器選択の表示状態を更新してから一度通知する。
+     * 題名の空欄は編集・保存値として保持し、画面側が表示名だけを補完する。
      * 通常数値も正規化する。会話モードの動作反映はアプリの設定適用処理が担う。
      */
     updateSettings(partial: Partial<SincroAppSettings>, source: "user" | "restore" = "user"): void {
@@ -78,12 +79,6 @@ export class SincroAppSettingsModel {
         const applied = { ...gazeApplied, ...this.stateStore.updateSettings(remaining) };
         if (Object.keys(applied).length === 0) {
             return;
-        }
-        if (applied.titleText !== undefined) {
-            this.stateStore.set(
-                "titleText",
-                applied.titleText === "" ? "Sincromisor" : applied.titleText,
-            );
         }
         this.settingsChangeBatcher.emit();
         if (source === "user") {

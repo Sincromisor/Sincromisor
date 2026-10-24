@@ -64,7 +64,7 @@ it("起動前後で設定を共有し、操作制限・補正・機器表示と�
         enableVadGate: true,
         enableNoiseSuppression: false,
         enableAutoMute: false,
-        titleText: "Sincromisor",
+        titleText: "",
         talkMode: "sincro",
         characterMotionScale: 1.2,
         sincroPoseRetargetScale: 0.68,

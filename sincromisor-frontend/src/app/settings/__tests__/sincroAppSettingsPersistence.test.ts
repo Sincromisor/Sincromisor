@@ -173,3 +173,14 @@ it("playbackを保存・復元する", () => {
     app.restoreSettings("simple-vrm", { talkMode: "chat" }, { talkMode: "echo" });
     expect(app.getSettingsSnapshot().talkMode).toBe("echo");
 });
+
+it("空の題名を編集値として保存し、その後の入力も復元する", () => {
+    storage();
+    const app = new SincroAppController();
+    app.restoreSettings("simple-vrm", {}, {});
+    app.applySettings({ titleText: "" });
+    expect(app.getSettingsSnapshot().titleText).toBe("");
+    expect(new SincroAppSettingsPersistence("simple-vrm").load().titleText).toBe("");
+    app.applySettings({ titleText: "新しい題名" });
+    expect(new SincroAppSettingsPersistence("simple-vrm").load().titleText).toBe("新しい題名");
+});
