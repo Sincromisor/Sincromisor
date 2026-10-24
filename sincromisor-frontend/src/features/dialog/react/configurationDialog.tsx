@@ -49,7 +49,12 @@ export function ConfigurationDialog() {
 
     return (
         <>
-            <dialog id="configurationDialog" ref={dialogRef} aria-hidden={!dialogUiState.isOpen}>
+            <dialog
+                id="configurationDialog"
+                ref={dialogRef}
+                aria-hidden={!dialogUiState.isOpen}
+                aria-labelledby="configuration-dialog-title"
+            >
                 {dialogUiState.isOpen ? (
                     <StartupDialogFrame
                         popLayer={<DialogPopMessages />}

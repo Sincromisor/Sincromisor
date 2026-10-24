@@ -19,6 +19,6 @@
 .conversationHistory .sincroMessage__text > p { margin: 0; }
 .rightToolFrame--history { --right-tool-frame-width: 560px; --right-tool-frame-top: 150px; }
 .rightToolFrame--history .rightToolFrame__surface {
-    height: calc(100dvh - var(--right-tool-frame-top) - var(--right-tool-frame-side));
+    height: calc(100dvh - var(--right-tool-frame-effective-top) - var(--right-tool-frame-side));
 }
 .rightToolFrame--history .rightToolFrame__scroll { display: flex; overflow: hidden; }

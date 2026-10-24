@@ -20,6 +20,7 @@ type SettingsShellProps = {
     ariaLabel: string;
     badge?: string;
     title: string;
+    titleId?: string;
     description?: string;
     pages: SettingsShellPage[];
     initialPageId?: string;
@@ -32,13 +33,17 @@ type SettingsShellProps = {
     navigationPlacement?: "auto" | "top";
 };
 
-type SettingsShellHeaderProps = Pick<SettingsShellProps, "badge" | "title" | "description">;
+type SettingsShellHeaderProps = Pick<
+    SettingsShellProps,
+    "badge" | "title" | "titleId" | "description"
+>;
 
 /** 起動前後の設定を、固定の見出し・分類・操作とスクロール本文へ分ける。 */
 export function SettingsShell({
     ariaLabel,
     badge,
     title,
+    titleId,
     description,
     pages,
     initialPageId,
@@ -74,7 +79,12 @@ export function SettingsShell({
 
     return (
         <section className={shellClassName} aria-label={ariaLabel}>
-            <SettingsShellHeader badge={badge} title={title} description={description} />
+            <SettingsShellHeader
+                badge={badge}
+                title={title}
+                titleId={titleId}
+                description={description}
+            />
             <SettingsShellBody
                 scrollEnd={scrollEnd}
                 title={title}
@@ -184,12 +194,14 @@ function getSettingsShellPanelId(prefix: string, pageId: string): string {
     return `${prefix}-settings-shell-panel-${pageId}`;
 }
 
-function SettingsShellHeader({ badge, title, description }: SettingsShellHeaderProps) {
+function SettingsShellHeader({ badge, title, titleId, description }: SettingsShellHeaderProps) {
     return (
         <header className="settingsShell__header">
             <div>
                 {badge ? <div className="settingsShell__badge">{badge}</div> : null}
-                <div className="settingsShell__title">{title}</div>
+                <h1 id={titleId} className="settingsShell__title">
+                    {title}
+                </h1>
                 {description ? <p className="settingsShell__description">{description}</p> : null}
             </div>
         </header>
