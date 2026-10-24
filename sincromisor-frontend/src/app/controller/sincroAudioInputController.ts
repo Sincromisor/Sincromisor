@@ -9,10 +9,14 @@ import {
 import type { SincroAppSettings } from "../settings/sincroAppSettingsDefaults";
 import type { SincroAppSettingsModel } from "../settings/sincroAppSettingsModel";
 import type { SincroAppSettingsPersistence } from "../settings/sincroAppSettingsPersistence";
+import {
+    audioInputFailureMessage,
+    classifyAudioInputFailure,
+    type SincroAudioInputFailure,
+} from "./sincroAudioInputState";
 import { SincroAudioTuningBinding } from "./sincroAudioTuningBinding";
 
-// getUserMedia と VAD/音声フィルタ設定の結線をまとめる controller。
-// SincroAppSettingsModel(設定入力) / UserMediaManager(実処理) / DebugConsoleManager(診断UI) の橋渡し役。
+/** マイク取得と音声処理設定を結び、現在世代の取得結果だけをアプリ制御へ返す。 */
 export class SincroAudioInputController {
     private tuningBinding?: SincroAudioTuningBinding;
     private readonly settingsModel: SincroAppSettingsModel;
@@ -47,12 +51,12 @@ export class SincroAudioInputController {
     start(
         onAudioTrack: (audioTrack: MediaStreamTrack) => void,
         onAudioTrackReplaced: (audioTrack: MediaStreamTrack) => void,
+        onFailure: (reason: SincroAudioInputFailure) => void,
     ): void {
         const generation = ++this.startGeneration;
         this.onAudioTrackReplaced = onAudioTrackReplaced;
         this.hasStarted = true;
-        // CharacterGaze 用カメラは専用 manager で取得する。
-        // 音声入力の初回 getUserMedia では常に video を無効化し、不要な二重取得を避ける。
+        // 追跡カメラは別の所有者が取得するため、音声の再試行では映像を要求しない。
         this.userMediaManager.disableVideo();
 
         this.userMediaManager.getUserMedia(
@@ -67,13 +71,14 @@ export class SincroAudioInputController {
             () => {},
             (err) => {
                 if (!this.hasStarted || generation !== this.startGeneration) return;
+                // 失敗後は設定変更から再取得せず、アプリの明示再試行だけを受け付ける。
+                this.hasStarted = false;
+                const reason = classifyAudioInputFailure(err);
                 this.characterBehaviorState.setErrorSource(
                     "media",
-                    `マイク入力の取得に失敗しました。${err}`,
+                    audioInputFailureMessage(reason),
                 );
-                this.chatMessageService.writeErrorMessage(
-                    `カメラまたはマイクが見つかりませんでした。 - ${err}`,
-                );
+                onFailure(reason);
             },
         );
     }
@@ -105,34 +110,12 @@ export class SincroAudioInputController {
     }
 
     private bindDebugConsoleAndVadState(): void {
-        // DebugConsole の初期表示値を UserMediaManager の内部状態に合わせる。
-        this.syncInitialDebugConsoleAudioState();
         this.tuningBinding = new SincroAudioTuningBinding({
             debug: this.debugConsoleManager,
             media: this.userMediaManager,
             clearVenuePreset: () => this.clearVenuePresetIfEnabledWithoutResync(),
         });
         this.bindUserMediaStateCallbacks();
-    }
-
-    private syncInitialDebugConsoleAudioState(): void {
-        this.debugConsoleManager.setLocalAudioFilterConfig(
-            this.userMediaManager.getAudioFilterConfig(),
-        );
-        this.debugConsoleManager.setLocalVadRmsThreshold(
-            this.userMediaManager.getVadThresholds().rmsThreshold,
-        );
-        this.debugConsoleManager.setLocalVadThresholdMode(
-            this.userMediaManager.getVadThresholdMode(),
-        );
-        this.debugConsoleManager.setLocalLearnedVadTuning(
-            this.userMediaManager.getLearnedVadTuning(),
-        );
-        this.debugConsoleManager.setLocalLearnedVadStrictMode(
-            this.userMediaManager.getLearnedVadStrictMode(),
-        );
-        // 学習VADは balanced を初期プリセットとして採用し、必要時にUIから変更できるようにする。
-        this.debugConsoleManager.setLocalLearnedVadPerformanceMode("balanced");
     }
 
     /** 通常設定の復元後・音声取得前に診断調整を実処理へ戻し、利用者操作の保存を開始する。 */
@@ -178,7 +161,13 @@ export class SincroAudioInputController {
 
         if (forceAll || prev === undefined || prev.audioInputDeviceId !== next.audioInputDeviceId) {
             this.userMediaManager.setAudioInputDeviceId(next.audioInputDeviceId);
-            if (!forceAll && prev !== undefined && this.hasStarted) {
+            // 初回取得待ちや失敗中の設定変更は、並行取得を起こさず明示再試行へ反映する。
+            if (
+                !forceAll &&
+                prev !== undefined &&
+                this.hasStarted &&
+                this.userMediaManager.audioTrack
+            ) {
                 this.scheduleAudioInputRefresh();
             }
         }

@@ -40,14 +40,26 @@ export class UserMediaAcquisition {
         this.close();
         const generation = this.generation;
         this.onUsage("requesting");
-        void navigator.mediaDevices
-            .getUserMedia(options.config)
+        // API不在など同期的な取得失敗も、同じ現在世代の結果として返す。
+        void Promise.resolve()
+            .then(() => {
+                if (generation !== this.generation) {
+                    throw new DOMException("Media acquisition cancelled", "AbortError");
+                }
+                return navigator.mediaDevices.getUserMedia(options.config);
+            })
             .then(async (stream) => {
                 if (generation !== this.generation) {
                     for (const track of stream.getTracks()) track.stop();
                     return;
                 }
                 for (const track of stream.getTracks()) this.ownedTracks.add(track);
+                if (
+                    options.config.audio &&
+                    !stream.getTracks().some((track) => track.kind === "audio")
+                ) {
+                    throw new Error("Media acquisition returned no audio track");
+                }
                 await installMediaStreamTracks({
                     mediaStream: stream,
                     processAudioTrack: (track) => this.processor.buildProcessedAudioTrack(track),

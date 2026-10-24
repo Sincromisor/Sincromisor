@@ -2,7 +2,7 @@ import type { DebugConsoleManager } from "../../features/debug/model/debugConsol
 import type { UserMediaManager } from "../../features/media/userMedia/userMediaManager";
 import type { SincroAppSettingsPersistence } from "../settings/sincroAppSettingsPersistence";
 
-/** 診断の操作を音声処理へ適用し、その操作結果だけを保存する。通常設定の復元後に保存先を接続する。 */
+/** 診断表示を音声処理へ同期し、操作結果だけを保存する。通常設定の復元後に保存先を接続する。 */
 export class SincroAudioTuningBinding {
     private persistence?: SincroAppSettingsPersistence;
     private restoring = false;
@@ -13,6 +13,7 @@ export class SincroAudioTuningBinding {
             clearVenuePreset: () => boolean;
         },
     ) {
+        this.syncInitialDebugState();
         const { debug, media } = params;
         debug.setLocalAudioFilterChangeCallback((config) => {
             media.setAudioFilterConfig(config);
@@ -57,6 +58,18 @@ export class SincroAudioTuningBinding {
                 peakThreshold: media.getManualVadThresholds().peakThreshold,
             });
         });
+    }
+
+    /** 保存調整を復元する前に、音声処理の既定値を診断表示へ一度同期する。 */
+    private syncInitialDebugState(): void {
+        const { debug, media } = this.params;
+        debug.setLocalAudioFilterConfig(media.getAudioFilterConfig());
+        debug.setLocalVadRmsThreshold(media.getVadThresholds().rmsThreshold);
+        debug.setLocalVadThresholdMode(media.getVadThresholdMode());
+        debug.setLocalLearnedVadTuning(media.getLearnedVadTuning());
+        debug.setLocalLearnedVadStrictMode(media.getLearnedVadStrictMode());
+        // 学習VADの既定方式はbalanced。保存値は後続のrestoreで重ねる。
+        debug.setLocalLearnedVadPerformanceMode("balanced");
     }
 
     /** プリセット→手動調整→方式の順で既存コールバックを通す。復元そのものは保存や会場解除を起こさない。 */

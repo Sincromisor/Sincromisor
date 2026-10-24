@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { SettingsButton } from "../../../features/settings/react/primitives/settingsActionControls";
 import type { SincroAppController } from "../../controller";
 import type { SincroAppMediaState } from "../../controller/sincroAppTypes";
+import {
+    audioInputFailureMessage,
+    type SincroAudioInputState,
+} from "../../controller/sincroAudioInputState";
 import { subscribeActiveSincroAppEvents } from "../../react/subscribeActiveSincroAppEvents";
 
 const unusedMedia: SincroAppMediaState = {
@@ -11,9 +15,10 @@ const unusedMedia: SincroAppMediaState = {
 };
 const usageLabels = { idle: "未使用", requesting: "取得中", active: "使用中" };
 
-/** 通常画面から所有者の機器状態を確認し、RTC停止と別に体験全体を終了する。 */
+/** 実際の機器状態と音声だけの回復を示し、RTC停止と別に体験全体を終了する。 */
 export function SincroExperienceControls() {
     const [media, setMedia] = useState(unusedMedia);
+    const [audioInput, setAudioInput] = useState<SincroAudioInputState>({ status: "idle" });
     const [controller, setController] = useState<SincroAppController>();
     useEffect(
         () =>
@@ -21,9 +26,11 @@ export function SincroExperienceControls() {
                 onControllerChange: (next) => {
                     setController(next);
                     setMedia(unusedMedia);
+                    setAudioInput({ status: "idle" });
                 },
                 onEvent: (event) => {
                     if (event.type === "media_state") setMedia(event.state);
+                    if (event.type === "audio_input_state") setAudioInput(event.state);
                 },
             }),
         [],
@@ -39,6 +46,18 @@ export function SincroExperienceControls() {
                 <span>マイク {usageLabels[media.microphone]}</span>
                 <span>カメラ {usageLabels[media.camera]}</span>
             </div>
+            {audioInput.status === "failed" ? (
+                <>
+                    <span role="status">{audioInputFailureMessage(audioInput.reason)}</span>
+                    <SettingsButton
+                        type="button"
+                        onClick={() => controller?.retryAudioInput()}
+                        disabled={!controller}
+                    >
+                        マイクを再試行
+                    </SettingsButton>
+                </>
+            ) : null}
             <SettingsButton
                 type="button"
                 disabled={!controller}

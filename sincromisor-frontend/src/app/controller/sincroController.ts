@@ -85,17 +85,24 @@ export class SincroController {
 
     /** カメラ追跡と音声取得を独立して開始し、音声取得成功時だけRTCへ進む。 */
     start(onTrackingStopped: (reason: string) => void): void {
-        const generation = ++this.generation;
         if (!this.mediaState.experienceActive) {
             this.updateMediaState({ experienceActive: true });
         }
         this.startCharacterGaze(onTrackingStopped);
+        this.retryAudioInput();
+    }
+
+    /** 音声だけを取得し直す。追跡・較正・シーンの開始は繰り返さない。 */
+    retryAudioInput(): void {
+        const generation = ++this.generation;
+        this.emitEvent({ type: "audio_input_state", state: { status: "acquiring" } });
         this.audioInputController.start(
             (audioTrack: MediaStreamTrack) => {
                 if (generation !== this.generation || !this.mediaState.experienceActive) {
                     audioTrack.stop();
                     return;
                 }
+                this.emitEvent({ type: "audio_input_state", state: { status: "ready" } });
                 this.startRTC(audioTrack);
             },
             (audioTrack: MediaStreamTrack) => {
@@ -104,6 +111,10 @@ export class SincroController {
                     return;
                 }
                 this.rtcSessionController.replaceAudioTrack(audioTrack);
+            },
+            (reason) => {
+                if (generation !== this.generation || !this.mediaState.experienceActive) return;
+                this.emitEvent({ type: "audio_input_state", state: { status: "failed", reason } });
             },
         );
     }
@@ -123,6 +134,7 @@ export class SincroController {
     endExperience(): void {
         ++this.generation;
         this.updateMediaState({ experienceActive: false });
+        this.emitEvent({ type: "audio_input_state", state: { status: "idle" } });
         // 一つの所有者が失敗しても他の資源を解放し、全て試みた後で失敗を呼出元へ返す。
         const errors: unknown[] = [];
         for (const release of [

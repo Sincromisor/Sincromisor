@@ -6,6 +6,7 @@ import { TrackerRuntime } from "../../../features/gaze/trackingRuntime/trackerRu
 import { UserMediaAudioProcessor } from "../../../features/media/vad/userMediaAudioProcessor";
 import { SincroAppSettingsModel } from "../../settings/sincroAppSettingsModel";
 import { SincroAppController } from "../sincroAppController";
+import type { SincroAppEvent } from "../sincroAppTypes";
 import { SincroRtcSessionController } from "../sincroRtcSessionController";
 
 const rtc = vi.hoisted(() => ({ starts: 0, stops: 0 }));
@@ -35,8 +36,13 @@ class Track extends EventTarget {
 }
 const raw: Track[] = [];
 const processed: Track[] = [];
-const pending: { kind: string; resolve: (value: object) => void }[] = [];
+const pending: {
+    kind: string;
+    resolve: (value: object) => void;
+    reject: (error: unknown) => void;
+}[] = [];
 let defer = false;
+let audioFailure: string | undefined;
 function stream(track: Track) {
     return {
         getTracks: () => [track],
@@ -52,6 +58,7 @@ beforeEach(() => {
     raw.length = processed.length = pending.length = 0;
     rtc.starts = rtc.stops = 0;
     defer = false;
+    audioFailure = undefined;
     vi.stubGlobal("window", new EventTarget());
     vi.stubGlobal("document", {
         querySelector: () => ({
@@ -67,7 +74,12 @@ beforeEach(() => {
         mediaDevices: {
             getUserMedia: vi.fn((config) => {
                 const kind = config.audio ? "audio" : "video";
-                if (defer) return new Promise((resolve) => pending.push({ kind, resolve }));
+                if (kind === "audio" && audioFailure)
+                    return Promise.reject(new DOMException("private device detail", audioFailure));
+                if (defer)
+                    return new Promise((resolve, reject) =>
+                        pending.push({ kind, resolve, reject }),
+                    );
                 const track = new Track(kind);
                 raw.push(track);
                 return Promise.resolve(stream(track));
@@ -293,4 +305,139 @@ it("本番WorkerClientの初期化待ちを終了し、カメラの取得列を�
     await settle();
     expect(workers[1].terminate).toHaveBeenCalled();
     expect(raw.every((track) => track.readyState === "ended")).toBe(true);
+});
+
+it.each([
+    ["NotAllowedError", "permission"],
+    ["NotFoundError", "not-found"],
+    ["NotReadableError", "other"],
+])("音声取得の%sを分類し、稼働中のカメラを維持する", async (error, reason) => {
+    audioFailure = error;
+    const value = app();
+    const events: SincroAppEvent[] = [];
+    value.subscribe((event) => events.push(event));
+    value.start();
+    await settle();
+    expect(events).toContainEqual({
+        type: "audio_input_state",
+        state: { status: "failed", reason },
+    });
+    expect(events.filter((event) => event.type === "connection_state").slice(-1)[0]).toMatchObject({
+        value: "input_failed",
+    });
+    expect(events.filter((event) => event.type === "lifecycle").slice(-1)[0]).toMatchObject({
+        state: "running",
+    });
+    expect(events.filter((event) => event.type === "media_state").slice(-1)[0]).toMatchObject({
+        state: { experienceActive: true, camera: "active", microphone: "idle" },
+    });
+    expect(events.filter((event) => event.type === "error_message")).toHaveLength(0);
+    expect(JSON.stringify(events)).not.toContain("private device detail");
+    expect(rtc.starts).toBe(0);
+    expect(raw).toHaveLength(1);
+    value.endExperience();
+    expect(raw[0].readyState).toBe("ended");
+});
+
+it("音声だけを一度再試行し、設定・較正・カメラを保って現在世代から一度接続する", async () => {
+    audioFailure = "NotAllowedError";
+    const value = app();
+    value.applySettings({ titleText: "保持する題名" });
+    const beforeStart = vi.fn();
+    value.setStartHooks({ beforeStart });
+    value.start();
+    await settle();
+    const calibration = value.calibration.getState();
+    const camera = raw[0];
+    value.applySettings({ audioInputDeviceId: "corrected" });
+    await settle();
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(2);
+    audioFailure = undefined;
+    defer = true;
+    value.retryAudioInput();
+    value.retryAudioInput();
+    value.start();
+    await settle();
+    expect(pending).toHaveLength(1);
+    expect(pending[0].kind).toBe("audio");
+    const audio = new Track("audio");
+    raw.push(audio);
+    pending[0].resolve(stream(audio));
+    await settle();
+    expect(rtc.starts).toBe(1);
+    expect(TrackerRuntime.prototype.startFaceTracking).toHaveBeenCalledTimes(1);
+    expect(beforeStart).toHaveBeenCalledTimes(1);
+    expect(value.calibration.getState()).toEqual(calibration);
+    expect(camera.readyState).toBe("live");
+    expect(value.getSettingsSnapshot()).toMatchObject({
+        titleText: "保持する題名",
+        audioInputDeviceId: "corrected",
+    });
+});
+
+it.each(["success", "failure"])(
+    "終了した音声再試行の後着%sが新体験を変更しない",
+    async (result) => {
+        audioFailure = "NotAllowedError";
+        const value = app();
+        const events: SincroAppEvent[] = [];
+        value.subscribe((event) => events.push(event));
+        value.start();
+        await settle();
+        audioFailure = undefined;
+        defer = true;
+        value.retryAudioInput();
+        await settle();
+        expect(pending).toHaveLength(1);
+        value.endExperience();
+        expect(raw.every((track) => track.readyState === "ended")).toBe(true);
+        defer = false;
+        value.start();
+        await settle();
+        expect(rtc.starts).toBe(1);
+        if (result === "success") {
+            const late = new Track("audio");
+            pending[0].resolve(stream(late));
+            await settle();
+            expect(late.readyState).toBe("ended");
+        } else {
+            pending[0].reject(new DOMException("old denial", "NotAllowedError"));
+            await settle();
+        }
+        expect(rtc.starts).toBe(1);
+        expect(
+            events.filter((event) => event.type === "audio_input_state").slice(-1)[0],
+        ).toMatchObject({ state: { status: "ready" } });
+        expect(raw.slice(-2).every((track) => track.readyState === "live")).toBe(true);
+    },
+);
+
+it("取得を受理した直後に終了した場合、遅延して機器取得を始めない", async () => {
+    const value = app();
+    value.start();
+    value.endExperience();
+    await settle();
+    expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled();
+    expect(rtc.starts).toBe(0);
+});
+
+it("接続停止後の音声だけの再試行も接続表示へ反映し、カメラを再取得しない", async () => {
+    audioFailure = "NotAllowedError";
+    const value = app();
+    const events: SincroAppEvent[] = [];
+    value.subscribe((event) => events.push(event));
+    value.start();
+    await settle();
+    value.stopRTC();
+    audioFailure = undefined;
+    value.retryAudioInput();
+    await settle();
+    expect(rtc.starts).toBe(1);
+    expect(TrackerRuntime.prototype.startFaceTracking).toHaveBeenCalledTimes(1);
+    expect(events.filter((event) => event.type === "lifecycle").slice(-1)[0]).toMatchObject({
+        state: "running",
+    });
+    expect(events.filter((event) => event.type === "connection_state").slice(-1)[0]).toMatchObject({
+        value: "connecting",
+    });
 });

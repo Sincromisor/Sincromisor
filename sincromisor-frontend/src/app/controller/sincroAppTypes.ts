@@ -7,6 +7,7 @@ import type { CameraQualityScore } from "../../features/gaze/trackingRuntime/cam
 import type { MediaUsageState } from "../../features/media/userMedia/userMediaAcquisition";
 import type { ChatMessage, TelopChannelMessage } from "../../features/rtc/rtcMessage";
 import type { AppSettingsUiHints, AppSettingsUiState } from "../settings/sincroAppSettingsPolicy";
+import type { SincroAudioInputState } from "./sincroAudioInputState";
 
 // SincroAppController を境界にした UI 向けの共通型定義。
 // React UI / initializer / helper 群で同じ契約を共有するために Controller 本体から分離している。
@@ -104,6 +105,7 @@ export type SincroAppLookingGlassConfigUpdatedEventDetail = {
 // singleton manager / service ごとの差分をこの union へ吸収し、React 側の購読先を一本化する。
 // camera quality の observedAtMs は UI hysteresis の唯一の clock であり、consumer 側で再採時しない。
 export type SincroAppEvent =
+    | { type: "audio_input_state"; state: SincroAudioInputState }
     | { type: "media_state"; state: SincroAppMediaState }
     | {
           type: "lifecycle";
@@ -164,6 +166,7 @@ export type SincroAppEvent =
               | "connecting"
               | "connected"
               | "degraded"
+              | "input_failed"
               | "stopping"
               | "stopped";
           detail?: string;

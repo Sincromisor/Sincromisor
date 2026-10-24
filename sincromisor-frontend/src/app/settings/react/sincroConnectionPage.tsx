@@ -44,15 +44,18 @@ function ConnectionStatusCard({ value, detail, startupOptionHint }: ConnectionSt
 }
 
 function ConnectionActionButtons({ panelState }: SincroControlPanelPageProps) {
+    const inputFailed = panelState.connectionState.value === "input_failed";
+    const alreadyStarting =
+        panelState.lifecycleState === "starting" || panelState.lifecycleState === "running";
     return (
         <div className="settingsPrimitiveButtonRow">
             <SettingsButton
                 type="button"
                 tone="primary"
                 onClick={panelState.startAction}
-                disabled={!panelState.hasActiveController}
+                disabled={!panelState.hasActiveController || (alreadyStarting && !inputFailed)}
             >
-                会話を開始
+                {inputFailed ? "マイクを再試行" : "会話を開始"}
             </SettingsButton>
             <SettingsButton
                 type="button"

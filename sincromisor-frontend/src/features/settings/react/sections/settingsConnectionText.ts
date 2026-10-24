@@ -3,6 +3,7 @@ import type {
     SincroAppStartupSettingsStatus,
 } from "../../../../app/controller";
 
+/** アプリが導出した接続・音声取得の状態を、通常表示の操作語へ変換する。 */
 export function connectionStatusLabel(value: string): string {
     switch (value) {
         case "connected":
@@ -13,6 +14,8 @@ export function connectionStatusLabel(value: string): string {
             return "接続中";
         case "degraded":
             return "要確認";
+        case "input_failed":
+            return "マイクを開始できません";
         case "stopping":
             return "停止中";
         case "stopped":
