@@ -66,6 +66,8 @@
 
 - [Docker Compose](infrastructure/compose.md)
     - Docker Composeプロファイル、環境変数受け渡し、ローカル起動
+- [ローカル開発の手順](infrastructure/local-development.md)
+    - 開発ツールの導入、画面編集、変更の確認
 - [コンテナイメージの公開](infrastructure/image-publishing.md)
     - GHCRへの月次更新、認証、旧構成の整理、失敗時の再開
 - [Consul](infrastructure/consul.md)
