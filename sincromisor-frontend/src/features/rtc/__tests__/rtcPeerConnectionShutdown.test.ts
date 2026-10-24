@@ -56,3 +56,15 @@ describe("closeRtcPeerConnection", () => {
         expect(fixture.track.stop).toHaveBeenCalledOnce();
     });
 });
+
+it("接続失敗後の重複停止でもtransceiverを再停止せず、保持した送信音声は解放する", () => {
+    vi.useFakeTimers();
+    const fixture = createShutdownFixture();
+    closeRtcPeerConnection({ ...fixture, stopSenderTracks: false });
+    vi.runAllTimers();
+    closeRtcPeerConnection(fixture);
+    expect(fixture.transceiver.stop).toHaveBeenCalledOnce();
+    expect(fixture.peerConnection.close).toHaveBeenCalledOnce();
+    expect(fixture.track.stop).toHaveBeenCalledOnce();
+    vi.useRealTimers();
+});

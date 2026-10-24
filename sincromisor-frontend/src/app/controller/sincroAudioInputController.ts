@@ -24,6 +24,7 @@ export class SincroAudioInputController {
     private suppressNextMicSettingsSync = false;
     private onAudioTrackReplaced: (audioTrack: MediaStreamTrack) => void = () => {};
     private hasStarted = false;
+    private startGeneration = 0;
     private pendingAudioInputRefreshToken = 0;
     private audioInputRefreshChain: Promise<void> = Promise.resolve();
 
@@ -42,12 +43,12 @@ export class SincroAudioInputController {
         this.bindDebugConsoleAndVadState();
     }
 
-    // UserMedia取得を開始し、取得できたトラックを呼び出し元へ返す。
-    // React移行中でも getUserMedia / VAD 実装はこの controller に集約しておく。
+    /** 音声取得を開始し、現在の開始世代の成功・失敗だけを呼び出し元へ返す。 */
     start(
         onAudioTrack: (audioTrack: MediaStreamTrack) => void,
         onAudioTrackReplaced: (audioTrack: MediaStreamTrack) => void,
     ): void {
+        const generation = ++this.startGeneration;
         this.onAudioTrackReplaced = onAudioTrackReplaced;
         this.hasStarted = true;
         // CharacterGaze 用カメラは専用 manager で取得する。
@@ -56,11 +57,16 @@ export class SincroAudioInputController {
 
         this.userMediaManager.getUserMedia(
             (audioTrack) => {
+                if (!this.hasStarted || generation !== this.startGeneration) {
+                    audioTrack.stop();
+                    return;
+                }
                 this.characterBehaviorState.clearErrorSource("media");
                 onAudioTrack(audioTrack);
             },
             () => {},
             (err) => {
+                if (!this.hasStarted || generation !== this.startGeneration) return;
                 this.characterBehaviorState.setErrorSource(
                     "media",
                     `マイク入力の取得に失敗しました。${err}`,
@@ -70,6 +76,19 @@ export class SincroAudioInputController {
                 );
             },
         );
+    }
+
+    /** 所有者の使用状態を中核制御へ中継し、表示側で取得成功を推測させない。 */
+    setUsageCallback(callback: Parameters<UserMediaManager["setUsageCallback"]>[0]): void {
+        this.userMediaManager.setUsageCallback(callback);
+    }
+
+    /** 初回取得・切替待ちを無効化し、設定からの自動再取得と元音声・処理器を停止する。 */
+    stop(): void {
+        this.hasStarted = false;
+        ++this.startGeneration;
+        ++this.pendingAudioInputRefreshToken;
+        this.userMediaManager.close();
     }
 
     private bindSettingsToUserMedia(): void {
@@ -209,15 +228,21 @@ export class SincroAudioInputController {
                 // 直前の切替失敗でチェーン全体が止まらないようにする。
             })
             .then(async () => {
-                if (refreshToken !== this.pendingAudioInputRefreshToken) {
+                if (!this.hasStarted || refreshToken !== this.pendingAudioInputRefreshToken) {
                     return;
                 }
                 const selectedDeviceId = this.userMediaManager.getAudioInputDeviceId();
                 try {
                     const nextAudioTrack = await this.userMediaManager.reacquireAudioTrack();
+                    if (!this.hasStarted || refreshToken !== this.pendingAudioInputRefreshToken) {
+                        nextAudioTrack.stop();
+                        return;
+                    }
                     this.characterBehaviorState.clearErrorSource("media");
                     this.onAudioTrackReplaced(nextAudioTrack);
                 } catch (err) {
+                    if (!this.hasStarted || refreshToken !== this.pendingAudioInputRefreshToken)
+                        return;
                     const detail = err instanceof Error ? err.message : String(err);
                     this.characterBehaviorState.setErrorSource(
                         "media",

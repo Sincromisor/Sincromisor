@@ -106,3 +106,27 @@ div#sincroHeaderBox {
         }
     }
 }
+
+/* 機器使用と終了操作は設定を開かず到達でき、狭幅では状態と操作を折り返す。 */
+.sincroExperienceControls {
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px;
+    margin-top: 8px;
+    border-radius: 12px;
+    background: var(--sincro-main-overlay-surface, rgba(14, 16, 22, 0.92));
+    color: var(--headerTextColor);
+    pointer-events: auto;
+}
+
+.sincroExperienceControls__usage {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    font-size: 12px;
+}

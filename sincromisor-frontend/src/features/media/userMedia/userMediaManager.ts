@@ -1,6 +1,5 @@
-import { frontendLogger } from "../../../shared/logging/appLogger";
-import { diagnosticReason } from "../../../shared/logging/browserDiagnostics";
 import { UserMediaAudioProcessor } from "../vad/userMediaAudioProcessor";
+import { type MediaUsageState, UserMediaAcquisition } from "./userMediaAcquisition";
 import {
     type AudioBooleanConstraintKey,
     applyAudioBooleanConstraintToTrack,
@@ -9,12 +8,6 @@ import {
     setAudioInputDeviceIdInConfig,
 } from "./userMediaConstraints";
 import { createDefaultUserMediaConfig } from "./userMediaDefaultConfig";
-import {
-    acquireRawAudioTrack,
-    installMediaStreamTracks,
-    stopPreviousAudioTracks,
-    stopTrack,
-} from "./userMediaTrackLifecycle";
 import type {
     AudioConstraintRuntimeApplyReport,
     AudioFilterConfig,
@@ -39,18 +32,25 @@ export type {
 // マイク/カメラ取得と、送信用音声トラックの前処理入口を担当する。
 // WebAudio/VADの詳細は UserMediaAudioProcessor に委譲し、このクラスは track lifecycle に集中する。
 export class UserMediaManager {
-    audioTrack?: MediaStreamTrack;
-    videoTrack?: MediaStreamTrack;
+    /** 現在所有する加工済み送信用トラック。未取得・終了後はundefined。 */
+    get audioTrack(): MediaStreamTrack | undefined {
+        return this.acquisition.audioTrack;
+    }
+    /** この所有者が取得した映像。追跡専用カメラとは別に保持する。 */
+    get videoTrack(): MediaStreamTrack | undefined {
+        return this.acquisition.videoTrack;
+    }
     config: MediaStreamConstraints;
     private readonly audioProcessor: UserMediaAudioProcessor;
     private onAudioConstraintRuntimeApplyCallback: (
         report: AudioConstraintRuntimeApplyReport,
     ) => void = () => {};
-    private rawAudioTrack?: MediaStreamTrack;
+    private readonly acquisition: UserMediaAcquisition;
 
     constructor() {
         this.config = this.defaultConfig();
         this.audioProcessor = new UserMediaAudioProcessor();
+        this.acquisition = new UserMediaAcquisition(this.audioProcessor);
     }
 
     // ブラウザが getUserMedia に対応しているかを確認する。
@@ -164,55 +164,22 @@ export class UserMediaManager {
         videoTrackCallback: (videoTrack: MediaStreamTrack) => void,
         errCallback: (err: unknown) => void,
     ): void {
-        navigator.mediaDevices
-            .getUserMedia(this.config)
-            .then(async (mediaStream) => {
-                await installMediaStreamTracks({
-                    mediaStream,
-                    processAudioTrack: (track) =>
-                        this.audioProcessor.buildProcessedAudioTrack(track),
-                    onRawAudioTrack: (track) => {
-                        this.rawAudioTrack = track;
-                    },
-                    onProcessedAudioTrack: (track) => {
-                        this.audioTrack = track;
-                        audioTrackCallback(track);
-                    },
-                    onVideoTrack: (track) => {
-                        this.videoTrack = track;
-                        videoTrackCallback(track);
-                    },
-                });
-            })
-            .catch((err) => {
-                // 同時要求でも要求した機器を区別し、例外の本文は診断へ渡さない。
-                if (this.config.audio)
-                    frontendLogger.diagnostic("microphone", diagnosticReason(err));
-                if (this.config.video) frontendLogger.diagnostic("camera", diagnosticReason(err));
-                frontendLogger.error("Could not acquire media.", { error: err });
-                errCallback(err);
-            });
+        this.acquisition.acquire({
+            config: this.config,
+            onAudio: audioTrackCallback,
+            onVideo: videoTrackCallback,
+            onError: errCallback,
+        });
     }
 
-    // 実行中のマイク入力を再取得し、処理済み送信用トラックへ差し替える。
-    async reacquireAudioTrack(): Promise<MediaStreamTrack> {
-        const previousProcessedTrack = this.audioTrack;
-        const previousRawTrack = this.rawAudioTrack;
-        const previousEnabled = previousProcessedTrack?.enabled ?? true;
-        const nextRawTrack = await acquireRawAudioTrack(this.config);
+    /** 所有トラックの使用状態をアプリの通常画面へ通知する。 */
+    setUsageCallback(callback: (state: MediaUsageState) => void): void {
+        this.acquisition.setUsageCallback(callback);
+    }
 
-        try {
-            const nextProcessedTrack =
-                await this.audioProcessor.buildProcessedAudioTrack(nextRawTrack);
-            nextProcessedTrack.enabled = previousEnabled;
-            this.rawAudioTrack = nextRawTrack;
-            this.audioTrack = nextProcessedTrack;
-            stopPreviousAudioTracks(previousRawTrack, previousProcessedTrack);
-            return nextProcessedTrack;
-        } catch (error) {
-            nextRawTrack.stop();
-            throw error;
-        }
+    /** 実行中のマイクを切り替え、終了後の後着結果は所有者側で破棄する。 */
+    reacquireAudioTrack(): Promise<MediaStreamTrack> {
+        return this.acquisition.reacquire(this.config);
     }
 
     // 設定ダイアログのAGC設定を getUserMedia 制約へ反映する。
@@ -237,19 +204,7 @@ export class UserMediaManager {
 
     // 取得したメディアトラックと音声処理リソースを停止する。
     close(): void {
-        const audioTrack = this.audioTrack;
-        const rawAudioTrack = this.rawAudioTrack;
-        stopTrack(this.videoTrack);
-        this.videoTrack = undefined;
-        if (audioTrack) {
-            audioTrack.stop();
-            this.audioTrack = undefined;
-        }
-        if (rawAudioTrack && rawAudioTrack !== audioTrack) {
-            rawAudioTrack.stop();
-        }
-        this.rawAudioTrack = undefined;
-        this.audioProcessor.dispose();
+        this.acquisition.close();
     }
 
     // 音声制約の boolean パラメータ更新を共通化する。
@@ -260,7 +215,7 @@ export class UserMediaManager {
         applyAudioBooleanConstraintToTrack({
             key,
             enabled,
-            rawTrack: this.rawAudioTrack,
+            rawTrack: this.acquisition.rawTrack,
             onReport: (report) => {
                 this.onAudioConstraintRuntimeApplyCallback(report);
             },

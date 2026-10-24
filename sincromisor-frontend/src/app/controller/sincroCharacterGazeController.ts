@@ -5,6 +5,7 @@ import type { ChatMessageService } from "../../features/conversation/chat/model/
 import type { DebugConsoleManager } from "../../features/debug/model/debugConsoleManager";
 import { CharacterGaze } from "../../features/gaze/characterGaze/characterGaze";
 import { TrackerRuntime } from "../../features/gaze/trackingRuntime/trackerRuntime";
+import type { MediaUsageState } from "../../features/media/userMedia/userMediaAcquisition";
 import { VideoInputManager } from "../../features/media/userMedia/videoInputManager";
 import { frontendLogger } from "../../shared/logging/appLogger";
 import type { SincroAppSettingsModel } from "../settings/sincroAppSettingsModel";
@@ -37,6 +38,7 @@ export class SincroCharacterGazeController {
     private readonly videoInputManager = new VideoInputManager();
     private readonly trackingVideoElement: HTMLVideoElement;
     private readonly trackerRuntime: TrackerRuntime;
+    private onUsage: (state: MediaUsageState) => void = () => {};
     private released = false;
     private readonly unsubscribeSettings: () => void;
     private onTrackingStopped: (reason: string) => void = () => {};
@@ -103,6 +105,17 @@ export class SincroCharacterGazeController {
         this.applyGazeSettings(true);
     }
 
+    /** 終了後は設定変更による再取得を休止し、現在の追跡と取得待ちを解放する。 */
+    stop(): void {
+        this.hasStarted = false;
+        this.stopCharacterGazeCamera();
+    }
+
+    /** カメラの取得開始と実トラックの使用状態を通常画面へ伝える。 */
+    setUsageCallback(callback: typeof this.onUsage): void {
+        this.onUsage = callback;
+    }
+
     // 通常設定から視線処理へ必要な差分だけを反映する。
     private applyGazeSettings(forceAll: boolean): void {
         const next = readGazeSettingsSnapshot(this.settingsModel);
@@ -151,12 +164,14 @@ export class SincroCharacterGazeController {
         this.characterBehaviorState.setPoseMotionTrackingEnabled(false);
         this.activeTrackingVideoTrack = undefined;
         this.videoInputManager.releaseVideoTrack();
+        this.onUsage("idle");
         this.debugConsoleManager.setCharacterGazePaused(true);
         this.debugConsoleManager.updateCharacterGazeTargetDebug("停止中");
         hideEyeTargetOverlay();
     }
 
     private scheduleCameraRefresh(): void {
+        this.onUsage("requesting");
         const refreshToken = ++this.pendingCameraRefreshToken;
         const onTrackingStopped = this.onTrackingStopped;
         this.cameraRefreshChain = this.cameraRefreshChain
@@ -199,6 +214,7 @@ export class SincroCharacterGazeController {
                 return;
             }
             this.activeTrackingVideoTrack = nextVideoTrack;
+            this.onUsage("active");
             nextVideoTrack.addEventListener("ended", () => {
                 if (
                     !this.isCurrentTracking(refreshToken) ||
@@ -206,6 +222,7 @@ export class SincroCharacterGazeController {
                 ) {
                     return;
                 }
+                this.onUsage("idle");
                 onTrackingStopped("camera_ended");
                 this.characterBehaviorState.setErrorSource(
                     "gaze",
@@ -361,6 +378,7 @@ export class SincroCharacterGazeController {
 
     /** アプリ差し替えで購読と結果の反映を終了する。機器停止は既存の操作範囲に残す。 */
     releaseSubscriptions(): void {
+        this.stop();
         this.released = true;
         ++this.pendingCameraRefreshToken;
         this.unsubscribeSettings();
@@ -370,6 +388,7 @@ export class SincroCharacterGazeController {
     private isCurrentTracking(refreshToken: number): boolean {
         return (
             !this.released &&
+            this.hasStarted &&
             refreshToken === this.pendingCameraRefreshToken &&
             this.settingsModel.getSetting("enableCharacterGaze")
         );

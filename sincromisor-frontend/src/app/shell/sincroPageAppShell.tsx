@@ -12,6 +12,7 @@ import {
 } from "../react/useRightToolPanelState";
 import { useSincroAppControllerSettingsState } from "../react/useSincroAppControllerSettingsState";
 import { RightToolFrame } from "./react/overlay/rightToolFrame";
+import { SincroExperienceControls } from "./react/sincroExperienceControls";
 
 type SincroPageAppShellProps = {
     controlPanel: ReactElement;
@@ -67,6 +68,7 @@ function SincroShellHeader() {
                     </div>
                 </div>
             </div>
+            <SincroExperienceControls />
         </div>
     );
 }

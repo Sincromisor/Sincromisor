@@ -192,6 +192,11 @@ export class DebugConsoleManager {
         this.audioControls.updateLocalAudioConstraintApplyStatus(report);
     }
 
+    /** 体験終了時は送受信音声の測定ループとAudioContextも解放する。 */
+    stopAudioMeters(): void {
+        this.audioControls.stopAudioMeters();
+    }
+
     setLocalAudioTrack(track: MediaStreamTrack): void {
         this.audioControls.setLocalAudioTrack(track);
     }
