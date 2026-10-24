@@ -1,9 +1,5 @@
 import { settingHelp } from "../../../../features/settings/react/fields/settingsFields";
-import {
-    SettingsButton,
-    SettingsHelpLabel,
-    SettingsHint,
-} from "../../../../features/settings/react/primitives/settingsPrimitives";
+import { SettingsButton } from "../../../../features/settings/react/primitives/settingsPrimitives";
 import { defaultSincroAppSettingsSnapshot } from "../../sincroAppSettingsDefaults";
 import type { ApplySettingsFn, SincroAppSettingsSnapshot } from "../panelTypes";
 import { NumericSettingField } from "./numericSettingField";
@@ -11,7 +7,6 @@ import { NumericSettingField } from "./numericSettingField";
 type LookingGlassSettingsSectionProps = {
     settings: SincroAppSettingsSnapshot;
     onApplySettings: ApplySettingsFn;
-    showSectionTitle?: boolean;
 };
 
 const LOOKING_GLASS_PRESETS: Array<{
@@ -73,32 +68,16 @@ const LOOKING_GLASS_PRESETS: Array<{
 export function LookingGlassSettingsSection({
     settings,
     onApplySettings,
-    showSectionTitle = true,
 }: LookingGlassSettingsSectionProps) {
     return (
         <div className="settingsPrimitiveSectionBlock">
-            <LookingGlassSectionHeader showSectionTitle={showSectionTitle} />
+            <h3>次回開始時の設定</h3>
             <LookingGlassPresetButtons onApplySettings={onApplySettings} />
             <LookingGlassNumericSettingsGrid
                 settings={settings}
                 onApplySettings={onApplySettings}
             />
         </div>
-    );
-}
-
-function LookingGlassSectionHeader({ showSectionTitle }: { showSectionTitle: boolean }) {
-    return (
-        <>
-            {showSectionTitle ? <SettingsHelpLabel text="Looking Glass 設定" /> : null}
-            <SettingsHint className="settingsPrimitiveHint--bottomGap settingsPrimitiveHint--soft">
-                これらの値は、次回の Looking Glass 起動時に適用されます。
-            </SettingsHint>
-            <SettingsHint className="settingsPrimitiveHint--bottomGap">
-                ピンボケ気味の場合は、まず「注視する奥行き」と「注視する範囲」
-                を少しずつ調整してください。
-            </SettingsHint>
-        </>
     );
 }
 
