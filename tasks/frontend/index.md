@@ -4,13 +4,7 @@
 
 ## タスク一覧（自動生成 / 全 38 件）
 
-### open（未完） — 1 件
-
-| タスク                                                                                                       | タイトル                                               | 判定 | 依存                                                 |
-| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ | ---- | ---------------------------------------------------- |
-| [task-261024223620-recover-media-startup-failure](./task-261024223620-recover-media-startup-failure/task.md) | 入力機器の取得失敗を状態へ反映し再試行できるようにする | —    | `task-261024223620-end-experience-and-release-media` |
-
-### done（完了） — 37 件
+### done（完了） — 38 件
 
 | タスク                                                                                                                 | タイトル                                                 | 判定    | 依存                                                 |
 | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ------- | ---------------------------------------------------- |
@@ -44,6 +38,7 @@
 | [task-261024223620-clarify-media-data-use](./task-261024223620-clarify-media-data-use/task.md)                         | 開始前に音声と映像の扱いを判断できるようにする           | ✅ PASS | —                                                    |
 | [task-261024223620-end-experience-and-release-media](./task-261024223620-end-experience-and-release-media/task.md)     | 機器の使用状態と体験を終了する操作を通常画面に設ける     | ✅ PASS | —                                                    |
 | [task-261024223620-keep-important-notices-visible](./task-261024223620-keep-important-notices-visible/task.md)         | 重要な通知をキャラクターに隠れない位置へ表示する         | ✅ PASS | —                                                    |
+| [task-261024223620-recover-media-startup-failure](./task-261024223620-recover-media-startup-failure/task.md)           | 入力機器の取得失敗を状態へ反映し再試行できるようにする   | ✅ PASS | `task-261024223620-end-experience-and-release-media` |
 | [task-261024223621-announce-conversation-speakers](./task-261024223621-announce-conversation-speakers/task.md)         | 会話の話者と新着を支援技術へ伝える                       | ✅ PASS | —                                                    |
 | [task-261024223621-make-conversation-history-readable](./task-261024223621-make-conversation-history-readable/task.md) | 会話履歴を読み返せる操作を設ける                         | ✅ PASS | —                                                    |
 | [task-261024223621-restore-dialog-panel-focus](./task-261024223621-restore-dialog-panel-focus/task.md)                 | ダイアログと設定パネルのフォーカス移動を整える           | ✅ PASS | —                                                    |
