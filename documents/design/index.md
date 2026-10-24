@@ -27,6 +27,8 @@
 
 ## フロントエンド
 
+- [Web UI・UX設計原則](../rules/web-ui-ux.md)
+    - サービス全体で満たすべき体験と設計判断の基準。現在の実装仕様とは分けて適用する。
 - [アプリの共通枠組み](frontend/app-shell.md)
     - Vite MPA、Reactによるアプリの共通枠組み、制御処理境界
 - [ページ構成](frontend/pages.md)
