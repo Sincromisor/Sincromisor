@@ -136,7 +136,7 @@ if (tool === "gh" && !args.includes("DELETE"))
     JSON.stringify([
       [
         ...[
-          "minio",
+          "retired-image",
           "sincro-rtc",
           "sincro-frontend",
           "vector",

@@ -170,11 +170,11 @@ test("固定タグを含む現行パッケージと他リポジトリの削除�
     "other",
     "missing",
   ]) {
-    const { result, calls } = invoke(["delete-retired", "minio", name]);
+    const { result, calls } = invoke(["delete-retired", "retired-image", name]);
     assert.equal(result.status, 1, name);
     assert.deepEqual(writes(calls), [], "全対象の検証前に削除しない");
   }
-  const deleted = invoke(["delete-retired", "minio"]);
+  const deleted = invoke(["delete-retired", "retired-image"]);
   assert.equal(deleted.result.status, 0, deleted.result.stderr);
   assert.deepEqual(writes(deleted.calls), [
     [
@@ -182,7 +182,7 @@ test("固定タグを含む現行パッケージと他リポジトリの削除�
       "api",
       "--method",
       "DELETE",
-      "/orgs/Sincromisor/packages/container/minio",
+      "/orgs/Sincromisor/packages/container/retired-image",
     ],
   ]);
   const inventory = invoke(["inventory"]);
@@ -260,9 +260,5 @@ test("コミット済み実Composeの全プロファイルから得た対象とp
     "victoria-logs",
   ])
     assert(actual.some((line) => line.startsWith(`${name}: `)));
-  assert(
-    !actual.some(
-      (line) => line.startsWith("minio:") || line.startsWith("llama-server:"),
-    ),
-  );
+  assert(!actual.some((line) => line.startsWith("llama-server:")));
 });

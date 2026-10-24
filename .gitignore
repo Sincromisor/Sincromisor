@@ -37,6 +37,7 @@ samples
 volumes/consul-data
 volumes/sincro-cache
 volumes/llama-models
+# 廃止済みMinIOの保存データも誤って公開しない。
 volumes/minio
 sincromisor-server/log/*.log
 sincromisor-server/log/voice
