@@ -95,6 +95,7 @@
     }
 
     .rightToolFrame {
+        --right-tool-frame-effective-top: max(calc(var(--right-tool-frame-top) + var(--right-tool-frame-surface-offset-top)), var(--sincro-chrome-bottom, 0px));
         position: fixed;
         inset: 0;
         visibility: hidden;
@@ -111,14 +112,13 @@
         display: flex;
         flex-direction: column;
         position: absolute;
-        top: calc(var(--right-tool-frame-top) + var(--right-tool-frame-surface-offset-top));
+        top: var(--right-tool-frame-effective-top);
         right: var(--right-tool-frame-side);
         width: min(var(--right-tool-frame-width, 560px), calc(100vw - (var(--right-tool-frame-side) * 2)));
         max-height: calc(
             100dvh
-            - var(--right-tool-frame-top)
+            - var(--right-tool-frame-effective-top)
             - var(--right-tool-frame-side)
-            - var(--right-tool-frame-surface-offset-top)
         );
         box-sizing: border-box;
         border: 1px solid var(--right-tool-frame-border);
@@ -212,7 +212,7 @@
     .rightToolFrame--settings .rightToolFrame__scroll {
         /* 設定パネル自体が surface を描くため、外枠ではなく中身の表示面を共通基準まで下げる。 */
         padding-top: var(--right-tool-frame-visual-offset-top);
-        height: calc(100dvh - var(--right-tool-frame-top) - var(--right-tool-frame-side));
+        height: calc(100dvh - var(--right-tool-frame-effective-top) - var(--right-tool-frame-side));
         overflow: hidden;
         display: grid;
         grid-template-rows: minmax(0, 1fr);

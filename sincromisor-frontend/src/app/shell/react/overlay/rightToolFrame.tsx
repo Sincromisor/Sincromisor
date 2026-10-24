@@ -1,4 +1,5 @@
-import type { PointerEvent, ReactNode } from "react";
+import { type PointerEvent, type ReactNode, useLayoutEffect, useRef } from "react";
+import { useRightToolPanelState } from "../../../react/useRightToolPanelState";
 import { OverlayCloseButton } from "./overlayCloseButton";
 import "./overlay.css";
 
@@ -33,6 +34,17 @@ export function RightToolFrame({
     variant,
     children,
 }: RightToolFrameProps) {
+    const surfaceRef = useRef<HTMLElement>(null);
+    const wasOpen = useRef(false);
+    const { activePanel } = useRightToolPanelState();
+    useLayoutEffect(() => {
+        if (isOpen && !wasOpen.current)
+            surfaceRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+        // 別パネルへの切り替えでは、新しく開いたパネルのフォーカスを上書きしない。
+        if (!isOpen && wasOpen.current && activePanel === "none")
+            document.getElementById("debugMenuButton")?.focus();
+        wasOpen.current = isOpen;
+    }, [isOpen, activePanel]);
     const frameClassName = ["rightToolFrame", `rightToolFrame--${variant}`, isOpen ? "is-open" : ""]
         .filter(Boolean)
         .join(" ");
@@ -48,9 +60,18 @@ export function RightToolFrame({
             id={id}
             className={frameClassName}
             aria-hidden={!isOpen}
+            inert={!isOpen}
             onPointerDown={handleBackdropPointerDown}
         >
             <section
+                ref={surfaceRef}
+                onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        onClose();
+                    }
+                }}
                 className="rightToolFrame__surface"
                 role="dialog"
                 aria-modal="false"

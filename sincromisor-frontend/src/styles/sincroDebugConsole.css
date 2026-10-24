@@ -64,7 +64,7 @@ div#debugMenuPanel {
     visibility: hidden;
     opacity: 0;
     transform: translateY(-6px);
-    transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
+    transition: opacity 120ms ease, transform 120ms ease;
     pointer-events: none;
 }
 

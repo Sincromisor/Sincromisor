@@ -1,4 +1,4 @@
-import { type ReactElement, useEffect, useRef } from "react";
+import { type ReactElement, useEffect, useLayoutEffect, useRef } from "react";
 import { ChatAnnouncer } from "../../features/conversation/chat/react/chatAnnouncer";
 import { ConversationHistoryView } from "../../features/conversation/chat/react/conversationHistoryView";
 import { SincroChatView } from "../../features/conversation/chat/react/sincroChatView";
@@ -51,8 +51,28 @@ export function SincroPageAppShell({ controlPanel, onCharacterMounted }: SincroP
 // 題名も設定パネルと同じ購読で描画し、有効な制御処理の差し替えに追従する。
 function SincroShellHeader() {
     const { settings } = useSincroAppControllerSettingsState();
+    const headerRef = useRef<HTMLDivElement>(null);
+    useLayoutEffect(() => {
+        const node = headerRef.current;
+        const root = node?.parentElement;
+        if (!node || !root) return;
+        // 文字拡大・狭幅の折り返し後も、パネル操作を常設ヘッダーの下へ配置する。
+        const measure = () =>
+            root.style.setProperty(
+                "--sincro-chrome-bottom",
+                `${Math.max(node.getBoundingClientRect().bottom, ...[...node.children].map((child) => child.getBoundingClientRect().bottom)) + 8}px`,
+            );
+        const observer = new ResizeObserver(measure);
+        observer.observe(node);
+        for (const child of node.children) observer.observe(child);
+        measure();
+        return () => {
+            observer.disconnect();
+            root.style.removeProperty("--sincro-chrome-bottom");
+        };
+    }, []);
     return (
-        <div id="sincroHeaderContainer">
+        <div id="sincroHeaderContainer" ref={headerRef}>
             <div id="sincroHeaderBox">
                 <div id="sincroHeaderBox__brand">
                     <div className="headerIconBox">

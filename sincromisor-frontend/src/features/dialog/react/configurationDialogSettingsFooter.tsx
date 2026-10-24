@@ -25,7 +25,7 @@ export function ConfigurationDialogSettingsFooter({
     return (
         <div className="configurationDialogReactSettingsPanel__footer">
             <div className="configurationDialogReactSettingsPanel__footerLead">
-                <SettingsButton type="button" onClick={onToggleDetails}>
+                <SettingsButton type="button" onClick={onToggleDetails} data-startup-view-toggle>
                     {showDetails ? "開始画面へ戻る" : "詳しい設定"}
                 </SettingsButton>
                 <a className="configurationDialogReactSettingsPanel__backLink" href="/">
