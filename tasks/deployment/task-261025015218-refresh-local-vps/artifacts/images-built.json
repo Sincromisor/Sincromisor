@@ -1,0 +1,86 @@
+[
+  {
+    "service": "agent-server",
+    "image": "sincromisor-update/agent-server:20261025-a29a6ea2",
+    "id": "sha256:307d8ec65e81c10656f9f76b3b8c0b6a09455569d83004c8b883eca961ba17a7",
+    "size": 757040857,
+    "revision": "a29a6ea29e1a4b0e792f45d198eee8c638d743fd"
+  },
+  {
+    "service": "log-observer",
+    "image": "sincromisor-update/log-observer:20261025-a29a6ea2",
+    "id": "sha256:e0967685a477bb3ab04f3a4bdbb379fe724c585e62c167ad9e050887dfa994e3",
+    "size": 17489310,
+    "revision": "a29a6ea29e1a4b0e792f45d198eee8c638d743fd"
+  },
+  {
+    "service": "sincro-frontend",
+    "image": "sincromisor-update/sincro-frontend:20261025-a29a6ea2",
+    "id": "sha256:f5d6bb0a3d3dff8e6bbf43059e8d9c110c68689462ee2169d689caf0c61626b6",
+    "size": 630312463,
+    "revision": "a29a6ea29e1a4b0e792f45d198eee8c638d743fd"
+  },
+  {
+    "service": "sincro-redis",
+    "image": "sincromisor-update/sincro-redis:20261025-a29a6ea2",
+    "id": "sha256:d8af91800b3e1cd979b3c0c1dc3ae8dde9131bc9d8555ac666f4bc65a50f663b",
+    "size": 481516081,
+    "revision": "a29a6ea29e1a4b0e792f45d198eee8c638d743fd"
+  },
+  {
+    "service": "sincro-rtc",
+    "image": "sincromisor-update/sincro-rtc:20261025-a29a6ea2",
+    "id": "sha256:c9a082bb6fc1eed64c66f4646c02ce7feb0b7a688c328cce3f0fd2cdac853f6d",
+    "size": 1209524114,
+    "revision": "a29a6ea29e1a4b0e792f45d198eee8c638d743fd"
+  },
+  {
+    "service": "sincro-voicevox",
+    "image": "sincromisor-update/sincro-voicevox:20261025-81369030",
+    "id": "sha256:1245f3aef8d6e44d05f77ffb7ef56a8b1fd45d5a7989aba574d3a412525af961",
+    "size": 1514003853,
+    "revision": "81369030a95686345b98b720c2e0c5806ff1c163"
+  },
+  {
+    "service": "speech-extractor",
+    "image": "sincromisor-update/speech-extractor:20261025-a29a6ea2",
+    "id": "sha256:3852df1ba07e39ee82c2cba2690f261b1472fa0d114d6a9e074a5a17a5eca37f",
+    "size": 1791577437,
+    "revision": "a29a6ea29e1a4b0e792f45d198eee8c638d743fd"
+  },
+  {
+    "service": "speech-recognizer",
+    "image": "sincromisor-update/speech-recognizer:20261025-a29a6ea2",
+    "id": "sha256:cb2c65ffe8838d9c94d407b62b247c5f61d896cc168e36970a3c729a57253d2f",
+    "size": 16865483817,
+    "revision": "a29a6ea29e1a4b0e792f45d198eee8c638d743fd"
+  },
+  {
+    "service": "text-processor",
+    "image": "sincromisor-update/text-processor:20261025-a29a6ea2",
+    "id": "sha256:59637f6cac29dd1a8023d2f0d3caa0fe91fee32af5caa81400e394bde3cac812",
+    "size": 1202696932,
+    "revision": "a29a6ea29e1a4b0e792f45d198eee8c638d743fd"
+  },
+  {
+    "service": "vector",
+    "image": "sincromisor-update/vector:20261025-a29a6ea2",
+    "id": "sha256:86c8e1b87106c11db9ed49c2dca2101a1831dcbd637d3a61ade3e8c6badbd4b3",
+    "size": 407722129,
+    "revision": "a29a6ea29e1a4b0e792f45d198eee8c638d743fd"
+  },
+  {
+    "service": "victoria-logs",
+    "image": "sincromisor-update/victoria-logs:20261025-a29a6ea2",
+    "id": "sha256:9e18dda1c046bc359e43ebdf6448247f99ad92ba1a5c5644c2244b7a9d5fb066",
+    "size": 46506633,
+    "revision": "a29a6ea29e1a4b0e792f45d198eee8c638d743fd"
+  },
+  {
+    "service": "voice-synthesizer",
+    "image": "sincromisor-update/voice-synthesizer:20261025-a29a6ea2",
+    "id": "sha256:186d4a449048570d277e53481c77db9bb1bed2098e2e31896e33ad311d7fd42d",
+    "size": 755834556,
+    "revision": "a29a6ea29e1a4b0e792f45d198eee8c638d743fd"
+  }
+]

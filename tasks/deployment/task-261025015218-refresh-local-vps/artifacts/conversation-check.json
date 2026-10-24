@@ -1,0 +1,52 @@
+{
+  "local": {
+    "textCount": 21,
+    "userMessages": 2,
+    "responseMessages": 2,
+    "telop": 604,
+    "media": [
+      {
+        "paused": false,
+        "muted": false
+      }
+    ],
+    "peers": [
+      {
+        "state": "connected",
+        "ice": "connected",
+        "stats": [
+          {
+            "packets": 2300,
+            "energy": 0.4963290076623814,
+            "duration": 46.18999999999938
+          }
+        ]
+      }
+    ]
+  },
+  "vps": {
+    "textCount": 13,
+    "userMessages": 1,
+    "responseMessages": 1,
+    "telop": 838,
+    "media": [
+      {
+        "paused": false,
+        "muted": false
+      }
+    ],
+    "peers": [
+      {
+        "state": "connected",
+        "ice": "connected",
+        "stats": [
+          {
+            "packets": 1607,
+            "energy": 0.8267613181033896,
+            "duration": 32.40000000000212
+          }
+        ]
+      }
+    ]
+  }
+}

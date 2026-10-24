@@ -1,0 +1,30 @@
+{
+  "core": [
+    "0.17.0"
+  ],
+  "http": [
+    {
+      "mode": "normal",
+      "bytes": 709676,
+      "frames": 354816,
+      "first_pcm_s": 2.1061272059960174,
+      "total_s": 2.111732993995247
+    },
+    {
+      "mode": "fixed",
+      "bytes": 709676,
+      "frames": 354816,
+      "first_pcm_s": 0.20069843599776505,
+      "total_s": 4.026637271999789
+    },
+    {
+      "mode": "ramped",
+      "bytes": 709676,
+      "frames": 354816,
+      "first_pcm_s": 0.18546695799886947,
+      "total_s": 2.5334537730013835
+    }
+  ],
+  "adapter_pcm_bytes": 653312,
+  "mora_frames": 326656
+}
