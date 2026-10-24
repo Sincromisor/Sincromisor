@@ -25,7 +25,6 @@ function compose(confidence: number, intent = createIntent("pointing"), age = 0)
         frame,
         profile: createProfile(),
         semanticFinger: {
-            mode: "composer",
             intent,
             hand: createHand({ index: 0.8 }),
             mediaTimeMs: 1000,
@@ -85,7 +84,6 @@ describe("観測と補助姿勢の調停", () => {
         const service = new SincroVrmPoseComposerService();
         const profile = createProfile();
         const active = {
-            mode: "composer" as const,
             intent: createIntent("pointing"),
             hand: createHand({ index: 0.8 }),
             mediaTimeMs: 1000,

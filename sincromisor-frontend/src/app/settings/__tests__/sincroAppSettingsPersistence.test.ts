@@ -152,6 +152,27 @@ it("視線・姿勢の不正項目と観測値を除外し、通常強度とラ�
     expect(restored.getGazeTuning()).toEqual(saved.getGazeTuning());
 });
 
+it.each(["off", "composer"])(
+    "旧切り戻し設定%sを読み捨て、他の姿勢調整を復元・再保存する",
+    (mode) => {
+        const local = storage();
+        const key = sincroSettingsStorageKey("simple-vrm");
+        local.setItem(
+            key,
+            JSON.stringify({
+                version: 1,
+                settings: { titleText: "旧設定" },
+                pose: { composerSemanticFingerApplicationMode: mode, smoothingMs: 175 },
+            }),
+        );
+        const saved = new SincroAppSettingsPersistence("simple-vrm");
+        expect(saved.load()).toEqual({ titleText: "旧設定" });
+        expect(saved.getPoseTuning()).toEqual({ smoothingMs: 175 });
+        saved.save({ titleText: "更新" });
+        expect(JSON.parse(local.getItem(key) ?? "{}").pose).toEqual({ smoothingMs: 175 });
+    },
+);
+
 it("echoを保存・復元し、明示したURL設定を優先する", () => {
     storage();
     new SincroAppSettingsPersistence("simple-vrm").save({ talkMode: "echo" });

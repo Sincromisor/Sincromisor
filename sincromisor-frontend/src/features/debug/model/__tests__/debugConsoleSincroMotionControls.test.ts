@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { SincroPoseSettingsModel } from "../../../../character/runtime/sincroPoseSettingsModel";
 import { DebugConsoleSincroMotionControls } from "../debugConsoleSincroMotionControls";
 import { createDefaultSnapshot, type DebugConsoleSnapshot } from "../debugConsoleSnapshot";
 
@@ -25,13 +24,6 @@ describe("DebugConsoleSincroMotionControls", () => {
         current();
         controls.applySincroPoseRetargetConfig({ intensityScale: 0.6 });
         expect(calls).toBe(1);
-    });
-    it("initializes semantic/finger composer mode with the production default", () => {
-        const snapshot = createDefaultSnapshot();
-
-        expect(snapshot.sincroMotion.poseRetarget.composerSemanticFingerApplicationMode).toBe(
-            "composer",
-        );
     });
 
     it("updates composer dry-run summary without replacing observe-only tracker stages", () => {
@@ -78,27 +70,5 @@ describe("DebugConsoleSincroMotionControls", () => {
                 unavailableReason: "full_normalized_pose_application_result_missing",
             },
         });
-    });
-
-    it("applies semantic finger composer mode through the pose retarget config path", () => {
-        let snapshot = createDefaultSnapshot();
-        const controls = new DebugConsoleSincroMotionControls({
-            updateSnapshot: (updater: (current: DebugConsoleSnapshot) => DebugConsoleSnapshot) => {
-                snapshot = updater(snapshot);
-            },
-        });
-
-        const model = new SincroPoseSettingsModel();
-        model.subscribe((config) => controls.setSincroPoseRetargetConfig(config));
-        controls.setSincroPoseRetargetConfigEditCallback((config) => {
-            model.applyConfig(config);
-        });
-        controls.applySincroPoseRetargetConfig({
-            composerSemanticFingerApplicationMode: "off",
-        });
-
-        expect(snapshot.sincroMotion.poseRetarget.composerSemanticFingerApplicationMode).toBe(
-            "off",
-        );
     });
 });

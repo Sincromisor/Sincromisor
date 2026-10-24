@@ -24,7 +24,7 @@ describe("指の実観測と保持期限", () => {
         const render = (time: number, hand = observed) => {
             const result = createSemanticFingerComposerLayers(
                 profile,
-                { mode: "composer", hand, intent: createIntent(), mediaTimeMs: time },
+                { hand, intent: createIntent(), mediaTimeMs: time },
                 state,
             );
             state = { previousFinger: result.previousFinger };
@@ -69,7 +69,6 @@ describe("指の実観測と保持期限", () => {
                 profile: createProfile(),
                 mediaTimeMs: now,
                 semanticFinger: {
-                    mode: "composer",
                     intent: createIntent(),
                     hand,
                     mediaTimeMs: clock.evaluate(now).handTimeMs,
@@ -109,7 +108,6 @@ describe("指の実観測と保持期限", () => {
                 frame: NEUTRAL_POSE_FRAME,
                 profile: createProfile(),
                 semanticFinger: {
-                    mode: "composer",
                     hand: handInput,
                     intent: createIntent(),
                     mediaTimeMs: 1100,

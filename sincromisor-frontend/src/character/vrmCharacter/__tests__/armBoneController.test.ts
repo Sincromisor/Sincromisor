@@ -201,53 +201,6 @@ describe("VRMCharacterManager full normalized pose application", () => {
     });
 });
 
-describe("VRMCharacterManager semantic/finger rollback lifecycle", () => {
-    it("resets production dry-run previous final pose when semantic finger mode changes", () => {
-        const reset = vi.fn();
-        const setConfig = vi.fn();
-        const manager = Object.create(
-            VRMCharacterManager.prototype,
-        ) as SemanticFingerModeManagerTestDouble;
-        Object.assign(manager, {
-            composerSemanticFingerApplicationMode: "composer",
-            poseComposer: { reset },
-            sincroPoseRetargeter: { setConfig },
-        });
-
-        manager.setSincroPoseRetargetConfig({ composerSemanticFingerApplicationMode: "off" });
-
-        expect(reset).toHaveBeenCalledTimes(1);
-        expect(manager.composerSemanticFingerApplicationMode).toBe("off");
-        expect(setConfig).toHaveBeenCalledWith({ composerSemanticFingerApplicationMode: "off" });
-    });
-
-    it("keeps dry-run previous final pose when unrelated retarget config changes", () => {
-        const reset = vi.fn();
-        const setConfig = vi.fn();
-        const manager = Object.create(
-            VRMCharacterManager.prototype,
-        ) as SemanticFingerModeManagerTestDouble;
-        Object.assign(manager, {
-            composerSemanticFingerApplicationMode: "composer",
-            poseComposer: { reset },
-            sincroPoseRetargeter: { setConfig },
-        });
-
-        manager.setSincroPoseRetargetConfig({ intensityScale: 0.5 });
-
-        expect(reset).not.toHaveBeenCalled();
-        expect(manager.composerSemanticFingerApplicationMode).toBe("composer");
-        expect(setConfig).toHaveBeenCalledWith({ intensityScale: 0.5 });
-    });
-});
-
-type SemanticFingerModeManagerTestDouble = {
-    setSincroPoseRetargetConfig: VRMCharacterManager["setSincroPoseRetargetConfig"];
-    composerSemanticFingerApplicationMode: "off" | "composer";
-    poseComposer: { reset: () => void };
-    sincroPoseRetargeter: { setConfig: (config: unknown) => void };
-};
-
 type UpdateManagerTestDouble = VRMCharacterManager & {
     headBoneController: { update: ReturnType<typeof vi.fn> };
     eyeBehaviorController: { update: ReturnType<typeof vi.fn> };
@@ -362,7 +315,6 @@ function createUpdateManagerDouble(options: {
             getAvatarMotionProfile: vi.fn(() => undefined),
         },
         poseComposer: { reset: vi.fn(), compose: vi.fn(() => options.composerResult) },
-        composerSemanticFingerApplicationMode: "composer",
         sincroMotionPipelineState: createDefaultSincroMotionPipelineState(),
         headBoneController: { update: vi.fn() },
         eyeBehaviorController: { update: vi.fn() },

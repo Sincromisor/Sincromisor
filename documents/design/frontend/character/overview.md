@@ -75,8 +75,8 @@
     - 指クォータニオンは曲げローカル `+X`、指の開きローカル `+Z`、親指の対向動作ローカル `+Y`の低次元対応付けから作り、左右の指の開き / 対向動作符号だけを反転する。未加工のランドマークから指ごとの3D回転を直接作らず、層 / デバッグには通常のクォータニオンオブジェクトだけを保存する。
     - 制作済み範囲制限やAnimationMixerを使う場合も準備段階に留め、姿勢合成処理へ渡す最終表現は `semantic`姿勢差分とする。
     - motion-debugは `frame.solver.phase6`に段階6ソルバースナップショット、`frame.solver.phase7`に段階7の完成版 `AvatarMotionProfile` / 較正スナップショット、`frame.solver.phase9`に段階9意味に基づく動作 / 指診断用スナップショット、`frame.finalPose`に姿勢合成処理結果を保存・表示する。本番では合成サービスが計算した同一フレームの最終姿勢を上半身へ一括適用する。
-    - 本番の合成サービスは、保存済み `MotionIntentState`、低次元Handスナップショット、完成版 `AvatarMotionProfile`が有効なフレームだけ意味に基づく動作の姿勢 / 指の曲げ層を姿勢合成処理入力へ追加する。`composerSemanticFingerApplicationMode`は開発者切り戻しフラグであり、未加工のランドマーク、ジェスチャーRecognizer未加工の結果、VRM Object3D、元のボーンノードは層生成入力にしない。
-    - 正規化済み姿勢の全面適用段階は本番の常時パスであり、同一フレームの利用可能な合成結果 `finalPose`を `VRMCharacterManager.update()`から `normalizedPoseWriter`を介して `vrm.humanoid.setNormalizedPose()`へ1回渡す。追跡フレームの `active`が `false`の場合、代替処理層は体幹 / 肩を単位回転、`upperArm` / `lowerArm` / 手を腕を下ろした `CHARACTER_ARM_REST_POSE`にする。全面段階が所有するその他の欠損ボーンは毎フレーム単位クォータニオンで埋め、前フレームの指姿勢を残さない。利用不可 / 無効 / 欠損プロファイル / 結果欠損では古くなったfinalPoseを使わず、腕 / 体幹 / 肩の旧段階別の切り戻し書き込み処理も本番代替処理として実行しない。利用不可理由は診断Console要約 / 指標用の観測情報として残す。頭部 / 首 / 脚 / 表情は姿勢合成処理の所有対象に含めず、従来制御処理で更新する。`composerSemanticFingerApplicationMode`は意味に基づく動作 / 指抑制を切り分ける開発者切り戻しフラグとして残す。
+    - 本番の合成サービスは、保存済み `MotionIntentState`、低次元Handスナップショット、完成版 `AvatarMotionProfile`が有効なフレームだけ意味に基づく動作の姿勢 / 指の曲げ層を姿勢合成処理入力へ追加する。開発者向けの切り戻しフラグは設けず、未加工のランドマーク、ジェスチャーRecognizer未加工の結果、VRM Object3D、元のボーンノードは層生成入力にしない。
+    - 正規化済み姿勢の全面適用段階は本番の常時パスであり、同一フレームの利用可能な合成結果 `finalPose`を `VRMCharacterManager.update()`から `normalizedPoseWriter`を介して `vrm.humanoid.setNormalizedPose()`へ1回渡す。追跡フレームの `active`が `false`の場合、代替処理層は体幹 / 肩を単位回転、`upperArm` / `lowerArm` / 手を腕を下ろした `CHARACTER_ARM_REST_POSE`にする。全面段階が所有するその他の欠損ボーンは毎フレーム単位クォータニオンで埋め、前フレームの指姿勢を残さない。利用不可 / 無効 / 欠損プロファイル / 結果欠損では古くなったfinalPoseを使わず、腕 / 体幹 / 肩の旧段階別の切り戻し書き込み処理も本番代替処理として実行しない。利用不可理由は診断Console要約 / 指標用の観測情報として残す。頭部 / 首 / 脚 / 表情は姿勢合成処理の所有対象に含めず、従来制御処理で更新する。意味に基づく動作 / 指の層生成も入力検証を経て常に試みる。
     - 動作指標は保存済み `frame.intent`から `gestureFlickerCount`、`semanticFallbackFrameCount`、`intentCooldownSuppressionCount`、`intentInvalidFrameCount`を計算する。無効意図は `intentInvalidFrameCount`だけに数え、他の段階9指標では有効意図サンプルが無い場合 `not_available`にする。
     - 保存契約は `avatarMotionProfileTypes.ts`、保存検証は `avatarMotionProfileSchema.ts`、共有複製と最小プロファイルへの変換は `avatarMotionProfileClone.ts`が担う。保存検証はVRM計測を読み込まず、既存の版・厳密なキー検証・数値範囲・エラー分類を維持する。
     - `avatarMotionProfileMeasurement.ts`がVRMのボーン・寸法・初期回転を計測し、通常データと警告を返す。`avatarMotionProfile.ts`は計測結果から既定値・対応能力・リスク値を組み立てる。`SincroPoseRetargeter.attachVrm()`で計測、組み立て、IK初期化の順に実行する。
@@ -94,7 +94,7 @@
   -> setNormalizedPose(finalPose) による全面適用
 ```
 
-旧腕適用処理と体幹 / 肩移行の段階別の切り戻しパスは後始末済みであり、現行本番実行時では全面 `setNormalizedPose(finalPose)`適用が唯一の上半身の最終姿勢を書き込む処理である。指標が合格でも、複数VRMの手動確認、機能低下 / ROI / カメラ品質の説明成果物、意味に基づく動作 / 指切り戻し条件は継続して記録する。
+旧腕適用処理と体幹 / 肩移行の段階別の切り戻しパスは後始末済みであり、現行本番実行時では全面 `setNormalizedPose(finalPose)`適用が唯一の上半身の最終姿勢を書き込む処理である。指標が合格でも、複数VRMの手動確認、機能低下 / ROI / カメラ品質の説明成果物、意味に基づく動作 / 指の入力検証と抑制理由は継続して記録する。
 
 ## 会話モードの責務境界
 

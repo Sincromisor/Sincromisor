@@ -13,7 +13,7 @@ export const sincroGazeTuningSchema = z.object({
     deadband: z.number().min(0).max(0.02).catch(gaze.deadband),
 });
 
-/** 未指定の姿勢強度を生成せず、通常設定からの初期値を維持する部分設定。 */
+/** 未指定の姿勢強度は生成せず、廃止済みの診断項目を含む未知のキーは読み捨てる部分設定。 */
 export const sincroPoseTuningSchema = z.object({
     intensityScale: z.number().min(0).max(1.2).optional().catch(undefined),
     minConfidence: z.number().min(0).max(1).optional().catch(undefined),
@@ -43,5 +43,4 @@ export const sincroPoseTuningSchema = z.object({
         .enum(["world_3d_ik", "screen_space_ik", "feature_only"])
         .optional()
         .catch(undefined),
-    composerSemanticFingerApplicationMode: z.enum(["composer", "off"]).optional().catch(undefined),
 });
