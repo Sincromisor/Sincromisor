@@ -49,7 +49,7 @@ test("画像を読み込み、画面幅を変えても体験選択と会話例�
 
 test("正式トップの両開始ボタンから選んだ体験へ直接進む", async ({ page }) => {
     for (const selector of [".header-start", ".hero-actions button"]) {
-        for (const mode of ["sincro", "chat"]) {
+        for (const mode of ["sincro", "chat", "echo", "playback"]) {
             await page.goto("http://127.0.0.1:5173/index.html");
             await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
             await expect(page.getByRole("link", { name: "360度カメラ（実験的）" })).toHaveAttribute(
@@ -77,13 +77,22 @@ test("正式トップの両開始ボタンから選んだ体験へ直接進む",
             await expect(setting).toHaveValue(mode === "chat" ? "sincro" : "chat");
         }
     }
+    const setting = page
+        .getByRole("dialog")
+        .getByRole("combobox")
+        .filter({ has: page.locator('option[value="sincro"]') });
+    // URLの選択を表示しても保存値は変えず、未指定・不正値では最後の利用者入力へ戻す。
+    await setting.selectOption("sincro");
+    await page.goto("http://127.0.0.1:5173/simple-vrm/?talkMode=chat");
+    await expect(setting).toHaveValue("chat");
     for (const query of ["", "?talkMode=invalid"]) {
         await page.goto(`http://127.0.0.1:5173/simple-vrm/${query}`);
-        await expect(
-            page
-                .getByRole("dialog")
-                .getByRole("combobox")
-                .filter({ has: page.locator('option[value="sincro"]') }),
-        ).toHaveValue("chat");
+        await expect(setting).toHaveValue("sincro");
+    }
+    // このテストで作った設定だけを消し、保存値のない初回起動も確認する。
+    await page.evaluate(() => localStorage.removeItem("sincromisor:settings:simple-vrm"));
+    for (const query of ["", "?talkMode=invalid"]) {
+        await page.goto(`http://127.0.0.1:5173/simple-vrm/${query}`);
+        await expect(setting).toHaveValue("chat");
     }
 });
