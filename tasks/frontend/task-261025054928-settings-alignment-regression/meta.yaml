@@ -4,6 +4,7 @@ category: frontend
 status: open
 depends_on:
   - task-261025054927-startup-action-alignment
+  - task-261025055639-settings-fixed-footer-height
 superseded_by: null
 review: null
 reviewed_sha: null
