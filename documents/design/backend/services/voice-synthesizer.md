@@ -16,7 +16,7 @@ Composeは公式 [VOICEVOX ENGINE 0.26.0](https://github.com/VOICEVOX/voicevox_e
 
 | 構成要素                     | 固定版                                              |
 | ---------------------------- | --------------------------------------------------- |
-| Python / uv                  | 3.14.6 / 0.13.1、公式Engineの `uv.lock`で依存を固定 |
+| Python / uv                  | 3.14.9 / 0.13.5、公式Engineの `uv.lock`で依存を固定 |
 | Core / VOICEVOX ONNX Runtime | 0.17.1 / 1.23.2、配布物のSHA-256を検証              |
 | モデル                       | VVM 0.17.0の `0.vvm`、SHA-256を検証                 |
 | 公式リソース                 | 0.26.0の `37c265375e05313486ebf2024b1679d6952a53d8` |

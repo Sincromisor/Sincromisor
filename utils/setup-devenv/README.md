@@ -65,7 +65,7 @@ HTTP が開けても WebRTC の UDP が到達するとは限らない。既定�
 
 2026-09-13 に公式手順を確認した。採用範囲は次のとおり。
 
-- [Ubuntu の Node.js](https://packages.ubuntu.com/resolute/nodejs): 標準パッケージ導入後、`package.json`のNode.js 26.11.1 / npm 11.20.0へ公式配布または既存のバージョン管理ツールで切り替える。セットアップは不一致時に停止する。
+- [Ubuntu の Node.js](https://packages.ubuntu.com/resolute/nodejs): 標準パッケージ導入後、`package.json`のNode.js 26.12.1 / npm 11.21.1へ公式配布または既存のバージョン管理ツールで切り替える。セットアップは不一致時に停止する。
 - [Docker Engine](https://docs.docker.com/engine/install/ubuntu/): Ubuntu 26.04 向け公式 APT、Compose、Buildx を導入する。
 - [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html): 安定版 APT と Docker ランタイム設定を利用する。
 - [CUDA on WSL](https://docs.nvidia.com/cuda/wsl-user-guide/index.html): Windows ドライバーを利用し、Linux ドライバーを追加しない。

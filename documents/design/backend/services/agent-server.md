@@ -10,7 +10,7 @@ TextProcessorのchat入口はこのサービスへ接続し、Mastraのストリ
 
 実装は `sincromisor-server/agent-server/`、配備は `Docker/agent-server/`と `compose/agent-server.yml`。
 Mastra CLI 1.35.0、core 1.79.0、Editor 0.16.4、Memory 1.39.0、libSQL 1.27.0、MCPClient 2.5.0をロックし、
-`mastra build --studio`の本番成果物をNode 24.21.0で実行する。
+`mastra build --studio`の本番成果物をNode 24.22.1で実行する。
 StudioのAPI接続先は `MASTRA_AUTO_DETECT_URL=true`によりページと同一オリジンにする。
 待受アドレス `0.0.0.0`をブラウザー向けURLとして使わない。
 

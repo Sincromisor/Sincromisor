@@ -140,11 +140,11 @@ sh scripts/logging/backup.sh /backup/sincromisor-logs.tar --env-file .env -f com
 ```sh
 docker volume create logs-restore-data
 docker run --rm -i --network none -v logs-restore-data:/restore \
-  --entrypoint /busybox ghcr.io/sincromisor/victoria-logs:v1.52.0 \
+  --entrypoint /busybox ghcr.io/sincromisor/victoria-logs:v1.53.0 \
   tar -C /restore -xf - < /backup/sincromisor-logs.tar
 docker run -d --name logs-restore-check --network none \
   -v logs-restore-data:/victoria-logs-data \
-  ghcr.io/sincromisor/victoria-logs:v1.52.0 -storageDataPath=/victoria-logs-data
+  ghcr.io/sincromisor/victoria-logs:v1.53.0 -storageDataPath=/victoria-logs-data
 docker exec logs-restore-check /busybox wget -qO- \
   'http://127.0.0.1:9428/select/logsql/query?query=*&limit=10'
 ```

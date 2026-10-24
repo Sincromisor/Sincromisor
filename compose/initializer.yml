@@ -3,7 +3,7 @@ services:
     s3-credential-initializer:
         logging: {driver: journald, options: {mode: non-blocking, max-buffer-size: "4m", labels: "com.docker.compose.project,com.docker.compose.service"}}
         profiles: [full, backend, external, s3]
-        image: curlimages/curl:8.12.1
+        image: curlimages/curl:8.23.0
         user: "0:0"
         entrypoint: [sh, /initialize.sh, s3]
         volumes:
@@ -15,7 +15,7 @@ services:
     service-initializer:
         logging: {driver: journald, options: {mode: non-blocking, max-buffer-size: "4m", labels: "com.docker.compose.project,com.docker.compose.service"}}
         profiles: [full, backend, chat]
-        image: curlimages/curl:8.12.1
+        image: curlimages/curl:8.23.0
         user: "0:0"
         entrypoint: [sh, /initialize.sh, services]
         volumes:
@@ -28,7 +28,7 @@ services:
     llama-model-initializer:
         logging: {driver: journald, options: {mode: non-blocking, max-buffer-size: "4m", labels: "com.docker.compose.project,com.docker.compose.service"}}
         profiles: [chat]
-        image: curlimages/curl:8.12.1
+        image: curlimages/curl:8.23.0
         user: "0:0"
         entrypoint: [sh, /initialize.sh, llama]
         environment:

@@ -30,7 +30,7 @@ RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
 
 USER ${SINCRO_USER_ID}
 # ビルドツールの更新で依存導入が変わらないよう、公式バイナリの版を固定する。
-COPY --from=ghcr.io/astral-sh/uv:0.13.1 --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
+COPY --from=ghcr.io/astral-sh/uv:0.13.5 --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     /uv /uvx ${SINCRO_USER_DIR}/.local/bin/
 
 USER ${SINCRO_USER_ID}

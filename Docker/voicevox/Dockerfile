@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
-FROM hashicorp/consul@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54 AS consul
+FROM hashicorp/consul:2.1.0@sha256:259fd02f2544fe1aa03fa49efd3b105c8dd67106d710a72f5e898110266356f7 AS consul
 
-FROM python:3.14.6-slim-bookworm AS source
+FROM python:3.14.9-slim-bookworm AS source
 ARG ENGINE_REVISION=7ebc23342bd812f5a72816330f62f110ccca8bdc
 WORKDIR /opt/voicevox_engine
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -18,9 +18,9 @@ COPY Docker/voicevox/streaming-ramp.patch /tmp/streaming-ramp.patch
 RUN git apply --check /tmp/streaming-ramp.patch && git apply /tmp/streaming-ramp.patch \
     && sha256sum /tmp/streaming-ramp.patch | cut -d " " -f 1 > STREAMING_PATCH_SHA256
 
-FROM python:3.14.6-slim-bookworm AS build
+FROM python:3.14.9-slim-bookworm AS build
 WORKDIR /opt/voicevox_engine
-COPY --from=ghcr.io/astral-sh/uv:0.13.1 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.13.5 /uv /usr/local/bin/uv
 ENV UV_PYTHON_PREFERENCE=only-system UV_PYTHON_DOWNLOADS=never UV_LINK_MODE=copy
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
@@ -70,7 +70,7 @@ RUN .venv/bin/python -c 'import json; from pathlib import Path; p=Path("engine_m
 COPY Docker/voicevox/generate-licenses.py /tmp/generate-licenses.py
 RUN .venv/bin/python /tmp/generate-licenses.py
 
-FROM python:3.14.6-slim-bookworm AS runtime
+FROM python:3.14.9-slim-bookworm AS runtime
 WORKDIR /opt/voicevox_engine
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \

@@ -1,10 +1,10 @@
 # hostname -i用
-FROM ubuntu:24.04 AS busybox
+FROM ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac AS busybox
 
 RUN apt-get update && \
     apt-get install -y busybox-static
 
-FROM hashicorp/consul:latest AS consul
+FROM hashicorp/consul:2.1.0 AS consul
 
 FROM minio/minio:latest
 

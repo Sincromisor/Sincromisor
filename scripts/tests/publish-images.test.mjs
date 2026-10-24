@@ -18,8 +18,8 @@ const historyTag = "20261018t010203-aaaaaaaaaaaa";
 const expectedRefs = [
   "sincro-rtc:latest",
   "sincro-frontend:latest",
-  "vector:0.58.0",
-  "victoria-logs:v1.52.0",
+  "vector:0.60.0",
+  "victoria-logs:v1.53.0",
   "agent-server:latest",
 ].map((ref) => `ghcr.io/sincromisor/${ref}`);
 

@@ -47,11 +47,11 @@ if (tool === "docker" && args[0] === "compose") {
       build: { context: source, dockerfile: "Docker/frontend/Dockerfile" },
     },
     vector: {
-      image: "ghcr.io/sincromisor/vector:0.58.0",
+      image: "ghcr.io/sincromisor/vector:0.60.0",
       build: { context: path.join(source, "Docker/logging/vector") },
     },
     logs: {
-      image: "ghcr.io/sincromisor/victoria-logs:v1.52.0",
+      image: "ghcr.io/sincromisor/victoria-logs:v1.53.0",
       build: { context: path.join(source, "Docker/logging") },
     },
     consul: { image: "hashicorp/consul:latest" },
@@ -126,7 +126,7 @@ if (tool === "docker" && args[0] === "image")
 if (tool === "docker" && args[2] === "inspect")
   console.log(
     JSON.stringify(
-      mode === "bad-digest" && args[3].endsWith(":0.58.0")
+      mode === "bad-digest" && args[3].endsWith(":0.60.0")
         ? "sha256:wrong"
         : "sha256:abc",
     ),
