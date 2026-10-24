@@ -1,20 +1,20 @@
 import { expect, type Page, test } from "@playwright/test";
 
 // 起動済み開発サーバーを使い、機器・RTCだけを置換してReactとページ初期化は本番経路を通す。
-test.use({ channel: "chrome", baseURL: "http://127.0.0.1:5176" });
+test.use({ channel: "chrome", baseURL: "http://127.0.0.1:5173" });
 
 async function replaceDeviceStart(page: Page) {
     await page.route("**/app/controller/sincroController.ts*", async (route) => {
         const response = await route.fetch();
         const source = await response.text();
-        expect(source).toContain("start() {");
+        expect(source).toContain("start(onTrackingStopped) {");
         await route.fulfill({
             response,
             body: source.replace(
-                "start() {",
-                `start() {
+                "start(onTrackingStopped) {",
+                `start(onTrackingStopped) {
             document.body.dataset.startCount = String(Number(document.body.dataset.startCount ?? 0) + 1);
-            document.body.dataset.startedSettings = JSON.stringify(this.dialogManager.getSettings());
+            document.body.dataset.startedSettings = JSON.stringify(this.settingsModel.getSettings());
             return;`,
             ),
         });
@@ -56,7 +56,7 @@ test("3ページの配置と既定設定を維持し、通常ページを手動�
     await startAgain(page);
     await expect(page.locator("body")).toHaveAttribute("data-start-count", "1");
     await expect(page.locator("#sincroCharacterBox canvas")).toHaveCount(2);
-    await expect(page.getByText("こんにちは～!", { exact: true })).toHaveCount(1);
+    await expect(page.getByText("こんにちは～!", { exact: true })).toHaveCount(0);
 });
 
 test("パネル遅延中は開始せず、実Reactの配置通知を再実行してもOBS開始は一度だけ", async ({
@@ -83,7 +83,7 @@ test("パネル遅延中は開始せず、実Reactの配置通知を再実行し
         releasePanel = resolve;
     });
     let panelRequested = false;
-    await page.route("**/pages/simpleVrm/react/simpleVrmControlPanel.tsx*", async (route) => {
+    await page.route("**/app/settings/react/sincroControlPanel.tsx*", async (route) => {
         panelRequested = true;
         await panelReady;
         await route.continue();
@@ -99,7 +99,7 @@ test("パネル遅延中は開始せず、実Reactの配置通知を再実行し
     await startAgain(page);
     await expect(page.locator("body")).toHaveAttribute("data-start-count", "1");
     await expect(page.locator("#sincroCharacterBox canvas")).toHaveCount(2);
-    await expect(page.getByText("こんにちは～!", { exact: true })).toHaveCount(1);
+    await expect(page.getByText("こんにちは～!", { exact: true })).toHaveCount(0);
 });
 
 test("パネル読込と描画の失敗は観測可能なエラーを残して開始しない", async ({ page }) => {
@@ -113,10 +113,10 @@ test("パネル読込と描画の失敗は観測可能なエラーを残して�
     });
     for (const body of [
         'throw new Error("panel import rejected");',
-        'export function SimpleVrmControlPanel() { throw new Error("panel render rejected"); }',
+        'export function SincroControlPanel() { throw new Error("panel render rejected"); }',
     ]) {
         errors.length = 0;
-        await page.route("**/pages/simpleVrm/react/simpleVrmControlPanel.tsx*", (route) =>
+        await page.route("**/app/settings/react/sincroControlPanel.tsx*", (route) =>
             route.fulfill({ contentType: "text/javascript", body }),
         );
         await page.goto("/simple-vrm/");
@@ -126,6 +126,6 @@ test("パネル読込と描画の失敗は観測可能なエラーを残して�
         expect(await currentSettings(page)).toBeUndefined();
         expect(await page.locator("body").getAttribute("data-start-count")).toBeNull();
         await expect(page.locator("#sincroCharacterBox")).toHaveCount(0);
-        await page.unroute("**/pages/simpleVrm/react/simpleVrmControlPanel.tsx*");
+        await page.unroute("**/app/settings/react/sincroControlPanel.tsx*");
     }
 });

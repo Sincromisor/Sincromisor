@@ -102,6 +102,10 @@ it("実際の3ページ入口で設定確定後に手動・OBS開始し、再開
                 "../../../features/conversation/chat/model/chatMessageService"
             );
             const greeting = vi.spyOn(ChatMessageService.getService(), "writeSystemMessage");
+            const userGreeting = vi.spyOn(
+                ChatMessageService.getService(),
+                "writeUnknownUserMessage",
+            );
             coreStart.mockImplementation(() => {
                 const app = SincroAppController.getCurrent();
                 expect(app?.getSettingsSnapshot()).toMatchObject({
@@ -161,7 +165,8 @@ it("実際の3ページ入口で設定確定後に手動・OBS開始し、再開
             expect(motionTuning).toHaveBeenLastCalledWith(
                 expect.objectContaining({ motionScale: 0.72 }),
             );
-            expect(greeting).toHaveBeenCalledTimes(page === "simple-echo" ? 0 : 2);
+            expect(greeting).not.toHaveBeenCalled();
+            expect(userGreeting).not.toHaveBeenCalled();
             await vi.waitFor(() =>
                 expect(cachedWarning).toHaveBeenCalledWith(
                     "Failed to load cached VRM thumbnail.",
@@ -170,6 +175,7 @@ it("実際の3ページ入口で設定確定後に手動・OBS開始し、再開
             );
             app?.releaseEventSubscriptions();
             greeting.mockRestore();
+            userGreeting.mockRestore();
         }
     }
 });
