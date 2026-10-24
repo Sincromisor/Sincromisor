@@ -1,0 +1,811 @@
+{
+  "keep": {
+    "sincromisor-update/speech-extractor:20261025-a29a6ea2": "sha256:3852df1ba07e39ee82c2cba2690f261b1472fa0d114d6a9e074a5a17a5eca37f",
+    "hashicorp/consul:2.1.0": "sha256:259fd02f2544fe1aa03fa49efd3b105c8dd67106d710a72f5e898110266356f7",
+    "curlimages/curl:8.23.0": "sha256:11e64e28c5f58c8d93ee95fcf22ac055f48b0bc440e0ce7d8013bbb5ad6aa8ac",
+    "sincromisor-update/sincro-voicevox:20261025-81369030": "sha256:1245f3aef8d6e44d05f77ffb7ef56a8b1fd45d5a7989aba574d3a412525af961",
+    "sincromisor-update/vector:20261025-a29a6ea2": "sha256:86c8e1b87106c11db9ed49c2dca2101a1831dcbd637d3a61ade3e8c6badbd4b3",
+    "caddy:2.11.7-alpine": "sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f",
+    "sincromisor-update/log-observer:20261025-a29a6ea2": "sha256:e0967685a477bb3ab04f3a4bdbb379fe724c585e62c167ad9e050887dfa994e3",
+    "sincromisor-update/sincro-frontend:20261025-a29a6ea2": "sha256:f5d6bb0a3d3dff8e6bbf43059e8d9c110c68689462ee2169d689caf0c61626b6",
+    "sincromisor-update/sincro-redis:20261025-a29a6ea2": "sha256:d8af91800b3e1cd979b3c0c1dc3ae8dde9131bc9d8555ac666f4bc65a50f663b",
+    "sincromisor-update/victoria-logs:20261025-a29a6ea2": "sha256:9e18dda1c046bc359e43ebdf6448247f99ad92ba1a5c5644c2244b7a9d5fb066",
+    "sincromisor-update/voice-synthesizer:20261025-a29a6ea2": "sha256:186d4a449048570d277e53481c77db9bb1bed2098e2e31896e33ad311d7fd42d",
+    "sincromisor-update/sincro-rtc:20261025-a29a6ea2": "sha256:c9a082bb6fc1eed64c66f4646c02ce7feb0b7a688c328cce3f0fd2cdac853f6d",
+    "sincromisor-update/speech-recognizer:20261025-a29a6ea2": "sha256:cb2c65ffe8838d9c94d407b62b247c5f61d896cc168e36970a3c729a57253d2f",
+    "sincromisor-update/text-processor:20261025-a29a6ea2": "sha256:59637f6cac29dd1a8023d2f0d3caa0fe91fee32af5caa81400e394bde3cac812",
+    "sincromisor-update/agent-server:20261025-a29a6ea2": "sha256:307d8ec65e81c10656f9f76b3b8c0b6a09455569d83004c8b883eca961ba17a7",
+    "ghcr.io/ggml-org/llama.cpp@sha256:dfe42bda81c6bd53df864dfcf65e2423e9703f9991c238cfa7aaa893063e2977": "sha256:dfe42bda81c6bd53df864dfcf65e2423e9703f9991c238cfa7aaa893063e2977",
+    "chrislusf/seaweedfs:4.48": "sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d"
+  },
+  "remove_images": [
+    {
+      "id": "sha256:03394eba0982e9847c10cb164ef02df3c0ff3a5361f90f67f4f2fb60cdf2c343",
+      "tags": [
+        "sincromisor-rollback/victoria-logs:20261017"
+      ],
+      "digests": [
+        "sincromisor-rollback/victoria-logs@sha256:03394eba0982e9847c10cb164ef02df3c0ff3a5361f90f67f4f2fb60cdf2c343"
+      ],
+      "size": 43374467,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:0582dc87068bd86b3c057bf758f6364867133231a5c348dd55eb1c1a2b0e3867",
+      "tags": [
+        "sincromisor-rollback/sincro-frontend:streaming-20261018",
+        "sincromisor-update/sincro-frontend:20261018-9f351157",
+        "ghcr.io/sincromisor/sincro-frontend:latest"
+      ],
+      "digests": [
+        "sincromisor-rollback/sincro-frontend@sha256:0582dc87068bd86b3c057bf758f6364867133231a5c348dd55eb1c1a2b0e3867",
+        "sincromisor-update/sincro-frontend@sha256:0582dc87068bd86b3c057bf758f6364867133231a5c348dd55eb1c1a2b0e3867",
+        "ghcr.io/sincromisor/sincro-frontend@sha256:0582dc87068bd86b3c057bf758f6364867133231a5c348dd55eb1c1a2b0e3867"
+      ],
+      "size": 614877967,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:0ea40249fce5a3ab2f0355297911d116b5d77c60ff5c17ae1835a2070d4a1bf3",
+      "tags": [
+        "sincromisor-update/sincro-voicevox:20261018-streaming-88a169a6"
+      ],
+      "digests": [
+        "sincromisor-update/sincro-voicevox@sha256:0ea40249fce5a3ab2f0355297911d116b5d77c60ff5c17ae1835a2070d4a1bf3"
+      ],
+      "size": 1509117409,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:1225203282bf17f45fbad7b89ff1db255e3502087c41ee6a3b36800598763f2e",
+      "tags": [
+        "sincro-deps-agent:verify"
+      ],
+      "digests": [
+        "sincro-deps-agent@sha256:1225203282bf17f45fbad7b89ff1db255e3502087c41ee6a3b36800598763f2e"
+      ],
+      "size": 727274860,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:1815eb3cef017a4f6543c8e0a5fc8299d4bbbf9fb8af2d5bd333cc5f4f046018",
+      "tags": [
+        "sincromisor-rollback/sincro-rtc:20261025",
+        "sincromisor-update/sincro-rtc:20261018-streaming-833a5687"
+      ],
+      "digests": [
+        "sincromisor-rollback/sincro-rtc@sha256:1815eb3cef017a4f6543c8e0a5fc8299d4bbbf9fb8af2d5bd333cc5f4f046018",
+        "sincromisor-update/sincro-rtc@sha256:1815eb3cef017a4f6543c8e0a5fc8299d4bbbf9fb8af2d5bd333cc5f4f046018"
+      ],
+      "size": 1202594572,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:1aaee107d46a8fdc106d16c01c5450e0cb962aa796eb49401e49a14b0b84a387",
+      "tags": [
+        "sincromisor-vps/sincro-rtc:20261014-9b0dc36f"
+      ],
+      "digests": [
+        "sincromisor-vps/sincro-rtc@sha256:1aaee107d46a8fdc106d16c01c5450e0cb962aa796eb49401e49a14b0b84a387"
+      ],
+      "size": 1063495136,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54",
+      "tags": [
+        "hashicorp/consul:latest",
+        "sincromisor-rollback/bandog:20261017",
+        "sincromisor-rollback/bandog:20261018",
+        "sincromisor-rollback/bandog:local-20261014",
+        "sincromisor-rollback/bandog:logging-20260923",
+        "sincromisor-rollback/consul-agent-chat:20261017",
+        "sincromisor-rollback/consul-agent-chat:20261018",
+        "sincromisor-rollback/consul-agent-chat:local-20261014",
+        "sincromisor-rollback/consul-agent-chat:logging-20260923",
+        "sincromisor-rollback/consul-agent-extractor:20261017",
+        "sincromisor-rollback/consul-agent-extractor:20261018",
+        "sincromisor-rollback/consul-agent-extractor:local-20261014",
+        "sincromisor-rollback/consul-agent-extractor:logging-20260923",
+        "sincromisor-rollback/consul-agent-frontend:20261017",
+        "sincromisor-rollback/consul-agent-frontend:20261018",
+        "sincromisor-rollback/consul-agent-frontend:local-20261014",
+        "sincromisor-rollback/consul-agent-frontend:logging-20260923",
+        "sincromisor-rollback/consul-agent-logging:20261017",
+        "sincromisor-rollback/consul-agent-logging:20261018",
+        "sincromisor-rollback/consul-agent-logging:local-20261014",
+        "sincromisor-rollback/consul-agent-logs:20261017",
+        "sincromisor-rollback/consul-agent-logs:20261018",
+        "sincromisor-rollback/consul-agent-logs:local-20261014",
+        "sincromisor-rollback/consul-agent-processor:20261017",
+        "sincromisor-rollback/consul-agent-processor:20261018",
+        "sincromisor-rollback/consul-agent-processor:local-20261014",
+        "sincromisor-rollback/consul-agent-processor:logging-20260923",
+        "sincromisor-rollback/consul-agent-recognizer:20261017",
+        "sincromisor-rollback/consul-agent-recognizer:20261018",
+        "sincromisor-rollback/consul-agent-recognizer:local-20261014",
+        "sincromisor-rollback/consul-agent-recognizer:logging-20260923",
+        "sincromisor-rollback/consul-agent-redis:20261017",
+        "sincromisor-rollback/consul-agent-redis:20261018",
+        "sincromisor-rollback/consul-agent-redis:local-20261014",
+        "sincromisor-rollback/consul-agent-redis:logging-20260923",
+        "sincromisor-rollback/consul-agent-rtc:20261017",
+        "sincromisor-rollback/consul-agent-rtc:20261018",
+        "sincromisor-rollback/consul-agent-rtc:local-20261014",
+        "sincromisor-rollback/consul-agent-rtc:logging-20260923",
+        "sincromisor-rollback/consul-agent-s3:20261017",
+        "sincromisor-rollback/consul-agent-s3:20261018",
+        "sincromisor-rollback/consul-agent-s3:local-20261014",
+        "sincromisor-rollback/consul-agent-s3:logging-20260923",
+        "sincromisor-rollback/consul-agent-synthesizer:20261017",
+        "sincromisor-rollback/consul-agent-synthesizer:20261018",
+        "sincromisor-rollback/consul-agent-synthesizer:local-20261014",
+        "sincromisor-rollback/consul-agent-synthesizer:logging-20260923",
+        "sincromisor-rollback/sincro-consul-server:20261017",
+        "sincromisor-rollback/sincro-consul-server:20261018",
+        "sincromisor-rollback/sincro-consul-server:local-20261014",
+        "sincromisor-rollback/sincro-consul-server:logging-20260923"
+      ],
+      "digests": [
+        "hashicorp/consul@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54",
+        "sincromisor-rollback/bandog@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54",
+        "sincromisor-rollback/consul-agent-chat@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54",
+        "sincromisor-rollback/consul-agent-extractor@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54",
+        "sincromisor-rollback/consul-agent-frontend@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54",
+        "sincromisor-rollback/consul-agent-logging@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54",
+        "sincromisor-rollback/consul-agent-logs@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54",
+        "sincromisor-rollback/consul-agent-processor@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54",
+        "sincromisor-rollback/consul-agent-recognizer@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54",
+        "sincromisor-rollback/consul-agent-redis@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54",
+        "sincromisor-rollback/consul-agent-rtc@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54",
+        "sincromisor-rollback/consul-agent-s3@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54",
+        "sincromisor-rollback/consul-agent-synthesizer@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54",
+        "sincromisor-rollback/sincro-consul-server@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54"
+      ],
+      "size": 324864099,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:21ba118e3fbc957a3dbc50f674986ffbc3325c27e3219721f98f48efd1c67974",
+      "tags": [
+        "sincro-deps-python:verify"
+      ],
+      "digests": [
+        "sincro-deps-python@sha256:21ba118e3fbc957a3dbc50f674986ffbc3325c27e3219721f98f48efd1c67974"
+      ],
+      "size": 18039555454,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:23238c1e4c473204b8d65420da05d5dcbd1fecbcf9aad75261360d29d5fb8166",
+      "tags": [
+        "sincromisor-rollback/speech-recognizer:20261017"
+      ],
+      "digests": [
+        "sincromisor-rollback/speech-recognizer@sha256:23238c1e4c473204b8d65420da05d5dcbd1fecbcf9aad75261360d29d5fb8166"
+      ],
+      "size": 17054316021,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:258493846992187e1e292280ce5804f9583dfe18c74075cc286f4f4ea646a7b1",
+      "tags": [
+        "sincromisor-rollback/sincro-rtc:streaming-20261018",
+        "sincromisor-update/sincro-rtc:20261018-9f351157",
+        "ghcr.io/sincromisor/sincro-rtc:latest"
+      ],
+      "digests": [
+        "sincromisor-rollback/sincro-rtc@sha256:258493846992187e1e292280ce5804f9583dfe18c74075cc286f4f4ea646a7b1",
+        "sincromisor-update/sincro-rtc@sha256:258493846992187e1e292280ce5804f9583dfe18c74075cc286f4f4ea646a7b1",
+        "ghcr.io/sincromisor/sincro-rtc@sha256:258493846992187e1e292280ce5804f9583dfe18c74075cc286f4f4ea646a7b1"
+      ],
+      "size": 1045644335,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:28a54834b66a36318a684bfacc09eb0c3c16caa384c98fe3cbb53bf89c4b7483",
+      "tags": [
+        "sincromisor-rollback/voice-synthesizer:20261018",
+        "sincromisor-update/voice-synthesizer:20261017-9dc3f816"
+      ],
+      "digests": [
+        "sincromisor-rollback/voice-synthesizer@sha256:28a54834b66a36318a684bfacc09eb0c3c16caa384c98fe3cbb53bf89c4b7483",
+        "sincromisor-update/voice-synthesizer@sha256:28a54834b66a36318a684bfacc09eb0c3c16caa384c98fe3cbb53bf89c4b7483"
+      ],
+      "size": 622513247,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:29dfeb780ab1cfc6d914fca88a9d8d580a46b865001b5d82e6fe8200aa6dd8e0",
+      "tags": [
+        "sincromisor-rollback/sincro-voicevox:20261017"
+      ],
+      "digests": [
+        "sincromisor-rollback/sincro-voicevox@sha256:29dfeb780ab1cfc6d914fca88a9d8d580a46b865001b5d82e6fe8200aa6dd8e0"
+      ],
+      "size": 4595127309,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:2c7f4b7ecaa8a57910c76b26619677d00084ba6b5eda9373422e86c4308c04eb",
+      "tags": [
+        "sincromisor-vps/log-observer:20261014-9b0dc36f"
+      ],
+      "digests": [
+        "sincromisor-vps/log-observer@sha256:2c7f4b7ecaa8a57910c76b26619677d00084ba6b5eda9373422e86c4308c04eb"
+      ],
+      "size": 17441868,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:33f0ddca6222a26c5ee45615c2cfa6672b332346494c282e004b92f55b68729b",
+      "tags": [
+        "sincromisor-rollback/sincro-voicevox:streaming-20261018",
+        "ghcr.io/sincromisor/voicevox:latest"
+      ],
+      "digests": [
+        "sincromisor-rollback/sincro-voicevox@sha256:33f0ddca6222a26c5ee45615c2cfa6672b332346494c282e004b92f55b68729b",
+        "ghcr.io/sincromisor/voicevox@sha256:33f0ddca6222a26c5ee45615c2cfa6672b332346494c282e004b92f55b68729b"
+      ],
+      "size": 1509117333,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:34fadb4b45cf334b0b8a1e20b0e6b45c049aa14c6d9579c332ab6f42d4fe19c8",
+      "tags": [
+        "sincromisor-rollback/log-observer:20261017"
+      ],
+      "digests": [
+        "sincromisor-rollback/log-observer@sha256:34fadb4b45cf334b0b8a1e20b0e6b45c049aa14c6d9579c332ab6f42d4fe19c8"
+      ],
+      "size": 17441988,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:3ec975e63af0dbb74656d384a8c88a6a0107596f0f51d8b052d4462d19a66866",
+      "tags": [
+        "sincromisor-rollback/victoria-logs:20261018",
+        "sincromisor-update/victoria-logs:20261017-9dc3f816",
+        "ghcr.io/sincromisor/victoria-logs:v1.52.0"
+      ],
+      "digests": [
+        "sincromisor-rollback/victoria-logs@sha256:3ec975e63af0dbb74656d384a8c88a6a0107596f0f51d8b052d4462d19a66866",
+        "sincromisor-update/victoria-logs@sha256:3ec975e63af0dbb74656d384a8c88a6a0107596f0f51d8b052d4462d19a66866",
+        "ghcr.io/sincromisor/victoria-logs@sha256:3ec975e63af0dbb74656d384a8c88a6a0107596f0f51d8b052d4462d19a66866"
+      ],
+      "size": 43374472,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:3f1deab48fd4660a1568c72aed6c4c417e2b11c74ac17293ebdac5ac82aed547",
+      "tags": [
+        "sincromisor-rollback/voice-synthesizer:20261017"
+      ],
+      "digests": [
+        "sincromisor-rollback/voice-synthesizer@sha256:3f1deab48fd4660a1568c72aed6c4c417e2b11c74ac17293ebdac5ac82aed547"
+      ],
+      "size": 633851688,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:3fad059431a02205d35055c842babe171820159b6c498200de23ec55d120e4db",
+      "tags": [
+        "sincromisor-rollback/text-processor:20261018",
+        "sincromisor-update/text-processor:20261017-9dc3f816"
+      ],
+      "digests": [
+        "sincromisor-rollback/text-processor@sha256:3fad059431a02205d35055c842babe171820159b6c498200de23ec55d120e4db",
+        "sincromisor-update/text-processor@sha256:3fad059431a02205d35055c842babe171820159b6c498200de23ec55d120e4db"
+      ],
+      "size": 1070481728,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:44d0db6af703485bff6ec6f016500b00ce82ada9c568ab60be24182193ede029",
+      "tags": [
+        "sincromisor-rollback/sincro-frontend:20261017"
+      ],
+      "digests": [
+        "sincromisor-rollback/sincro-frontend@sha256:44d0db6af703485bff6ec6f016500b00ce82ada9c568ab60be24182193ede029"
+      ],
+      "size": 632798859,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
+      "tags": [
+        "caddy:2.10.2-alpine",
+        "sincromisor-rollback/log-router:20261017",
+        "sincromisor-rollback/log-router:20261018",
+        "sincromisor-rollback/log-router:local-20261014"
+      ],
+      "digests": [
+        "caddy@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
+        "sincromisor-rollback/log-router@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d"
+      ],
+      "size": 82853383,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:4e05c34858df55cfea61f04a78f7d59d22dd21248a638c64a694d5b08549e961",
+      "tags": [
+        "sincromisor-rollback/agent-server:20261017"
+      ],
+      "digests": [
+        "sincromisor-rollback/agent-server@sha256:4e05c34858df55cfea61f04a78f7d59d22dd21248a638c64a694d5b08549e961"
+      ],
+      "size": 699091065,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:539cc24698f13de7149d522d3759eec777621d54d26041361c12cfc04029fecb",
+      "tags": [
+        "sincromisor-rollback/voice-synthesizer:streaming-20261018",
+        "sincromisor-update/voice-synthesizer:20261018-9f351157",
+        "ghcr.io/sincromisor/voice-synthesizer:latest"
+      ],
+      "digests": [
+        "sincromisor-rollback/voice-synthesizer@sha256:539cc24698f13de7149d522d3759eec777621d54d26041361c12cfc04029fecb",
+        "sincromisor-update/voice-synthesizer@sha256:539cc24698f13de7149d522d3759eec777621d54d26041361c12cfc04029fecb",
+        "ghcr.io/sincromisor/voice-synthesizer@sha256:539cc24698f13de7149d522d3759eec777621d54d26041361c12cfc04029fecb"
+      ],
+      "size": 622694699,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:570e28ebd4c4962b16f7ac95bfede5ac885532a1c69816f4268dc5e28687b379",
+      "tags": [
+        "sincromisor-rollback/sincro-rtc:20261017"
+      ],
+      "digests": [
+        "sincromisor-rollback/sincro-rtc@sha256:570e28ebd4c4962b16f7ac95bfede5ac885532a1c69816f4268dc5e28687b379"
+      ],
+      "size": 1063495300,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777",
+      "tags": [
+        "sincromisor-rollback/consul-s3-registrar:20261017",
+        "sincromisor-rollback/consul-s3-registrar:local-20261014",
+        "sincromisor-rollback/consul-s3-registrar:logging-20260923"
+      ],
+      "digests": [
+        "sincromisor-rollback/consul-s3-registrar@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777"
+      ],
+      "size": 35427433,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:5b5029e12f41e1aa31c9e01a75c5f37be0ee3b42e2fd3224ff482f651bc10324",
+      "tags": [
+        "ghcr.io/sincromisor/minio:latest"
+      ],
+      "digests": [
+        "ghcr.io/sincromisor/minio@sha256:5b5029e12f41e1aa31c9e01a75c5f37be0ee3b42e2fd3224ff482f651bc10324"
+      ],
+      "size": 499310744,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:5c616849bbb0066e892d42f45b8027ca418a5a35f3be4ac3bc2ec0a86ac003a9",
+      "tags": [
+        "sincromisor-rollback/sincro-rtc:20261018",
+        "sincromisor-update/sincro-rtc:20261017-9dc3f816"
+      ],
+      "digests": [
+        "sincromisor-rollback/sincro-rtc@sha256:5c616849bbb0066e892d42f45b8027ca418a5a35f3be4ac3bc2ec0a86ac003a9",
+        "sincromisor-update/sincro-rtc@sha256:5c616849bbb0066e892d42f45b8027ca418a5a35f3be4ac3bc2ec0a86ac003a9"
+      ],
+      "size": 1045569817,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:6754c482c9dd441b2005aeaeccd17810820572fc2bb3314b71e0edace37cbda1",
+      "tags": [
+        "sincromisor-rollback/speech-recognizer:20261018",
+        "sincromisor-update/speech-recognizer:20261017-9dc3f816"
+      ],
+      "digests": [
+        "sincromisor-rollback/speech-recognizer@sha256:6754c482c9dd441b2005aeaeccd17810820572fc2bb3314b71e0edace37cbda1",
+        "sincromisor-update/speech-recognizer@sha256:6754c482c9dd441b2005aeaeccd17810820572fc2bb3314b71e0edace37cbda1"
+      ],
+      "size": 17054368465,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:6a6ead5f39ae093241d6ce842be57d1b8eb3a0bee8e55ccbd3928ba56ea1d88b",
+      "tags": [
+        "sincromisor-vps/vector:20261014-9b0dc36f"
+      ],
+      "digests": [
+        "sincromisor-vps/vector@sha256:6a6ead5f39ae093241d6ce842be57d1b8eb3a0bee8e55ccbd3928ba56ea1d88b"
+      ],
+      "size": 408409338,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:72143138272300bf1a32be9342f54537db7506c2efe01aebde05b521b2cd976c",
+      "tags": [
+        "sincromisor-rollback/sincro-frontend:20261025",
+        "sincromisor-update/sincro-frontend:20261018-streaming-88a169a6"
+      ],
+      "digests": [
+        "sincromisor-rollback/sincro-frontend@sha256:72143138272300bf1a32be9342f54537db7506c2efe01aebde05b521b2cd976c",
+        "sincromisor-update/sincro-frontend@sha256:72143138272300bf1a32be9342f54537db7506c2efe01aebde05b521b2cd976c"
+      ],
+      "size": 614860685,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:750f85eef186de72ce422e148b04216fd06aa5541a9367ab76d866b206ac83c5",
+      "tags": [
+        "sincromisor-rollback/voice-synthesizer:20261025",
+        "sincromisor-update/voice-synthesizer:20261018-streaming-88a169a6"
+      ],
+      "digests": [
+        "sincromisor-rollback/voice-synthesizer@sha256:750f85eef186de72ce422e148b04216fd06aa5541a9367ab76d866b206ac83c5",
+        "sincromisor-update/voice-synthesizer@sha256:750f85eef186de72ce422e148b04216fd06aa5541a9367ab76d866b206ac83c5"
+      ],
+      "size": 756249727,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:7c4b649d4177f6731bd8f8dd190e960282ccf193c7de64d44cfc7c6a098601fc",
+      "tags": [
+        "sincromisor-rollback/text-processor:20261025",
+        "sincromisor-update/text-processor:20261018-9f351157",
+        "ghcr.io/sincromisor/text-processor:latest"
+      ],
+      "digests": [
+        "sincromisor-rollback/text-processor@sha256:7c4b649d4177f6731bd8f8dd190e960282ccf193c7de64d44cfc7c6a098601fc",
+        "sincromisor-update/text-processor@sha256:7c4b649d4177f6731bd8f8dd190e960282ccf193c7de64d44cfc7c6a098601fc",
+        "ghcr.io/sincromisor/text-processor@sha256:7c4b649d4177f6731bd8f8dd190e960282ccf193c7de64d44cfc7c6a098601fc"
+      ],
+      "size": 1070667493,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:8771716b216e23edfe2acc6ed4d09f4dcf751e3ce40af6f6ed9aa6a17243f43a",
+      "tags": [
+        "sincromisor-rollback/text-processor:20261017"
+      ],
+      "digests": [
+        "sincromisor-rollback/text-processor@sha256:8771716b216e23edfe2acc6ed4d09f4dcf751e3ce40af6f6ed9aa6a17243f43a"
+      ],
+      "size": 1081844947,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:8e1a8f4308a61f550a4fbac0c9b31bec1f8fdf038d1305df33fe9b39969326bd",
+      "tags": [
+        "sincromisor-rollback/log-observer:20261018",
+        "sincromisor-rollback/log-observer:20261025",
+        "sincromisor-update/log-observer:20261017-9dc3f816",
+        "ghcr.io/sincromisor/log-observer:latest"
+      ],
+      "digests": [
+        "sincromisor-rollback/log-observer@sha256:8e1a8f4308a61f550a4fbac0c9b31bec1f8fdf038d1305df33fe9b39969326bd",
+        "sincromisor-update/log-observer@sha256:8e1a8f4308a61f550a4fbac0c9b31bec1f8fdf038d1305df33fe9b39969326bd",
+        "ghcr.io/sincromisor/log-observer@sha256:8e1a8f4308a61f550a4fbac0c9b31bec1f8fdf038d1305df33fe9b39969326bd"
+      ],
+      "size": 17441993,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:92f75345eeeffa2e76e0e47526f310d0aca36b523bfe514a7dfda5bb1185f256",
+      "tags": [
+        "sincromisor-rollback/llama-server:20261017",
+        "sincromisor-rollback/llama-server:20261018",
+        "sincromisor-rollback/llama-server:20261025",
+        "sincromisor-rollback/llama-server:local-20261014",
+        "sincromisor-rollback/llama-server:logging-20260923",
+        "ghcr.io/ggml-org/llama.cpp:server-cuda13",
+        "ghcr.io/ggml-org/llama.cpp@sha256:92f75345eeeffa2e76e0e47526f310d0aca36b523bfe514a7dfda5bb1185f256"
+      ],
+      "digests": [
+        "sincromisor-rollback/llama-server@sha256:92f75345eeeffa2e76e0e47526f310d0aca36b523bfe514a7dfda5bb1185f256",
+        "ghcr.io/ggml-org/llama.cpp@sha256:92f75345eeeffa2e76e0e47526f310d0aca36b523bfe514a7dfda5bb1185f256"
+      ],
+      "size": 5239558920,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:94e9e444bcba979c2ea12e27ae39bee4cd10bc7041a472c4727a558e213744e6",
+      "tags": [
+        "curlimages/curl:8.12.1",
+        "sincromisor-rollback/llama-model-initializer:20261017",
+        "sincromisor-rollback/llama-model-initializer:20261018",
+        "sincromisor-rollback/llama-model-initializer:local-20261014",
+        "sincromisor-rollback/llama-model-initializer:logging-20260923",
+        "sincromisor-rollback/s3-credential-initializer:20261017",
+        "sincromisor-rollback/s3-credential-initializer:20261018",
+        "sincromisor-rollback/s3-credential-initializer:local-20261014",
+        "sincromisor-rollback/s3-credential-initializer:logging-20260923",
+        "sincromisor-rollback/service-initializer:20261017",
+        "sincromisor-rollback/service-initializer:20261018",
+        "sincromisor-rollback/service-initializer:local-20261014",
+        "sincromisor-rollback/service-initializer:logging-20260923"
+      ],
+      "digests": [
+        "curlimages/curl@sha256:94e9e444bcba979c2ea12e27ae39bee4cd10bc7041a472c4727a558e213744e6",
+        "sincromisor-rollback/llama-model-initializer@sha256:94e9e444bcba979c2ea12e27ae39bee4cd10bc7041a472c4727a558e213744e6",
+        "sincromisor-rollback/s3-credential-initializer@sha256:94e9e444bcba979c2ea12e27ae39bee4cd10bc7041a472c4727a558e213744e6",
+        "sincromisor-rollback/service-initializer@sha256:94e9e444bcba979c2ea12e27ae39bee4cd10bc7041a472c4727a558e213744e6"
+      ],
+      "size": 41670502,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:999a102d8fedffe7b86f500a43a7cc609128976f23eddc090367814ab2e96557",
+      "tags": [
+        "sincromisor-rollback/vector:20261017"
+      ],
+      "digests": [
+        "sincromisor-rollback/vector@sha256:999a102d8fedffe7b86f500a43a7cc609128976f23eddc090367814ab2e96557"
+      ],
+      "size": 408409451,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:9fca0a6c21ef379518e523434f3bb3deb106405d2d6287bc716cc134416c6687",
+      "tags": [
+        "sincromisor-rollback/sincro-redis:20261017"
+      ],
+      "digests": [
+        "sincromisor-rollback/sincro-redis@sha256:9fca0a6c21ef379518e523434f3bb3deb106405d2d6287bc716cc134416c6687"
+      ],
+      "size": 472831075,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:a134550be58ab783810e613ae96fd253c38f7bdd16d9bf9be350700c7a29ac06",
+      "tags": [
+        "curlimages/curl:latest",
+        "sincromisor-rollback/consul-s3-registrar:20261018"
+      ],
+      "digests": [
+        "curlimages/curl@sha256:a134550be58ab783810e613ae96fd253c38f7bdd16d9bf9be350700c7a29ac06",
+        "sincromisor-rollback/consul-s3-registrar@sha256:a134550be58ab783810e613ae96fd253c38f7bdd16d9bf9be350700c7a29ac06"
+      ],
+      "size": 35941818,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:a3e2c06003e8461fda2445717569f5c8a27ee77d023032e7187ab0f967756924",
+      "tags": [
+        "sincromisor-rollback/speech-extractor:20261018",
+        "sincromisor-update/speech-extractor:20261017-9dc3f816"
+      ],
+      "digests": [
+        "sincromisor-rollback/speech-extractor@sha256:a3e2c06003e8461fda2445717569f5c8a27ee77d023032e7187ab0f967756924",
+        "sincromisor-update/speech-extractor@sha256:a3e2c06003e8461fda2445717569f5c8a27ee77d023032e7187ab0f967756924"
+      ],
+      "size": 1620213998,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:a8731ede556f60bd873833dd821aeeee6e1044f613bc10de03fbea9fe89aae4f",
+      "tags": [
+        "sincromisor-rollback/sincro-redis:20261018",
+        "sincromisor-rollback/sincro-redis:20261025",
+        "sincromisor-update/sincro-redis:20261017-9dc3f816",
+        "ghcr.io/sincromisor/redis:latest"
+      ],
+      "digests": [
+        "sincromisor-rollback/sincro-redis@sha256:a8731ede556f60bd873833dd821aeeee6e1044f613bc10de03fbea9fe89aae4f",
+        "sincromisor-update/sincro-redis@sha256:a8731ede556f60bd873833dd821aeeee6e1044f613bc10de03fbea9fe89aae4f",
+        "ghcr.io/sincromisor/redis@sha256:a8731ede556f60bd873833dd821aeeee6e1044f613bc10de03fbea9fe89aae4f"
+      ],
+      "size": 472831080,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:ad8f4dc0e561f1e7b7a54a3576751a77c6ef3d6ebcd34c6e815d71903d379ce5",
+      "tags": [
+        "sincro-deps-observer-builder:verify"
+      ],
+      "digests": [
+        "sincro-deps-observer-builder@sha256:ad8f4dc0e561f1e7b7a54a3576751a77c6ef3d6ebcd34c6e815d71903d379ce5"
+      ],
+      "size": 1369206494,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:affac64682bb47068d768e1d3f38af8a2bb3ca29e62d82ab3723f8c784727ea1",
+      "tags": [
+        "sincromisor-rollback/speech-recognizer:20261025",
+        "sincromisor-update/speech-recognizer:20261018-9f351157",
+        "ghcr.io/sincromisor/speech-recognizer-nemo:latest"
+      ],
+      "digests": [
+        "sincromisor-rollback/speech-recognizer@sha256:affac64682bb47068d768e1d3f38af8a2bb3ca29e62d82ab3723f8c784727ea1",
+        "sincromisor-update/speech-recognizer@sha256:affac64682bb47068d768e1d3f38af8a2bb3ca29e62d82ab3723f8c784727ea1",
+        "ghcr.io/sincromisor/speech-recognizer-nemo@sha256:affac64682bb47068d768e1d3f38af8a2bb3ca29e62d82ab3723f8c784727ea1"
+      ],
+      "size": 17041185639,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:b0f31c210b5880a9acd64cb9556bd3d65a7f1f0e6a856a4cd5df40841bf0de4a",
+      "tags": [
+        "sincromisor-rollback/agent-server:20261018",
+        "sincromisor-update/agent-server:20261017-9dc3f816"
+      ],
+      "digests": [
+        "sincromisor-rollback/agent-server@sha256:b0f31c210b5880a9acd64cb9556bd3d65a7f1f0e6a856a4cd5df40841bf0de4a",
+        "sincromisor-update/agent-server@sha256:b0f31c210b5880a9acd64cb9556bd3d65a7f1f0e6a856a4cd5df40841bf0de4a"
+      ],
+      "size": 727275053,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:b245096b85e7d25d8c9f739b53b3ecee3fc6ebe5063ffce32060cdce3a077b80",
+      "tags": [
+        "sincromisor-rollback/sincro-voicevox:20261018",
+        "sincromisor-update/sincro-voicevox:20261017-9dc3f816"
+      ],
+      "digests": [
+        "sincromisor-rollback/sincro-voicevox@sha256:b245096b85e7d25d8c9f739b53b3ecee3fc6ebe5063ffce32060cdce3a077b80",
+        "sincromisor-update/sincro-voicevox@sha256:b245096b85e7d25d8c9f739b53b3ecee3fc6ebe5063ffce32060cdce3a077b80"
+      ],
+      "size": 4586170393,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:cd19e43b77938f4775a431a86e1a7ea59cf91d8b950d36c137548f8dfd3114a2",
+      "tags": [
+        "sincromisor-rollback/agent-server:20261025",
+        "sincromisor-update/agent-server:20261018-9f351157",
+        "ghcr.io/sincromisor/agent-server:latest"
+      ],
+      "digests": [
+        "sincromisor-rollback/agent-server@sha256:cd19e43b77938f4775a431a86e1a7ea59cf91d8b950d36c137548f8dfd3114a2",
+        "sincromisor-update/agent-server@sha256:cd19e43b77938f4775a431a86e1a7ea59cf91d8b950d36c137548f8dfd3114a2",
+        "ghcr.io/sincromisor/agent-server@sha256:cd19e43b77938f4775a431a86e1a7ea59cf91d8b950d36c137548f8dfd3114a2"
+      ],
+      "size": 727283770,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:d9130de32d317ff7a7f2a5e19cfc97ecd8d113b2fd651efa5da8e5b9f1ee55a6",
+      "tags": [
+        "sincromisor-rollback/vector:20261018",
+        "sincromisor-update/vector:20261017-9dc3f816",
+        "ghcr.io/sincromisor/vector:0.58.0"
+      ],
+      "digests": [
+        "sincromisor-rollback/vector@sha256:d9130de32d317ff7a7f2a5e19cfc97ecd8d113b2fd651efa5da8e5b9f1ee55a6",
+        "sincromisor-update/vector@sha256:d9130de32d317ff7a7f2a5e19cfc97ecd8d113b2fd651efa5da8e5b9f1ee55a6",
+        "ghcr.io/sincromisor/vector@sha256:d9130de32d317ff7a7f2a5e19cfc97ecd8d113b2fd651efa5da8e5b9f1ee55a6"
+      ],
+      "size": 398236388,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:da267af6ed556e977dae4ededf29f91e0781114596c4e79840c5c1bab4f51282",
+      "tags": [
+        "sincromisor-local/voicevox:task-261024000805",
+        "sincromisor-rollback/sincro-voicevox:20261025"
+      ],
+      "digests": [
+        "sincromisor-local/voicevox@sha256:da267af6ed556e977dae4ededf29f91e0781114596c4e79840c5c1bab4f51282",
+        "sincromisor-rollback/sincro-voicevox@sha256:da267af6ed556e977dae4ededf29f91e0781114596c4e79840c5c1bab4f51282"
+      ],
+      "size": 1509178910,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:e94b032750a6aa9ef04dd8d12ddcaac62d22abd84e79e253fd4f05002e81e61f",
+      "tags": [
+        "sincro-deps-rtc-builder:verify"
+      ],
+      "digests": [
+        "sincro-deps-rtc-builder@sha256:e94b032750a6aa9ef04dd8d12ddcaac62d22abd84e79e253fd4f05002e81e61f"
+      ],
+      "size": 1273720026,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:ea0722186261ca06d8f47c3f45c43278bac01242ecc016506d218462f0de8ae0",
+      "tags": [
+        "sincromisor-rollback/speech-extractor:20261025",
+        "sincromisor-update/speech-extractor:20261018-9f351157",
+        "ghcr.io/sincromisor/speech-extractor:latest"
+      ],
+      "digests": [
+        "sincromisor-rollback/speech-extractor@sha256:ea0722186261ca06d8f47c3f45c43278bac01242ecc016506d218462f0de8ae0",
+        "sincromisor-update/speech-extractor@sha256:ea0722186261ca06d8f47c3f45c43278bac01242ecc016506d218462f0de8ae0",
+        "ghcr.io/sincromisor/speech-extractor@sha256:ea0722186261ca06d8f47c3f45c43278bac01242ecc016506d218462f0de8ae0"
+      ],
+      "size": 1620429093,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:eedd7d4db385ad34b29c396a692a5c963af5d53e6609cc4456be0b3f5a05ab13",
+      "tags": [
+        "sincromisor-rollback/sincro-frontend:20261018",
+        "sincromisor-update/sincro-frontend:20261017-9dc3f816"
+      ],
+      "digests": [
+        "sincromisor-rollback/sincro-frontend@sha256:eedd7d4db385ad34b29c396a692a5c963af5d53e6609cc4456be0b3f5a05ab13",
+        "sincromisor-update/sincro-frontend@sha256:eedd7d4db385ad34b29c396a692a5c963af5d53e6609cc4456be0b3f5a05ab13"
+      ],
+      "size": 614859271,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:f49c4cabc3242e61ea83080ff2bc49f6004b0e3095fca41c467ba0b97d749c35",
+      "tags": [
+        "sincromisor-rollback/speech-extractor:20261017"
+      ],
+      "digests": [
+        "sincromisor-rollback/speech-extractor@sha256:f49c4cabc3242e61ea83080ff2bc49f6004b0e3095fca41c467ba0b97d749c35"
+      ],
+      "size": 1631590049,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    }
+  ],
+  "remove_aliases": [
+    {
+      "id": "sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d",
+      "tag": "sincromisor-rollback/s3-bootstrap:20261017"
+    },
+    {
+      "id": "sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d",
+      "tag": "sincromisor-rollback/s3-bootstrap:20261018"
+    },
+    {
+      "id": "sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d",
+      "tag": "sincromisor-rollback/s3-bootstrap:20261025"
+    },
+    {
+      "id": "sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d",
+      "tag": "sincromisor-rollback/seaweed-filer:20261017"
+    },
+    {
+      "id": "sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d",
+      "tag": "sincromisor-rollback/seaweed-filer:20261018"
+    },
+    {
+      "id": "sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d",
+      "tag": "sincromisor-rollback/seaweed-filer:20261025"
+    },
+    {
+      "id": "sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d",
+      "tag": "sincromisor-rollback/seaweed-master:20261017"
+    },
+    {
+      "id": "sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d",
+      "tag": "sincromisor-rollback/seaweed-master:20261018"
+    },
+    {
+      "id": "sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d",
+      "tag": "sincromisor-rollback/seaweed-master:20261025"
+    },
+    {
+      "id": "sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d",
+      "tag": "sincromisor-rollback/seaweed-volume:20261017"
+    },
+    {
+      "id": "sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d",
+      "tag": "sincromisor-rollback/seaweed-volume:20261018"
+    },
+    {
+      "id": "sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d",
+      "tag": "sincromisor-rollback/seaweed-volume:20261025"
+    },
+    {
+      "id": "sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d",
+      "tag": "sincromisor-rollback/sincro-s3:20261017"
+    },
+    {
+      "id": "sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d",
+      "tag": "sincromisor-rollback/sincro-s3:20261018"
+    },
+    {
+      "id": "sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d",
+      "tag": "sincromisor-rollback/sincro-s3:20261025"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+id: task-261025041522-cleanup-old-images
+title: 現行版を保持して旧Sincromisorイメージを削除する
+category: deployment
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-10-25
+closed_at: 2026-10-25
+legacy_ids: []

@@ -1,0 +1,309 @@
+{
+  "keep": {
+    "hashicorp/consul:2.1.0": "sha256:259fd02f2544fe1aa03fa49efd3b105c8dd67106d710a72f5e898110266356f7",
+    "sincromisor-update/sincro-rtc:20261025-a29a6ea2": "sha256:c9a082bb6fc1eed64c66f4646c02ce7feb0b7a688c328cce3f0fd2cdac853f6d",
+    "sincromisor-update/log-observer:20261025-a29a6ea2": "sha256:e0967685a477bb3ab04f3a4bdbb379fe724c585e62c167ad9e050887dfa994e3",
+    "sincromisor-update/vector:20261025-a29a6ea2": "sha256:86c8e1b87106c11db9ed49c2dca2101a1831dcbd637d3a61ade3e8c6badbd4b3",
+    "caddy:2.11.7-alpine": "sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f"
+  },
+  "remove_images": [
+    {
+      "id": "sha256:1815eb3cef017a4f6543c8e0a5fc8299d4bbbf9fb8af2d5bd333cc5f4f046018",
+      "tags": [
+        "sincromisor-rollback/sincro-rtc:20261025",
+        "sincromisor-update/sincro-rtc:20261018-streaming-833a5687"
+      ],
+      "digests": [
+        "sincromisor-rollback/sincro-rtc@sha256:1815eb3cef017a4f6543c8e0a5fc8299d4bbbf9fb8af2d5bd333cc5f4f046018",
+        "sincromisor-update/sincro-rtc@sha256:1815eb3cef017a4f6543c8e0a5fc8299d4bbbf9fb8af2d5bd333cc5f4f046018"
+      ],
+      "size": 1200743180,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:1aaee107d46a8fdc106d16c01c5450e0cb962aa796eb49401e49a14b0b84a387",
+      "tags": [
+        "sincromisor-rollback/sincro-rtc:20261017",
+        "sincromisor-vps/sincro-rtc:20261014-9b0dc36f"
+      ],
+      "digests": [
+        "sincromisor-rollback/sincro-rtc@sha256:1aaee107d46a8fdc106d16c01c5450e0cb962aa796eb49401e49a14b0b84a387",
+        "sincromisor-vps/sincro-rtc@sha256:1aaee107d46a8fdc106d16c01c5450e0cb962aa796eb49401e49a14b0b84a387"
+      ],
+      "size": 1061082592,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54",
+      "tags": [
+        "hashicorp/consul:latest",
+        "sincromisor-rollback/consul-agent-logging:20261014",
+        "sincromisor-rollback/consul-agent-logging:20261017",
+        "sincromisor-rollback/consul-agent-logging:20261018",
+        "sincromisor-rollback/consul-agent-logging:20261025",
+        "sincromisor-rollback/consul-agent-logging:streaming-20261018",
+        "sincromisor-rollback/consul-agent-rtc:20261014",
+        "sincromisor-rollback/consul-agent-rtc:20261017",
+        "sincromisor-rollback/consul-agent-rtc:20261018",
+        "sincromisor-rollback/consul-agent-rtc:20261025",
+        "sincromisor-rollback/consul-agent-rtc:streaming-20261018"
+      ],
+      "digests": [
+        "hashicorp/consul@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54",
+        "sincromisor-rollback/consul-agent-logging@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54",
+        "sincromisor-rollback/consul-agent-rtc@sha256:1c59f007df8ea1c21b2558dc73ef8d99047bc895d9e52e635d1e745e35fe9a54"
+      ],
+      "size": 326449251,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:258493846992187e1e292280ce5804f9583dfe18c74075cc286f4f4ea646a7b1",
+      "tags": [
+        "sincromisor-rollback/sincro-rtc:streaming-20261018",
+        "sincromisor-update/sincro-rtc:20261018-9f351157"
+      ],
+      "digests": [
+        "sincromisor-rollback/sincro-rtc@sha256:258493846992187e1e292280ce5804f9583dfe18c74075cc286f4f4ea646a7b1",
+        "sincromisor-update/sincro-rtc@sha256:258493846992187e1e292280ce5804f9583dfe18c74075cc286f4f4ea646a7b1"
+      ],
+      "size": 1043227695,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:2c4544ddbd5511669585d78e72aa29a6efcd141136345c541d2c532934589cd8",
+      "tags": [
+        "sincro-playback-check/rtc:261011233441"
+      ],
+      "digests": [
+        "sincro-playback-check/rtc@sha256:2c4544ddbd5511669585d78e72aa29a6efcd141136345c541d2c532934589cd8"
+      ],
+      "size": 1061076656,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:2c7f4b7ecaa8a57910c76b26619677d00084ba6b5eda9373422e86c4308c04eb",
+      "tags": [
+        "sincromisor-rollback/log-observer:20261017",
+        "sincromisor-vps/log-observer:20261014-9b0dc36f"
+      ],
+      "digests": [
+        "sincromisor-rollback/log-observer@sha256:2c7f4b7ecaa8a57910c76b26619677d00084ba6b5eda9373422e86c4308c04eb",
+        "sincromisor-vps/log-observer@sha256:2c7f4b7ecaa8a57910c76b26619677d00084ba6b5eda9373422e86c4308c04eb"
+      ],
+      "size": 17355852,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:2f5e1cf974f4df1ce320ef0ecbc2feb7081cade47f24b06833fc78e68d8f520c",
+      "tags": [
+        "ghcr.io/sincromisor/sincro-rtc:latest"
+      ],
+      "digests": [
+        "ghcr.io/sincromisor/sincro-rtc@sha256:2f5e1cf974f4df1ce320ef0ecbc2feb7081cade47f24b06833fc78e68d8f520c"
+      ],
+      "size": 1049666688,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
+      "tags": [
+        "caddy:2.10.2-alpine",
+        "sincromisor-rollback/log-router:20261014",
+        "sincromisor-rollback/log-router:20261017",
+        "sincromisor-rollback/log-router:20261018",
+        "sincromisor-rollback/log-router:20261025",
+        "sincromisor-rollback/log-router:streaming-20261018"
+      ],
+      "digests": [
+        "caddy@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
+        "sincromisor-rollback/log-router@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d"
+      ],
+      "size": 84463111,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:540812c47f4578e1f0975e7c94634d3bc9ad1951dd6a5fd0b536f688f17b2f14",
+      "tags": [
+        "sincro-socket-test/victoria-logs:v1.52.0"
+      ],
+      "digests": [
+        "sincro-socket-test/victoria-logs@sha256:540812c47f4578e1f0975e7c94634d3bc9ad1951dd6a5fd0b536f688f17b2f14"
+      ],
+      "size": 44058408,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:56a8d0fdbfcb35836c4ce2fc8a5d34eac48594ef067bbe4af7d5ceb9fb08c28d",
+      "tags": [
+        "sincromisor-rollback/consul-agent-rtc:logging-20260923"
+      ],
+      "digests": [
+        "sincromisor-rollback/consul-agent-rtc@sha256:56a8d0fdbfcb35836c4ce2fc8a5d34eac48594ef067bbe4af7d5ceb9fb08c28d"
+      ],
+      "size": 317486638,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:5c616849bbb0066e892d42f45b8027ca418a5a35f3be4ac3bc2ec0a86ac003a9",
+      "tags": [
+        "sincromisor-rollback/sincro-rtc:20261018",
+        "sincromisor-update/sincro-rtc:20261017-9dc3f816"
+      ],
+      "digests": [
+        "sincromisor-rollback/sincro-rtc@sha256:5c616849bbb0066e892d42f45b8027ca418a5a35f3be4ac3bc2ec0a86ac003a9",
+        "sincromisor-update/sincro-rtc@sha256:5c616849bbb0066e892d42f45b8027ca418a5a35f3be4ac3bc2ec0a86ac003a9"
+      ],
+      "size": 1043153177,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:62f5c86427e0731c52c51bf6475defaccb25b3e4df9a45b5fd021d8e47736cd7",
+      "tags": [
+        "sincro-playback-check/frontend:261011233441"
+      ],
+      "digests": [
+        "sincro-playback-check/frontend@sha256:62f5c86427e0731c52c51bf6475defaccb25b3e4df9a45b5fd021d8e47736cd7"
+      ],
+      "size": 3030598135,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:6954fb4cee17beb140cde520488c7c91c9be8bd829e70821a9d5c187611722d9",
+      "tags": [
+        "sincromisor-rollback/sincro-rtc:20261014"
+      ],
+      "digests": [
+        "sincromisor-rollback/sincro-rtc@sha256:6954fb4cee17beb140cde520488c7c91c9be8bd829e70821a9d5c187611722d9"
+      ],
+      "size": 1059924658,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:6a6ead5f39ae093241d6ce842be57d1b8eb3a0bee8e55ccbd3928ba56ea1d88b",
+      "tags": [
+        "sincromisor-rollback/vector:20261017",
+        "sincromisor-vps/vector:20261014-9b0dc36f"
+      ],
+      "digests": [
+        "sincromisor-rollback/vector@sha256:6a6ead5f39ae093241d6ce842be57d1b8eb3a0bee8e55ccbd3928ba56ea1d88b",
+        "sincromisor-vps/vector@sha256:6a6ead5f39ae093241d6ce842be57d1b8eb3a0bee8e55ccbd3928ba56ea1d88b"
+      ],
+      "size": 406738170,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:6fc6b9573324022c4d56cc0e33492f0e5ecb400cf8bde139b8c0356c0b0cc1c6",
+      "tags": [
+        "sincro-playback-check/go-regression:261011233441"
+      ],
+      "digests": [
+        "sincro-playback-check/go-regression@sha256:6fc6b9573324022c4d56cc0e33492f0e5ecb400cf8bde139b8c0356c0b0cc1c6"
+      ],
+      "size": 1262934728,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:70ec8641961d0b159db32107efd4a373c35b66808ca872e878d726b02a0fcca4",
+      "tags": [
+        "sincro-socket-test/log-observer:latest"
+      ],
+      "digests": [
+        "sincro-socket-test/log-observer@sha256:70ec8641961d0b159db32107efd4a373c35b66808ca872e878d726b02a0fcca4"
+      ],
+      "size": 17355874,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:81af733ad443c101d61bb65f4744f44306b4e6b448d2823fa574cb9d1e9e02e2",
+      "tags": [
+        "sincro-socket-test/vector:0.58.0",
+        "sincromisor-rollback/vector:20261014",
+        "ghcr.io/sincromisor/vector:0.58.0"
+      ],
+      "digests": [
+        "sincro-socket-test/vector@sha256:81af733ad443c101d61bb65f4744f44306b4e6b448d2823fa574cb9d1e9e02e2",
+        "sincromisor-rollback/vector@sha256:81af733ad443c101d61bb65f4744f44306b4e6b448d2823fa574cb9d1e9e02e2",
+        "ghcr.io/sincromisor/vector@sha256:81af733ad443c101d61bb65f4744f44306b4e6b448d2823fa574cb9d1e9e02e2"
+      ],
+      "size": 394465115,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:86b91c4c324eebd3369fd80d28aa64db4a4ef8d975922ae66e90865396128124",
+      "tags": [
+        "sincromisor-rollback/sincro-rtc:20260910"
+      ],
+      "digests": [
+        "sincromisor-rollback/sincro-rtc@sha256:86b91c4c324eebd3369fd80d28aa64db4a4ef8d975922ae66e90865396128124"
+      ],
+      "size": 1049946132,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:8e1a8f4308a61f550a4fbac0c9b31bec1f8fdf038d1305df33fe9b39969326bd",
+      "tags": [
+        "sincromisor-rollback/log-observer:20261018",
+        "sincromisor-rollback/log-observer:20261025",
+        "sincromisor-rollback/log-observer:streaming-20261018",
+        "sincromisor-update/log-observer:20261017-9dc3f816"
+      ],
+      "digests": [
+        "sincromisor-rollback/log-observer@sha256:8e1a8f4308a61f550a4fbac0c9b31bec1f8fdf038d1305df33fe9b39969326bd",
+        "sincromisor-update/log-observer@sha256:8e1a8f4308a61f550a4fbac0c9b31bec1f8fdf038d1305df33fe9b39969326bd"
+      ],
+      "size": 17355977,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:d4351cea795cd8ebb1e8125b288abc29d5e5ceb551c437db601229574fa95f63",
+      "tags": [
+        "sincro-playback-check/go:261011233441"
+      ],
+      "digests": [
+        "sincro-playback-check/go@sha256:d4351cea795cd8ebb1e8125b288abc29d5e5ceb551c437db601229574fa95f63"
+      ],
+      "size": 1262804793,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:d58da21a222cb41bc860f4de7ddc198e1fec15e46ef4f8f264024e1bc90d00b1",
+      "tags": [
+        "sincromisor-rollback/sincro-rtc:logging-20260923"
+      ],
+      "digests": [
+        "sincromisor-rollback/sincro-rtc@sha256:d58da21a222cb41bc860f4de7ddc198e1fec15e46ef4f8f264024e1bc90d00b1"
+      ],
+      "size": 1049986086,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:d9130de32d317ff7a7f2a5e19cfc97ecd8d113b2fd651efa5da8e5b9f1ee55a6",
+      "tags": [
+        "sincromisor-rollback/vector:20261018",
+        "sincromisor-rollback/vector:20261025",
+        "sincromisor-rollback/vector:streaming-20261018",
+        "sincromisor-update/vector:20261017-9dc3f816"
+      ],
+      "digests": [
+        "sincromisor-rollback/vector@sha256:d9130de32d317ff7a7f2a5e19cfc97ecd8d113b2fd651efa5da8e5b9f1ee55a6",
+        "sincromisor-update/vector@sha256:d9130de32d317ff7a7f2a5e19cfc97ecd8d113b2fd651efa5da8e5b9f1ee55a6"
+      ],
+      "size": 396585700,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    },
+    {
+      "id": "sha256:f2dd740417f085ed61e7e81425821b89c6e8a79f2cafe71e869042801d263453",
+      "tags": [
+        "sincromisor-rollback/log-observer:20261014",
+        "ghcr.io/sincromisor/log-observer:latest"
+      ],
+      "digests": [
+        "sincromisor-rollback/log-observer@sha256:f2dd740417f085ed61e7e81425821b89c6e8a79f2cafe71e869042801d263453",
+        "ghcr.io/sincromisor/log-observer@sha256:f2dd740417f085ed61e7e81425821b89c6e8a79f2cafe71e869042801d263453"
+      ],
+      "size": 17390814,
+      "reason": "Sincromisorのタグ・ソースラベルがあり、現行Composeと全コンテナから未参照"
+    }
+  ],
+  "remove_aliases": []
+}

@@ -1,0 +1,38 @@
+{
+  "local": {
+    "completed_at": "2026-10-24T19:17:55.221358+00:00",
+    "host": "local",
+    "removed_images": 51,
+    "removed_aliases": 15,
+    "images_before": 94,
+    "images_after": 43,
+    "kept_current_images": 17,
+    "containers": 0,
+    "volumes": 271,
+    "free_before": 80873889792,
+    "free_after": 129116098560,
+    "free_change": 48242208768,
+    "current_ids_preserved": true,
+    "containers_preserved": true,
+    "volumes_preserved": true,
+    "other_images_preserved": true
+  },
+  "vps": {
+    "completed_at": "2026-10-24T19:18:33.430594+00:00",
+    "host": "vps",
+    "removed_images": 23,
+    "removed_aliases": 0,
+    "images_before": 32,
+    "images_after": 9,
+    "kept_current_images": 5,
+    "containers": 6,
+    "volumes": 19,
+    "free_before": 16090181632,
+    "free_after": 24851034112,
+    "free_change": 8760852480,
+    "current_ids_preserved": true,
+    "containers_preserved": true,
+    "volumes_preserved": true,
+    "other_images_preserved": true
+  }
+}
