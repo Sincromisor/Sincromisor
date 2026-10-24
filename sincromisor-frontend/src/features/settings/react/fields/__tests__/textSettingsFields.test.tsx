@@ -19,6 +19,9 @@ it("体験の選択欄は音声診断だけに固有情報を関連付ける", (
             talkMode === "echo" || talkMode === "playback",
         );
         expect(html).not.toContain("再接続");
+        expect(html.match(/checked=""/g)).toHaveLength(1);
+        expect(html.includes('open=""')).toBe(talkMode === "echo" || talkMode === "playback");
+        expect(html).toContain("<summary>音声診断");
         if (talkMode === "echo") expect(html).toContain("自動ミュートは適用しません");
         if (talkMode === "playback") expect(html).toContain("VOICEVOX:ずんだもん");
     }

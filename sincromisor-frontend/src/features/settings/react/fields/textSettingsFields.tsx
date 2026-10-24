@@ -1,7 +1,8 @@
 import { useId } from "react";
-import { SettingsHelpLabel, SettingsInput, SettingsSelect } from "../primitives/settingsPrimitives";
+import { SettingsHelpLabel, SettingsInput } from "../primitives/settingsPrimitives";
 import type { SettingsFieldProps } from "./settingsFieldTypes";
 import { settingHelp } from "./settingsHelp";
+import "./talkModeField.css";
 
 /** 項目名を入力へ関連付け、変更を共通設定の適用窓口へ渡す。 */
 export function TitleTextField({
@@ -26,7 +27,16 @@ export function TitleTextField({
     );
 }
 
-/** 体験名は選択肢で示し、音声診断固有の注意だけを選択欄に添える。 */
+const normalModes = [
+    ["chat", "キャラクターと話す"],
+    ["sincro", "キャラクターになる"],
+] as const;
+const diagnosticModes = [
+    ["echo", "入力音声を折り返す"],
+    ["playback", "サンプル音声を繰り返す"],
+] as const;
+
+/** 通常の二体験を先に示し、診断は開閉領域へまとめて現在の選択を保つ。 */
 export function TalkModeField({
     settings,
     uiState,
@@ -35,32 +45,44 @@ export function TalkModeField({
     style,
 }: SettingsFieldProps & { onTalkModeChange: (talkMode: string) => void }) {
     const inputId = useId();
+    const diagnostic = diagnosticModes.find(([value]) => value === settings.talkMode);
     const description =
         settings.talkMode === "echo"
-            ? "音声診断：フィルターとVADを通った入力を返します。ヘッドホンをご使用ください。自動ミュートは適用しません。"
+            ? "フィルターとVADを通った入力を返します。ヘッドホンをご使用ください。自動ミュートは適用しません。"
             : settings.talkMode === "playback"
               ? "既定音声: VOICEVOX:ずんだもんを繰り返します。入力は音声再生へ影響しません。"
               : undefined;
-    return (
-        <div className={className} style={style}>
-            <SettingsHelpLabel htmlFor={inputId} text="体験を選ぶ" />
-            <SettingsSelect
-                id={inputId}
-                aria-describedby={description ? `${inputId}-description` : undefined}
-                value={settings.talkMode}
-                onChange={(event) => onTalkModeChange(event.target.value)}
+    const choice = ([value, label]: readonly [string, string]) => (
+        <label key={value} className="talkModeField__choice">
+            <input
+                type="radio"
+                name={inputId}
+                value={value}
+                checked={settings.talkMode === value}
                 disabled={uiState.talkModeDisabled}
-            >
-                <option value="chat">キャラクターと話す</option>
-                <option value="sincro">キャラクターになる</option>
-                <option value="echo">入力音声を折り返す</option>
-                <option value="playback">サンプル音声を繰り返す</option>
-            </SettingsSelect>
-            {description ? (
+                aria-describedby={
+                    settings.talkMode === value && description
+                        ? `${inputId}-description`
+                        : undefined
+                }
+                onChange={() => onTalkModeChange(value)}
+            />
+            {label}
+        </label>
+    );
+    return (
+        <fieldset className={`talkModeField ${className ?? ""}`} style={style}>
+            <legend>体験を選ぶ</legend>
+            {normalModes.map(choice)}
+            <details className="talkModeField__diagnostics" open={!!diagnostic}>
+                <summary>音声診断{diagnostic && <span>：{diagnostic[1]}</span>}</summary>
+                {diagnosticModes.map(choice)}
+            </details>
+            {description && (
                 <p id={`${inputId}-description`} className="settingsPrimitiveFieldDescription">
                     {description}
                 </p>
-            ) : null}
-        </div>
+            )}
+        </fieldset>
     );
 }

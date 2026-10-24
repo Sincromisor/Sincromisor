@@ -8,7 +8,20 @@ for (const mode of ["chat", "sincro"]) {
         const choice = document.querySelector(`input[value="${mode}"]`);
         if (!(choice instanceof HTMLInputElement)) return;
         choice.checked = true;
+        choice.dispatchEvent(new Event("change", { bubbles: true }));
         choice.focus({ preventScroll: true });
         document.querySelector("#main")?.scrollIntoView();
+    });
+}
+
+// 診断を閉じても現在の選択を見失わず、通常体験へ戻る操作も同じラジオ群で扱う。
+const diagnosticSummary = document.querySelector(".mode-diagnostics summary span");
+for (const choice of document.querySelectorAll<HTMLInputElement>('input[name="talkMode"]')) {
+    choice.addEventListener("change", () => {
+        if (!diagnosticSummary) return;
+        const label = choice.closest(".mode-choice")?.querySelector("strong")?.textContent;
+        diagnosticSummary.textContent = ["echo", "playback"].includes(choice.value)
+            ? `：${label}`
+            : "";
     });
 }

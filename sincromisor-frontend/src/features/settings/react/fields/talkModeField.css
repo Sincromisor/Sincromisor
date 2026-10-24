@@ -1,0 +1,7 @@
+.talkModeField { min-width: 0; margin: 0; padding: 0; border: 0; }
+.talkModeField legend { margin-bottom: 8px; font-weight: 600; }
+.talkModeField__choice { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
+.talkModeField__choice input { flex: none; }
+.talkModeField__diagnostics { margin-top: 8px; }
+.talkModeField__diagnostics summary { cursor: pointer; padding-block: 10px; }
+.talkModeField__diagnostics[open] summary span { display: none; }
