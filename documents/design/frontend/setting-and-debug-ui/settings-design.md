@@ -146,6 +146,14 @@ Looking Glassの値は専用の実行時設定へ反映し、設定スナップ�
 - 外枠変更は `src/app/shell/react/overlay/`と `overlay.css`、ページの変更は[共通枠組み](../app-shell.md)と[ページ構成](../pages.md)を確認する。
 - 文書だけの変更は変更MarkdownのPrettier確認と相対リンク確認を行う。実装変更の検査範囲は[タスク管理](../../../../tasks/README.md#確認コマンド)に従う。
 
+配置の回帰確認は、リポジトリルートで開発サーバーを起動してから次を実行する。[配置テスト](../../../../sincromisor-frontend/tests/ui/settingsAlignment.spec.ts)は機器取得と接続設定を模擬し、実通信を開始しない。
+
+```sh
+npm run dev -- --host 127.0.0.1
+# 別のターミナルで実行する。
+npm run browser:test -- sincromisor-frontend/tests/ui/settingsAlignment.spec.ts sincromisor-frontend/tests/ui/focus.spec.ts --reporter=line --workers=1
+```
+
 ## 開始前のデータ利用
 
 開始前の概要・詳細に、音声の接続先への送信と、通常体験での認識音声・文章のサーバー保存を示す。「データの扱い」から、会話履歴のサーバー保存、カメラ映像のブラウザー内追跡、VRM・設定のブラウザー保存を確認できる。概要の「カメラを使う」で追跡とカメラ選択を無効化でき、開始せずトップへ戻る導線を維持する。

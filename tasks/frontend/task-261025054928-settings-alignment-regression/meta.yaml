@@ -1,15 +1,15 @@
 id: task-261025054928-settings-alignment-regression
 title: 設定画面の整列をPlaywrightで回帰確認する
 category: frontend
-status: open
+status: done
 depends_on:
   - task-261025054927-startup-action-alignment
   - task-261025055639-settings-fixed-footer-height
 superseded_by: null
 review: null
 reviewed_sha: null
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 3
 created_at: 2026-10-25
-closed_at: null
+closed_at: 2026-10-25
 legacy_ids: []
