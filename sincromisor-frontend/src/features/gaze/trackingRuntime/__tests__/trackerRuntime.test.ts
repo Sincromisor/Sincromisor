@@ -157,6 +157,29 @@ afterEach(() => {
 });
 
 describe("TrackerRuntime", () => {
+    it("初期化待ちの停止後に映像接続と推論ループを再開しない", async () => {
+        vi.stubGlobal("HTMLMediaElement", { HAVE_CURRENT_DATA: 2 });
+        vi.stubGlobal("MediaStream", FakeMediaStream);
+        const { video, getFrameCallback } = createFakeVideo();
+        const face = new RecordingFaceTracker();
+        let release: () => void = () => {};
+        vi.spyOn(face, "initVision").mockImplementation(
+            () =>
+                new Promise<void>((resolve) => {
+                    release = resolve;
+                }),
+        );
+        const runtime = new TrackerRuntime(video, face);
+        const starting = runtime.startFaceTracking(createFakeTrack(), { onFaceMotion: () => {} });
+        await Promise.resolve();
+        await Promise.resolve();
+        runtime.stopFaceTracking("experience_ended");
+        release();
+        await starting;
+        expect(video.srcObject).toBeNull();
+        expect(getFrameCallback()).toBeUndefined();
+    });
+
     it("状態を置き換えた後も共通コールバックが現在の状態を更新する", () => {
         const { video } = createFakeVideo();
         const runtime = new TrackerRuntime(video);

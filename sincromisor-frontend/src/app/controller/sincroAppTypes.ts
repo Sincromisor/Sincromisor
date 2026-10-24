@@ -4,12 +4,20 @@ import type { TelopTextSegment } from "../../features/conversation/talk/talkMana
 import type { DialogUiState, DialogVrmUiState } from "../../features/dialog/model/dialogManager";
 import type { DialogPopEvent } from "../../features/dialog/model/popMessageService";
 import type { CameraQualityScore } from "../../features/gaze/trackingRuntime/cameraQualityScore";
+import type { MediaUsageState } from "../../features/media/userMedia/userMediaAcquisition";
 import type { ChatMessage, TelopChannelMessage } from "../../features/rtc/rtcMessage";
 import type { AppSettingsUiHints, AppSettingsUiState } from "../settings/sincroAppSettingsPolicy";
 
 // SincroAppController を境界にした UI 向けの共通型定義。
 // React UI / initializer / helper 群で同じ契約を共有するために Controller 本体から分離している。
 export type SincroAppLifecycleState = "idle" | "starting" | "running" | "stopping" | "stopped";
+
+/** RTC接続と独立した体験・機器の実使用状態。終了後は取得要求も休止する。 */
+export type SincroAppMediaState = {
+    experienceActive: boolean;
+    microphone: MediaUsageState;
+    camera: MediaUsageState;
+};
 
 export type SincroAppStartHooks = {
     beforeStart?: () => void;
@@ -96,6 +104,7 @@ export type SincroAppLookingGlassConfigUpdatedEventDetail = {
 // singleton manager / service ごとの差分をこの union へ吸収し、React 側の購読先を一本化する。
 // camera quality の observedAtMs は UI hysteresis の唯一の clock であり、consumer 側で再採時しない。
 export type SincroAppEvent =
+    | { type: "media_state"; state: SincroAppMediaState }
     | {
           type: "lifecycle";
           state: SincroAppLifecycleState;

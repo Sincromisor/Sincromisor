@@ -200,3 +200,11 @@ ICE失敗時の既存収集は`rtc`へ限定した`ice_summary`を添える。�
 - `documents/design/frontend/setting-and-debug-ui/README.md`
 - `documents/design/archive/legacy-flat/frontend_ui.md`
 - `documents/design/archive/legacy-flat/frontend_migration_react.md`
+
+## 体験の終了と機器の使用
+
+通常画面のヘッダー下に、マイク・カメラの「未使用／取得中／使用中」と「体験を終了」を置く。使用状態は取得した実トラックの所有者が通知し、設定の有効値やRTC接続状態から推測しない。320px幅では状態と操作を折り返す。確認ダイアログは設けない。
+
+`SincroAppLifecycleController`が開始・RTC停止・体験終了を区別し、`SincroController`の開始世代から音声・カメラ所有者へ委譲する。体験終了は較正、RTC、元の音声と加工済みトラック、音声処理と診断メーター、追跡カメラと推論ループを終了する。取得・切り替え・初期化待ちの後着結果も所有者側で解放し、設定購読からの再取得を休止する。設定とモデルは保持し、通常画面の「体験を開始」または設定の開始操作で明示再開始する。
+
+`stop()` / `stopRTC()`は既存どおりRTCだけを止める。接続が停止済みでも機器を使っている場合は体験全体を終了できる。通信形式、ブラウザー権限、保存データ、Looking Glass表示の独立した開始停止は変更しない。

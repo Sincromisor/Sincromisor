@@ -11,26 +11,34 @@ export type RtcPeerConnectionShutdownParams = {
     textChannel: RTCDataChannel;
 };
 
+// 接続失敗と利用者の停止が重なっても、同じ接続を再度停止・closeしない。
+const closingPeerConnections = new WeakSet<RTCPeerConnection>();
+
 /**
  * DataChannel/transceiverを停止し、1秒後にPeerConnectionをcloseする。
  *
  * `stopSenderTracks`の既定値はtrueであり、resource ownerが明示したreplacement時だけtrackを保持する。
  */
 export function closeRtcPeerConnection(params: RtcPeerConnectionShutdownParams): void {
+    // 置き換え時は保持した送信トラックも、後の明示停止では解放する。
+    if (params.stopSenderTracks ?? true) {
+        params.peerConnection.getSenders().forEach((sender: RTCRtpSender) => {
+            sender.track?.stop();
+        });
+    }
+    if (closingPeerConnections.has(params.peerConnection)) return;
+    closingPeerConnections.add(params.peerConnection);
     params.textChannel.close();
     params.telopChannel.close();
 
-    if (params.peerConnection.getTransceivers) {
+    if (
+        params.peerConnection.signalingState !== "closed" &&
+        params.peerConnection.getTransceivers
+    ) {
         params.peerConnection.getTransceivers().forEach((transceiver) => {
             if (transceiver.stop) {
                 transceiver.stop();
             }
-        });
-    }
-
-    if (params.stopSenderTracks ?? true) {
-        params.peerConnection.getSenders().forEach((sender: RTCRtpSender) => {
-            sender.track?.stop();
         });
     }
 

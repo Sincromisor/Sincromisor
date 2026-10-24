@@ -5,7 +5,7 @@ import { DebugConsoleManager } from "../../features/debug/model/debugConsoleMana
 import { SincroRTCConfigManager } from "../../features/rtc/sincroRtcConfigManager";
 import type { SincroAppSettingsModel } from "../settings/sincroAppSettingsModel";
 import type { SincroAppSettingsPersistence } from "../settings/sincroAppSettingsPersistence";
-import type { SincroAppEvent } from "./sincroAppTypes";
+import type { SincroAppEvent, SincroAppMediaState } from "./sincroAppTypes";
 import { SincroAudioInputController } from "./sincroAudioInputController";
 import { SincroCharacterGazeController } from "./sincroCharacterGazeController";
 import { SincroRtcSessionController } from "./sincroRtcSessionController";
@@ -18,6 +18,13 @@ type SincroControllerOptions = {
 
 /** アプリの音声・追跡・RTCを接続する。追跡終了だけを較正へ返し、音声・RTC失敗は独立して扱う。 */
 export class SincroController {
+    private generation = 0;
+    private mediaState: SincroAppMediaState = {
+        experienceActive: false,
+        microphone: "idle",
+        camera: "idle",
+    };
+    private readonly emitEvent: (event: SincroAppEvent) => void;
     private readonly settingsModel: SincroAppSettingsModel;
     private readonly debugConsoleManager: DebugConsoleManager;
     private readonly chatMessageService: ChatMessageService;
@@ -28,6 +35,7 @@ export class SincroController {
     private readonly characterGazeController: SincroCharacterGazeController;
 
     constructor(options: SincroControllerOptions) {
+        this.emitEvent = options.emitEvent;
         this.settingsModel = options.settingsModel;
         this.debugConsoleManager = DebugConsoleManager.getManager();
         this.chatMessageService = ChatMessageService.getService();
@@ -54,6 +62,12 @@ export class SincroController {
             talkManager,
             this.rtcConfigManager,
         );
+        this.audioInputController.setUsageCallback((microphone) =>
+            this.updateMediaState({ microphone }),
+        );
+        this.characterGazeController.setUsageCallback((camera) =>
+            this.updateMediaState({ camera }),
+        );
         // 手動ミュートは接続中にも反映し、診断時の自動ミュート抑止とは独立して保持する。
         this.unsubscribeMuteSettings = this.settingsModel.subscribeSettingsChange(() => {
             this.rtcSessionController.setManualMute(
@@ -71,12 +85,24 @@ export class SincroController {
 
     /** カメラ追跡と音声取得を独立して開始し、音声取得成功時だけRTCへ進む。 */
     start(onTrackingStopped: (reason: string) => void): void {
+        const generation = ++this.generation;
+        if (!this.mediaState.experienceActive) {
+            this.updateMediaState({ experienceActive: true });
+        }
         this.startCharacterGaze(onTrackingStopped);
         this.audioInputController.start(
             (audioTrack: MediaStreamTrack) => {
+                if (generation !== this.generation || !this.mediaState.experienceActive) {
+                    audioTrack.stop();
+                    return;
+                }
                 this.startRTC(audioTrack);
             },
             (audioTrack: MediaStreamTrack) => {
+                if (generation !== this.generation || !this.mediaState.experienceActive) {
+                    audioTrack.stop();
+                    return;
+                }
                 this.rtcSessionController.replaceAudioTrack(audioTrack);
             },
         );
@@ -91,6 +117,35 @@ export class SincroController {
     // WebRTC接続を停止する。
     stopRTC(): void {
         this.rtcSessionController.stop();
+    }
+
+    /** RTC停止とは別に、取得世代を失効させ全機器・音声処理・追跡を終了する。 */
+    endExperience(): void {
+        ++this.generation;
+        this.updateMediaState({ experienceActive: false });
+        // 一つの所有者が失敗しても他の資源を解放し、全て試みた後で失敗を呼出元へ返す。
+        const errors: unknown[] = [];
+        for (const release of [
+            () => this.rtcSessionController.stop(),
+            () => this.audioInputController.stop(),
+            () => this.debugConsoleManager.stopAudioMeters(),
+            () => this.characterGazeController.stop(),
+        ]) {
+            try {
+                release();
+            } catch (error) {
+                errors.push(error);
+            }
+        }
+        if (errors.length > 0)
+            throw Object.assign(new Error("Could not end all experience resources"), {
+                cause: errors,
+            });
+    }
+
+    private updateMediaState(partial: Partial<SincroAppMediaState>): void {
+        this.mediaState = { ...this.mediaState, ...partial };
+        this.emitEvent({ type: "media_state", state: { ...this.mediaState } });
     }
 
     // 顔認識を開始し、視線・AutoMute状態をデバッグUIとRTC mute制御へ反映する。

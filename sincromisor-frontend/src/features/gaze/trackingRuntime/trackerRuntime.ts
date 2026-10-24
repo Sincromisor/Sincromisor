@@ -77,6 +77,7 @@ export class TrackerRuntime {
     private readonly degradationPolicy = new TrackerRuntimeDegradationPolicyController();
     private callbacks?: TrackerRuntimeCallbacks;
     private loadedDataHandlerBound?: () => void;
+    private startGeneration = 0;
     private state: TrackerRuntimeMutableState = createTrackerRuntimeMutableState();
     private performanceProfile: TrackerRuntimePerformanceProfile =
         resolveTrackerRuntimePerformanceProfile().profile;
@@ -107,8 +108,15 @@ export class TrackerRuntime {
         if (this.frameLoop.enabled || this.callbacks) {
             this.stopFaceTracking("sincro_face_tracking_restarting");
         }
+        const generation = ++this.startGeneration;
         this.resetStartState(callbacks, targetInferenceFps, poseOptions);
-        this.state.useWorkerTracking = await this.initializeTrackerEngine(true);
+        const useWorkerTracking = await this.initializeTrackerEngine(true);
+        // エンジン初期化中に終了した場合は映像と推論ループを再開しない。
+        if (generation !== this.startGeneration) {
+            this.workerClient.dispose();
+            return;
+        }
+        this.state.useWorkerTracking = useWorkerTracking;
         attachTrackerVideoTrack(this.videoElement, videoTrack);
         this.frameLoop.enable();
         if (!this.loadedDataHandlerBound) {
@@ -119,10 +127,9 @@ export class TrackerRuntime {
     }
 
     stopFaceTracking(reason: string | undefined = "sincro_face_tracking_stopped"): void {
+        ++this.startGeneration;
         this.frameLoop.stop();
-        if (this.state.useWorkerTracking) {
-            this.workerClient.dispose();
-        }
+        this.workerClient.dispose();
         this.callbacks?.onFaceMotion(this.faceTracker.stop(reason));
         this.callbacks?.onPoseMotion?.(this.poseTracker.stop(reason));
         this.callbacks?.onHandMotion?.(this.handTracker.stop(reason));

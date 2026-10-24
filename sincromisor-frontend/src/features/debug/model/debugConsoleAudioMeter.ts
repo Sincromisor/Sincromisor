@@ -52,6 +52,12 @@ export class DebugConsoleAudioMeter {
 
     constructor(private readonly callbacks: DebugConsoleAudioMeterCallbacks) {}
 
+    /** トラックは音声所有者へ残し、測定ノード・ループ・Contextだけを解放する。 */
+    stop(): void {
+        this.stopAudioMeter(this.localAudioMeterHandle, "local");
+        this.stopAudioMeter(this.remoteAudioMeterHandle, "remote");
+    }
+
     setLocalAudioTrack(track: MediaStreamTrack): void {
         this.stopAudioMeter(this.localAudioMeterHandle, "local");
         this.localAudioMeterHandle = this.startAudioMeter(track, "local");

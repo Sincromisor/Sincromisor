@@ -15,10 +15,7 @@ import { buildSincroAppConnectionStateEvent } from "../events/sincroAppConnectio
 import { emitSincroAppControllerInitialSnapshot } from "../events/sincroAppControllerInitialSnapshot";
 import { bindSincroAppControllerSubscriptions } from "../events/sincroAppControllerSubscriptions";
 import { bindSincroAppControllerWindowEvents } from "../events/sincroAppControllerWindowEvents";
-import {
-    emitSincroAppLifecycle,
-    emitSincroAppSettingsRelatedSnapshots,
-} from "../events/sincroAppEmitHelpers";
+import { emitSincroAppSettingsRelatedSnapshots } from "../events/sincroAppEmitHelpers";
 import { SincroAppEventHub } from "../events/sincroAppEventHub";
 import { SincroAppLookingGlassStateTracker } from "../events/sincroAppLookingGlassStateTracker";
 import { applySincroAppControllerSettings } from "../settings/sincroAppSettingsApplyFlow";
@@ -30,18 +27,14 @@ import {
 import { buildSincroAppSettingsRelatedSnapshotPayload } from "../settings/sincroAppSettingsRelatedSnapshotBuilder";
 import { buildSincroAppSettingsSnapshot } from "../settings/sincroAppSettingsSnapshotBuilder";
 import { SincroAppSettingsStore } from "../settings/sincroAppSettingsStore";
-import {
-    buildStartupSettingsStatus,
-    type SincroAppStartupAppliedSettings,
-} from "../settings/sincroAppStartupSettings";
 import { buildSincroAppUiStateSnapshot } from "../settings/sincroAppUiStateSnapshotBuilder";
 import { SincroAppActiveControllerRegistry } from "./sincroAppActiveControllerRegistry";
 import { SincroAppCalibration } from "./sincroAppCalibration";
+import { SincroAppLifecycleController } from "./sincroAppLifecycleController";
 import type {
     SincroAppDialogUiState,
     SincroAppDialogVrmUiState,
     SincroAppEvent,
-    SincroAppLifecycleState,
     SincroAppSettingsSnapshot,
     SincroAppStartHooks,
     SincroAppStartupSettingsCapabilities,
@@ -60,7 +53,6 @@ export type {
     SincroAppDialogUiState,
     SincroAppDialogVrmUiState,
     SincroAppEvent,
-    SincroAppLifecycleState,
     SincroAppLookingGlassConfigStatus,
     SincroAppSettingsSnapshot,
     SincroAppSettingsUiHints,
@@ -82,15 +74,15 @@ export class SincroAppController {
     /** 開始入口とPose観測が共有する、このアプリ専用の較正。 */
     readonly calibration = new SincroAppCalibration();
     private released = false;
-    private lifecycleState: SincroAppLifecycleState = "idle";
+    private readonly lifecycle: SincroAppLifecycleController;
+    private get lifecycleState() {
+        return this.lifecycle.state;
+    }
     private iceConnectionState: string = "";
     private signalingState: string = "";
-    private beforeStartHook: () => void = () => {};
-    private afterStartHook: () => void = () => {};
     private suppressSettingsSnapshotEvent: boolean = false;
     /** 設定値・操作可否・案内の同時点スナップショットをReactへ公開する。 */
     readonly settingsStore: SincroAppSettingsStore;
-    private startupAppliedSettings: SincroAppStartupAppliedSettings | undefined;
     private startupSettingsCapabilities: SincroAppStartupSettingsCapabilities =
         createDefaultSincroAppStartupSettingsCapabilities();
     private persistence?: SincroAppSettingsPersistence;
@@ -146,6 +138,14 @@ export class SincroAppController {
             },
         });
         this.runtime = runtime;
+        this.lifecycle = new SincroAppLifecycleController({
+            core: runtime.coreController,
+            calibration: this.calibration,
+            getSettings: () => this.getSettingsSnapshot(),
+            isReleased: () => this.released,
+            emitEvent: (event) => this.emitEvent(event),
+            emitConnectionState: () => this.emitDerivedConnectionState(),
+        });
         const initialSettings = buildSincroAppSettingsRelatedSnapshotPayload({
             settingsModel: runtime.settingsModel,
             buildStartupSettingsStatus: (settings) =>
@@ -227,6 +227,7 @@ export class SincroAppController {
     subscribe(listener: (event: SincroAppEvent) => void): () => void {
         // 購読直後にスナップショットを送ることで、React 側は初回描画時の「空状態」を減らせる。
         const unsubscribe = this.eventHub.subscribe(listener);
+        listener({ type: "media_state", state: { ...this.lifecycle.mediaState } });
         emitSincroAppControllerInitialSnapshot({
             listener,
             lifecycleState: this.lifecycleState,
@@ -246,65 +247,29 @@ export class SincroAppController {
         return unsubscribe;
     }
 
-    // Public lifecycle / control API
+    /** 開始時のシーン・ダイアログ操作をライフサイクル所有者へ渡す。 */
     setStartHooks(hooks: SincroAppStartHooks): void {
-        // initializer 側に残る UI副作用（挨拶、シーン開始、ダイアログclose）をここ経由で組み込む。
-        this.beforeStartHook = hooks.beforeStart ?? (() => {});
-        this.afterStartHook = hooks.afterStart ?? (() => {});
+        this.lifecycle.setStartHooks(hooks);
     }
 
-    /** 全開始入口の重複を抑止し、較正・シーン・機器を順に開始する。同期失敗時は較正を中断する。 */
+    /** 設定を保持した明示開始。重複操作と非同期結果はライフサイクル所有者が制御する。 */
     start(): void {
-        if (
-            this.released ||
-            this.lifecycleState === "starting" ||
-            this.lifecycleState === "running"
-        ) {
-            return;
-        }
-        const startupSnapshot = this.getSettingsSnapshot();
-        this.emitLifecycle("starting", startupSnapshot);
-        this.emitDerivedConnectionState();
-        // 起動時点の startup 設定を保存し、後で「再起動推奨」判定に使う。
-        this.startupAppliedSettings = {
-            enableTalk: startupSnapshot.enableTalk,
-            enableInspector: startupSnapshot.enableInspector,
-            enableVR: startupSnapshot.enableVR,
-        };
-        const cancelStart = this.calibration.start(startupSnapshot.talkMode);
-        try {
-            this.beforeStartHook();
-            this.runtime.coreController.start(cancelStart);
-            this.afterStartHook();
-            this.emitLifecycle("running");
-            this.emitDerivedConnectionState();
-        } catch (error) {
-            cancelStart("start_failed");
-            this.emitLifecycle("stopped");
-            this.emitDerivedConnectionState();
-            throw error;
-        }
+        this.lifecycle.start();
     }
 
-    /** RTCだけを停止して状態を通知する。設定などの外部購読は維持し、未起動・停止済みなら何もしない。 */
+    /** 診断・再接続用のRTC停止。機器全体の終了とは区別する。 */
     stopRTC(): void {
-        if (
-            this.lifecycleState === "stopping" ||
-            this.lifecycleState === "stopped" ||
-            this.lifecycleState === "idle"
-        ) {
-            return;
-        }
-        this.calibration.cancel("connection_stopped");
-        this.emitLifecycle("stopping");
-        this.emitDerivedConnectionState();
-        this.runtime.coreController.stopRTC();
-        this.emitLifecycle("stopped");
-        this.emitDerivedConnectionState();
+        this.lifecycle.stopRTC();
     }
 
+    /** 既存の内部停止窓口はRTCだけを停止する。 */
     stop(): void {
         this.stopRTC();
+    }
+
+    /** 通常画面から較正・全機器・取得待ちを終了する。 */
+    endExperience(): void {
+        this.lifecycle.endExperience();
     }
 
     /** シーン反映と設定適用処理のため、現在の通常設定・実行時設定を取得する。 */
@@ -335,11 +300,7 @@ export class SincroAppController {
     private buildStartupSettingsStatusFromSnapshot(
         current: SincroAppSettingsSnapshot,
     ): SincroAppStartupSettingsStatus {
-        return buildStartupSettingsStatus({
-            lifecycleState: this.lifecycleState,
-            current,
-            applied: this.startupAppliedSettings,
-        });
+        return this.lifecycle.getStartupSettingsStatus(current);
     }
 
     // Public startup capability API
@@ -409,23 +370,9 @@ export class SincroAppController {
         }
     }
 
-    // lifecycle event は startup settings status と一緒に流し、UI 側の再起動案内判定を安定させる。
-    private emitLifecycle(
-        state: SincroAppLifecycleState,
-        settingsSnapshot?: SincroAppSettingsSnapshot,
-    ): void {
-        this.lifecycleState = state;
-        emitSincroAppLifecycle(
-            (event) => this.emitEvent(event),
-            state,
-            settingsSnapshot
-                ? this.buildStartupSettingsStatusFromSnapshot(settingsSnapshot)
-                : this.getStartupSettingsStatus(),
-        );
-    }
-
     // 実配信は EventHub に委譲し、本体は emit 順序制御に集中する。
     private emitEvent(event: SincroAppEvent): void {
+        if (event.type === "media_state") this.lifecycle?.updateMediaState(event.state);
         this.eventHub.emit(event);
     }
 

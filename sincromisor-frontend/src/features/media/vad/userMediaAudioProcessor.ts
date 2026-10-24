@@ -141,11 +141,18 @@ export class UserMediaAudioProcessor {
         this.audioContext = context;
         const source = context.createMediaStreamSource(new MediaStream([rawTrack]));
         const gateGain = await this.createVadProcessingChain(context);
+        if (this.audioContext !== context) {
+            throw new DOMException("Audio processing cancelled", "AbortError");
+        }
         const destination = context.createMediaStreamDestination();
 
         this.connectAudioNodes({ source, gateGain, destination });
         if (context.state === "suspended") {
             await context.resume();
+        }
+        if (this.audioContext !== context) {
+            for (const track of destination.stream.getTracks()) track.stop();
+            throw new DOMException("Audio processing cancelled", "AbortError");
         }
         return destination.stream.getAudioTracks()[0] ?? rawTrack;
     }
@@ -171,6 +178,10 @@ export class UserMediaAudioProcessor {
         this.applyFilterNodes();
 
         await context.audioWorklet.addModule(VAD_WORKLET_MODULE_URL);
+        // addModule待機中の終了・再開始から、古い処理器を再接続しない。
+        if (this.audioContext !== context) {
+            throw new DOMException("Audio processing cancelled", "AbortError");
+        }
         const vadNode = new AudioWorkletNode(context, "vad-processor");
         this.vadNode = vadNode;
         this.vadRuntime.attachVadNode(vadNode);
