@@ -28,9 +28,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 48 件）
+## タスク一覧（自動生成 / 全 49 件）
 
-### done（完了） — 48 件
+### done（完了） — 49 件
 
 | タスク                                                                                                                                 | タイトル                                              | 判定    | 依存                                                                                                                                                          |
 | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -82,5 +82,6 @@
 | [task-261017151033-remove-settings-pass-through-memo](./task-261017151033-remove-settings-pass-through-memo/task.md)                   | 設定画面の不要なuseMemoを削除                         | ✅ PASS | —                                                                                                                                                             |
 | [task-261017151033-subscribe-media-device-store](./task-261017151033-subscribe-media-device-store/task.md)                             | 機器一覧のReact同期を外部ストア購読へ移行             | ✅ PASS | `task-261017151032-stabilize-media-device-snapshot`                                                                                                           |
 | [task-261017151033-unify-scene-animation-loop](./task-261017151033-unify-scene-animation-loop/task.md)                                 | 通常描画とXR描画をThree.jsのループへ統一              | ✅ PASS | —                                                                                                                                                             |
+| [task-261024154945-refresh-frontend-dependencies](./task-261024154945-refresh-frontend-dependencies/task.md)                           | フロントエンドと共通開発ツールの依存を更新する        | ✅ PASS | —                                                                                                                                                             |
 
 <!-- AUTOGEN:tasks END -->
