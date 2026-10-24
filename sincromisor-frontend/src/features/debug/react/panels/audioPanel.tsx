@@ -20,7 +20,6 @@ export function AudioPanel({ snapshot, manager, isActive }: AudioPanelProps) {
             aria-labelledby="debug-console-tab-audio"
             hidden={!isActive}
         >
-            <h3>Audio</h3>
             <div className="audioMeterGrid">
                 <AudioPanelLocalMeter snapshot={snapshot} />
                 <AudioMeter

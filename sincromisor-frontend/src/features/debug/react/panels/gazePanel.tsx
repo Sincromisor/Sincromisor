@@ -20,7 +20,6 @@ export function GazePanel({ detailsRef, isActive }: GazePanelProps) {
             aria-labelledby="debug-console-tab-gaze"
             hidden={!isActive}
         >
-            <h3>Gaze</h3>
             <div className="gazePanelGrid">
                 <GazePreview />
                 <div className="gazePanelDetails" ref={detailsRef} />

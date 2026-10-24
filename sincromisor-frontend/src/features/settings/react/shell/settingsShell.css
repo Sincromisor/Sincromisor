@@ -37,7 +37,6 @@
         --settings-shell-page-radius: var(--sincro-radius-600);
         --settings-shell-page-border-top-color: var(--settings-shell-border);
         --settings-shell-page-border-left-color: transparent;
-        --settings-shell-page-header-padding-bottom: var(--sincro-space-350);
         display: grid;
         min-height: 0;
         min-width: 0;
@@ -260,21 +259,6 @@
         box-shadow: none;
     }
 
-    .settingsShell__pageHeader {
-        display: grid;
-        gap: var(--sincro-space-150);
-        min-height: 0;
-        align-content: start;
-        padding-bottom: var(--settings-shell-page-header-padding-bottom);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    .settingsShell__pageTitle {
-        margin: 0;
-        font-size: 1.28rem;
-        line-height: var(--sincro-line-height-tight);
-    }
-
     .settingsShell__pageDescription {
         margin: 0;
         opacity: 0.8;
@@ -366,7 +350,6 @@
             --settings-shell-tab-active-shadow: inset 0 3px 0 var(--sincro-overlay-tab-accent, rgba(159, 210, 255, 0.76));
             --settings-shell-page-gap: var(--sincro-space-350);
             --settings-shell-page-padding: var(--sincro-space-450);
-            --settings-shell-page-header-padding-bottom: var(--sincro-space-300);
             gap: 0;
         }
 
