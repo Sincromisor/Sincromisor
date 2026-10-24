@@ -32,6 +32,7 @@ export type SincroAppControllerSettingsState = {
     currentController: SincroAppController | undefined;
     lifecycleState: SincroAppLifecycleState;
     connectionState: SincroAppControllerConnectionState;
+    saveFailed: boolean;
     settings: SincroAppSettingsSnapshot;
     settingsUiState: SincroAppSettingsUiState;
     settingsUiHints: SincroAppSettingsUiHints;
@@ -63,6 +64,7 @@ const defaultConnectionState: SincroAppControllerConnectionState = {
 
 // 制御処理のない初回表示でも、外部ストアの取得結果を安定させる。
 const defaultSettingsSnapshot = {
+    saveFailed: false,
     settings: createDefaultSincroAppSettingsSnapshot(),
     settingsUiState: createDefaultSincroAppSettingsUiState(),
     settingsUiHints: defaultSincroAppSettingsUiHints,

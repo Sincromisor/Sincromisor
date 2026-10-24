@@ -324,6 +324,13 @@ export class SincroAppController {
         url: Partial<SincroAppSettingsSnapshot>,
     ): void {
         this.persistence = new SincroAppSettingsPersistence(page);
+        const persistence = this.persistence;
+        this.settingsStore.setSaveFailed(persistence.hasUnsavedChanges());
+        this.eventUnsubscribers.push(
+            persistence.subscribe(() =>
+                this.settingsStore.setSaveFailed(persistence.hasUnsavedChanges()),
+            ),
+        );
         this.applySettings({ ...defaults, ...this.persistence.load(), ...url }, "restore");
         this.runtime.coreController.restoreAudioTuning(this.persistence);
         const debug = this.runtime.debugConsoleManager;
@@ -339,6 +346,11 @@ export class SincroAppController {
                     this.persistence?.saveGazeTuning(event.config);
             }),
         );
+    }
+
+    /** 未保存の最新文書を再試行し、結果は設定ストアの購読で画面へ伝える。 */
+    retrySettingsSave(): void {
+        this.persistence?.retry();
     }
 
     /** 設定を正本へ一括適用し、完了後の値と操作可否を設定購読へ同時に公開する。 */

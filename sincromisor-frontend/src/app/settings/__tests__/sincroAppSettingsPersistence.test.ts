@@ -184,3 +184,22 @@ it("空の題名を編集値として保存し、その後の入力も復元す�
     app.applySettings({ titleText: "新しい題名" });
     expect(new SincroAppSettingsPersistence("simple-vrm").load().titleText).toBe("新しい題名");
 });
+
+it("適用値を保って未保存状態を通知し、再試行の成功を同じ購読へ伝える", () => {
+    const local = storage();
+    const app = new SincroAppController();
+    app.restoreSettings("simple-vrm", {}, {});
+    const notify = vi.fn();
+    const unsubscribe = app.settingsStore.subscribe(notify);
+    local.setItem.mockImplementationOnce(() => {
+        throw new Error("full");
+    });
+    app.applySettings({ titleText: "保持する入力" });
+    expect(app.getSettingsSnapshot().titleText).toBe("保持する入力");
+    expect(app.settingsStore.getSnapshot().saveFailed).toBe(true);
+    app.retrySettingsSave();
+    expect(app.settingsStore.getSnapshot().saveFailed).toBe(false);
+    expect(new SincroAppSettingsPersistence("simple-vrm").load().titleText).toBe("保持する入力");
+    expect(notify).toHaveBeenCalled();
+    unsubscribe();
+});

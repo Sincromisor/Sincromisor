@@ -15,13 +15,14 @@ it("初期値の参照を保持し、値・操作可否・案内を一括通知�
         settingsUiHints: defaultSincroAppSettingsUiHints,
     };
     const store = new SincroAppSettingsStore(initial);
-    expect(store.getSnapshot()).toBe(initial);
+    const first = store.getSnapshot();
+    expect(first).toEqual({ ...initial, saveFailed: false });
     expect(store.getSnapshot()).toBe(store.getSnapshot());
     const seen = vi.fn(() => store.getSnapshot());
     const unsubscribe = store.subscribe(seen);
     expect(seen).not.toHaveBeenCalled();
     store.update(structuredClone(initial));
-    expect(store.getSnapshot()).toBe(initial);
+    expect(store.getSnapshot()).toBe(first);
     expect(seen).not.toHaveBeenCalled();
     const next = {
         settings: { ...initial.settings, titleText: "変更後" },
@@ -34,7 +35,7 @@ it("初期値の参照を保持し、値・操作可否・案内を一括通知�
         startupSettingsStatus: createDefaultSincroAppStartupSettingsStatus(),
     });
     expect(seen).toHaveBeenCalledOnce();
-    expect(seen.mock.results[0].value).toEqual(next);
+    expect(seen.mock.results[0].value).toEqual({ ...next, saveFailed: false });
     expect(emit).toHaveBeenCalledWith({ type: "settings_snapshot", settings: next.settings });
     const current = store.getSnapshot();
     store.update(structuredClone(next));

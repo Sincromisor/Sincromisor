@@ -65,10 +65,32 @@ const documentSchema = z.object({
 /** 小さなページ別JSONを保持する。初期化・環境通知は書き込まず、利用者操作の差分だけを保存する。 */
 export class SincroAppSettingsPersistence {
     private static writesStopped = false;
+    private static readonly stopListeners = new Set<() => void>();
+    private readonly listeners = new Set<() => void>();
+    private failed = false;
 
     /** 全設定初期化後は、既存の通知や古いアプリ参照からの再保存も再読込まで受け付けない。 */
     static stopSaving(): void {
         SincroAppSettingsPersistence.writesStopped = true;
+        for (const listener of SincroAppSettingsPersistence.stopListeners) listener();
+    }
+
+    /** 適用済み文書が未保存かを返す。初期化で保存を停止した文書は再試行させない。 */
+    hasUnsavedChanges = (): boolean => !SincroAppSettingsPersistence.writesStopped && this.failed;
+
+    /** 書き込み結果と初期化停止を購読し、解除時は全体の停止通知からも取り外す。 */
+    subscribe = (listener: () => void): (() => void) => {
+        this.listeners.add(listener);
+        SincroAppSettingsPersistence.stopListeners.add(listener);
+        return () => {
+            this.listeners.delete(listener);
+            SincroAppSettingsPersistence.stopListeners.delete(listener);
+        };
+    };
+
+    /** 失敗後に保持した最新の共有文書を再保存する。停止済みの保存は再開しない。 */
+    retry(): void {
+        if (this.hasUnsavedChanges()) this.write();
     }
 
     private gaze?: z.infer<typeof sincroGazeTuningSchema>;
@@ -189,8 +211,11 @@ export class SincroAppSettingsPersistence {
                     pose: this.pose,
                 }),
             );
+            this.failed = false;
         } catch (error) {
+            this.failed = true;
             frontendLogger.warn("Failed to save settings.", { error });
         }
+        for (const listener of this.listeners) listener();
     }
 }

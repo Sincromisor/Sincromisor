@@ -86,7 +86,6 @@ export function createPurposeSettingsPages({
                     {...fields}
                     onTitleChange={(titleText) => state.applySettings({ titleText })}
                 />
-                <SettingsHint>設定はこのブラウザーに自動で保存されます。</SettingsHint>
                 <ResetSettingsButton />
             </>
         ),
