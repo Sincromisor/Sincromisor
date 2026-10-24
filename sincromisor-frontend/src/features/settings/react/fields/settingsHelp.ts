@@ -2,8 +2,6 @@
 export const settingHelp = {
     titleText:
         "会話UIなどに表示されるタイトル文字列です。配信名・キャラクター名を表示したい時に設定します。",
-    talkMode:
-        "会話、キャラクター動作、または入力音声の折り返し診断を選びます。折り返しは認識・合成に接続せず、反映には再接続が必要です。",
     audioInputDeviceId:
         "使うマイクを選びます。未選択ならブラウザで既定になっているマイクを使います。",
     videoInputDeviceId:
