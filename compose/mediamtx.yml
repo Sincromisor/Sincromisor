@@ -5,7 +5,7 @@ services:
       - full
       - backend
       - external
-    image: bluenviron/mediamtx:latest
+    image: bluenviron/mediamtx:1.21.2
     ports:
       - 1935:1935/tcp
     networks:

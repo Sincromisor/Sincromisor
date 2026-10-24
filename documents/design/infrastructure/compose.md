@@ -75,7 +75,7 @@ LLM設定と管理者が指定したトークンは `.env`から渡す。トー�
 GHCRへの月次更新は[コンテナイメージの公開](image-publishing.md)を参照する。
 
 フロントエンドは `npm ci`、Pythonサービスは `uv sync --locked`で管理済みロックに従う。
-Pythonの4サービスは公式イメージ `ghcr.io/astral-sh/uv:0.13.1`のバイナリを既存の `.local/bin`へ配置する。
+Pythonの4サービスは公式イメージ `ghcr.io/astral-sh/uv:0.13.5`のバイナリを既存の `.local/bin`へ配置する。
 依存宣言とロックが不整合ならビルドを失敗させる。Pythonはソース配置前に
 `--no-install-workspace`で外部依存だけを導入し、配置後に同じグループのワークスペースを導入する。
 起動時は `uv run --no-sync`でビルド済み環境を使う。
@@ -84,6 +84,8 @@ Pythonは全メンバーの依存宣言を保持し、ソースは対象サー�
 音声区間抽出にはYAMNet素材も配置する。AgentServerは独立したコンテキストの `.dockerignore`を使う。
 依存を変更するときは開発環境で `npm install`または `uv lock`を実行し、
 依存宣言とロックの差分を一緒に確認・コミットしてから再ビルドする。
+
+標準構成のS3にはSeaweedFSを使う。旧`compose/minio.yml`は標準のincludeに含まれず、公式MinIOイメージの公開配布を取得できないため、そのままの再ビルドはできない。
 
 音声認識モデルの指定は `SINCRO_RECOGNIZER_MODEL=nemo`のみ対応する。
 以前の `nue`指定は非互換となり、ビルドでは依存導入前に拒否する。配布イメージも `nemo`を選ぶ。

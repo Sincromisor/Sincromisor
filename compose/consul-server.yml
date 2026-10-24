@@ -5,7 +5,7 @@ services:
             - full
             - backend
             - external
-        image: hashicorp/consul:latest
+        image: hashicorp/consul:2.1.0
         # 単一サーバーの検証環境では長期停止を許容する。複数サーバーでは標準の168hへ戻す。
         command:
             [
@@ -38,7 +38,7 @@ services:
             - full
             - backend
             - external
-        image: hashicorp/consul:latest
+        image: hashicorp/consul:2.1.0
         networks:
             - sincromisor-net
         volumes:

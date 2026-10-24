@@ -78,7 +78,7 @@ services:
         profiles:
             - full
             - backend
-        image: hashicorp/consul:latest
+        image: hashicorp/consul:2.1.0
         command:
             [
                 "agent",

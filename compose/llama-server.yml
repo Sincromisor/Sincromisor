@@ -4,7 +4,7 @@ services:
         logging: {driver: journald, options: {mode: non-blocking, max-buffer-size: "4m", labels: "com.docker.compose.project,com.docker.compose.service"}}
         profiles: [chat]
         restart: unless-stopped
-        image: ${SINCRO_LLAMA_IMAGE:-ghcr.io/ggml-org/llama.cpp@sha256:92f75345eeeffa2e76e0e47526f310d0aca36b523bfe514a7dfda5bb1185f256}
+        image: ${SINCRO_LLAMA_IMAGE:-ghcr.io/ggml-org/llama.cpp@sha256:dfe42bda81c6bd53df864dfcf65e2423e9703f9991c238cfa7aaa893063e2977}
         entrypoint: [sh, /start-llama.sh]
         environment:
             SINCRO_LOG_CONVERSATION_ENABLED: ${SINCRO_LOG_CONVERSATION_ENABLED-true}

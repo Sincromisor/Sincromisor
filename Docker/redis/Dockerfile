@@ -1,6 +1,6 @@
-FROM hashicorp/consul:latest AS consul
+FROM hashicorp/consul:2.1.0 AS consul
 
-FROM redis:8
+FROM redis:8.10.2
 
 LABEL org.opencontainers.image.source=https://github.com/Sincromisor/Sincromisor
 

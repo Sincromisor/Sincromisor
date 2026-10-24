@@ -6,7 +6,7 @@ services:
             - backend
             - external
             - s3
-        image: chrislusf/seaweedfs
+        image: chrislusf/seaweedfs:4.48
         command: 'master -ip=seaweed-master -ip.bind=0.0.0.0 -metricsPort=9324'
         volumes:
             - ../Docker/seaweedfs/healthcheck.sh:/healthcheck.sh:ro
@@ -33,7 +33,7 @@ services:
             - backend
             - external
             - s3
-        image: chrislusf/seaweedfs
+        image: chrislusf/seaweedfs:4.48
         command: 'volume -ip=seaweed-volume -master="seaweed-master:9333" -ip.bind=0.0.0.0 -port=8080 -metricsPort=9325'
         volumes:
             - ../Docker/seaweedfs/healthcheck.sh:/healthcheck.sh:ro
@@ -62,7 +62,7 @@ services:
             - backend
             - external
             - s3
-        image: chrislusf/seaweedfs
+        image: chrislusf/seaweedfs:4.48
         command: 'filer -ip=seaweed-filer -master="seaweed-master:9333" -ip.bind=0.0.0.0 -metricsPort=9326'
         # オブジェクトの場所と認証設定をdown/up後も同じ領域から読み込む。
         volumes:
@@ -96,7 +96,7 @@ services:
             - backend
             - external
             - s3
-        image: chrislusf/seaweedfs
+        image: chrislusf/seaweedfs:4.48
         command: 's3 -filer="seaweed-filer:8888" -ip.bind=0.0.0.0 -metricsPort=9327'
         volumes:
             - ../Docker/seaweedfs/healthcheck.sh:/healthcheck.sh:ro
@@ -127,7 +127,7 @@ services:
             - backend
             - external
             - s3
-        image: hashicorp/consul:latest
+        image: hashicorp/consul:2.1.0
         command:
             [
                 "agent",
@@ -157,7 +157,7 @@ services:
             - backend
             - external
             - s3
-        image: curlimages/curl:latest
+        image: curlimages/curl:8.23.0
         networks:
             - sincromisor-net
         depends_on:
@@ -185,7 +185,7 @@ services:
             - backend
             - external
             - s3
-        image: chrislusf/seaweedfs:latest
+        image: chrislusf/seaweedfs:4.48
         networks:
             - s3-internal-net
         depends_on:

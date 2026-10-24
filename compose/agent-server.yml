@@ -41,7 +41,7 @@ services:
     consul-agent-chat:
         logging: {driver: journald, options: {mode: non-blocking, max-buffer-size: "4m", labels: "com.docker.compose.project,com.docker.compose.service"}}
         profiles: [chat]
-        image: hashicorp/consul:latest
+        image: hashicorp/consul:2.1.0
         restart: unless-stopped
         command:
             - agent

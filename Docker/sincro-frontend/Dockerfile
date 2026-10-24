@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
-FROM hashicorp/consul:latest AS consul
+FROM hashicorp/consul:2.1.0 AS consul
 
-FROM node:26.11.1 AS frontend-builder
+FROM node:26.12.1 AS frontend-builder
 
 ARG SINCRO_USER_ID=sincromisor
 ARG SINCRO_USER_DIR=/opt/${SINCRO_USER_ID}
@@ -20,7 +20,7 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
 
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} package.json package-lock.json .npmrc ${SINCRO_USER_DIR}/
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} scripts/check-node-version.mjs ${SINCRO_USER_DIR}/scripts/
-RUN npm install --global npm@11.20.0
+RUN npm install --global npm@11.21.1
 
 USER ${SINCRO_USER_ID}
 RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.npm,uid=1001,gid=1001 \
@@ -45,7 +45,7 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
 
 RUN npm run build
 
-FROM caddy:latest AS runner
+FROM caddy:2.11.7 AS runner
 
 LABEL org.opencontainers.image.source=https://github.com/Sincromisor/Sincromisor
 

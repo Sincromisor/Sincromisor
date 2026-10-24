@@ -1,6 +1,6 @@
 module github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc
 
-go 1.26.9
+go 1.26.10
 
 require (
 	github.com/coder/websocket v1.8.15

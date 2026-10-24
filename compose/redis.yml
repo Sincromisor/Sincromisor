@@ -35,7 +35,7 @@ services:
             - full
             - backend
             - external
-        image: hashicorp/consul:latest
+        image: hashicorp/consul:2.1.0
         command:
             [
                 "agent",

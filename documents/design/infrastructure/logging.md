@@ -12,7 +12,7 @@
 業務サービスは中央の起動・正常性を待たない。分散配置では中央を置く1台だけで`full`または`logs`を選ぶ。
 `logs`単独は既存Consulサーバーへ参加するため、`SINCRO_CONSUL_SERVER_HOST`を設定する。
 
-VictoriaLogs v1.52.0の公式イメージをダイジェストで固定し、HTTP確認用のBusyBoxだけを追加する。
+VictoriaLogs v1.53.0の公式イメージをダイジェストで固定し、HTTP確認用のBusyBoxだけを追加する。
 `/busybox wget -q -O /dev/null http://127.0.0.1:9428/health`の成功をDockerの正常状態とする。
 `SINCRO_LOG_RETENTION`は既定`7d`で、起動引数の`-retentionPeriod`へ渡す。変更は再作成で反映する。
 
@@ -105,7 +105,7 @@ curl --fail --data-urlencode 'query=_time:1h host:fixture service:fixture' \
 同じホストの担当プロファイルを複数指定しても各1インスタンスである。`COMPOSE_PROJECT_NAME`をVectorへ渡し、そのComposeプロジェクトのラベルだけを収集する。
 ホストごとの`SINCRO_LOG_HOST`は管理者が一意に設定する。ホスト間で時刻を同期し、発生時刻と収集時刻を区別する。
 
-Vector 0.58.0のnative journald入力はDockerが付けたプロジェクト・サービスラベルを読み、新規・再作成・削除済みコンテナも原本が残る範囲で回収する。
+Vector 0.60.0のnative journald入力はDockerが付けたプロジェクト・サービスラベルを読み、新規・再作成・削除済みコンテナも原本が残る範囲で回収する。
 RTC、フロントCaddy、音声処理、AgentServer、llama-server、VOICEVOX、Redis、SeaweedFS、Consul、bandog、初期化コンテナをサービス名の除外なしで対象にする。
 任意選択のMediaMTX・旧MinIOも同じプロジェクトなら対象である。
 Vector自身・転送Caddy・Consulも同じjournal入力で一度だけ回収する。`internal_logs`との二重入力や標準出力への再送先は設けない。Vector自身の任意本文・属性は捨て、`vector_runtime`の固定理由だけを残す。
@@ -115,7 +115,7 @@ JSONと構造付きテキストを展開し、認識不能な本文も保持す�
 本文に含まれるホスト・サービス・コンテナID・streamは収集側の値で上書きする。
 `stderr`だけではerrorと判定せず、重大度不明なら`unknown`とする。
 既知の認証属性、要求全体・ヘッダーを除去し、Bearer値を伏せる。任意の文章中に混入した秘密を完全に識別する仕組みではないため、出力元の認証・本文制御が必要である。
-0.58.0は環境変数展開が既定で無効のため、固定設定のプロジェクト条件を展開するフラグを明示する。
+0.60.0は環境変数展開が既定で無効のため、固定設定のプロジェクト条件を展開するフラグを明示する。
 Vectorへ認証情報や業務サービスの環境変数を渡さない。
 
 ### Consul経由の投入
@@ -169,7 +169,7 @@ Vectorはjournalの読取だけを持つ。Dockerソケットを使うobserver�
 `node --test scripts/tests/log-collector.test.mjs`は人工ログだけの隔離Composeを使う。
 `node --test scripts/tests/log-diagnostics.test.mjs`はGoの実WebSocket代役とPythonのHTTP合成・配送失敗代役から本番JSONLを生成し、同じjournal入力・Vector設定・VictoriaLogs検索へ通す。本文無効で切断原因、再接続、未受信・破棄件数、合成後の配送失敗を確認する。保存は専用tmpfsで、既存のサービス・ボリュームを変更しない。複数ホスト間の到達や実GPU推論はこの試験の対象外。
 
-2026-09-22に[Docker journald](https://docs.docker.com/engine/logging/drivers/journald/)、[非同期ログの破棄条件](https://docs.docker.com/engine/logging/configure/)、[Vector HTTP送信](https://vector.dev/docs/reference/configuration/sinks/http/)を確認した。固定版の[journal入力実装](https://github.com/vectordotdev/vector/blob/v0.58.0/src/sources/journald.rs)はinclude条件をORで評価し、中央受理後にcursorを更新する。
+2026-09-22に[Docker journald](https://docs.docker.com/engine/logging/drivers/journald/)、[非同期ログの破棄条件](https://docs.docker.com/engine/logging/configure/)、[Vector HTTP送信](https://vector.dev/docs/reference/configuration/sinks/http/)を確認した。2026-10-24に再確認した固定版の[journal入力実装](https://github.com/vectordotdev/vector/blob/v0.60.0/src/sources/journald.rs)はinclude条件をORで評価し、中央受理後にcursorを更新する。
 
 ## PythonのJSONL出力
 
@@ -288,7 +288,7 @@ Linuxの永続journal `/var/log/journal`と実行中journal `/run/log/journal`�
 
 初回導入ではホストでjournaldの永続保存を有効にし、容量・空き容量を管理する。例えば `/etc/systemd/journald.conf.d/sincromisor.conf`の `[Journal]`に `Storage=persistent`とホストに適した `SystemMaxUse` / `RuntimeMaxUse`を設定し、`systemctl restart systemd-journald`、`journalctl --flush`を実行する。これらは管理者がホストごとに行う前提であり、Composeから原本を変更しない。原本が空・不存在・読取拒否の場合も本体の依存条件にはせず、収集の異常として扱う。
 
-収集イメージはVector 0.58.0の公式バイナリとUbuntu 26.04のjournalctlを使う。公式VectorのDebianイメージに含まれるjournalctl 257では過去bootの追尾をVectorが拒否するため、258以降が必要である。nativeの `journald`入力で `current_boot_only=false`、`--merge`を指定し、ホストとコンテナのmachine-idの違いを吸収する。読取位置は `host_journal`入力名で `vector-data`に保持する。入力名やボリュームを変更・削除すると再読取や欠落の原因になる。[Vectorのjournal入力仕様](https://vector.dev/docs/reference/configuration/sources/journald/)を参照する。
+収集イメージはVector 0.60.0の公式バイナリとUbuntu 26.04のjournalctlを使う。公式VectorのDebianイメージに含まれるjournalctl 257では過去bootの追尾をVectorが拒否するため、258以降が必要である。nativeの `journald`入力で `current_boot_only=false`、`--merge`を指定し、ホストとコンテナのmachine-idの違いを吸収する。読取位置は `host_journal`入力名で `vector-data`に保持する。入力名やボリュームを変更・削除すると再読取や欠落の原因になる。[Vectorのjournal入力仕様](https://vector.dev/docs/reference/configuration/sources/journald/)を参照する。
 
 VectorのhealthcheckはHTTP生存に加え、実journalのカーソルを読めることとnativeの追尾プロセスを確認する。原本本文をhealthcheck出力へ流さず、`journal_unreadable_or_missing` / `journal_input_unavailable`等の固定理由だけを状態ファイルへ残す。Vectorは共有journalを読む権限を持つため、Composeラベルによる対象選別は読取権限の分離ではない。ホスト・kernel・systemd・Docker daemonの診断変換は提供しない。
 
