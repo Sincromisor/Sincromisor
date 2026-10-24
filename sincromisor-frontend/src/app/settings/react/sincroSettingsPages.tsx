@@ -12,11 +12,6 @@ import type { SincroPanelState } from "./sincroControlPanelTypes";
 export function createSincroSettingsPages(state: SincroPanelState) {
     return createPurposeSettingsPages({
         state,
-        experience: (
-            <SettingsHint>
-                体験を変えたときは、接続を停止してからもう一度開始すると会話に反映されます。
-            </SettingsHint>
-        ),
         character: <CurrentCharacter />,
         camera: (
             <>

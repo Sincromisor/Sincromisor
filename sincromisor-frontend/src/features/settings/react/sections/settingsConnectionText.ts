@@ -1,4 +1,7 @@
-import type { SincroAppStartupSettingsStatus } from "../../../../app/controller";
+import type {
+    SincroAppLifecycleState,
+    SincroAppStartupSettingsStatus,
+} from "../../../../app/controller";
 
 export function connectionStatusLabel(value: string): string {
     switch (value) {
@@ -25,4 +28,11 @@ export function createStartupOptionHint(status: SincroAppStartupSettingsStatus):
         return "";
     }
     return `開始前だけ効く項目に変更があります: ${status.changedKeys.join(", ")}`;
+}
+
+/** 接続が生きている間だけ、体験変更時の操作を常設の接続欄へ案内する。 */
+export function createTalkModeReconnectHint(lifecycle: SincroAppLifecycleState): string {
+    return lifecycle === "running" || lifecycle === "starting"
+        ? "体験を変える場合は、接続を停止して再開してください。"
+        : "";
 }

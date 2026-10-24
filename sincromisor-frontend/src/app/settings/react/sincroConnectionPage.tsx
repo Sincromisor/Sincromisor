@@ -2,6 +2,7 @@ import { SettingsButton } from "../../../features/settings/react/primitives/sett
 import {
     connectionStatusLabel,
     createStartupOptionHint,
+    createTalkModeReconnectHint,
 } from "../../../features/settings/react/sections/settingsConnectionText";
 import type { SincroControlPanelPageProps } from "./sincroControlPanelTypes";
 
@@ -14,6 +15,11 @@ export function ConnectionSettingsPage({ panelState }: SincroControlPanelPagePro
                 detail={panelState.connectionState.detail ?? ""}
                 startupOptionHint={createStartupOptionHint(panelState.startupSettingsStatus)}
             />
+            {createTalkModeReconnectHint(panelState.lifecycleState) ? (
+                <p className="settingsPrimitiveFieldDescription">
+                    {createTalkModeReconnectHint(panelState.lifecycleState)}
+                </p>
+            ) : null}
             <ConnectionActionButtons panelState={panelState} />
         </div>
     );
