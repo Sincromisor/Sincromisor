@@ -1,0 +1,14 @@
+id: task-261025054927-startup-action-alignment
+title: 起動前の戻る導線と開始操作を整列する
+category: frontend
+status: open
+depends_on:
+  - task-261025054927-settings-shared-layout
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-10-25
+closed_at: null
+legacy_ids: []
