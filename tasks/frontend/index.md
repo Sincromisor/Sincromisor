@@ -2,15 +2,15 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 42 件）
+## タスク一覧（自動生成 / 全 43 件）
 
 ### open（未完） — 1 件
 
-| タスク                                                                                                       | タイトル                                 | 判定 | 依存                                         |
-| ------------------------------------------------------------------------------------------------------------ | ---------------------------------------- | ---- | -------------------------------------------- |
-| [task-261025054928-settings-alignment-regression](./task-261025054928-settings-alignment-regression/task.md) | 設定画面の整列をPlaywrightで回帰確認する | —    | `task-261025054927-startup-action-alignment` |
+| タスク                                                                                                       | タイトル                                 | 判定 | 依存                                                                                           |
+| ------------------------------------------------------------------------------------------------------------ | ---------------------------------------- | ---- | ---------------------------------------------------------------------------------------------- |
+| [task-261025054928-settings-alignment-regression](./task-261025054928-settings-alignment-regression/task.md) | 設定画面の整列をPlaywrightで回帰確認する | —    | `task-261025054927-startup-action-alignment`, `task-261025055639-settings-fixed-footer-height` |
 
-### done（完了） — 41 件
+### done（完了） — 42 件
 
 | タスク                                                                                                                 | タイトル                                                 | 判定    | 依存                                                 |
 | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ------- | ---------------------------------------------------- |
@@ -55,5 +55,6 @@
 | [task-261025054927-settings-alignment-contract](./task-261025054927-settings-alignment-contract/task.md)               | 設定画面の整列と操作配置の設計を定める                   | ✅ PASS | —                                                    |
 | [task-261025054927-settings-shared-layout](./task-261025054927-settings-shared-layout/task.md)                         | 設定本文と固定操作欄の幅と余白を統一する                 | ✅ PASS | `task-261025054927-settings-alignment-contract`      |
 | [task-261025054927-startup-action-alignment](./task-261025054927-startup-action-alignment/task.md)                     | 起動前の戻る導線と開始操作を整列する                     | ✅ PASS | `task-261025054927-settings-shared-layout`           |
+| [task-261025055639-settings-fixed-footer-height](./task-261025055639-settings-fixed-footer-height/task.md)             | 基本設定のカテゴリ切替で固定操作欄が動く不具合を修正する | ✅ PASS | `task-261025054927-settings-shared-layout`           |
 
 <!-- AUTOGEN:tasks END -->

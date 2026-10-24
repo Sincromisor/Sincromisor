@@ -1,0 +1,14 @@
+id: task-261025055639-settings-fixed-footer-height
+title: 基本設定のカテゴリ切替で固定操作欄が動く不具合を修正する
+category: frontend
+status: done
+depends_on:
+  - task-261025054927-settings-shared-layout
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-10-25
+closed_at: 2026-10-25
+legacy_ids: []

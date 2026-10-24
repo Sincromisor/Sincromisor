@@ -1,9 +1,11 @@
-div#reactSettingsPanel {
-    width: 100%;
-}
-
+/* 外枠の残り高さを設定本文まで伝え、内容量で固定操作の位置を動かさない。 */
+div#reactSettingsPanel,
 div#sincroReactSettingsPanelRoot {
     width: 100%;
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
 }
 
 div#debugMenu {
@@ -227,12 +229,6 @@ div#debugConsole .debugConsoleHeaderActions {
 
 div#sincroReactSettingsPanelRoot .settingsShell__header {
     padding-right: 50px;
-}
-
-div#sincroReactSettingsPanelRoot .sincroControlPanel {
-    max-height: calc(100dvh - var(--right-tool-frame-top) - var(--right-tool-frame-side) - 34px) !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
 }
 
 /* React settings panel scrollbar styling to match Debug Console without dominating the UI. */
