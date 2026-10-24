@@ -173,3 +173,8 @@ details p { font-size: 12px; line-height: 1.9; color: var(--muted); padding: 0 1
 
 .other-displays { padding-block: 0 50px; }
 .other-displays > div { display: flex; flex-wrap: wrap; gap: 8px 32px; margin-top: 12px; }
+
+.mode-diagnostics summary { cursor: pointer; padding-block: 10px; font-size: 13px; }
+.mode-diagnostics .mode-choice { margin-top: 9px; }
+
+.mode-diagnostics[open] summary span { display: none; }

@@ -14,7 +14,7 @@ test("起動前と右側パネルをキーボードで切り替えても見え�
         await page.goto("/simple-vrm/");
         const startup = page.getByRole("dialog", { name: "開始前の確認", exact: true });
         await expect(
-            startup.getByRole("combobox", { name: "体験を選ぶ", exact: true }),
+            startup.getByRole("radio", { name: "キャラクターと話す", exact: true }),
         ).toBeFocused();
         await startup.getByRole("button", { name: "詳しい設定", exact: true }).focus();
         await page.keyboard.press("Enter");

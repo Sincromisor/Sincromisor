@@ -36,7 +36,9 @@ export function useConfigurationDialogPlatformState(
         if (!changed) return;
         // 初期選択で隠したファイル入力へ入らず、開始後も見える操作へ移す。
         const target = isOpen
-            ? dialog.querySelector<HTMLElement>("select:not(:disabled), button:not(:disabled)")
+            ? dialog.querySelector<HTMLElement>(
+                  'input[type="radio"]:checked:not(:disabled), select:not(:disabled), button:not(:disabled)',
+              )
             : document.getElementById("debugMenuButton");
         target?.focus({ preventScroll: true });
     }, [isOpen]);

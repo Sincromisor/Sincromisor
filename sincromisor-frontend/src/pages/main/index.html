@@ -46,18 +46,21 @@
                                 <span><strong>キャラクターになる</strong></span>
                                 <span class="radio-mark" aria-hidden="true"></span>
                             </label>
-                            <label class="mode-choice">
-                                <input type="radio" name="talkMode" value="echo" />
-                                <span class="mode-icon" aria-hidden="true">↩</span>
-                                <span><strong>入力音声を折り返す</strong><small>音声診断・ヘッドホンをご使用ください</small></span>
-                                <span class="radio-mark" aria-hidden="true"></span>
-                            </label>
-                            <label class="mode-choice">
-                                <input type="radio" name="talkMode" value="playback" />
-                                <span class="mode-icon" aria-hidden="true">↻</span>
-                                <span><strong>サンプル音声を繰り返す</strong><small>音声・テロップ・口形の同期を確認</small></span>
-                                <span class="radio-mark" aria-hidden="true"></span>
-                            </label>
+                            <details class="mode-diagnostics">
+                                <summary>音声診断<span></span></summary>
+                                <label class="mode-choice">
+                                    <input type="radio" name="talkMode" value="echo" />
+                                    <span class="mode-icon" aria-hidden="true">↩</span>
+                                    <span><strong>入力音声を折り返す</strong><small>音声診断・ヘッドホンをご使用ください</small></span>
+                                    <span class="radio-mark" aria-hidden="true"></span>
+                                </label>
+                                <label class="mode-choice">
+                                    <input type="radio" name="talkMode" value="playback" />
+                                    <span class="mode-icon" aria-hidden="true">↻</span>
+                                    <span><strong>サンプル音声を繰り返す</strong><small>音声・テロップ・口形の同期を確認</small></span>
+                                    <span class="radio-mark" aria-hidden="true"></span>
+                                </label>
+                            </details>
                         </fieldset>
                     </form>
                     <div class="hero-actions">

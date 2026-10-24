@@ -63,6 +63,8 @@ test("正式トップの両開始ボタンから選んだ体験へ直接進む",
                 "href",
                 "https://github.com/Sincromisor/Sincromisor",
             );
+            if (["echo", "playback"].includes(mode))
+                await page.getByText("音声診断", { exact: true }).click();
             await page.locator(`input[value="${mode}"]`).check();
             await expect(page.locator("dialog")).toHaveCount(0);
             await page.locator(selector).focus();
@@ -70,29 +72,29 @@ test("正式トップの両開始ボタンから選んだ体験へ直接進む",
             await expect(page).toHaveURL(`http://127.0.0.1:5173/simple-vrm/?talkMode=${mode}`);
             const setting = page
                 .getByRole("dialog")
-                .getByRole("combobox")
-                .filter({ has: page.locator('option[value="sincro"]') });
-            await expect(setting).toHaveValue(mode);
-            await setting.selectOption(mode === "chat" ? "sincro" : "chat");
-            await expect(setting).toHaveValue(mode === "chat" ? "sincro" : "chat");
+                .locator(`input[type="radio"][value="${mode}"]`);
+            await expect(setting).toBeChecked();
+            await expect(setting).toBeVisible();
+            await page
+                .getByRole("dialog")
+                .locator(`input[type="radio"][value="${mode === "chat" ? "sincro" : "chat"}"]`)
+                .check();
         }
     }
-    const setting = page
-        .getByRole("dialog")
-        .getByRole("combobox")
-        .filter({ has: page.locator('option[value="sincro"]') });
+    const setting = (value: string) =>
+        page.getByRole("dialog").locator(`input[type="radio"][value="${value}"]`);
     // URLの選択を表示しても保存値は変えず、未指定・不正値では最後の利用者入力へ戻す。
-    await setting.selectOption("sincro");
+    await setting("sincro").check();
     await page.goto("http://127.0.0.1:5173/simple-vrm/?talkMode=chat");
-    await expect(setting).toHaveValue("chat");
+    await expect(setting("chat")).toBeChecked();
     for (const query of ["", "?talkMode=invalid"]) {
         await page.goto(`http://127.0.0.1:5173/simple-vrm/${query}`);
-        await expect(setting).toHaveValue("sincro");
+        await expect(setting("sincro")).toBeChecked();
     }
     // このテストで作った設定だけを消し、保存値のない初回起動も確認する。
     await page.evaluate(() => localStorage.removeItem("sincromisor:settings:simple-vrm"));
     for (const query of ["", "?talkMode=invalid"]) {
         await page.goto(`http://127.0.0.1:5173/simple-vrm/${query}`);
-        await expect(setting).toHaveValue("chat");
+        await expect(setting("chat")).toBeChecked();
     }
 });
