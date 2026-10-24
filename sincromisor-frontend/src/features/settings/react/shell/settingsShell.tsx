@@ -21,6 +21,8 @@ type SettingsShellProps = {
     badge?: string;
     title: string;
     titleId?: string;
+    /** 画面を離れるリンクなど、本文の操作から分ける見出し側の導線。 */
+    headerAction?: ReactNode;
     description?: string;
     pages: SettingsShellPage[];
     initialPageId?: string;
@@ -35,7 +37,7 @@ type SettingsShellProps = {
 
 type SettingsShellHeaderProps = Pick<
     SettingsShellProps,
-    "badge" | "title" | "titleId" | "description"
+    "badge" | "title" | "titleId" | "description" | "headerAction"
 >;
 
 /** 起動前後の設定を、固定の見出し・分類・操作とスクロール本文へ分ける。 */
@@ -44,6 +46,7 @@ export function SettingsShell({
     badge,
     title,
     titleId,
+    headerAction,
     description,
     pages,
     initialPageId,
@@ -83,6 +86,7 @@ export function SettingsShell({
                 badge={badge}
                 title={title}
                 titleId={titleId}
+                headerAction={headerAction}
                 description={description}
             />
             <SettingsShellBody
@@ -194,7 +198,13 @@ function getSettingsShellPanelId(prefix: string, pageId: string): string {
     return `${prefix}-settings-shell-panel-${pageId}`;
 }
 
-function SettingsShellHeader({ badge, title, titleId, description }: SettingsShellHeaderProps) {
+function SettingsShellHeader({
+    badge,
+    title,
+    titleId,
+    description,
+    headerAction,
+}: SettingsShellHeaderProps) {
     return (
         <header className="settingsShell__header">
             <div>
@@ -204,6 +214,7 @@ function SettingsShellHeader({ badge, title, titleId, description }: SettingsShe
                 </h1>
                 {description ? <p className="settingsShell__description">{description}</p> : null}
             </div>
+            {headerAction}
         </header>
     );
 }
