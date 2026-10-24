@@ -27,6 +27,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
     build-essential cmake git curl ca-certificates unzip libsndfile1 libgomp1
 COPY --from=source /opt/voicevox_engine/pyproject.toml /opt/voicevox_engine/uv.lock ./
+# 上流のPythonパッチ版固定だけを基底イメージへ合わせ、依存パッケージのロックは維持する。
+COPY Docker/voicevox/python-runtime.patch /tmp/python-runtime.patch
+RUN git apply --check /tmp/python-runtime.patch && git apply /tmp/python-runtime.patch
 # pyopenjtalkのC++拡張でlibstdc++へのリンクが欠落するため、明示してビルドする。
 RUN --mount=type=cache,id=voicevox-streaming-uv-cxx,target=/root/.cache/uv \
     LDFLAGS="-Wl,--no-as-needed -lstdc++" uv sync --frozen --no-dev
