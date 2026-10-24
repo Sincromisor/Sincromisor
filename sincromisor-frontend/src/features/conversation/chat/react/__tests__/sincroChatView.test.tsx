@@ -33,7 +33,8 @@ it("DOMなしで履歴を保持し、同一ID更新・件数制限・文字列�
     markup = renderToStaticMarkup(<SincroChatView />);
     expect(markup).toContain("<b>許可</b>");
     expect(markup).toContain("&lt;b&gt;ユーザー&lt;/b&gt;");
-    expect(markup.match(/同じエラー/g)).toHaveLength(1);
+    expect(markup).not.toContain("同じエラー");
+    expect(service.getSnapshot().importantNotice?.message.message).toBe("同じエラー");
     expect(markup).toContain("リセット");
     unsubscribe();
     listener.mockClear();

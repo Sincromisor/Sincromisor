@@ -38,3 +38,15 @@ it("更新時だけスナップショットを置き換え、古い履歴・順�
     service.writeSystemMessage("解除後");
     expect(listener).not.toHaveBeenCalled();
 });
+
+it("重要エラーは会話の保持上限で消えず、明示的に閉じた後は再発を通知する", () => {
+    const service = ChatMessageService.getService();
+    service.writeErrorMessage("保存しておくエラー");
+    const notice = service.getSnapshot().importantNotice;
+    for (let i = 0; i < 31; i++) service.writeSystemMessage(`続く会話${i}`);
+    expect(service.getSnapshot().importantNotice).toBe(notice);
+    service.dismissImportantNotice();
+    expect(service.getSnapshot().importantNotice).toBeUndefined();
+    service.writeErrorMessage("保存しておくエラー");
+    expect(service.getSnapshot().importantNotice?.message.message).toBe("保存しておくエラー");
+});

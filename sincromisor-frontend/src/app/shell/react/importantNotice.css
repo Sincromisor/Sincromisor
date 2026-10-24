@@ -1,0 +1,23 @@
+.sincroImportantNotice {
+    box-sizing: border-box;
+    max-height: 30dvh;
+    overflow: auto;
+    overflow-wrap: anywhere;
+    margin: 8px 12px;
+    padding: 12px;
+    border: 1px solid #d78686;
+    border-radius: 10px;
+    background: #351e28;
+    color: #fff1f1;
+    pointer-events: auto;
+    font-size: 14px;
+    line-height: 1.5;
+}
+.sincroImportantNotice p { margin: 0 0 8px; }
+.sincroImportantNotice--floating {
+    position: fixed;
+    top: 150px;
+    left: 8px;
+    width: min(620px, calc(100vw - 32px));
+    z-index: 20;
+}

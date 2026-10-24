@@ -21,6 +21,7 @@ export type SincroAppDialogBridge = {
 
 /** チャットの書き込みとReactのスナップショット購読に使う窓口。 */
 export type SincroAppChatBridge = {
+    dismissImportantNotice: () => void;
     writeUnknownUserMessage: (message: string, isHTML?: boolean) => void;
     writeSystemMessage: (message: string, isHTML?: boolean) => void;
     setSystemIcon: (iconUrl: string) => void;

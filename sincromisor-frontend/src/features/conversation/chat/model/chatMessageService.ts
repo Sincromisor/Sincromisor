@@ -11,6 +11,8 @@ export type ChatMessageViewRecord = {
 export type ChatMessageSnapshot = {
     readonly messages: readonly ChatMessageViewRecord[];
     readonly systemIconUrl: string;
+    /** 通常会話の保持上限で消えない、利用者の確認待ちエラー。 */
+    readonly importantNotice?: ChatMessageViewRecord;
 };
 
 /** 通常文字列と、既存の信頼済みHTMLを区別する。 */
@@ -146,6 +148,14 @@ export class ChatMessageService {
         this.emitSystemIconChanged();
     }
 
+    /** 明示的な確認だけで通知を閉じ、同じ失敗の再発を通知可能に戻す。 */
+    dismissImportantNotice(): void {
+        if (!this.snapshot.importantNotice) return;
+        this.snapshot = { ...this.snapshot, importantNotice: undefined };
+        this.lastErrorMessage = "";
+        this.notifySnapshot();
+    }
+
     // React描画向けの履歴正本。message_id ベースで更新/新規挿入を行う。
     private upsertMessageSnapshot(message: ChatMessage, isHTML: boolean): void {
         const renderMode: ChatMessageRenderMode = isHTML ? "trusted_html" : "text";
@@ -157,6 +167,7 @@ export class ChatMessageService {
         const record = { message: { ...message }, renderMode };
         this.snapshot = {
             ...this.snapshot,
+            ...(message.message_type === "error" ? { importantNotice: record } : {}),
             messages:
                 existingIndex >= 0
                     ? messages.map((previous, index) =>

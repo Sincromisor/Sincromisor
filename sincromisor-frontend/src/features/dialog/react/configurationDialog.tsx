@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { SincroAppDialogUiState, SincroAppEvent } from "../../../app/controller";
 import { SincroAppController } from "../../../app/controller";
 import { subscribeActiveSincroAppEvents } from "../../../app/react/subscribeActiveSincroAppEvents";
+import { ImportantNotice } from "../../../app/shell/react/importantNotice";
 import { StartupDialogFrame } from "../../../app/shell/react/overlay/startupDialogFrame";
 import { ConfigurationDialogSettingsPanel } from "./configurationDialogSettingsPanel";
 import { DialogPopMessages } from "./dialogPopMessages";
@@ -47,12 +48,18 @@ export function ConfigurationDialog() {
     });
 
     return (
-        <dialog id="configurationDialog" ref={dialogRef} aria-hidden={!dialogUiState.isOpen}>
-            {dialogUiState.isOpen ? (
-                <StartupDialogFrame popLayer={<DialogPopMessages />}>
-                    <ConfigurationDialogSettingsPanel />
-                </StartupDialogFrame>
-            ) : null}
-        </dialog>
+        <>
+            <dialog id="configurationDialog" ref={dialogRef} aria-hidden={!dialogUiState.isOpen}>
+                {dialogUiState.isOpen ? (
+                    <StartupDialogFrame
+                        popLayer={<DialogPopMessages />}
+                        notice={<ImportantNotice />}
+                    >
+                        <ConfigurationDialogSettingsPanel />
+                    </StartupDialogFrame>
+                ) : null}
+            </dialog>
+            {dialogUiState.isOpen ? null : <ImportantNotice floating />}
+        </>
     );
 }
