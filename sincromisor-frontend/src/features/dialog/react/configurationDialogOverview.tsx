@@ -16,22 +16,27 @@ export function ConfigurationDialogOverview({
     onOpenFilePicker: () => void;
 }) {
     return (
-        <div className="configurationDialogReactSettingsPanel__overview">
-            <ExperienceSettingsFields state={state} />
-            <VrmModelSection onOpenFilePicker={onOpenFilePicker} uiState={state.dialogVrmUiState} />
-            <PurposeDeviceField state={state} kind="audio" />
-            <SettingsToggle
-                label="カメラを使う"
-                description="映像はブラウザー内で処理し、送信しません。"
-                checked={state.settings.enableCharacterGaze}
-                disabled={state.settingsUiState.enableCharacterGazeDisabled}
-                disabledReason={state.settingsUiHints.enableCharacterGazeReason}
-                onChange={(enableCharacterGaze) => state.applySettings({ enableCharacterGaze })}
-            />
-            {state.settings.enableCharacterGaze ? (
-                <PurposeDeviceField state={state} kind="video" />
-            ) : null}
-            <StartupMediaNotice settings={state.settings} />
+        <div className="settingsShell__detail">
+            <div className="settingsShell__detailScroll configurationDialogReactSettingsPanel__overview">
+                <ExperienceSettingsFields state={state} />
+                <VrmModelSection
+                    onOpenFilePicker={onOpenFilePicker}
+                    uiState={state.dialogVrmUiState}
+                />
+                <PurposeDeviceField state={state} kind="audio" />
+                <SettingsToggle
+                    label="カメラを使う"
+                    description="映像はブラウザー内で処理し、送信しません。"
+                    checked={state.settings.enableCharacterGaze}
+                    disabled={state.settingsUiState.enableCharacterGazeDisabled}
+                    disabledReason={state.settingsUiHints.enableCharacterGazeReason}
+                    onChange={(enableCharacterGaze) => state.applySettings({ enableCharacterGaze })}
+                />
+                {state.settings.enableCharacterGaze ? (
+                    <PurposeDeviceField state={state} kind="video" />
+                ) : null}
+                <StartupMediaNotice settings={state.settings} />
+            </div>
         </div>
     );
 }
