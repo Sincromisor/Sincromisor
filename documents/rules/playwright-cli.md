@@ -58,6 +58,10 @@ npm run browser -- -s=sincromisor close
 
 `playwright-cli install --skills=agents` で導入する公式スキルと `references/` は、上流の原文資料としてGit管理する。プロジェクト固有の運用は本書に置き、公式スキルの汎用例より本書を優先する。更新時はスキル本文と参照資料をまとめて確認し、リンク先の欠落と利用コマンドの変更を確認する。公式資料の英語表記は原文として保持する。
 
+公式スキルは固定済みCLIより新しい場合がある。追加オプションを利用する前に、対象コマンドのヘルプで対応を確認する。CLI 0.1.22のヘルプには、公式例の `tab-new --isolated-context` と `cookie-delete --domain` は掲載されていない。
+
 ## 参照
 
 [Playwright CLI公式ドキュメント](https://github.com/microsoft/playwright-cli)（2026-10-11参照）。本プロジェクトでは名前付きセッションによる操作と専用プロファイルの永続化を採用する。インストール済みCLIの `open --help` で `--browser`、`--headed`、`--profile` の対応を確認した。
+
+[Playwright公式スキル](https://github.com/microsoft/playwright/tree/b4695e3eb2e6736d1a7b1fd255c4e94f78553660/packages/playwright-core/src/tools/skills/playwright-cli)（2026-10-24参照）。スキル本文と参照資料はこのコミットの内容を採用し、リポジトリのMarkdown整形と既存の雛形の整形除外を維持する。
