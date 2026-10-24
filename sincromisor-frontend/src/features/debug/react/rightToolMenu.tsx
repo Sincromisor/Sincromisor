@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import {
     closeRightToolMenu,
     toggleRightToolDebugPanel,
+    toggleRightToolHistoryPanel,
     toggleRightToolMenu,
     toggleRightToolSettingsPanel,
     useRightToolPanelState,
@@ -13,7 +14,13 @@ export function RightToolMenu() {
     const state = useRightToolPanelState();
     const settingsActive = state.activePanel === "settings";
     const debugActive = state.activePanel === "debug";
-    const currentToolLabel = settingsActive ? "基本設定" : debugActive ? "開発者ツール" : "未選択";
+    const currentToolLabel = settingsActive
+        ? "基本設定"
+        : debugActive
+          ? "開発者ツール"
+          : state.activePanel === "history"
+            ? "会話履歴"
+            : "未選択";
     useCloseMenuOnOutsideClick(state.menuOpen);
     useDebugPanelShortcut();
 
@@ -28,6 +35,7 @@ export function RightToolMenu() {
                 menuOpen={state.menuOpen}
                 settingsActive={settingsActive}
                 debugActive={debugActive}
+                historyActive={state.activePanel === "history"}
             />
         </div>
     );
@@ -96,13 +104,21 @@ function RightToolMenuPanel({
     menuOpen,
     settingsActive,
     debugActive,
+    historyActive,
 }: {
     menuOpen: boolean;
     settingsActive: boolean;
     debugActive: boolean;
+    historyActive: boolean;
 }) {
     return (
         <div id="debugMenuPanel" role="menu" aria-hidden={!menuOpen} aria-label="右側ツール">
+            <RightToolMenuItem
+                id="historyPanelToggle"
+                isActive={historyActive}
+                onClick={toggleRightToolHistoryPanel}
+                title="会話履歴"
+            />
             <RightToolMenuItem
                 id="reactSettingsPanelToggle"
                 isActive={settingsActive}

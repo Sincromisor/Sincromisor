@@ -1,0 +1,24 @@
+.conversationHistory {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: 18px;
+    box-sizing: border-box;
+    color: #eef3fb;
+    background: #141c29;
+}
+.conversationHistory h2 { margin: 0; padding-right: 48px; font-size: 1.2rem; }
+.conversationHistory__scroll { min-height: 0; overflow: auto; overflow-anchor: none; }
+.conversationHistory__list { display: grid; gap: 16px; overflow-wrap: anywhere; }
+.conversationHistory .sincroMessage { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 10px; }
+.conversationHistory .sincroMessage__icon { width: 32px; height: 32px; }
+.conversationHistory .sincroMessage__text { min-width: 0; line-height: 1.6; white-space: pre-wrap; }
+.conversationHistory .sincroMessage__text > p { margin: 0; }
+.rightToolFrame--history { --right-tool-frame-width: 560px; --right-tool-frame-top: 150px; }
+.rightToolFrame--history .rightToolFrame__surface {
+    height: calc(100dvh - var(--right-tool-frame-top) - var(--right-tool-frame-side));
+}
+.rightToolFrame--history .rightToolFrame__scroll { display: flex; overflow: hidden; }
