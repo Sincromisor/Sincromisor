@@ -21,6 +21,11 @@ Composeは公式 [VOICEVOX ENGINE 0.26.0](https://github.com/VOICEVOX/voicevox_e
 | モデル                       | VVM 0.17.0の `0.vvm`、SHA-256を検証                 |
 | 公式リソース                 | 0.26.0の `37c265375e05313486ebf2024b1679d6952a53d8` |
 
+公式EngineのPython指定はパッチ版まで固定されているため、`Docker/voicevox/python-runtime.patch`で
+`pyproject.toml`と `uv.lock`のPython要求だけを基底イメージの3.14.9へ合わせる。
+依存パッケージの版・取得元・ハッシュは変えず、パッチ適用失敗時はビルドを停止する。
+Python基底イメージを更新するときは、このパッチも同時に更新して実合成を確認する。
+
 `0.vvm`で既定のスタイルID `0`を提供する。他のモデルのスタイルを使う場合は、同じ固定版の
 モデルとチェックサムをDockerfileへ追加してから切り替える。
 Engine、Core、ランタイムのライセンス、Python依存の同梱情報、公式リソースの利用規約を最終イメージに保持する。
