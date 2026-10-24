@@ -4,14 +4,13 @@
 
 ## タスク一覧（自動生成 / 全 42 件）
 
-### open（未完） — 2 件
+### open（未完） — 1 件
 
 | タスク                                                                                                       | タイトル                                 | 判定 | 依存                                         |
 | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------- | ---- | -------------------------------------------- |
-| [task-261025054927-startup-action-alignment](./task-261025054927-startup-action-alignment/task.md)           | 起動前の戻る導線と開始操作を整列する     | —    | `task-261025054927-settings-shared-layout`   |
 | [task-261025054928-settings-alignment-regression](./task-261025054928-settings-alignment-regression/task.md) | 設定画面の整列をPlaywrightで回帰確認する | —    | `task-261025054927-startup-action-alignment` |
 
-### done（完了） — 40 件
+### done（完了） — 41 件
 
 | タスク                                                                                                                 | タイトル                                                 | 判定    | 依存                                                 |
 | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ------- | ---------------------------------------------------- |
@@ -55,5 +54,6 @@
 | [task-261024223622-separate-audio-diagnostic-entry](./task-261024223622-separate-audio-diagnostic-entry/task.md)       | 通常体験の選択と音声診断の導線を分ける                   | ✅ PASS | —                                                    |
 | [task-261025054927-settings-alignment-contract](./task-261025054927-settings-alignment-contract/task.md)               | 設定画面の整列と操作配置の設計を定める                   | ✅ PASS | —                                                    |
 | [task-261025054927-settings-shared-layout](./task-261025054927-settings-shared-layout/task.md)                         | 設定本文と固定操作欄の幅と余白を統一する                 | ✅ PASS | `task-261025054927-settings-alignment-contract`      |
+| [task-261025054927-startup-action-alignment](./task-261025054927-startup-action-alignment/task.md)                     | 起動前の戻る導線と開始操作を整列する                     | ✅ PASS | `task-261025054927-settings-shared-layout`           |
 
 <!-- AUTOGEN:tasks END -->

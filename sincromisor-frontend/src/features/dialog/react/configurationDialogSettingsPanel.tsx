@@ -39,6 +39,12 @@ export function ConfigurationDialogSettingsPanel() {
         onOpenFilePicker: handleOpenVrmFilePicker,
     });
 
+    const backLink = (
+        <a className="configurationDialogReactSettingsPanel__backLink" href="/">
+            トップへ戻る
+        </a>
+    );
+
     return (
         <fieldset
             ref={panelRef}
@@ -64,6 +70,7 @@ export function ConfigurationDialogSettingsPanel() {
                     ariaLabel="起動前の詳しい設定"
                     title="詳しい設定"
                     titleId="configuration-dialog-title"
+                    headerAction={backLink}
                     className="settingsShell--startupDialog"
                     navigationPlacement="top"
                     responsiveMode="container"
@@ -85,7 +92,10 @@ export function ConfigurationDialogSettingsPanel() {
                     className="settingsShell is-containerResponsive configurationDialogReactSettingsPanel__summary"
                     aria-label="開始前の確認"
                 >
-                    <h1 id="configuration-dialog-title">開始前の確認</h1>
+                    <header className="settingsShell__header">
+                        <h1 id="configuration-dialog-title">開始前の確認</h1>
+                        {backLink}
+                    </header>
                     <ConfigurationDialogOverview
                         state={state}
                         onOpenFilePicker={handleOpenVrmFilePicker}
