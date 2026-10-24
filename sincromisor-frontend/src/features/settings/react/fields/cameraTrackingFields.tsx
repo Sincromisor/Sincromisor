@@ -30,27 +30,26 @@ export function CameraTrackingFields({
             <SettingsToggleGrid density={gridDensity}>
                 <SettingsToggle
                     density={toggleDensity}
-                    label="顔の向きを使う"
+                    label="顔の向き・視線をカメラで追跡"
                     disabledReason={uiHints.enableCharacterGazeReason}
-                    description={settingHelp.enableCharacterGaze}
                     checked={!!settings.enableCharacterGaze}
                     disabled={uiState.enableCharacterGazeDisabled}
                     onChange={(checked) => onApplySettings({ enableCharacterGaze: checked })}
                 />
                 <SettingsToggle
                     density={toggleDensity}
-                    label="姿勢を使う"
-                    disabledReason="先に3Dキャラクター表示と「顔の向きを使う」をオンにしてください。"
-                    description={settingHelp.enableSincroPoseTracking}
+                    label="体の姿勢をカメラで追跡"
+                    disabledReason="先に3Dキャラクター表示と顔・視線の追跡をオンにしてください。"
+                    description="「キャラクターになる」で反映します。"
                     checked={!!settings.enableSincroPoseTracking}
                     disabled={!settings.enableCharacter || !settings.enableCharacterGaze}
                     onChange={(checked) => onApplySettings({ enableSincroPoseTracking: checked })}
                 />
             </SettingsToggleGrid>
             <SettingsRange
-                label="姿勢同期"
+                label="姿勢の反映量"
                 disabledReason="3Dキャラクター表示・顔の向き・姿勢をオンにすると調整できます。"
-                description={settingHelp.sincroPoseRetargetScale}
+                help={settingHelp.sincroPoseRetargetScale}
                 {...sincroAppNumericSettingConstraints.sincroPoseRetargetScale}
                 step="any"
                 value={settings.sincroPoseRetargetScale}
@@ -63,9 +62,9 @@ export function CameraTrackingFields({
                 onChange={(value) => onApplySettings({ sincroPoseRetargetScale: value })}
             />
             <SettingsRange
-                label="目線追跡"
-                disabledReason="3Dキャラクター表示と「顔の向きを使う」をオンにすると調整できます。"
-                description={settingHelp.characterEyeTrackingScale}
+                label="目線の動きの強さ"
+                disabledReason="3Dキャラクター表示と顔・視線の追跡をオンにすると調整できます。"
+                help={settingHelp.characterEyeTrackingScale}
                 {...sincroAppNumericSettingConstraints.characterEyeTrackingScale}
                 step="any"
                 value={settings.characterEyeTrackingScale}
