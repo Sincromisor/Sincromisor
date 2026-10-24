@@ -1,5 +1,5 @@
 import { createPurposeSettingsPages } from "../../settings/react/pages/purposeSettingsPages";
-import { DialogVrmDropStatusCard, VrmModelSection } from "./components/dialogSettingsSections";
+import { VrmModelSection } from "./components/dialogSettingsSections";
 import type { useConfigurationDialogSettingsState } from "./useConfigurationDialogSettingsState";
 
 type ConfigurationDialogSettingsState = ReturnType<typeof useConfigurationDialogSettingsState>;
@@ -15,10 +15,7 @@ export function createConfigurationDialogSettingsPages({
     return createPurposeSettingsPages({
         state,
         character: (
-            <>
-                <VrmModelSection onOpenFilePicker={onOpenFilePicker} />
-                <DialogVrmDropStatusCard uiState={state.dialogVrmUiState} />
-            </>
+            <VrmModelSection onOpenFilePicker={onOpenFilePicker} uiState={state.dialogVrmUiState} />
         ),
     });
 }

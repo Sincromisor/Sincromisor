@@ -75,37 +75,30 @@
         white-space: nowrap;
     }
 
-    .configurationDialogReactSettingsPanel__vrmSection {
-        margin-top: var(--sincro-space-100);
-    }
-
-    .configurationDialogReactSettingsPanel__subTitle {
-        opacity: 0.84;
-        margin-bottom: var(--sincro-space-100);
-        font-weight: 700;
-    }
-
+    /* 操作と現在モデルを同じ境界内に置き、ダイアログ全体のドロップ状態を示す。 */
     .configurationDialogReactSettingsPanel__vrmDropStatus {
-        margin-top: var(--sincro-space-300);
+        display: grid;
+        gap: var(--sincro-space-250);
+        min-width: 0;
         padding: var(--sincro-space-300) var(--sincro-space-350);
         border-radius: var(--sincro-radius-300);
-        border: 1px solid var(--sincro-color-border-default);
+        border: 1px dashed var(--sincro-color-border-default);
         background: var(--sincro-color-surface-soft);
         line-height: 1.45;
+        overflow-wrap: anywhere;
+    }
+
+    .configurationDialogReactSettingsPanel__vrmActions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--sincro-space-200);
     }
 
     .configurationDialogReactSettingsPanel__vrmDropStatus.is-dragover {
         border-color: var(--sincro-color-accent-outline);
         background: var(--sincro-color-accent-fill);
-    }
-
-    .configurationDialogReactSettingsPanel__statusText {
-        opacity: 0.9;
-    }
-
-    .configurationDialogReactSettingsPanel__statusSubText {
-        opacity: 0.7;
-        margin-top: var(--sincro-space-050);
+        outline: 2px solid var(--sincro-color-accent-outline);
     }
 
     .configurationDialogReactSettingsPanel__connectionPage {

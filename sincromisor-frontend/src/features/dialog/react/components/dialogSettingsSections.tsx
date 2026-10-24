@@ -1,42 +1,34 @@
+import { useId } from "react";
 import type { SincroAppDialogVrmUiState } from "../../../../app/controller";
 import { SettingsButton } from "../../../settings/react/primitives/settingsActionControls";
 
-// 起動前 dialog の VRM 置き換え導線（ファイル選択 / D&D状態表示）をまとめる。
 type VrmModelSectionProps = {
     onOpenFilePicker: () => void;
-};
-
-/** 概要・詳細から同じファイル選択窓口を開く。読込と保存はダイアログ所有者に委ねる。 */
-export function VrmModelSection({ onOpenFilePicker }: VrmModelSectionProps) {
-    return (
-        <div className="configurationDialogReactSettingsPanel__vrmSection">
-            <div className="configurationDialogReactSettingsPanel__subTitle">VRM-1.0 モデル</div>
-            <SettingsButton type="button" onClick={onOpenFilePicker}>
-                VRM ファイルを選択
-            </SettingsButton>
-        </div>
-    );
-}
-
-type DialogVrmDropStatusCardProps = {
     uiState: SincroAppDialogVrmUiState;
 };
 
-/** 選択中のモデルと拒否理由を所有者の状態文で表示し、ドラッグ中だけ操作案内を切り替える。 */
-export function DialogVrmDropStatusCard({ uiState }: DialogVrmDropStatusCardProps) {
-    // dragover 中は「ここへドロップ」へ切り替え、平常時は導線説明を短く表示する。
+/** 概要・詳細でモデル状態と交換操作を共有する。ドロップ受付は親のfieldset全体が所有する。 */
+export function VrmModelSection({ onOpenFilePicker, uiState }: VrmModelSectionProps) {
+    const statusId = useId();
     return (
-        <div
+        <section
+            aria-label="キャラクター（VRM 1.0）"
             className={`configurationDialogReactSettingsPanel__vrmDropStatus${uiState.isDragOver ? " is-dragover" : ""}`}
         >
-            <div className="configurationDialogReactSettingsPanel__statusText">
-                {uiState.isDragOver
-                    ? "ここにVRMファイルをドロップしてください"
-                    : "VRMファイルをここにドラッグ&ドロップ"}
+            <div className="configurationDialogReactSettingsPanel__vrmActions">
+                <SettingsButton
+                    type="button"
+                    onClick={onOpenFilePicker}
+                    aria-describedby={statusId}
+                >
+                    VRMファイルを選択
+                </SettingsButton>
+                <span>VRM 1.0</span>
             </div>
-            <div className="configurationDialogReactSettingsPanel__statusSubText">
+            <div id={statusId} role="status">
                 {uiState.vrmStatusText}
             </div>
-        </div>
+            {uiState.isDragOver ? <div>ここにドロップ</div> : null}
+        </section>
     );
 }
