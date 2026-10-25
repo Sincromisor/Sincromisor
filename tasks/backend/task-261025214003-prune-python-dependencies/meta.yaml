@@ -1,0 +1,13 @@
+id: task-261025214003-prune-python-dependencies
+title: Python依存の未使用宣言と本番への不要導入を整理する
+category: backend
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 2
+created_at: 2026-10-25
+closed_at: 2026-10-25
+legacy_ids: []

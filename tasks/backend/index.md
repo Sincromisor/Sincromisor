@@ -2,9 +2,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 27 件）
+## タスク一覧（自動生成 / 全 28 件）
 
-### done（完了） — 27 件
+### done（完了） — 28 件
 
 | タスク                                                                                                             | タイトル                                                | 判定    | 依存                                                                                 |
 | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------ |
@@ -35,5 +35,6 @@
 | [task-261018204902-streaming-conversation-audio](./task-261018204902-streaming-conversation-audio/task.md)         | 会話音声を逐次合成・転送して生成完了前に再生する        | ✅ PASS | —                                                                                    |
 | [task-261018215553-synthesis-request-backpressure](./task-261018215553-synthesis-request-backpressure/task.md)     | 音声合成の未完了要求上限で待機し会話切断を防ぐ          | ✅ PASS | —                                                                                    |
 | [task-261024154944-refresh-server-dependencies](./task-261024154944-refresh-server-dependencies/task.md)           | サーバーのPython・Go・AgentServer依存を更新する         | ✅ PASS | —                                                                                    |
+| [task-261025214003-prune-python-dependencies](./task-261025214003-prune-python-dependencies/task.md)               | Python依存の未使用宣言と本番への不要導入を整理する      | ✅ PASS | —                                                                                    |
 
 <!-- AUTOGEN:tasks END -->

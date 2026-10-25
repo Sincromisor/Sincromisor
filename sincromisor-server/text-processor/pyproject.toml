@@ -9,7 +9,6 @@ dependencies = [
     "sincro-models",
     "sudachipy>=0.7.0",
     "sudachidict-full>=20261015",
-    "requests>=2.34.2",
     "aiohttp>=3.14.5",
     "pydantic>=2.14.1",
     "uvicorn>=0.54.0",

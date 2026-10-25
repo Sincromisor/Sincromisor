@@ -5,21 +5,18 @@ description = "Sincromisor-2.0.0"
 authors = [
     { name = "Akito Miura", email = "phenomer@g.hachune.net" }
 ]
-dependencies = [
-    "python-dotenv>=1.2.4",
-    "setuptools>=84.2.1",
-]
+dependencies = []
 
 readme = "README.md"
 requires-python = ">=3.14,<3.15"
 
 [dependency-groups]
 dev = [
-    "httpx2>=2.16.0",
+    "python-dotenv>=1.2.4",
     "pytest>=9.1.1",
+    "redis>=8.1.0",
     "ruff>=0.17.2",
     "ty>=0.0.91",
-    "types-psutil>=7.2.2.20260906",
     "types-pyyaml>=6.0.12.20260906",
     "types-requests>=2.33.0.20261006",
 ]
@@ -54,6 +51,8 @@ build-backend = "hatchling.build"
 [tool.uv]
 default-groups = []
 constraint-dependencies = [
+    # ルートの実行時依存を外しても、NeMoなどが使う既存の下限を維持する。
+    "setuptools>=84.2.1",
     # 推移依存が脆弱性の修正版より古い版へ戻らないよう、下限を指定する。
     "aiohttp>=3.14.5",
     "cryptography>=50.0.0",
