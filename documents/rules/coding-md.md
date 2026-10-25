@@ -25,6 +25,8 @@ Markdownは「次に読む人とLLMエージェントが短時間で判断でき
 | 一時メモ / 作業中メモ | 対応するタスクディレクトリの `artifacts/` |
 | 現在有効な設計 / 契約 | `documents/design/`に置く                 |
 
+閲覧制限のある調査記録は上表の公開保存先へ置かず、[成果物の公開範囲](../../tasks/README.md#公開成果物と非公開検証原本)に従う。本文・表・添付資料にも同じ基準を適用する。
+
 - snake_case / camelCaseの `.md`ファイル名を新規追加しない。
 - 設計文書の作成・更新・分割は [documents/design/documentation-guide.md](../design/documentation-guide.md) に従う。
 - タスクは `tasks/<category>/task-<id>-<slug>/`に作成し、状態は `meta.yaml`の `status`で管理する。

@@ -5,7 +5,6 @@
 - `aiohttp 3.14.3`, `cryptography 50.0.0`, `GitPython 3.1.59`, `Pillow 12.3.0`, `setuptools 84.0.0`, `torch 2.13.0` へ更新した。
 - `pyopenssl 26.4.0`, `triton 3.7.1` と CUDA 13 推移依存を lock 更新した。
 - `nemo-toolkit 2.6.2`, `reazonspeech-nemo-asr 3.0.0`, `transformers 4.53.3` は維持した。
-- `transformers 5.5.0` は resolver 上 `nemo-toolkit 3.0.0` への更新を伴うため、残存 alert として扱う。
 
 ## Verification
 

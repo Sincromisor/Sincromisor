@@ -1,5 +1,5 @@
 id: task-261011143119-dependabot-remediation
-title: Dependabot警告の修正と更新制約の確認
+title: 依存パッケージの修正と配布処理の確認
 category: dependency-security
 status: done
 depends_on: []

@@ -9,7 +9,7 @@
 
 ## 背景 / 目的
 
-`sincromisor-frontend/package-lock.json` に対して、`js-yaml` 1件と `postcss` 2件の未解決 Dependabot alerts がある。修正版へ限定更新し、フロントエンドの既知脆弱性を解消する。
+フロントエンドの`js-yaml`と`postcss`を修正版へ限定更新する。
 
 ## 完了条件（受け入れ条件）
 
