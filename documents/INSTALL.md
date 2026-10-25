@@ -6,7 +6,7 @@ Docker Composeで起動します。必要な機器とソフトウェアは[READM
 
 `examples/compose.env`をリポジトリのルートの`.env`へコピーすると、既定の`full,chat`で会話に必要なサービスが起動します。初回はイメージのビルドとモデル取得を行い、次回から保存済みモデルを再利用します。既存の`.env`は上書きせず、必要な設定を反映してください。
 
-Linuxホストでは[ホストのjournal](design/infrastructure/logging.md#ホストのjournal)に従い、ログの保存と読み取りを設定してください。起動後は同じPCのブラウザーで`http://localhost:8086/`を開きます。
+Linuxホストでは[ホストのjournal](guides/logging.md#起動前にjournalを準備する)に従い、ログの保存と読み取りを設定してください。起動後は同じPCのブラウザーで`http://localhost:8086/`を開きます。
 
 以前の`config.yml`、`install.sh`、`start-server.sh`を使う導入手順は廃止済みです。
 

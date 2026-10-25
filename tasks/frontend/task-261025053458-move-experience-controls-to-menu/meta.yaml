@@ -1,0 +1,13 @@
+id: task-261025053458-move-experience-controls-to-menu
+title: 機器状態の常設バーを撤去し終了操作を右上メニューへ集約する
+category: frontend
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-10-25
+closed_at: null
+legacy_ids: []

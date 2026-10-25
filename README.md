@@ -52,7 +52,7 @@ cp examples/compose.env .env
 docker compose up
 ```
 
-Linuxホストでは[journalの保存と読み取りの設定](documents/design/infrastructure/logging.md#ホストのjournal)を行ってください。
+Linuxホストでは[journalの保存と読み取りの設定](documents/guides/logging.md#起動前にjournalを準備する)を行ってください。
 ログの原本を読み取れない場合、ログ収集の監視結果は異常となります。
 
 同梱の設定で会話に必要なサービスが起動します。
@@ -68,8 +68,8 @@ Linuxホストでは[journalの保存と読み取りの設定](documents/design/
 記録の有無は、`.env`の`SINCRO_LOG_CONVERSATION_ENABLED`と`SINCRO_LOG_SYNTHESIS_ENABLED`でそれぞれ切り替えられます。
 設定を反映するには、対象サービスを再作成してください。
 
-詳しくは[ログの保存・検索と記録の切り替え](documents/design/infrastructure/logging.md)を参照してください。
-[停止中のログの回収](documents/design/infrastructure/logging.md#原本バッファ復旧)と[バックアップ・復元](documents/design/infrastructure/storage.md#ログ基盤)の手順も記載しています。
+詳しくは[ログの保存・検索と記録の切り替え](documents/guides/logging.md)を参照してください。
+[停止中のログの回収](documents/guides/logging.md#停止中のログを回収する)と[バックアップ・復元](documents/guides/logging.md#バックアップと復元確認)の手順も記載しています。
 
 ## クライアント側の使い方
 

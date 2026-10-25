@@ -81,22 +81,10 @@ Python4サービスは対話設定を受け取り、認識・対話ワーカー�
 設定変更は保存済みログ、Mastraの機能用会話履歴、認識用の音声・結果保存、Redis・S3の音声キャッシュを削除しない。
 音声バイナリをJSONLへ埋め込まない。
 
-## 人工ログの投入と検索
+## 検索と検証
 
-実際の対話や秘密を含まない確認データを使う。
-
-```sh
-jq -nc --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  '{timestamp:$now,host:"fixture",project:"fixture",service:"fixture",message:"日本語の確認",sequence_id:7}' \
-  | curl --fail -H 'Content-Type: application/stream+json' --data-binary @- \
-    'http://127.0.0.1:9428/insert/jsonline?_time_field=timestamp&_msg_field=message&_stream_fields=host,project,service'
-curl --fail --data-urlencode 'query=_time:1h host:fixture service:fixture' \
-  http://127.0.0.1:9428/select/logsql/query | jq '{"時刻":._time,"本文":._msg,"連番":.sequence_id}'
-```
-
-検索画面は`http://127.0.0.1:9428/select/vmui/`である。
-確認用の隔離Composeは`node --test scripts/tests/logging-foundation.test.mjs`で実行する。
-先に`docker compose --env-file examples/compose.env -f compose.yml build victoria-logs`でイメージを作る。
+利用者の検索例と記録設定の反映は[ログ利用ガイド](../../guides/logging.md)を参照する。
+人工ログを使う隔離Composeの検証は `scripts/tests/logging-foundation.test.mjs` が担う。
 設定・公開先を変える際は標準構成と分散用Compose、Consul登録、bandog、保存領域を同時確認する。
 
 ## 各ホストの収集
@@ -150,18 +138,18 @@ bandogのDNS確認は少なくとも1台の正常なサービスの存在を示�
 
 送信再試行中の滞留、観測不能、破棄をConsulの収集・observerチェックへ反映する。破棄の増分は`logging_discarded`に残る。起動前とhealthcheckで確定cursorの原本消失を調べ、`vector-data/journal-gap.json`に最後の原本確認から消失検知までの区間を保存する。件数を推測せず、markerが残る間はcriticalを維持する。読取や状態保存が失敗しても異常とする。
 
-復旧時は原本の容量・権限、中央到達性、`docker compose logs vector log-observer log-router`を確認する。cursor消失では不明区間を記録し、原本を戻せるなら戻した後、管理者が`docker compose exec vector rm /var/lib/vector/journal-gap.json`で確認済みmarkerだけを解除する。中央の診断履歴は消えない。`down -v`やcursor削除を通常の復旧手段にしない。入力名変更・ボリューム消失は全件再読取や欠落につながる。
+復旧操作は[ログ利用ガイド](../../guides/logging.md#停止中のログを回収する)を参照する。入力名変更・ボリューム消失は全件再読取や欠落につながる。
 
-Vectorはjournalの読取だけを持つ。Dockerソケットを使うobserverはホストの管理権限を持つ。ソケットの`:ro`はAPIを書込み不可にはしないため、管理者が設定・イメージを管理する。監視API・指標・Docker APIはホストへ追加公開しない。
+Vectorはjournalの読取権限を持ち、observerは共有状態と配送指標だけを読む。Dockerソケットは使用しない。監視API・指標・Docker APIはホストへ追加公開しない。
 
 | 経路                   | 回収・検知の責任                                                                                                                           |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | サーバー・補助コンテナ | 出力元が本文を制御し、Docker/journaldが原本を保持、VectorがACK付きで回収、observerが不在・滞留・破棄・cursor消失を検知                     |
-| ホスト障害             | 同じjournal入力で既知の診断だけを回収。journaldの抑制・保存失敗も固定理由で記録する。物理故障中は当該ホスト自身の記録を保証できない        |
+| ホスト障害             | ホスト・kernel・systemd・Docker daemonの診断変換は提供しない。journal原本の消失は検知するが、物理故障中の記録を保証できない                |
 | ブラウザー未送信       | 端末の有限キューと再試行・破棄数が責任範囲。RTC受理前のタブ終了・端末消失はサーバーから回収できない                                        |
 | 中央保存               | 管理者が整合バックアップと別ホスト保管を行う。バックアップ後の受理済み区間は中央故障で失われ得る。Vectorバッファは中央バックアップではない |
 
-バックアップと隔離復元の手順は[保存領域](storage.md#ログ基盤)を参照する。
+バックアップと隔離復元の手順は[ログ利用ガイド](../../guides/logging.md#バックアップと復元確認)を参照する。
 
 ### 収集の確認
 
@@ -286,7 +274,7 @@ Pythonの共通分類は常に`exception_type`を残す。requestsの接続・�
 
 Linuxの永続journal `/var/log/journal`と実行中journal `/run/log/journal`をVectorへ読取専用で渡す。別の保存先は `.env`の `SINCRO_LOG_JOURNAL_DIR` / `SINCRO_LOG_RUNTIME_JOURNAL_DIR`で指定する。Dockerソケット以外のホストルートや特権モードは要求しない。収集コンテナはrootで読み、原本の所有者・モードは変更しない。利用者名前空間等でホスト側の読取権限が不足する場合は、配置先のjournal読取グループまたはACLで必要な読取だけを与える。
 
-初回導入ではホストでjournaldの永続保存を有効にし、容量・空き容量を管理する。例えば `/etc/systemd/journald.conf.d/sincromisor.conf`の `[Journal]`に `Storage=persistent`とホストに適した `SystemMaxUse` / `RuntimeMaxUse`を設定し、`systemctl restart systemd-journald`、`journalctl --flush`を実行する。これらは管理者がホストごとに行う前提であり、Composeから原本を変更しない。原本が空・不存在・読取拒否の場合も本体の依存条件にはせず、収集の異常として扱う。
+各ホストの管理者が永続保存と容量を管理する。準備操作は[ログ利用ガイド](../../guides/logging.md#起動前にjournalを準備する)を参照する。原本が空・不存在・読取拒否の場合も本体の依存条件にはせず、収集の異常として扱う。
 
 収集イメージはVector 0.60.0の公式バイナリとUbuntu 26.04のjournalctlを使う。公式VectorのDebianイメージに含まれるjournalctl 257では過去bootの追尾をVectorが拒否するため、258以降が必要である。nativeの `journald`入力で `current_boot_only=false`、`--merge`を指定し、ホストとコンテナのmachine-idの違いを吸収する。読取位置は `host_journal`入力名で `vector-data`に保持する。入力名やボリュームを変更・削除すると再読取や欠落の原因になる。[Vectorのjournal入力仕様](https://vector.dev/docs/reference/configuration/sources/journald/)を参照する。
 
