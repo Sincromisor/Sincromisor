@@ -113,9 +113,10 @@ PTXや新機能には追加条件があるため、最低値だけで動作を�
 
 ## ブラウザの公開先
 
-- `compose/frontend.yml`はHTTPをホストの `8086`からコンテナの `80`へ公開する。同じPCでは `http://localhost:8086`、LANの別端末からのHTTP公開先は `http://<サーバーのLANアドレス>:8086`となる。
-- マイク・カメラには安全な接続条件とブラウザの利用許可が必要である。同じPCの `localhost`は通常HTTPでも利用できるが、LANの別端末では管理下のHTTPS終端とブラウザが信頼する証明書を準備し、そのHTTPSのURLを使う。
-- 現在の `configs/Caddyfile`は `:80`だけでHTTPS・証明書は未設定。未使用の `8443:443`は公開しない。HTTPSをコンテナで終端する場合は、証明書・待受設定と公開ポートを併せて追加する。
+`compose/frontend.yml`はHTTPをホストの8086からコンテナの80へ公開する。
+標準の `configs/Caddyfile`は `:80`だけで、HTTPS・証明書は未設定である。未使用の `8443:443`は公開しない。
+マイク・カメラには安全な接続条件とブラウザーの利用許可が必要となる。
+同一PCのlocalhost利用、別端末向けのHTTPS・メディア到達性、分散配置の手順は[ネットワーク利用ガイド](../../guides/network-deployment.md)を参照する。
 
 ## 公開ポートの選択
 
@@ -132,19 +133,11 @@ Redis、S3、VOICEVOX、下流4サービス、ConsulはCompose内部で通信し
 | `compose/distributed.yml` | 管理IPv4のTCP 8001〜8005、8300、TCP/UDP 8301・8311〜8321、TCP 9428 | 別ホストのRTCから下流APIへ接続し、Consulメンバー間で通信する |
 | `compose/management.yml`  | `127.0.0.1:8001/TCP`、`127.0.0.1:8500/TCP`                         | ホスト上のHTTPS終端・RTC保守確認・Consul管理UI/API           |
 
-分散配置では、各ホストの `.env`に以下を設定する。`COMPOSE_FILE`の区切りはLinuxの `:`である。
-管理接続が不要なら末尾の `:compose/management.yml`を省く。
-
-```dotenv
-COMPOSE_FILE=compose.yml:compose/distributed.yml:compose/management.yml
-```
-
-- `COMPOSE_PROFILES`はホストの担当に合わせて `full`、`backend`、`rtc`などを選ぶ。追加ファイルはサービスの起動範囲を増やさない。
-- `SINCRO_CONSUL_PUBLISH_HOST`はそのホストの管理IPv4にする。分散用ファイルは未設定・空欄を拒否する。全インターフェースやループバックではなく、相互到達できる管理IPを使う。
-- `SINCRO_CONSUL_ADVERTISE_ADDR`も管理IPv4にし、`SINCRO_CONSUL_SERVER_HOST`は既存サーバーの到達先を指定する。
-- 下流4サービスの `SINCRO_*_PUBLIC_BIND_HOST`は、それらを配置したホストの管理IPv4にする。TCP 8002〜8005は別ホストのRTCが直接使うため、内部サービス名に戻さない。
-- 別ホストから参照されるPionの `SINCRO_PION_SERVICE_BIND_HOST`は管理IPv4にする。ブラウザ向けの `SINCRO_PION_PUBLIC_IPV4`は別に設定する。
-- 音声合成と同居するRedis・S3・VOICEVOXは公開しない。ConsulのWAN federation、HTTPS/gRPC、ホスト向けDNSとS3メトリクスも公開しない。
+追加ファイルは選択されたサービスの公開先を変更し、起動範囲自体は増やさない。
+`SINCRO_CONSUL_PUBLISH_HOST`は管理IPv4として必須で、未設定・空欄を拒否する。
+Consul広告先とサービス登録先も管理ネットワークで到達できるアドレスとし、ブラウザー用の `SINCRO_PION_PUBLIC_IPV4`と区別する。
+音声合成と同居するRedis・S3・VOICEVOX、ConsulのWAN federation、HTTPS/gRPC、ホスト向けDNSとS3メトリクスは公開しない。
+ホスト別の設定と反映・確認は[分散配置のガイド](../../guides/network-deployment.md#処理を複数ホストへ分散する)を参照する。
 
 ### 既存環境の移行
 
@@ -153,14 +146,7 @@ COMPOSE_FILE=compose.yml:compose/distributed.yml:compose/management.yml
 単一ホストへ移行する場合は、Consul広告先を空欄、サービス登録先を内部サービス名へ戻してから公開を削除する。
 サンプルのメディアUDPは3478から3479へ変更したが、既存 `.env`の指定値を自動変更しない。
 
-リポジトリのルートで `docker compose config --services`と公開ポートを確認する。
-`-f`を明示すると `.env`の `COMPOSE_FILE`による選択を置き換えるため、イメージ復旧などの一時ファイルを追加する際も必要な追加ファイルをすべて列挙する。
-設定全体の出力には秘密情報が含まれるため、そのまま公開ログへ保存しない。
-
-反映は会話終了後に `docker compose up -d --no-build --pull never`で再作成する。`restart`だけでは公開設定が変わらない。
-VPSなどのRTC専用ホストではプロファイルを `rtc`とし、ローカル・リモート両RTCの登録、下流4サービスへの到達、会話を確認する。
-管理APIは追加ファイル使用時もループバック限定となるため、遠隔保守はSSH経由で行う。
-SeaweedFS内部サービスのネットワーク分離と保存ボリュームは維持する。
+反映と到達確認は[ネットワーク利用ガイド](../../guides/network-deployment.md)に従う。管理APIは追加ファイル使用時もループバック限定とし、SeaweedFS内部サービスのネットワーク分離と保存ボリュームを維持する。
 
 ## 共有橋渡しネットワーク
 

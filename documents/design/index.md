@@ -65,7 +65,7 @@
     - VictoriaLogsと共通ログ項目、保持期間、[利用者向けの検索・保存手順](../guides/logging.md)
 
 - [Docker Compose](infrastructure/compose.md)
-    - Docker Composeプロファイル、環境変数受け渡し、ローカル起動
+    - Docker Composeプロファイル、環境変数受け渡し、[別端末利用・分散配置の手順](../guides/network-deployment.md)
 - [ローカル開発の手順](infrastructure/local-development.md)
     - 初回準備、ViteとComposeの使い分け、分散環境の下流、更新と確認
 - [VPSへの配備手順](infrastructure/vps-deployment.md)

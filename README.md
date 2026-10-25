@@ -106,7 +106,7 @@ Linuxホストでは[journalの保存と読み取りの設定](documents/guides/
 ## 別の端末から使う・処理を分散させる
 
 LAN内の別の端末から利用したり、複数のサーバーに処理を分散させたりすることもできます。
-[接続先と配置の設定](documents/design/infrastructure/compose.md#ブラウザの公開先)を参照してください。
+[接続先と配置の設定](documents/guides/network-deployment.md)を参照してください。
 
 ## OBSで利用する
 
