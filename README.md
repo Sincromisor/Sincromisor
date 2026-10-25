@@ -101,7 +101,7 @@ Linuxホストでは[journalの保存と読み取りの設定](documents/guides/
 ## 会話の設定を変える
 
 キャラクターの話し方や指示は、同梱の管理画面で編集できます。
-[管理画面の使い方](documents/design/backend/services/agent-server.md#管理者認証とeditor)を参照してください。
+[管理画面の使い方](documents/guides/mastra-studio.md)を参照してください。
 
 ## 別の端末から使う・処理を分散させる
 
