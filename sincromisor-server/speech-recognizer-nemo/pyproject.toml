@@ -7,7 +7,6 @@ requires-python = ">=3.14,<3.15"
 dependencies = [
     "sincro-config",
     "sincro-models",
-    "pydantic>=2.14.1",
     "numpy>=2.5.4,<3",
     "sudachipy>=0.7.0",
     "sudachidict-full>=20261015",
@@ -18,7 +17,6 @@ dependencies = [
     "reazonspeech-nemo-asr",
     "nemo-toolkit[asr]>=3.0.0,<4",
     "boto3>=1.43.118",
-    "onnx>=1.23.2",
 ]
 
 [tool.uv.sources]
