@@ -1,0 +1,204 @@
+{
+    "baseline": "5b51fc8d",
+    "browser": "156.0.8078.47",
+    "css": {
+        "before": {
+            "files": 4,
+            "bytes": 97607,
+            "gzipBytes": 19524
+        },
+        "after": {
+            "files": 4,
+            "bytes": 89939,
+            "gzipBytes": 18655
+        }
+    },
+    "dependencies": {
+        "before": 213,
+        "after": 176,
+        "removed": [
+            "node_modules/@csstools/cascade-layer-name-parser",
+            "node_modules/@csstools/color-helpers",
+            "node_modules/@csstools/css-calc",
+            "node_modules/@csstools/css-color-parser",
+            "node_modules/@csstools/css-parser-algorithms",
+            "node_modules/@csstools/css-tokenizer",
+            "node_modules/@csstools/postcss-cascade-layers",
+            "node_modules/@csstools/postcss-is-pseudo-class",
+            "node_modules/@csstools/postcss-progressive-custom-properties",
+            "node_modules/@csstools/postcss-system-ui-font-family",
+            "node_modules/@csstools/postcss-text-decoration-shorthand",
+            "node_modules/@csstools/selector-resolve-nested",
+            "node_modules/@csstools/selector-specificity",
+            "node_modules/@csstools/utilities",
+            "node_modules/autoprefixer",
+            "node_modules/baseline-browser-mapping",
+            "node_modules/browserslist",
+            "node_modules/caniuse-lite",
+            "node_modules/cssesc",
+            "node_modules/electron-to-chromium",
+            "node_modules/escalade",
+            "node_modules/fraction.js",
+            "node_modules/node-releases",
+            "node_modules/postcss-clamp",
+            "node_modules/postcss-color-functional-notation",
+            "node_modules/postcss-color-hex-alpha",
+            "node_modules/postcss-custom-properties",
+            "node_modules/postcss-font-variant",
+            "node_modules/postcss-gap-properties",
+            "node_modules/postcss-logical",
+            "node_modules/postcss-nesting",
+            "node_modules/postcss-place",
+            "node_modules/postcss-replace-overflow-wrap",
+            "node_modules/postcss-selector-parser",
+            "node_modules/postcss-value-parser",
+            "node_modules/update-browserslist-db",
+            "node_modules/util-deprecate"
+        ],
+        "added": [],
+        "versionChanges": []
+    },
+    "comparisons": [
+        {
+            "route": "main",
+            "width": 1440,
+            "mode": "overview",
+            "beforeCount": 158,
+            "afterCount": 158,
+            "styleAndGeometryDifferences": 0,
+            "pngIdentical": true,
+            "pngSha256": "df6c3798fc59960c8a9a11dd545e15cd9aaacd0e413c89c9f11ddd2081e32020"
+        },
+        {
+            "route": "main",
+            "width": 320,
+            "mode": "overview",
+            "beforeCount": 154,
+            "afterCount": 154,
+            "styleAndGeometryDifferences": 0,
+            "pngIdentical": true,
+            "pngSha256": "75e89cce93343544ccf668caa4ff17bad0f7eb3cf2a53f11d982794f381e04b1"
+        },
+        {
+            "route": "simple-vrm",
+            "width": 1440,
+            "mode": "overview",
+            "beforeCount": 201,
+            "afterCount": 201,
+            "styleAndGeometryDifferences": 0,
+            "pngIdentical": true,
+            "pngSha256": "c1f8ebe05df6c423850e4f8fac2a1705571e4ec04ff8d1ac7c32ba2231755c00"
+        },
+        {
+            "route": "simple-vrm",
+            "width": 1440,
+            "mode": "detail",
+            "beforeCount": 190,
+            "afterCount": 190,
+            "styleAndGeometryDifferences": 0,
+            "pngIdentical": true,
+            "pngSha256": "3823f3e21fe4a7f5615b02000b22d5f907dea1056c77f64cbe41939930899b4d"
+        },
+        {
+            "route": "simple-vrm",
+            "width": 320,
+            "mode": "overview",
+            "beforeCount": 204,
+            "afterCount": 204,
+            "styleAndGeometryDifferences": 0,
+            "pngIdentical": true,
+            "pngSha256": "0bc6021f41e4a7c76f14332265ef7d054ecc93ba914ec5dbb89e8f8326f42c28"
+        },
+        {
+            "route": "simple-vrm",
+            "width": 320,
+            "mode": "detail",
+            "beforeCount": 196,
+            "afterCount": 196,
+            "styleAndGeometryDifferences": 0,
+            "pngIdentical": true,
+            "pngSha256": "c43f3bfed42136714476581a2ce4a02cb5f30eda13a34ed14428b8f7173da7a5"
+        },
+        {
+            "route": "vrm360",
+            "width": 1440,
+            "mode": "overview",
+            "beforeCount": 192,
+            "afterCount": 192,
+            "styleAndGeometryDifferences": 0,
+            "pngIdentical": true,
+            "pngSha256": "744befe8ecef3ca4a41aaf90e558e5045eb9c8f40970dd9f1f39b3585032db05"
+        },
+        {
+            "route": "vrm360",
+            "width": 1440,
+            "mode": "detail",
+            "beforeCount": 190,
+            "afterCount": 190,
+            "styleAndGeometryDifferences": 0,
+            "pngIdentical": true,
+            "pngSha256": "3823f3e21fe4a7f5615b02000b22d5f907dea1056c77f64cbe41939930899b4d"
+        },
+        {
+            "route": "vrm360",
+            "width": 320,
+            "mode": "overview",
+            "beforeCount": 195,
+            "afterCount": 195,
+            "styleAndGeometryDifferences": 0,
+            "pngIdentical": true,
+            "pngSha256": "0bc6021f41e4a7c76f14332265ef7d054ecc93ba914ec5dbb89e8f8326f42c28"
+        },
+        {
+            "route": "vrm360",
+            "width": 320,
+            "mode": "detail",
+            "beforeCount": 196,
+            "afterCount": 196,
+            "styleAndGeometryDifferences": 0,
+            "pngIdentical": true,
+            "pngSha256": "c43f3bfed42136714476581a2ce4a02cb5f30eda13a34ed14428b8f7173da7a5"
+        },
+        {
+            "route": "looking-glass-vrm",
+            "width": 1440,
+            "mode": "overview",
+            "beforeCount": 206,
+            "afterCount": 206,
+            "styleAndGeometryDifferences": 0,
+            "pngIdentical": true,
+            "pngSha256": "c1f8ebe05df6c423850e4f8fac2a1705571e4ec04ff8d1ac7c32ba2231755c00"
+        },
+        {
+            "route": "looking-glass-vrm",
+            "width": 1440,
+            "mode": "detail",
+            "beforeCount": 195,
+            "afterCount": 195,
+            "styleAndGeometryDifferences": 0,
+            "pngIdentical": true,
+            "pngSha256": "3823f3e21fe4a7f5615b02000b22d5f907dea1056c77f64cbe41939930899b4d"
+        },
+        {
+            "route": "looking-glass-vrm",
+            "width": 320,
+            "mode": "overview",
+            "beforeCount": 206,
+            "afterCount": 206,
+            "styleAndGeometryDifferences": 0,
+            "pngIdentical": true,
+            "pngSha256": "0bc6021f41e4a7c76f14332265ef7d054ecc93ba914ec5dbb89e8f8326f42c28"
+        },
+        {
+            "route": "looking-glass-vrm",
+            "width": 320,
+            "mode": "detail",
+            "beforeCount": 198,
+            "afterCount": 198,
+            "styleAndGeometryDifferences": 0,
+            "pngIdentical": true,
+            "pngSha256": "c43f3bfed42136714476581a2ce4a02cb5f30eda13a34ed14428b8f7173da7a5"
+        }
+    ],
+    "uncaughtErrors": []
+}
