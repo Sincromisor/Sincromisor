@@ -1,0 +1,248 @@
+{
+  "baseline": "6f82ff46",
+  "files": [
+    {
+      "file": "app/shell/react/importantNotice.css",
+      "bytes": 761,
+      "sha256": "97072f9747e347308e0ca1182812801a487c3c75e9bcc6de3ada5c1be3c76e1a",
+      "identical": true
+    },
+    {
+      "file": "app/shell/react/integratedTabs/integratedTabs.css",
+      "bytes": 4580,
+      "sha256": "77f7be2ae88dfd16299dd5f6bd0980a9b2fa393df56c4c4bf1466cc9812701d1",
+      "identical": true
+    },
+    {
+      "file": "app/shell/react/overlay/overlay.css",
+      "bytes": 14086,
+      "sha256": "92f89ee50fd9fa54066107fb1fa4fdd580ede5fd753c8345c0838e80a97e8759",
+      "identical": true
+    },
+    {
+      "file": "features/conversation/chat/react/conversationHistory.css",
+      "bytes": 1195,
+      "sha256": "13a1abc7a7995d47e0cd38c3b0cae66a1761063b09d5700b2662a6d429a552b0",
+      "identical": true
+    },
+    {
+      "file": "features/dialog/react/configurationDialogSettings.css",
+      "bytes": 8045,
+      "sha256": "929d4a9fce905ee45e51421523370502a016bae05189b5ec3575bc979b92857f",
+      "identical": true
+    },
+    {
+      "file": "features/settings/react/fields/talkModeField.css",
+      "bytes": 498,
+      "sha256": "17da367bfdbe2890e46c8aa08365b9f90736471085d58fefa728471e18f7a58a",
+      "identical": true
+    },
+    {
+      "file": "features/settings/react/primitives/settingsPrimitives.css",
+      "bytes": 10418,
+      "sha256": "8ee0cee64b60366ec5398f5a1e5b5bf21176ede99e4d248e33a5a42c447e8507",
+      "identical": true
+    },
+    {
+      "file": "features/settings/react/shell/settingsShell.css",
+      "bytes": 15345,
+      "sha256": "bde2631cb94ce3b19c14fa9c6acc6d7be6eca92cf43dbb6e2b32b0263cb7d4fe",
+      "identical": true
+    },
+    {
+      "file": "pages/main/styles.css",
+      "bytes": 14138,
+      "sha256": "2b257814f0ec1ed8a3a56520c686cf94288365d9951d5a3032712b8c8d24aa17",
+      "identical": true
+    },
+    {
+      "file": "pages/motionDebug/styles.css",
+      "bytes": 7706,
+      "sha256": "e31d69129693c50414dd98a99be5462b098328790ae47c00f357f77769c53991",
+      "identical": true
+    },
+    {
+      "file": "pages/poseLandmarkerSpike/styles.css",
+      "bytes": 3591,
+      "sha256": "1c62434006ad532b6440ad68f4e23d02cce9d50d2782d4894769ce00446b4e9c",
+      "identical": true
+    },
+    {
+      "file": "styles/common.css",
+      "bytes": 1992,
+      "sha256": "172bf4964b24c8ebac2964d440961f146091174e0ceee91fab19e7bcd7c25770",
+      "identical": true
+    },
+    {
+      "file": "styles/fonts.css",
+      "bytes": 966,
+      "sha256": "0db77936db230deea2102a669ba72c18c021a7f9518fd262d7ceb21dd4e7f0ac",
+      "identical": true
+    },
+    {
+      "file": "styles/simple.css",
+      "bytes": 6339,
+      "sha256": "d925d23b13f3f9bf9a3da992dae19e4f8fcb408d60b00f05c303a1d06f3e1eba",
+      "identical": true
+    },
+    {
+      "file": "styles/sincroBackgroundBox.css",
+      "bytes": 225,
+      "sha256": "435cdb4f17315ddb1449d0e39bb23ebfb14fc70c348d22decaf358856e10d49c",
+      "identical": true
+    },
+    {
+      "file": "styles/sincroCharacterBox.css",
+      "bytes": 853,
+      "sha256": "eb747722f3baea0c283f948e6466b39a3ecf6adc5624eeb7e6f806a14900e42d",
+      "identical": true
+    },
+    {
+      "file": "styles/sincroChatBox.css",
+      "bytes": 11465,
+      "sha256": "daf4d68315bbb5a25e1f63e02cef3aa5f6afcbde031620474e1b9472da6942f6",
+      "identical": true
+    },
+    {
+      "file": "styles/sincroConfigurationDialog.css",
+      "bytes": 6100,
+      "sha256": "ac6a47fed018256ff88f40320045e56980ff4d1e86cde27f41955a463b1c6f4b",
+      "identical": true
+    },
+    {
+      "file": "styles/sincroDebugConsole.css",
+      "bytes": 24162,
+      "sha256": "414a8ecb71726685f2efe096adb095bfa9ce3265f18193d7dba39740555aa456",
+      "identical": true
+    },
+    {
+      "file": "styles/sincroFooterBox.css",
+      "bytes": 2482,
+      "sha256": "0e341cf075e7bc771e418f0cc04a1a65eaf92e28a4fda0de978c854d89c707e0",
+      "identical": true
+    },
+    {
+      "file": "styles/sincroHeaderBox.css",
+      "bytes": 3666,
+      "sha256": "b42109427abfec800612f5fd0dbfaa892b9edf0fd28e98300e424f744e5fb141",
+      "identical": true
+    },
+    {
+      "file": "styles/sincroPopBox.css",
+      "bytes": 1092,
+      "sha256": "7a782e5c477f97229ee324de5b4610f8c77432cd882d222252aad0e73abf0a7d",
+      "identical": true
+    },
+    {
+      "file": "styles/sincroVideoBox.css",
+      "bytes": 261,
+      "sha256": "104526b0e8a8344c11dd4fadb09f87ad62d1de6caf4d635500efd849565a84b3",
+      "identical": true
+    },
+    {
+      "file": "styles/uiFoundation.css",
+      "bytes": 4794,
+      "sha256": "ec27286abaee9ce199f03ec08619cea4727c7a9178e590acdb4274273d1aa888",
+      "identical": true
+    }
+  ],
+  "builtAssets": [
+    {
+      "file": "main-q83C9-as.css",
+      "bytes": 12146,
+      "sha256": "85ace26e6b2c396e7abc62c323ccc429c8721ad67ed071dd45f8c67bd17fdf2d",
+      "identical": true
+    },
+    {
+      "file": "motion_debug-DFdiigLT.css",
+      "bytes": 5589,
+      "sha256": "39d2c96550b6e50be11a2a8a4671e2b8a292c44cf7be1d2c3943cfffbe9cca17",
+      "identical": true
+    },
+    {
+      "file": "pose_landmarker_spike-sv0k2q50.css",
+      "bytes": 2462,
+      "sha256": "8a50ce1eb7f23af77c24c446f1d5f815b6b026b141ccc2f427e9880dd89430e0",
+      "identical": true
+    },
+    {
+      "file": "preload-helper-5EFM_ce6.css",
+      "bytes": 77410,
+      "sha256": "6c67490699645e3ce0b0c92ad211f25268dac78f5d831fd5eca039b14037450c",
+      "identical": true
+    }
+  ],
+  "dependencies": {
+    "before": 278,
+    "after": 213,
+    "removed": [
+      "node_modules/@csstools/custom-function-parser",
+      "node_modules/@csstools/media-query-list-parser",
+      "node_modules/@csstools/postcss-alpha-function",
+      "node_modules/@csstools/postcss-color-function",
+      "node_modules/@csstools/postcss-color-function-display-p3-linear",
+      "node_modules/@csstools/postcss-color-mix-function",
+      "node_modules/@csstools/postcss-color-mix-variadic-function-arguments",
+      "node_modules/@csstools/postcss-container-rule-prelude-list",
+      "node_modules/@csstools/postcss-content-alt-text",
+      "node_modules/@csstools/postcss-contrast-color-function",
+      "node_modules/@csstools/postcss-custom-functions",
+      "node_modules/@csstools/postcss-exponential-functions",
+      "node_modules/@csstools/postcss-fit-tolerance-property",
+      "node_modules/@csstools/postcss-font-format-keywords",
+      "node_modules/@csstools/postcss-font-width-property",
+      "node_modules/@csstools/postcss-gamut-mapping",
+      "node_modules/@csstools/postcss-gradients-interpolation-method",
+      "node_modules/@csstools/postcss-hwb-function",
+      "node_modules/@csstools/postcss-ic-unit",
+      "node_modules/@csstools/postcss-image-function",
+      "node_modules/@csstools/postcss-initial",
+      "node_modules/@csstools/postcss-light-dark-function",
+      "node_modules/@csstools/postcss-logical-float-and-clear",
+      "node_modules/@csstools/postcss-logical-overflow",
+      "node_modules/@csstools/postcss-logical-overscroll-behavior",
+      "node_modules/@csstools/postcss-logical-resize",
+      "node_modules/@csstools/postcss-logical-viewport-units",
+      "node_modules/@csstools/postcss-media-minmax",
+      "node_modules/@csstools/postcss-media-queries-aspect-ratio-number-values",
+      "node_modules/@csstools/postcss-mixins",
+      "node_modules/@csstools/postcss-nested-calc",
+      "node_modules/@csstools/postcss-normalize-display-values",
+      "node_modules/@csstools/postcss-oklab-function",
+      "node_modules/@csstools/postcss-position-area-property",
+      "node_modules/@csstools/postcss-private-rule",
+      "node_modules/@csstools/postcss-property-rule-optional-descriptors",
+      "node_modules/@csstools/postcss-property-rule-prelude-list",
+      "node_modules/@csstools/postcss-random-function",
+      "node_modules/@csstools/postcss-relative-color-syntax",
+      "node_modules/@csstools/postcss-scope-pseudo-class",
+      "node_modules/@csstools/postcss-sign-functions",
+      "node_modules/@csstools/postcss-stepped-value-functions",
+      "node_modules/@csstools/postcss-syntax-descriptor-syntax-production",
+      "node_modules/@csstools/postcss-trigonometric-functions",
+      "node_modules/@csstools/postcss-unset-value",
+      "node_modules/css-blank-pseudo",
+      "node_modules/css-has-pseudo",
+      "node_modules/css-prefers-color-scheme",
+      "node_modules/cssdb",
+      "node_modules/postcss-attribute-case-insensitive",
+      "node_modules/postcss-color-rebeccapurple",
+      "node_modules/postcss-custom-media",
+      "node_modules/postcss-custom-selectors",
+      "node_modules/postcss-dir-pseudo-class",
+      "node_modules/postcss-double-position-gradients",
+      "node_modules/postcss-focus-visible",
+      "node_modules/postcss-focus-within",
+      "node_modules/postcss-image-set-function",
+      "node_modules/postcss-lab-function",
+      "node_modules/postcss-opacity-percentage",
+      "node_modules/postcss-overflow-shorthand",
+      "node_modules/postcss-page-break",
+      "node_modules/postcss-preset-env",
+      "node_modules/postcss-pseudo-class-any-link",
+      "node_modules/postcss-selector-not"
+    ],
+    "added": [],
+    "versionChanges": []
+  }
+}
