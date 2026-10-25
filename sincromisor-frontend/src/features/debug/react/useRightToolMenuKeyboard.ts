@@ -1,8 +1,13 @@
 import { type KeyboardEvent, useLayoutEffect, useRef } from "react";
 import { closeRightToolMenu, openRightToolMenu } from "../../../app/react/useRightToolPanelState";
 
+// 起動前などで無効な体験操作は、矢印キーの移動先からも除く。
 function menuItems(): HTMLButtonElement[] {
-    return [...document.querySelectorAll<HTMLButtonElement>('#debugMenuPanel [role="menuitem"]')];
+    return [
+        ...document.querySelectorAll<HTMLButtonElement>(
+            '#debugMenuPanel [role="menuitem"]:not(:disabled)',
+        ),
+    ];
 }
 
 function focusOutsideMenu(backward: boolean): void {

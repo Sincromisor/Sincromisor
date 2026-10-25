@@ -16,9 +16,10 @@
 .sincroImportantNotice p { margin: 0 0 8px; }
 .sincroImportantNotice--floating {
     position: fixed;
-    /* 音声の回復案内でヘッダーが伸びても、再試行・終了操作を覆わない。 */
-    top: var(--sincro-chrome-bottom, 150px);
+    /* 題名の高さが変わっても、右上メニューと重ならない位置へ追従する。 */
+    top: var(--sincro-chrome-bottom, 96px);
     left: 8px;
     width: min(620px, calc(100vw - 32px));
-    z-index: 20;
+    /* キャラクターより前、右上メニューより後ろに置く。 */
+    z-index: 5;
 }

@@ -8,10 +8,11 @@ import {
     useRightToolPanelState,
 } from "../../../app/react/useRightToolPanelState";
 
+import { useSincroExperienceState } from "../../../app/react/useSincroExperienceState";
+
 import { useRightToolMenuKeyboard } from "./useRightToolMenuKeyboard";
 
-// 右上メニューと右側ツール領域の見た目/DOMイベントだけを担当する薄い shell。
-// state owner は App/service 側に置き、ここでは排他表示と外側クリック閉じを UI として実装する。
+/** パネル選択と体験操作の入口。状態の所有者へ委譲し、表示の開閉では機器に触れない。 */
 export function RightToolMenu() {
     const state = useRightToolPanelState();
     const onMenuKeyDown = useRightToolMenuKeyboard(state.menuOpen);
@@ -142,6 +143,7 @@ function RightToolMenuPanel({
                 onClick={toggleRightToolSettingsPanel}
                 title="基本設定"
             />
+            <ExperienceMenuItem />
             <RightToolMenuItem
                 id="debugConsoleToggle"
                 isActive={debugActive}
@@ -174,6 +176,32 @@ function RightToolMenuItem({
         >
             <span className="debugMenuPanel__itemText">
                 <span className="debugMenuPanel__itemTitle">{title}</span>
+            </span>
+        </button>
+    );
+}
+
+/** パネル選択とは独立した実行操作。終了処理が失敗しても、閉じた項目にフォーカスを残さない。 */
+function ExperienceMenuItem() {
+    const { media, controller } = useSincroExperienceState();
+    const canEnd = media.experienceActive || media.microphone !== "idle" || media.camera !== "idle";
+    return (
+        <button
+            type="button"
+            role="menuitem"
+            disabled={!controller}
+            onClick={() => {
+                try {
+                    if (canEnd) controller?.endExperience();
+                    else controller?.start();
+                } finally {
+                    closeRightToolMenu();
+                    document.getElementById("debugMenuButton")?.focus();
+                }
+            }}
+        >
+            <span className="debugMenuPanel__itemTitle">
+                {canEnd ? "体験を終了" : "体験を開始"}
             </span>
         </button>
     );

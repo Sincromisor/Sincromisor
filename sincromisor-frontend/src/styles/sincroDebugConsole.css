@@ -90,8 +90,7 @@ div#debugMenu.is-open div#debugMenuPanel {
     pointer-events: auto;
 }
 
-button#debugConsoleToggle,
-button#reactSettingsPanelToggle {
+div#debugMenuPanel > button[role="menuitem"] {
     width: 100%;
     position: relative;
     display: flex;
@@ -110,16 +109,14 @@ button#reactSettingsPanelToggle {
     cursor: pointer;
 }
 
-button#debugConsoleToggle.is-active,
-button#reactSettingsPanelToggle.is-active {
+div#debugMenuPanel > button.is-active {
     border-color: hsl(186deg 72% 58% / 56%);
     background:
         linear-gradient(180deg, hsl(186deg 76% 42% / 18%), hsl(204deg 64% 34% / 12%)),
         rgba(25, 33, 43, 0.9);
 }
 
-button#debugConsoleToggle.is-active::before,
-button#reactSettingsPanelToggle.is-active::before {
+div#debugMenuPanel > button.is-active::before {
     content: "";
     width: 3px;
     border-radius: 999px;
@@ -130,15 +127,14 @@ button#reactSettingsPanelToggle.is-active::before {
     background: hsl(186deg 82% 60% / 88%);
 }
 
-button#debugConsoleToggle:hover,
-button#reactSettingsPanelToggle:hover {
+div#debugMenuPanel > button[role="menuitem"]:hover {
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)),
         rgba(28, 34, 44, 0.84);
     border-color: var(--sincro-main-overlay-border-strong, rgba(157, 190, 232, 0.24));
 }
 
-button#debugConsoleToggle {
+div#debugMenuPanel > button + button {
     margin-top: 6px;
 }
 

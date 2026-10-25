@@ -15,7 +15,6 @@ import {
 } from "../react/useRightToolPanelState";
 import { useSincroAppControllerSettingsState } from "../react/useSincroAppControllerSettingsState";
 import { RightToolFrame } from "./react/overlay/rightToolFrame";
-import { SincroExperienceControls } from "./react/sincroExperienceControls";
 
 type SincroPageAppShellProps = {
     controlPanel: ReactElement;
@@ -48,7 +47,7 @@ export function SincroPageAppShell({ controlPanel, onCharacterMounted }: SincroP
     );
 }
 
-// 題名と常設操作を描画し、その下端をパネル・重要通知の配置へ共有する。
+// 題名と右上メニューを描画し、その下端をパネル・重要通知の配置へ共有する。
 function SincroShellHeader() {
     const { settings } = useSincroAppControllerSettingsState();
     const headerRef = useRef<HTMLDivElement>(null);
@@ -95,7 +94,6 @@ function SincroShellHeader() {
                     </div>
                 </div>
             </div>
-            <SincroExperienceControls />
         </div>
     );
 }
