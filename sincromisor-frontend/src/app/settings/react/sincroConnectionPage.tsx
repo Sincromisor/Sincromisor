@@ -4,15 +4,28 @@ import {
     createStartupOptionHint,
     createTalkModeReconnectHint,
 } from "../../../features/settings/react/sections/settingsConnectionText";
+import { useSincroExperienceState } from "../../react/useSincroExperienceState";
 import type { SincroControlPanelPageProps } from "./sincroControlPanelTypes";
 
-/** 診断値を含めず、全分類から見える共通領域に接続状態と操作を置く。 */
+const usageLabels = { idle: "未使用", requesting: "取得中", active: "使用中" };
+
+/** 全分類から見える固定領域に実機器の使用状態と、RTCだけの接続操作を置く。 */
 export function ConnectionSettingsPage({ panelState }: SincroControlPanelPageProps) {
+    const { media } = useSincroExperienceState();
     return (
         <div className="settingsPrimitiveFieldStack">
+            <div className="settingsPrimitiveButtonRow" role="status" aria-label="機器の使用状態">
+                <span>マイク {usageLabels[media.microphone]}</span>
+                <span>カメラ {usageLabels[media.camera]}</span>
+            </div>
             <ConnectionStatusCard
                 value={panelState.connectionState.value}
-                detail={panelState.connectionState.detail ?? ""}
+                // 失敗理由は重要通知に一度だけ表示し、固定領域には状態名と既存の再試行を残す。
+                detail={
+                    panelState.connectionState.value === "input_failed"
+                        ? ""
+                        : (panelState.connectionState.detail ?? "")
+                }
                 startupOptionHint={createStartupOptionHint(panelState.startupSettingsStatus)}
             />
             {createTalkModeReconnectHint(panelState.lifecycleState) ? (

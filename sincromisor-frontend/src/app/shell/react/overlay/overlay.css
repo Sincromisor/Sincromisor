@@ -162,11 +162,6 @@
         padding-right: 60px;
     }
 
-    /* 機器使用・終了の常設操作より下に通知とパネルを収める。 */
-    .rightToolFrame:has(.sincroImportantNotice) {
-        --right-tool-frame-top: 150px;
-    }
-
     .rightToolFrame:has(.sincroImportantNotice) .rightToolFrame__chrome {
         top: 12px;
     }

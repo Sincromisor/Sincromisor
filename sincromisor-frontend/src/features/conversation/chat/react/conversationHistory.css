@@ -17,7 +17,7 @@
 .conversationHistory .sincroMessage__icon { width: 32px; height: 32px; }
 .conversationHistory .sincroMessage__text { min-width: 0; line-height: 1.6; white-space: pre-wrap; }
 .conversationHistory .sincroMessage__text > p { margin: 0; }
-.rightToolFrame--history { --right-tool-frame-width: 560px; --right-tool-frame-top: 150px; }
+.rightToolFrame--history { --right-tool-frame-width: 560px; }
 .rightToolFrame--history .rightToolFrame__surface {
     height: calc(100dvh - var(--right-tool-frame-effective-top) - var(--right-tool-frame-side));
 }

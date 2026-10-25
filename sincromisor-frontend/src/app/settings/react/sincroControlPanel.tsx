@@ -9,7 +9,7 @@ type SincroControlPanelProps = {
     variant?: "default" | "vrm360" | "looking-glass-vrm";
 };
 
-/** 3ページ共通の常設設定。接続状態と開始・停止は分類本文から独立して固定表示する。 */
+/** 3ページ共通の常設設定。機器使用・接続状態とRTC操作は分類本文から独立して固定表示する。 */
 export function SincroControlPanel({
     title = "基本設定",
     variant = "default",
