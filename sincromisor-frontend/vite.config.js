@@ -124,6 +124,8 @@ export default defineConfig({
     root: contents_src,
     publicDir: resolve(import.meta.dirname, "public"),
     build: {
+        // 最低対象のOBS Studio 33.0.0 / CEF 150で、ネストとレイヤーをネイティブ処理する。
+        cssTarget: "chrome150",
         emptyOutDir: true,
         outDir: resolve(import.meta.dirname, "dist"),
         rolldownOptions: {
