@@ -96,7 +96,7 @@ Linuxホストでは[journalの保存と読み取りの設定](documents/guides/
 ## 音声認識の固有名詞辞書を追加する
 
 名前や作品名の読み方を辞書に登録できます。
-[辞書の追加手順](documents/design/backend/services/speech-recognizer.md#辞書の追加手順)を参照してください。
+[辞書の追加手順](documents/guides/proper-noun-dictionary.md)を参照してください。
 
 ## 会話の設定を変える
 
