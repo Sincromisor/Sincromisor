@@ -2,7 +2,6 @@
 
 ## Completion Summary
 
-- Dependabot alerts #187、#180、#172 を確認した。
 - 直接依存 `js-yaml` を `4.3.1`、推移依存 `postcss` を `8.5.26` へ更新した。
 - 警告に無関係な依存は一括更新していない。
 

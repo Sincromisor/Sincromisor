@@ -12,8 +12,8 @@
 | [task-260518025152-urllib3-audit-remediation](./task-260518025152-urllib3-audit-remediation/task.md)                                   | urllib3 audit remediation                  | ✅ PASS | —    |
 | [task-260819030329-dependabot-server-dependency-remediation](./task-260819030329-dependabot-server-dependency-remediation/task.md)     | Dependabot server dependency remediation   | ✅ PASS | —    |
 | [task-260819061853-dependabot-frontend-dependency-remediation](./task-260819061853-dependabot-frontend-dependency-remediation/task.md) | Dependabot frontend dependency remediation | ✅ PASS | —    |
-| [task-260907004846-dependabot-compatible-updates](./task-260907004846-dependabot-compatible-updates/task.md)                           | Dependabot警告の依存更新とNeMo制約の確認   | ✅ PASS | —    |
-| [task-261011143119-dependabot-remediation](./task-261011143119-dependabot-remediation/task.md)                                         | Dependabot警告の修正と更新制約の確認       | ✅ PASS | —    |
+| [task-260907004846-dependabot-compatible-updates](./task-260907004846-dependabot-compatible-updates/task.md)                           | 依存パッケージの互換性を維持した更新       | ✅ PASS | —    |
+| [task-261011143119-dependabot-remediation](./task-261011143119-dependabot-remediation/task.md)                                         | 依存パッケージの修正と配布処理の確認       | ✅ PASS | —    |
 | [task-261011144531-remove-retired-nue-asr](./task-261011144531-remove-retired-nue-asr/task.md)                                         | 廃止済みNue-ASR実装と依存定義の削除        | ✅ PASS | —    |
 | [task-261025210425-dependabot-pillow-filelock](./task-261025210425-dependabot-pillow-filelock/task.md)                                 | Pillowとfilelockを修正版へ更新する         | ✅ PASS | —    |
 | [task-4000-uv-audit-remediation](./task-4000-uv-audit-remediation/task.md)                                                             | uv audit remediation                       | ✅ PASS | —    |

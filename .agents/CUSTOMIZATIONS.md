@@ -91,3 +91,10 @@
 - 採用範囲: [OpenAIの記事](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)（2026-09-13参照）を参考に、参照範囲、スキル選択、確認・停止条件を整理した。特定モデルだけの手順にはせず、コメント品質・通信契約・公開成果物の制約を維持する。
 - 生成対象: `new-task` / `run-task` とサブエージェントは原本から再生成する。`playwright-cli` は生成対象外であり、入口を直接編集する。既存の用途別参照資料は該当時だけ読む。
 - 確認: 変更したMarkdownの整形、生成物同期、タスク整合性に加え、誤字修正・起票のみ・通常実装・高リスク変更・ブラウザー確認で必要な参照先と停止条件を辿る。性能改善や自律動作の実証は文書検査だけでは断定しない。
+
+## タスク成果物の公開範囲
+
+- 対象ファイル: `AGENTS.md`、`tasks/README.md`、`tasks/AUTHORING-CHECKLIST.md`、`.claude/commands/*.md`、`.claude/agents/*.md`、`scripts/tasks/newTask.mjs`、`scripts/tasks/closeTask.mjs`、`documents/rules/coding-md.md`
+- 上流との差分: タスク名・メタデータ・本文・独立確認・添付資料・索引・コミットの件名・本文に同じ公開範囲を適用する。閲覧制限付きの調査記録は元サービスまたは既存のGit管理外領域で扱い、残リスクの記録義務を公開許可と解釈しない。
+- 理由: 公開リポジトリの作業記録が、取得元のアクセス制限を超える情報共有にならないようにするため。
+- 更新時の確認: 起票・実装・独立確認・完了処理が`tasks/README.md`の「公開成果物と非公開検証原本」を参照し、通常の直接コミットにも同じ基準が適用されることを確認する。生成後は`npm run gen:codex:check`で同期を検証する。

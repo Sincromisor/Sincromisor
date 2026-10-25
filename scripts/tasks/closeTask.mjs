@@ -116,7 +116,7 @@ async function main() {
         fail(
             [
                 "非公開またはrawの検証artifactがtask配下にあります。",
-                `work/private-artifacts/${meta.id}/ へ移し、taskには集計結果・SHA-256・再現手順だけを残してください:`,
+                `work/private-artifacts/${meta.id}/ へ移し、taskにはtasks/README.mdの公開範囲を満たす記録だけを残してください:`,
                 ...privateArtifacts.map((path) => `  - ${path}`),
             ].join("\n"),
         );

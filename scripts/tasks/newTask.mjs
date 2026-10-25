@@ -97,6 +97,7 @@ async function main() {
     const taskMd = `# ${title}
 
 <!-- ${TASKS_ROOT}/AUTHORING-CHECKLIST.md と documents/rules/coding-md.md に従い、変更のリスクに必要な項目だけを日本語で具体化する。 -->
+<!-- ${TASKS_ROOT}/README.md の「公開成果物と非公開検証原本」に従い、タイトル・本文・成果物へ閲覧制限付き情報を転記しない。 -->
 
 ## 背景 / 目的
 

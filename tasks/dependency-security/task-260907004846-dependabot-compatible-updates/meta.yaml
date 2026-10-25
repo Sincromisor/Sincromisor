@@ -1,5 +1,5 @@
 id: task-260907004846-dependabot-compatible-updates
-title: Dependabot警告の依存更新とNeMo制約の確認
+title: 依存パッケージの互換性を維持した更新
 category: dependency-security
 status: done
 depends_on: []

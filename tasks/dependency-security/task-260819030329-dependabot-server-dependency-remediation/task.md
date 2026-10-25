@@ -2,13 +2,13 @@
 
 ## 背景 / 目的
 
-サーバー側の未解決 Dependabot alerts を確認し、NeMo / ReazonSpeech の互換性を維持したまま修正版へ更新する。
+サーバー依存を確認し、NeMo / ReazonSpeechの互換性を維持したまま対象パッケージを修正版へ更新する。
 
 ## 完了条件（受け入れ条件）
 
-- [x] `transformers` 以外のサーバー側 Dependabot alerts が要求する修正版を `uv.lock` に解決する。
+- [x] 対象のサーバー依存を修正版へ更新し、`uv.lock`に反映する。
 - [x] NeMo / ReazonSpeech の既存バージョンを維持し、更新後の NeMo テストと GPU import が成功する。
-- [x] 更新できない alert と理由を記録する。
+- [x] 調査記録には成果物の公開範囲を適用する。
 
 ## 設計判断（着手前に確定済み）
 
