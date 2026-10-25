@@ -35,7 +35,8 @@
         "check:runtime": "node scripts/check-node-version.mjs",
         "browser": "playwright-cli",
         "browser:install": "PLAYWRIGHT_BROWSERS_PATH=./work/playwright-browsers playwright install chromium",
-        "browser:test": "PLAYWRIGHT_BROWSERS_PATH=./work/playwright-browsers playwright test"
+        "browser:test": "PLAYWRIGHT_BROWSERS_PATH=./work/playwright-browsers playwright test",
+        "browser:test:css": "npm run browser:test -- --config playwright.css.config.ts"
     },
     "codexGen": {
         "modelMap": {

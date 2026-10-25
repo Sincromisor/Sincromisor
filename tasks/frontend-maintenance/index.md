@@ -28,9 +28,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 51 件）
+## タスク一覧（自動生成 / 全 52 件）
 
-### done（完了） — 51 件
+### done（完了） — 52 件
 
 | タスク                                                                                                                                 | タイトル                                              | 判定    | 依存                                                                                                                                                          |
 | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -85,5 +85,6 @@
 | [task-261024154945-refresh-frontend-dependencies](./task-261024154945-refresh-frontend-dependencies/task.md)                           | フロントエンドと共通開発ツールの依存を更新する        | ✅ PASS | —                                                                                                                                                             |
 | [task-261025223749-reduce-css-transform-dependencies](./task-261025223749-reduce-css-transform-dependencies/task.md)                   | CSS変換の互換性を確認して依存を削減する               | ✅ PASS | —                                                                                                                                                             |
 | [task-261025230812-use-native-css-for-obs](./task-261025230812-use-native-css-for-obs/task.md)                                         | OBSのCEFを基準に独自CSS互換変換を撤去する             | ✅ PASS | —                                                                                                                                                             |
+| [task-261026015135-stabilize-obs-css-precedence](./task-261026015135-stabilize-obs-css-precedence/task.md)                             | OBS追加CSSとの優先順位を固定して回帰を防ぐ            | ✅ PASS | —                                                                                                                                                             |
 
 <!-- AUTOGEN:tasks END -->
