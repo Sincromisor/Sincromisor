@@ -22,7 +22,7 @@ VPSへ接続する開発環境を単一ホスト用の設定へ戻すと、VPS�
 ## 初回準備
 
 1. [必要なもの](../../../README.md#必要なもの)に従い、Linux、Docker Engine / Compose v2、NVIDIAドライバーとContainer Toolkitを用意する。認識とLLMはGPUを共有する。
-2. [ホストのjournal](logging.md#ホストのjournal)に従い、永続保存・読み取り・容量管理・時刻同期を準備する。
+2. [ホストのjournal](../../guides/logging.md#起動前にjournalを準備する)に従い、永続保存・読み取り・容量管理・時刻同期を準備する。
 3. リポジトリルートで、`.env`がない場合だけ `examples/compose.env`をコピーする。既存環境は差分を取り込む。
 4. [Docker Compose管理ルール](../../rules/docker-compose.md#開発用イメージとディスク容量)に従い、接続先・ビルダー・Docker保存先の空き容量を確認する。初回はイメージとモデルの取得がある。
 

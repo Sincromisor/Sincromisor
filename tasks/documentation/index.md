@@ -4,9 +4,17 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 37 件）
+## タスク一覧（自動生成 / 全 41 件）
 
-### done（完了） — 37 件
+### open（未完） — 3 件
+
+| タスク                                                                                                               | タイトル                                                  | 判定 | 依存 |
+| -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ---- | ---- |
+| [task-261025052500-mastra-studio-user-guide](./task-261025052500-mastra-studio-user-guide/task.md)                   | Mastra Studioのサインインと会話設定の操作ガイドを作成する | —    | —    |
+| [task-261025052500-proper-noun-dictionary-user-guide](./task-261025052500-proper-noun-dictionary-user-guide/task.md) | 音声認識の固有名詞辞書の追加ガイドを作成する              | —    | —    |
+| [task-261025052501-network-deployment-user-guide](./task-261025052501-network-deployment-user-guide/task.md)         | 別端末からの利用と分散配置の案内をガイドにまとめる        | —    | —    |
+
+### done（完了） — 38 件
 
 | タスク                                                                                                                         | タイトル                                                            | 判定    | 依存                                     |
 | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- | ------- | ---------------------------------------- |
@@ -47,5 +55,6 @@
 | [task-261001222215-yomiyasu-91-coding-ts](./task-261001222215-yomiyasu-91-coding-ts/task.md)                                   | 文書の日本語表現を整える（コーディング規約(TypeScript)ほか）        | ✅ PASS | —                                        |
 | [task-261009014405-fix-existing-markdown-format](./task-261009014405-fix-existing-markdown-format/task.md)                     | 既存15文書のMarkdown整形不一致を解消する                            | ✅ PASS | —                                        |
 | [task-261017073951-refresh-current-documents](./task-261017073951-refresh-current-documents/task.md)                           | documents配下の資料を現行実装と照合して更新する                     | ✅ PASS | —                                        |
+| [task-261025052500-logging-user-guide](./task-261025052500-logging-user-guide/task.md)                                         | ログの準備・検索・記録設定を利用者向けガイドにまとめる              | ✅ PASS | —                                        |
 
 <!-- AUTOGEN:tasks END -->

@@ -53,7 +53,7 @@ SINCRO_LOG_HOST=<ホストごとの一意な識別子>
 固定公開IPv4へ直接接続する場合はSTUNを空にできる。Consul登録先とブラウザー向けIPv4は用途が異なる。
 既存のComposeプロジェクト名と、必要なイメージ上書きファイルの選択を維持する。
 `--profile rtc`を追加するだけでは既存 `COMPOSE_PROFILES`を置き換えないため、保守時は以下のように明示する。
-全6サービスで使う[journalの準備](logging.md#ホストのjournal)はホストごとに済ませておく。
+全6サービスで使う[journalの準備](../../guides/logging.md#起動前にjournalを準備する)はホストごとに済ませておく。
 
 ## 1. 更新前の確認と退避
 
