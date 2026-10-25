@@ -47,21 +47,11 @@ Pythonの呼出先と保存済み設定を引き継ぐ場合、登録キーと�
 
 ## 管理者認証とEditor
 
-`http://127.0.0.1:4111`を開き、標準のSign in画面でログインする。
-自動生成された管理者トークンは、管理者がローカルで次のコマンドで確認する。
-表示した値をログや共有資料へ転載しない。
-
-```sh
-docker compose exec agent-server cat /run/sincromisor-auth/token
-```
-
-Email欄は形式上有効な例 `admin@example.test`、Password欄は管理者トークンを入力する。
+サインイン、指示の保存・試行・公開の操作は[Mastra Studio利用ガイド](../../../guides/mastra-studio.md)を参照する。
 SimpleAuthはEmailを利用者識別に使わず、トークンで管理者を判定する。
 ログインCookieとBearer認証でStudioとAPIを共通に保護し、会話ユーザー登録やRBACは追加しない。
 資格情報をURL、モデルの指示、ログ、公開検証資料へ入れない。
-
-Agentsから「Sincromisorのキャラクター」を開き、Editorで指示を編集する。
-下書きを保存して試験し、Publishで公開する。公開前の変更は通常APIへ反映しない。
+Editorの下書きは公開前の通常APIへ反映せず、Publish後に反映する。
 コードの標準指示は日本語会話と任意の先頭表情コード `^N`。省略時は既存契約の標準表情になる。
 Gemmaで必須の本文形式がツール選択を妨げることを確認したため、ツール呼出しへ表情コードを強制しない。Editorの既定動作を使い、公開済み設定があればそれを優先する。
 初期化で保存済み指示を上書きしない。エージェントID `sincromisor-character`、モデルと実行設定はコード側に置く。
