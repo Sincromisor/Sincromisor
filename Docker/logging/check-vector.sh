@@ -30,13 +30,18 @@ if [[ ! -s /var/lib/vector/host_journal/checkpoint.txt ]]; then
 fi
 if ! bash /check-journal-cursor.sh >/dev/null; then fail journal_cursor_missing; fi
 # HTTPだけ正常でも、journald子プロセスが起動・再開できなければ異常とする。
+# 候補ごとに子プロセスを起動しない。消滅した/procは読み飛ばし、NUL区切りの引数を比較する。
 for process in /proc/[0-9]*/comm; do
-    if [[ -r "$process" ]] && [[ "$(cat "$process" 2>/dev/null)" == journalctl ]]; then
-        if tr '\0' '\n' < "${process%/comm}/cmdline" 2>/dev/null | grep -qx -- '--follow'; then
-            write_state true available
-            printf 'journal_available\n'
-            exit 0
-        fi
+    if { IFS= read -r comm < "$process"; } 2>/dev/null && [[ "$comm" == journalctl ]]; then
+        # commを読んだ直後にも終了し得るため、cmdlineを開けない場合も探索を続ける。
+        if ! { mapfile -d '' -t args < "${process%/comm}/cmdline"; } 2>/dev/null; then continue; fi
+        for arg in "${args[@]}"; do
+            if [[ "$arg" == --follow ]]; then
+                write_state true available
+                printf 'journal_available\n'
+                exit 0
+            fi
+        done
     fi
 done
 fail journal_input_unavailable
