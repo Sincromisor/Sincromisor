@@ -1,3 +1,4 @@
-# 公開記録の整理
+# 実装記録
 
-この版の本文は公開範囲外の作業記録を含むため除去した。
+- Python RTC stackとaiortc診断profileを削除し、既存Go実装・imageを`sincro-rtc`の通常pathへrenameした。通信payloadとMessagePack fixtureは変更していない。
+- `uv run ruff check`は変更前からの範囲外違反110件でFAIL。削除後のworkspace解決は`uv lock --check`、MessagePack互換は`uv run --package sincro-models --group dev pytest sincromisor-server/sincro-models/tests/test_go_pipeline_protocol_compat.py`で確認する。

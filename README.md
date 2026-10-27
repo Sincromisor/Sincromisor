@@ -136,4 +136,3 @@ Google Chromeの設定を変えると、Chromium Embedded Frameworkにも反映�
 
 [SincromisorCLI](https://github.com/Sincromisor/SincromisorCLI)を使うと、コマンドラインから音声認識・音声合成を実行できます。
 テロップ用のテキストも取得できます。
-

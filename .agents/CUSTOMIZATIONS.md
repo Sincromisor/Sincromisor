@@ -97,4 +97,5 @@
 - 対象ファイル: `AGENTS.md`、`tasks/README.md`、`tasks/AUTHORING-CHECKLIST.md`、`.claude/commands/*.md`、`.claude/agents/*.md`、`scripts/tasks/newTask.mjs`、`scripts/tasks/closeTask.mjs`、`documents/rules/coding-md.md`
 - 上流との差分: タスク名・メタデータ・本文・独立確認・添付資料・索引・コミットの件名・本文に同じ公開範囲を適用する。閲覧制限付きの調査記録は元サービスまたは既存のGit管理外領域で扱い、残リスクの記録義務を公開許可と解釈しない。
 - 理由: 公開リポジトリの作業記録が、取得元のアクセス制限を超える情報共有にならないようにするため。
+- 開発用デプロイ環境の記録は伏字化・役割名への置換・集計後も公開しない。ルートREADMEは利用検討者向けとし、文書整理を公開許可と解釈しない。起票前とステージ後に本文・参照先・メタデータ・コミット文面を点検する。
 - 更新時の確認: 起票・実装・独立確認・完了処理が`tasks/README.md`の「公開成果物と非公開検証原本」を参照し、通常の直接コミットにも同じ基準が適用されることを確認する。生成後は`npm run gen:codex:check`で同期を検証する。

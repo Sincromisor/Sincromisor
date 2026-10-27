@@ -280,7 +280,7 @@ Linuxの永続journal `/var/log/journal`と実行中journal `/run/log/journal`�
 
 VectorのhealthcheckはHTTP生存に加え、実journalのカーソルを読めることとnativeの追尾プロセスを確認する。原本本文をhealthcheck出力へ流さず、`journal_unreadable_or_missing` / `journal_input_unavailable`等の固定理由だけを状態ファイルへ残す。Vectorは共有journalを読む権限を持つため、Composeラベルによる対象選別は読取権限の分離ではない。ホスト・kernel・systemd・Docker daemonの診断変換は提供しない。
 
-確認用のjournalctlは`-n +1`で指定カーソルから最初の1件だけを読む。初回はjournalの先頭1件を読む。出力はシェルで受け取り、journalctlの正常終了とカーソルの一致を確認する。`grep`へのパイプは使わない。Ubuntu同梱のGNU版`gnutimeout`を明示的に使い、TERMを受けたシェルは前景の確認処理を待つ。これにより、親シェルだけが先に終了して強制終了の監視が打ち切られることを防ぐ。Vectorサービスは`init: true`で動かし、時間切れで孤児化した子プロセスを回収する。
+確認用のjournalctlは`-n +1`で指定カーソルから最初の1件だけを読む。初回はjournalの先頭1件を読む。出力はシェルで受け取り、journalctlの正常終了とカーソルの一致を確認する。`grep`へのパイプは使わない。追尾プロセスの探索もBashの`read`・`mapfile`で行い、候補ごとにcat・tr・grepを起動しない。`/proc`の読取中に消滅した候補は読み飛ばし、journalctlのNUL区切り引数に独立した`--follow`があることを確認する。Ubuntu同梱のGNU版`gnutimeout`を明示的に使い、TERMを受けたシェルは前景の確認処理を待つ。これにより、親シェルだけが先に終了して強制終了の監視が打ち切られることを防ぐ。Vectorサービスは`init: true`で動かし、時間切れで孤児化した子プロセスを回収する。
 
 既存コンテナへinit設定を反映するには、リポジトリルートで運用中のComposeファイル・環境・プロファイルを選んだまま`docker compose up -d --no-deps --no-build --pull never --force-recreate vector`を実行する。ログ収集は再作成中に中断するが、`vector-data`とホストjournalは保持し、確定カーソルから再開する。`restart`だけではinit設定は変わらない。反映後は`HostConfig.Init=true`、healthy、ゾンビ不在を確認する。
 

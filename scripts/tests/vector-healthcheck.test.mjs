@@ -27,6 +27,8 @@ const run = (script) =>
 			"--tmpfs=/var/log/journal",
 			"--mount",
 			`type=bind,src=${resolve("Docker/logging")},dst=/checks,readonly`,
+			"--mount",
+			`type=bind,src=${resolve("Docker/logging/check-journal-cursor.sh")},dst=/check-journal-cursor.sh,readonly`,
 			"--entrypoint=bash",
 			image,
 			"-euc",
@@ -134,7 +136,7 @@ echo process_checks_passed
 	assert.equal(output.trim(), "process_checks_passed");
 });
 
-test("実journalでも末尾以外の確定カーソルを確認できる", () => {
+test("実journalのカーソルと追尾の有無をヘルスチェックへ反映する", () => {
 	const output = run(`
 mkdir -p /run/systemd/journal /var/lib/vector/host_journal
 /usr/lib/systemd/systemd-journald >/tmp/journald.out 2>&1 &
@@ -153,6 +155,53 @@ test -s /var/lib/vector/host_journal/checkpoint.txt
 bash /checks/check-journal-cursor.sh
 test -s /var/lib/vector/journal-last-valid
 test ! -e /var/lib/vector/journal-gap.json
+
+# Vectorの実HTTP生存確認と組み合わせ、journalctlの引数・終了を本番スクリプトで判定する。
+cat > /tmp/vector.toml <<'TOML'
+[api]
+enabled = true
+address = "127.0.0.1:8686"
+[sources.metrics]
+type = "internal_metrics"
+[sinks.discard]
+type = "blackhole"
+inputs = ["metrics"]
+TOML
+/usr/bin/vector --config /tmp/vector.toml >/tmp/vector.out 2>&1 &
+vector_pid=$!
+for attempt in {1..50}; do
+    if { exec 3<>/dev/tcp/127.0.0.1/8686; } 2>/dev/null; then exec 3<&- 3>&-; break; fi
+    sleep 0.1
+done
+printf '{"start_id":"11111111-1111-1111-1111-111111111111"}\\n' > /var/lib/vector/collector-health.json
+if result=$(bash /checks/check-vector.sh); then exit 1; fi
+test "$result" = journal_input_unavailable
+
+# 改行を含む別引数をtrで分割すると--followに見えるが、独立引数ではないため拒否する。
+cat > /tmp/journalctl <<'SH'
+#!/bin/bash
+sleep 30 &
+wait
+SH
+chmod +x /tmp/journalctl
+/tmp/journalctl $'unrelated\\n--follow' &
+fake_pid=$!
+if result=$(bash /checks/check-vector.sh); then exit 1; fi
+test "$result" = journal_input_unavailable
+kill "$fake_pid"
+wait "$fake_pid" || true
+
+journalctl --merge --follow -n 0 >/tmp/follow.out 2>&1 &
+follow_pid=$!
+test "$(bash /checks/check-vector.sh)" = journal_available
+grep -q '"healthy":true' /var/lib/vector/collector-health.json
+kill "$follow_pid"
+wait "$follow_pid" || true
+if result=$(bash /checks/check-vector.sh); then exit 1; fi
+test "$result" = journal_input_unavailable
+grep -q '"healthy":false' /var/lib/vector/collector-health.json
+kill "$vector_pid"
+wait "$vector_pid"
 kill "$journal_pid"
 wait "$journal_pid"
 echo real_journal_checks_passed
