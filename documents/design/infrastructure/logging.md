@@ -238,7 +238,7 @@ Dockerのローカル原本には要求URLが残り、ホストjournalの保持�
 
 標準の各プロファイルは`log-observer`も起動する。補助処理は5秒ごとに、Vectorが`vector-data`へ原子的に書く収集状態とVectorの配送指標を確認する。Dockerソケット、Docker API、ConsulのチェックAPIには接続しない。`docker_lifecycle`、`docker_health`、`docker_health_query_failed`、`consul_check`は中央ログに生成しない破壊的変更であり、コンテナとConsulサービスの状態は各サービスのhealthcheckとConsul自身で確認する。
 
-Vectorは起動ごとにUUIDの`start_id`、確認時刻、正常性、固定理由だけを状態ファイルへ書く。起動直後は前回の正常結果を無効にし、healthcheckがHTTP、実journal、追尾プロセスを確認するまで正常にしない。実journal読取は最大10秒かかるため、healthcheckは10秒周期・12秒時間切れで実行する。`log-observer`は次回実行までの最大20秒、2回連続の遅延、5秒の観測周期を考慮して45秒で状態を失効させる。欠落・不正・期限切れ・未来時刻・異常状態を収集異常とし、配送指標の取得後に同じ`start_id`を再確認する。確認中の再作成で旧状態と新しい累計を混同しないためである。
+Vectorは起動ごとにUUIDの`start_id`、確認時刻、正常性、固定理由だけを状態ファイルへ書く。起動直後は前回の正常結果を無効にし、healthcheckがHTTP、実journal、追尾プロセスを確認するまで正常にしない。healthcheckは10秒周期・12秒時間切れとし、内側の`gnutimeout`が10秒でTERM、さらに1秒後にKILLを送る。起動前のカーソル確認も同じ制限を使う。`log-observer`は10秒の実行周期と確認処理の遅延、5秒の観測周期を考慮して45秒で状態を失効させる。欠落・不正・期限切れ・未来時刻・異常状態を収集異常とし、配送指標の取得後に同じ`start_id`を再確認する。確認中の再作成で旧状態と新しい累計を混同しないためである。
 
 配送の成功、滞留、破棄、原本cursor消失、不明区間は従来どおり記録する。再起動時は配送累計を再初期化し、旧`observer-data`のDocker起動時刻は新しいUUIDと一致しないため安全側で不明区間として扱う。収集状態または配送が異常なら8687の`/collector`と`/health`は503となり、`SincroLogCollector_<host>`と`SincroLogObserver_<host>`のConsulチェックがcriticalになる。業務サービスはログ基盤の状態を起動条件にしない。
 
@@ -279,6 +279,12 @@ Linuxの永続journal `/var/log/journal`と実行中journal `/run/log/journal`�
 収集イメージはVector 0.60.0の公式バイナリとUbuntu 26.04のjournalctlを使う。公式VectorのDebianイメージに含まれるjournalctl 257では過去bootの追尾をVectorが拒否するため、258以降が必要である。nativeの `journald`入力で `current_boot_only=false`、`--merge`を指定し、ホストとコンテナのmachine-idの違いを吸収する。読取位置は `host_journal`入力名で `vector-data`に保持する。入力名やボリュームを変更・削除すると再読取や欠落の原因になる。[Vectorのjournal入力仕様](https://vector.dev/docs/reference/configuration/sources/journald/)を参照する。
 
 VectorのhealthcheckはHTTP生存に加え、実journalのカーソルを読めることとnativeの追尾プロセスを確認する。原本本文をhealthcheck出力へ流さず、`journal_unreadable_or_missing` / `journal_input_unavailable`等の固定理由だけを状態ファイルへ残す。Vectorは共有journalを読む権限を持つため、Composeラベルによる対象選別は読取権限の分離ではない。ホスト・kernel・systemd・Docker daemonの診断変換は提供しない。
+
+確認用のjournalctlは`-n +1`で指定カーソルから最初の1件だけを読む。初回はjournalの先頭1件を読む。出力はシェルで受け取り、journalctlの正常終了とカーソルの一致を確認する。`grep`へのパイプは使わない。Ubuntu同梱のGNU版`gnutimeout`を明示的に使い、TERMを受けたシェルは前景の確認処理を待つ。これにより、親シェルだけが先に終了して強制終了の監視が打ち切られることを防ぐ。Vectorサービスは`init: true`で動かし、時間切れで孤児化した子プロセスを回収する。
+
+既存コンテナへinit設定を反映するには、リポジトリルートで運用中のComposeファイル・環境・プロファイルを選んだまま`docker compose up -d --no-deps --no-build --pull never --force-recreate vector`を実行する。ログ収集は再作成中に中断するが、`vector-data`とホストjournalは保持し、確定カーソルから再開する。`restart`だけではinit設定は変わらない。反映後は`HostConfig.Init=true`、healthy、ゾンビ不在を確認する。
+
+2026-10-28に[Docker Composeのinit仕様](https://docs.docker.com/reference/compose-file/services/#init)のプロセス回収と、[journalctlの仕様](https://www.freedesktop.org/software/systemd/man/latest/journalctl.html)の`--cursor`・`--lines=+1`を確認し、上記の終了処理と読取件数に適用した。
 
 ## 参照
 

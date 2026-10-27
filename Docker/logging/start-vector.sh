@@ -8,5 +8,6 @@ state=/var/lib/vector/collector-health.json
 start_id=$(cat /proc/sys/kernel/random/uuid)
 printf '{"start_id":"%s","checked_at":"","healthy":false,"reason":"starting"}\n' "$start_id" > "$state.tmp"
 mv "$state.tmp" "$state"
-timeout 10 bash /check-journal-cursor.sh >/dev/null 2>&1 || true
+# 起動前確認もUbuntu同梱のGNU版でTERM後1秒に強制終了し、孤児はComposeのinitが回収する。
+gnutimeout --kill-after=1s 10 bash /check-journal-cursor.sh >/dev/null 2>&1 || true
 exec /usr/bin/vector "$@"
