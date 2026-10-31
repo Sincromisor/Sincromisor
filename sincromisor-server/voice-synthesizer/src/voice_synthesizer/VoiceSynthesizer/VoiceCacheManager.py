@@ -194,6 +194,10 @@ class VoiceCacheManager:
         result = self.__get_voice_s3(request, context.ids)
         if result is None:
             context.cache_source = "generated"
+        elif not context.cancelled.is_set():
+            # 通常取得と同じく昇格し、同じ音声の次要求でS3を再読取りしない。
+            # 書込み失敗は既存の診断だけに留め、取得済み音声の配信は継続する。
+            self.__put_voice_redis(request, result, context.ids)
         return result
 
     def save_cached_voice(
