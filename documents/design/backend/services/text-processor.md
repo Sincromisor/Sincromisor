@@ -25,6 +25,8 @@
 
 ## Mastraチャットの完了と失敗
 
+Go調停器は確定認識だけを文章処理へ送り、履歴を複製して応答照合用に保持する。暫定認識はフロントの表示更新だけに用い、文章処理への転送と照合用保持を行わない。Python側も確定していない要求には応答しない。
+
 `chat`は `text_processor.mastra_worker.MastraTextProcessorWorker`を使う。`SINCRO_PROCESSOR_MASTRA_URL`、
 `SINCRO_PROCESSOR_MASTRA_TOKEN`、`SINCRO_PROCESSOR_MASTRA_AGENT_ID`はComposeからプロセス引数へ渡す。
 トークンが空ならchat接続時に失敗するため、Mastraを使わない `sincro`の起動を妨げない。

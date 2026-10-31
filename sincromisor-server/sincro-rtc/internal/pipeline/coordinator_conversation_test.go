@@ -54,30 +54,54 @@ func TestCoordinatorRunsFixtureBackedFourStageConversation(t *testing.T) {
 	assertClosedOutputs(t, coordinator)
 }
 
-func TestCoordinatorSendsInitialPartialProcessorRequestWithEmptyHistory(t *testing.T) {
+func TestCoordinatorOnlySendsConfirmedRecognitionToProcessor(t *testing.T) {
 	factory := &fakeFactory{t: t}
 	coordinator := newTestCoordinator(t, factory)
-	if err := coordinator.Start(context.Background(), "session-initial-partial", "sincro"); err != nil {
-		t.Fatalf("Start() error = %v", err)
+	if err := coordinator.Start(context.Background(), "session-partial", "sincro"); err != nil {
+		t.Fatal(err)
 	}
+	defer coordinator.Close()
 	set := factory.setAt(t, 0)
-	set.extractor.onPCM = func([]byte) {
+	requests := make(chan protocol.ProcessorRequest, 8)
+	set.processor.onRequest = func(request protocol.ProcessorRequest) { requests <- request }
+	set.extractor.onPCM = func(frame []byte) {
+		sequence := int64(frame[0])
 		set.extractor.results <- protocol.ExtractorResult{
-			SessionID: "session-initial-partial", SpeechID: 1, SequenceID: 1, Confirmed: false,
+			SessionID: "session-partial", SpeechID: 1, SequenceID: sequence, Confirmed: sequence == 4,
 		}
 	}
-	if err := coordinator.SubmitPCM(make([]byte, pcmFrameBytes)); err != nil {
-		t.Fatalf("SubmitPCM() error = %v", err)
+	var messageID string
+	for sequence := byte(1); sequence <= 4; sequence++ {
+		frame := make([]byte, pcmFrameBytes)
+		frame[0] = sequence
+		if err := coordinator.SubmitPCM(frame); err != nil {
+			t.Fatal(err)
+		}
+		message := receive(t, coordinator.TextResults()).Value
+		if messageID == "" {
+			messageID = message.MessageID
+		}
+		if message.MessageID != messageID {
+			t.Fatal("partial message identity changed")
+		}
 	}
-	_ = receive(t, coordinator.TextResults())
-	_ = receive(t, coordinator.TextResults())
-	_ = receiveSynthesis(t, coordinator)
-	request := set.processor.lastRequest
-	if request.Confirmed || request.History.Messages == nil || len(request.History.Messages) != 0 {
-		t.Fatalf("initial partial processor request = %+v", request)
+	request := receive(t, requests)
+	if !request.Confirmed || request.SequenceID != 4 || len(request.History.Messages) != 1 {
+		t.Fatalf("processor received an unexpected request: %+v", request)
 	}
-	if err := coordinator.Close(); err != nil {
-		t.Fatalf("Close() error = %v", err)
+	// 確定要求の送信を同期点にし、それ以前の全暫定処理の完了を保証する。
+	coordinator.mu.Lock()
+	conv := coordinator.work.conv
+	coordinator.mu.Unlock()
+	conv.mu.Lock()
+	defer conv.mu.Unlock()
+	if len(conv.requests) != 1 || len(conv.outstanding) != 0 {
+		t.Fatalf("retained requests=%d extractions=%d", len(conv.requests), len(conv.outstanding))
+	}
+	select {
+	case extra := <-requests:
+		t.Fatalf("unexpected extra processor request: %+v", extra)
+	default:
 	}
 }
 

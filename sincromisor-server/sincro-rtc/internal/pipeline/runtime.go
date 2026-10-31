@@ -77,10 +77,13 @@ func (c *Coordinator) recognizerLoop(work *generationWork, recognizer Recognizer
 				c.runtimeFailure(work, pclient.ServiceRecognizer, "publish_text", "backpressure_timeout", "speech_id", value.SpeechID)
 				return
 			}
-			c.mu.Lock()
-			if value.Confirmed {
-				c.history = append(c.history, message)
+			// 暫定認識は表示だけを更新する。文章処理は確定にしか応答しないため、
+			// 履歴の複製・転送や、解放契機のない照合用要求を作らない。
+			if !value.Confirmed {
+				continue
 			}
+			c.mu.Lock()
+			c.history = append(c.history, message)
 			history := cloneMessages(c.history)
 			c.mu.Unlock()
 			request := protocol.ProcessorRequest{
