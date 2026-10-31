@@ -1,4 +1,4 @@
-"""受信バッファの出力時点・配列と結合回数を旧方式に照合する。"""
+"""最小長到達時の出力時点・配列と、一区間一回の結合を確認する。"""
 
 import asyncio
 from unittest.mock import patch
@@ -19,7 +19,7 @@ def test_chunk_buffer_matches_append(sizes):
     buffer = np.zeros(0, dtype=np.int16)
     for received, chunk in enumerate(chunks, 1):
         buffer = np.append(buffer, chunk)
-        if buffer.size > 3200:
+        if buffer.size >= 3200:
             expected.append((received, buffer))
             buffer = np.zeros(0, dtype=np.int16)
 

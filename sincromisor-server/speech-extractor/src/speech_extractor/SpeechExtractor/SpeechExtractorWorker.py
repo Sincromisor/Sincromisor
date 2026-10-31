@@ -137,8 +137,8 @@ class SpeechExtractorWorker:
                 np_frame: np.ndarray = np.frombuffer(frame, dtype=self.voice_dtype)
             chunks.append(np_frame)
             sample_count += np_frame.size
-            if sample_count > target_length:
-                # 受信時は参照だけを保持し、従来と同じ判定単位で一度だけ連続化する。
+            if sample_count >= target_length:
+                # 最小長に到達したら次の20msフレームを待たず、一度だけ連続化する。
                 yield np.concatenate(chunks)
                 chunks.clear()
                 sample_count = 0
