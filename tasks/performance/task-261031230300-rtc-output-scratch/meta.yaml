@@ -1,0 +1,13 @@
+id: task-261031230300-rtc-output-scratch
+title: RTC出力フレームの反復確保を減らす
+category: performance
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-10-31
+closed_at: null
+legacy_ids: []
