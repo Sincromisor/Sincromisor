@@ -9,8 +9,12 @@
  */
 import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
 import type { SincroGestureMotionSnapshot } from "../../features/gaze/gestureTracking/sincroGestureMotionSnapshot";
-import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
+import {
+    cloneSincroHandMotionSnapshot,
+    type SincroHandMotionSnapshot,
+} from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
+import { cloneSincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshotClone";
 import { createPoseReliabilityMap } from "../reliability/poseReliabilityEstimator";
 import { computeSincroCanonicalMotion, SincroMotionComputation } from "./sincroMotionComputation";
 import {
@@ -26,6 +30,7 @@ import {
     summarizeObserveOnlyStage,
 } from "./sincroMotionObserveOnlyPipelineTypes";
 import {
+    clonePipelineFaceMotionSnapshot,
     cloneSincroMotionPipelineState,
     createDefaultSincroMotionPipelineState,
     type SincroMotionPipelineState,
@@ -51,7 +56,8 @@ type PoseReliabilityPrevious = NonNullable<
 >;
 
 /**
- * Face / Pose / Hand / Gesture tracker callback から本番 observe-only state を更新する stateful service。
+ * 顔・姿勢・手・ジェスチャーの観測から、信頼性・共通表現・時系列・意図を更新する。
+ * 入力観測と公開結果は複製して参照を分離し、内部では所有済みの観測と計算結果を再利用する。
  *
  * stateful estimator は mode 切替、camera refresh、tracking stop で `reset()` される前提で保持する。
  * `updatePose()` は optional `cameraQuality` を同一 Pose frame の reliability へ反映して temporal / intent
@@ -69,24 +75,14 @@ export class SincroMotionObserveOnlyPipeline {
     private hasPose = false;
     private gestureSummarySource?: SincroGestureMotionSnapshot;
 
-    /**
-     * 保存済み pipeline state を clone して返す。
-     *
-     * caller が Debug Console やテストで参照しても内部 estimator memory へ書き戻せないようにする。
-     * VRM 適用や CharacterBehaviorSnapshot への合流は行わない。
-     */
+    /** 内部状態から独立したスナップショットを返し、利用側による配列・行列の変更を隔離する。 */
     getState(): SincroMotionPipelineState {
         return cloneSincroMotionPipelineState(this.state);
     }
 
-    /**
-     * Debug Console 用の小さい summary だけを返す。
-     *
-     * 常時描画面ではこの値を使い、ReliabilityMap / Canonical / Temporal / Intent 本体の大きな JSON は
-     * motion-debug など明示 inspection 用 surface に閉じる。
-     */
+    /** 診断表示に必要な小さい要約だけを返す。状態本体の複製は必要な取得時に限定する。 */
     getSummary(): SincroMotionObserveOnlySummary {
-        return this.createResult().summary;
+        return this.createSummary();
     }
 
     /**
@@ -104,25 +100,25 @@ export class SincroMotionObserveOnlyPipeline {
         this.computation.reset();
     }
 
-    /**
-     * Face callback から latest Face と head reliability / canonical yaw を observe-only 更新する。
-     *
-     * Pose が未到着の Face-only frame は `not_computed` のまま保存し、stateful temporal / intent memory は
-     * Pose callback だけで進める。これにより Face/Pose callback 順の差で腕の temporal state が二重更新されない。
-     */
+    /** 顔と任意の手・ジェスチャーを複製して取り込み、Poseがあれば信頼性と共通表現を更新する。
+     * 顔だけの更新では時系列・意図の履歴を進めず、無効時刻なら観測の保存と診断だけを行う。 */
     updateFace(
         snapshot: SincroFaceMotionSnapshot,
         input: SincroMotionObserveOnlyPipelineInput,
     ): SincroMotionObserveOnlyPipelineUpdateResult {
         const timing = resolveObserveOnlyTiming(input);
         this.hasFace = true;
-        this.state = cloneSincroMotionPipelineState({
+        this.state = {
             ...this.state,
-            face: snapshot,
-            hand: input.hand ?? this.state.hand,
-            gesture: input.gesture ?? this.state.gesture,
+            face: clonePipelineFaceMotionSnapshot(snapshot),
+            hand:
+                input.hand === undefined
+                    ? this.state.hand
+                    : cloneSincroHandMotionSnapshot(input.hand),
+            gesture:
+                input.gesture === undefined ? this.state.gesture : structuredClone(input.gesture),
             updatedAtMs: timing.updatedAtMs,
-        });
+        };
         if (timing.status === "invalid_input") {
             return this.createResult("invalid_input", timing.reason);
         }
@@ -137,25 +133,25 @@ export class SincroMotionObserveOnlyPipeline {
         return this.createResult();
     }
 
-    /**
-     * Pose callback から reliability / canonical / temporal / intent を observe-only 更新する。
-     *
-     * Face / Hand が未到着の旧 pose-only frame では該当 reliability を placeholder にし、例外ではなく
-     * `available` state 内の低信頼度として保存する。VRM pose と controller 呼び出し順序は変更しない。
-     */
+    /** 姿勢と任意の手・ジェスチャーを複製して取り込み、信頼性→共通表現→時系列→意図を更新する。
+     * 顔・手の欠損は低信頼度として扱い、無効時刻なら観測だけを保存する。VRMへの適用は呼び出し元が担う。 */
     updatePose(
         snapshot: SincroPoseMotionSnapshot,
         input: SincroMotionObserveOnlyPipelineInput,
     ): SincroMotionObserveOnlyPipelineUpdateResult {
         const timing = resolveObserveOnlyTiming(input);
         this.hasPose = true;
-        this.state = cloneSincroMotionPipelineState({
+        this.state = {
             ...this.state,
-            pose: snapshot,
-            hand: input.hand ?? this.state.hand,
-            gesture: input.gesture ?? this.state.gesture,
+            pose: cloneSincroPoseMotionSnapshot(snapshot),
+            hand:
+                input.hand === undefined
+                    ? this.state.hand
+                    : cloneSincroHandMotionSnapshot(input.hand),
+            gesture:
+                input.gesture === undefined ? this.state.gesture : structuredClone(input.gesture),
             updatedAtMs: timing.updatedAtMs,
-        });
+        };
         if (timing.status === "invalid_input") {
             return this.createResult("invalid_input", timing.reason);
         }
@@ -168,24 +164,20 @@ export class SincroMotionObserveOnlyPipeline {
         return this.createResult();
     }
 
-    /**
-     * Hand callback から latest Hand snapshot と Debug Console summary だけを更新する。
-     *
-     * Hand wrist は reliability / finger feature の材料であり、腕 IK target を置き換えない。Pose が既に
-     * 到着している場合だけ downstream を再計算し、Temporal / Intent の stateful memory は次の Pose
-     * callback まで進めない。Hand 初期化失敗や ROI pause の lost snapshot も例外にせず保存する。
-     */
+    /** 手と任意のジェスチャーを複製して取り込み、Poseがあれば信頼性と共通表現を更新する。
+     * 手は指の特徴と信頼性の材料であり、腕IKの目標や時系列・意図の履歴を単独では更新しない。 */
     updateHand(
         snapshot: SincroHandMotionSnapshot,
         input: SincroMotionObserveOnlyPipelineInput,
     ): SincroMotionObserveOnlyPipelineUpdateResult {
         const timing = resolveObserveOnlyTiming(input);
-        this.state = cloneSincroMotionPipelineState({
+        this.state = {
             ...this.state,
-            hand: snapshot,
-            gesture: input.gesture ?? this.state.gesture,
+            hand: cloneSincroHandMotionSnapshot(snapshot),
+            gesture:
+                input.gesture === undefined ? this.state.gesture : structuredClone(input.gesture),
             updatedAtMs: timing.updatedAtMs,
-        });
+        };
         if (timing.status === "invalid_input") {
             return this.createResult("invalid_input", timing.reason);
         }
@@ -200,24 +192,19 @@ export class SincroMotionObserveOnlyPipeline {
         return this.createResult();
     }
 
-    /**
-     * Gesture callback から latest Gesture observation と Debug Console summary だけを更新する。
-     *
-     * GestureRecognizer raw label は reliability の圧縮 label と MotionIntent の説明入力に限定し、raw category
-     * list や handedness object は state に保存しない。Gesture callback 単独では Pose / canonical / temporal を
-     * 再計算せず、次の Pose / reliability 更新で同じ observation を使う。
-     */
+    /** 表示用のジェスチャーと、呼び出し元が正規化した意図入力を複製して保持する。
+     * この観測だけでは推定を進めず、次のPose・信頼性更新で参照する。 */
     updateGesture(
         snapshot: SincroGestureMotionSnapshot,
         input: SincroMotionObserveOnlyPipelineInput,
     ): SincroMotionObserveOnlyPipelineUpdateResult {
         const timing = resolveObserveOnlyTiming(input);
-        this.gestureSummarySource = snapshot;
-        this.state = cloneSincroMotionPipelineState({
+        this.gestureSummarySource = structuredClone(snapshot);
+        this.state = {
             ...this.state,
-            gesture: input.gesture,
+            gesture: input.gesture === undefined ? undefined : structuredClone(input.gesture),
             updatedAtMs: timing.updatedAtMs,
-        });
+        };
         return timing.status === "invalid_input"
             ? this.createResult("invalid_input", timing.reason)
             : this.createResult();
@@ -247,11 +234,11 @@ export class SincroMotionObserveOnlyPipeline {
             mediaTimeMs: input.mediaTimeMs,
             reliability,
         });
-        this.state = cloneSincroMotionPipelineState({
+        this.state = {
             ...this.state,
             reliability,
             canonical,
-        });
+        };
 
         if (!input.updateStatefulEstimators) {
             return;
@@ -265,66 +252,75 @@ export class SincroMotionObserveOnlyPipeline {
             mediaTimeMs: input.mediaTimeMs,
         });
         this.previousPose = {
-            pose: cloneSincroMotionPipelineState(this.state).pose,
+            // 取り込み時に複製したPoseは内部で変更しないため、前回値にも同じ参照を使う。
+            pose: this.state.pose,
             mediaTimeMs: input.mediaTimeMs,
             reliability,
         };
-        this.state = cloneSincroMotionPipelineState({
+        this.state = {
             ...this.state,
             temporal,
             intent,
-        });
+        };
     }
 
     private createResult(
         overrideStatus?: SincroMotionObserveOnlyAvailability,
         reason?: string,
     ): SincroMotionObserveOnlyPipelineUpdateResult {
-        const state = this.getState();
         return {
-            state,
-            summary: {
-                reliability: summarizeObserveOnlyStage(
-                    state.reliability,
-                    state.reliability?.timestamp.mediaTimeMs,
-                    overrideStatus,
-                    reason ?? (this.hasPose ? "reliability_not_computed" : "pose_not_available"),
-                    state.reliability?.warnings,
-                ),
-                canonical: summarizeObserveOnlyStage(
-                    state.canonical,
-                    state.canonical?.timestamp.mediaTimeMs,
-                    overrideStatus,
-                    reason ?? (this.hasPose ? "canonical_not_computed" : "pose_not_available"),
-                    state.canonical?.warnings,
-                ),
-                temporal: summarizeObserveOnlyStage(
-                    state.temporal,
-                    state.temporal?.timestamp.mediaTimeMs,
-                    overrideStatus,
-                    reason ?? (this.hasPose ? "temporal_not_computed" : "pose_not_available"),
-                    state.temporal?.warnings,
-                ),
-                intent: summarizeObserveOnlyStage(
-                    state.intent,
-                    state.intent?.timestamp.mediaTimeMs,
-                    overrideStatus,
-                    reason ?? (this.hasPose ? "intent_not_computed" : "pose_not_available"),
-                    state.intent?.warnings,
-                ),
-                hand: summarizeObserveOnlyHand(
-                    state.hand,
-                    overrideStatus,
-                    reason ?? "hand_not_available",
-                ),
-                gesture: summarizeObserveOnlyGesture(
-                    this.gestureSummarySource,
-                    overrideStatus,
-                    reason ?? "gesture_not_available",
-                ),
-                composerDryRun: summarizeComposerDryRun(state.composerDryRun),
-                updatedAtMs: state.updatedAtMs,
-            },
+            state: this.getState(),
+            summary: this.createSummary(overrideStatus, reason),
+        };
+    }
+
+    /** 要約に必要な値と警告配列だけを取り出し、状態全体の複製を避ける。 */
+    private createSummary(
+        overrideStatus?: SincroMotionObserveOnlyAvailability,
+        reason?: string,
+    ): SincroMotionObserveOnlySummary {
+        const state = this.state;
+        return {
+            reliability: summarizeObserveOnlyStage(
+                state.reliability,
+                state.reliability?.timestamp.mediaTimeMs,
+                overrideStatus,
+                reason ?? (this.hasPose ? "reliability_not_computed" : "pose_not_available"),
+                state.reliability?.warnings,
+            ),
+            canonical: summarizeObserveOnlyStage(
+                state.canonical,
+                state.canonical?.timestamp.mediaTimeMs,
+                overrideStatus,
+                reason ?? (this.hasPose ? "canonical_not_computed" : "pose_not_available"),
+                state.canonical?.warnings,
+            ),
+            temporal: summarizeObserveOnlyStage(
+                state.temporal,
+                state.temporal?.timestamp.mediaTimeMs,
+                overrideStatus,
+                reason ?? (this.hasPose ? "temporal_not_computed" : "pose_not_available"),
+                state.temporal?.warnings,
+            ),
+            intent: summarizeObserveOnlyStage(
+                state.intent,
+                state.intent?.timestamp.mediaTimeMs,
+                overrideStatus,
+                reason ?? (this.hasPose ? "intent_not_computed" : "pose_not_available"),
+                state.intent?.warnings,
+            ),
+            hand: summarizeObserveOnlyHand(
+                state.hand,
+                overrideStatus,
+                reason ?? "hand_not_available",
+            ),
+            gesture: summarizeObserveOnlyGesture(
+                this.gestureSummarySource,
+                overrideStatus,
+                reason ?? "gesture_not_available",
+            ),
+            composerDryRun: summarizeComposerDryRun(state.composerDryRun),
+            updatedAtMs: state.updatedAtMs,
         };
     }
 }

@@ -105,7 +105,8 @@ export function cloneSincroMotionPipelineState(
     };
 }
 
-function clonePipelineFaceMotionSnapshot(
+/** 観測の取り込みと状態の公開で、顔の警告・領域・頭部行列を呼び出し元から分離する。 */
+export function clonePipelineFaceMotionSnapshot(
     snapshot: SincroFaceMotionSnapshot,
 ): SincroFaceMotionSnapshot {
     const cloned = cloneFaceMotionSnapshot(snapshot);

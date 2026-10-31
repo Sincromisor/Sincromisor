@@ -1,0 +1,13 @@
+id: task-261031224616-reduce-observation-state-cloning
+title: 追跡観測から動作生成までの不要な状態複製を削減する
+category: character-sincro-motion
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-10-31
+closed_at: 2026-10-31
+legacy_ids: []
