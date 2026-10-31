@@ -57,8 +57,10 @@ type Stats struct {
 // そのaudioから将来生成されるmora eventを同時に破棄するが、既にtrackへ書いたaudioは巻き戻さない。
 // TelopSinkは後段のDataChannelキューへの受け渡し境界であり、Processorはその配送を所有しない。
 type Processor struct {
-	mu            sync.Mutex
-	sendMu        sync.Mutex
+	mu     sync.Mutex
+	sendMu sync.Mutex
+	// frameは20ms出力の作業配列。sendMu下で生成から同期Encode完了まで借用する。
+	frame         [frameSamples]int16
 	queue         []*queuedSpeech
 	queuedSamples int
 	// 以下の逐次受信状態もmuで守る。incomingは再生終了・中止後もterminal検証まで参照を保つ。

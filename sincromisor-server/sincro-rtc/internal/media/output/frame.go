@@ -63,9 +63,12 @@ func (p *Processor) writeFrame() error {
 // frame内で始まるmoraは次frameまで切り替えず、frame開始sampleを含むactive moraだけを返す。
 // 最終audio frameはsilence paddingするが、itemのsample accountingは実PCM分だけを消費する。
 // 発話IDは最終frameでキューから除去しても診断へ渡し、無音と診断PCMではnilを返す。
+// 返すPCMは次の呼出しまで有効な借用であり、呼出元はsendMuで符号化まで直列化する。
 func (p *Processor) nextFrame() ([]int16, *TelopPayload, *int64) {
 	p.mu.Lock()
-	frame := make([]int16, frameSamples)
+	frame := p.frame[:]
+	// 無音・不足待ち・末尾の端数へ前の音声を混ぜないよう、再利用前に全枠を消す。
+	clear(frame)
 	if len(p.echoPCM) > 0 {
 		consumed := min(frameSamples, len(p.echoPCM))
 		copy(frame, p.echoPCM[:consumed])
