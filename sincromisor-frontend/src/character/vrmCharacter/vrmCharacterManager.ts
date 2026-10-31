@@ -21,11 +21,6 @@ import {
 } from "../retargeting/sincroPoseRetargeter";
 import { summarizeComposerDryRun } from "../runtime/sincroMotionObserveOnlyPipelineTypes";
 import {
-    cloneSincroMotionPipelineState,
-    createDefaultSincroMotionPipelineState,
-    type SincroMotionPipelineState,
-} from "../runtime/sincroMotionPipelineState";
-import {
     type SincroVrmPoseComposerResult,
     SincroVrmPoseComposerService,
 } from "../runtime/sincroVrmPoseComposer";
@@ -80,8 +75,6 @@ export class VRMCharacterManager {
     private readonly sincroFaceRetargeter = new SincroFaceRetargeter();
     private readonly sincroPoseRetargeter = new SincroPoseRetargeter();
     private readonly poseComposer = new SincroVrmPoseComposerService();
-    private sincroMotionPipelineState: SincroMotionPipelineState =
-        createDefaultSincroMotionPipelineState();
     private latestBehaviorSnapshot?: CharacterBehaviorSnapshot;
     private motionElapsedSeconds = 0;
     // VRMロード完了後、UI層へthumbnailImageを通知するためのフック。
@@ -286,16 +279,8 @@ export class VRMCharacterManager {
             appendComposerApplicationWarnings(composerResult, fullApplication.warnings),
             fullApplication,
         );
-        this.sincroMotionPipelineState = cloneSincroMotionPipelineState({
-            ...this.sincroMotionPipelineState,
-            face: this.latestBehaviorSnapshot.faceMotion,
-            pose: poseMotionForRetarget,
-            composerDryRun: observedComposerResult,
-            updatedAtMs: nowMs,
-        });
-        this.diagnostics?.onComposerSummary?.(
-            summarizeComposerDryRun(this.sincroMotionPipelineState.composerDryRun),
-        );
+        // 要約は配列と適用情報を独立生成するため、診断用に顔・姿勢・合成結果を再複製しない。
+        this.diagnostics?.onComposerSummary?.(summarizeComposerDryRun(observedComposerResult));
         this.diagnostics?.onComposerResult?.(observedComposerResult);
         this.legBoneController?.update(this.motionElapsedSeconds);
         this.vrm?.update(deltaSeconds);

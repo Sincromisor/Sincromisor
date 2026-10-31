@@ -1,5 +1,5 @@
 import { MathUtils } from "three";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
     createHand,
     createIntent,
@@ -16,6 +16,43 @@ import {
 import { compose, SincroVrmPoseComposerService } from "../sincroVrmPoseComposer";
 
 describe("SincroVrmPoseComposerService", () => {
+    it("返却境界だけを複製し、返却値の変更を同時刻の再取得と次フレームへ持ち込まない", () => {
+        const service = new SincroVrmPoseComposerService();
+        const control = new SincroVrmPoseComposerService();
+        const input = {
+            frame: createActiveFrame(0),
+            profile: COMPLETE_PROFILE,
+            deltaSeconds: 1 / 60,
+            mediaTimeMs: 1000,
+        };
+        const expected = control.compose(input);
+        const clone = vi.spyOn(globalThis, "structuredClone");
+        let first: ReturnType<typeof service.compose>;
+        try {
+            first = service.compose(input);
+            expect(clone).toHaveBeenCalledTimes(1);
+        } finally {
+            clone.mockRestore();
+        }
+        if (!first.result) throw new Error("Expected available pose");
+        first.result.finalPose.leftUpperArm = eulerQuaternion(Math.PI, 0, 0);
+        first.result.ownedBones.length = 0;
+        first.warnings.push("consumer_change");
+        expect(service.compose(input)).toEqual(expected);
+
+        const nextInput = {
+            ...input,
+            frame: createActiveFrame(Math.PI),
+            mediaTimeMs: 1016,
+        };
+        const next = service.compose(nextInput);
+        expect(next).toEqual(control.compose(nextInput));
+        expect(next.result?.clampedBones).toContainEqual(
+            expect.objectContaining({ bone: "leftUpperArm", reason: "angular_velocity" }),
+        );
+        expect(expected.result?.finalPose.leftUpperArm).toEqual(eulerQuaternion(0, 0, 0));
+    });
+
     it("returns status without result when input is not ready", () => {
         const service = new SincroVrmPoseComposerService();
 

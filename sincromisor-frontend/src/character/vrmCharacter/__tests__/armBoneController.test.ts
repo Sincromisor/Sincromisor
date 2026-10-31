@@ -77,6 +77,45 @@ describe("ArmBoneController direct writer", () => {
 });
 
 describe("VRMCharacterManager full normalized pose application", () => {
+    it.each([true, false])("診断接続=%sでも表示用状態を再複製せず姿勢を適用する", (connected) => {
+        const finalPose = { leftUpperArm: eulerQuaternion(0.8, 0.1, 0) };
+        const composerResult = createAvailableComposerResult(finalPose);
+        const diagnostics = createDebugManagerDouble();
+        const { manager, setNormalizedPose } = createUpdateManagerDouble({
+            snapshot: createBehaviorSnapshot(),
+            composerResult,
+            armUpdate: vi.fn(),
+            rootStabilization: vi.fn(),
+        });
+        Object.assign(manager, { diagnostics: connected ? diagnostics : undefined });
+        const clone = vi.spyOn(globalThis, "structuredClone");
+        try {
+            manager.update(1000);
+            manager.update(1016);
+            expect(clone).not.toHaveBeenCalled();
+        } finally {
+            clone.mockRestore();
+        }
+        expect(setNormalizedPose).toHaveBeenCalledTimes(2);
+        expect(setNormalizedPose).toHaveBeenLastCalledWith(toVrmPose(finalPose));
+        if (connected) {
+            expect(diagnostics.onComposerSummary).toHaveBeenLastCalledWith({
+                status: "available",
+                warnings: [],
+                suppressedLayers: [],
+                clampedBones: [],
+                fullNormalizedPoseApplication: { applied: true, unavailableReason: undefined },
+            });
+            expect(diagnostics.onComposerResult).toHaveBeenLastCalledWith({
+                ...composerResult,
+                fullNormalizedPoseApplication: { applied: true, unavailableReason: undefined },
+            });
+        } else {
+            expect(diagnostics.onComposerSummary).not.toHaveBeenCalled();
+            expect(diagnostics.onComposerResult).not.toHaveBeenCalled();
+        }
+    });
+
     it("フレーム時刻をTimerへ渡し、VRM更新に秒単位の差分を使う", () => {
         const { manager } = createUpdateManagerDouble({
             snapshot: createBehaviorSnapshot(),
@@ -315,7 +354,6 @@ function createUpdateManagerDouble(options: {
             getAvatarMotionProfile: vi.fn(() => undefined),
         },
         poseComposer: { reset: vi.fn(), compose: vi.fn(() => options.composerResult) },
-        sincroMotionPipelineState: createDefaultSincroMotionPipelineState(),
         headBoneController: { update: vi.fn() },
         eyeBehaviorController: { update: vi.fn() },
         mouthMorphController: { update: vi.fn() },

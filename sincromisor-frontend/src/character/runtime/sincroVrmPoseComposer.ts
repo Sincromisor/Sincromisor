@@ -120,7 +120,8 @@ export class SincroVrmPoseComposerService {
             previousFinalPose,
             deltaSeconds: input.deltaSeconds,
         });
-        this.previousFinalPose = structuredClone(result.finalPose);
+        // 合成関数は前回姿勢を変更せず、外へ返す結果は末尾で複製する。内部では同じ姿勢を保持できる。
+        this.previousFinalPose = result.finalPose;
         this.previousFinger = layerResult.previousFinger;
         this.lastMediaTimeMs = input.mediaTimeMs;
         this.lastResult = {
