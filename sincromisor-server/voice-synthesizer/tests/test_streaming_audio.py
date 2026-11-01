@@ -128,7 +128,7 @@ def test_stream_cache_saved_only_after_complete(outcome):
             manager.save_generated_voice.call_args.args
         )
         result = _complete_result(cached_request, saved_query, saved_pcm)
-        assert cached_request.redis_key().startswith("streaming-pcm-v1/")
+        assert cached_request.redis_key().startswith("streaming-pcm-v2/0.1/0.1/")
         with wave.open(io.BytesIO(result.voice)) as wav:
             assert wav.readframes(4900) == first.pcm + tail[0].pcm
         manager.load_cached_voice.return_value = result

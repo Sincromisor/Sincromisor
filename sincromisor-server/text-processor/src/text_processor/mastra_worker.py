@@ -1,6 +1,5 @@
 """Mastra本文を既存の音声入力へ分割し、正常完了だけをチャット履歴へ確定する。"""
 
-import re
 from collections.abc import AsyncGenerator
 from contextlib import aclosing
 
@@ -9,6 +8,7 @@ from sincro_config.websocket_diagnostics import WebSocketDiagnostics
 from sincro_models import TextProcessorRequest, TextProcessorResult
 
 from .mastra_client import MastraClient
+from .speech_phrases import SpeechPhrases
 from .TextProcessor.TextProcessorWorker import TextProcessorWorker
 
 
@@ -45,7 +45,7 @@ class MastraTextProcessorWorker(TextProcessorWorker):
         self,
         request: TextProcessorRequest,
     ) -> AsyncGenerator[TextProcessorResult]:
-        """句読点ごとに送り、成功したHTTP終端後だけ末尾と確定結果を渡す。
+        """自然な句を送り、成功したHTTP終端後だけ保留末尾と確定結果を渡す。
 
         表示用履歴はLLMへ再投入しない。表情コードの保持と除去は共通結果モデルへ
         委ね、送信失敗・切断時にはaclosingからHTTP読取りまで取消を伝える。
@@ -56,19 +56,18 @@ class MastraTextProcessorWorker(TextProcessorWorker):
             speaker_name=self.speaker_name,
             request=request,
         )
-        buffer = ""
+        phrases = SpeechPhrases()
         async with aclosing(
             self.mastra_client.chat(
                 request.request_message.message, request.session_id
             ),
         ) as texts:
             async for text in texts:
-                # 区切り文字を前の文へ残し、最後の未完部分だけ次の断片へ持ち越す。
-                *sentences, buffer = re.split(r"(?<=[、。？！,.?!])", buffer + text)
-                for sentence in sentences:
+                for sentence in phrases.feed(text):
                     if response.append_response_message(sentence):
                         yield response
-        if buffer and response.append_response_message(buffer):
+        # 異常・取消・送信失敗で抜けた場合は、保留中の短い句も履歴も確定しない。
+        if phrases.pending and response.append_response_message(phrases.pending):
             yield response
         response.finalize()
         yield response

@@ -33,15 +33,21 @@ class StreamContext:
 
 
 class _StreamingCacheRequest(VoiceSynthesizerRequest):
-    """従来の24kHz WAV/Opusを保持し、48kHz完成WAVだけを別名前空間へ保存する。"""
+    """48kHz完成WAVを無音条件ごとに分離し、旧キーへは読取代替しない。"""
 
     def redis_key(self) -> str:
-        """48kHz区間生成の版をキーに含め、従来キャッシュとの誤命中を防ぐ。"""
-        return "streaming-pcm-v1/" + super().redis_key()
+        """前後無音の異なるPCM・モーラ列との誤命中を防ぐ。"""
+        return (
+            f"streaming-pcm-v2/{self.pre_phoneme_length}/{self.post_phoneme_length}/"
+            + super().redis_key()
+        )
 
     def s3_key(self) -> str:
         """保存形式は既存Resultのまま、48kHz合成専用の階層へ分離する。"""
-        return "streaming-pcm-v1/" + super().s3_key()
+        return (
+            f"streaming-pcm-v2/{self.pre_phoneme_length}/{self.post_phoneme_length}/"
+            + super().s3_key()
+        )
 
 
 def _cached_pcm(

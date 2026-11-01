@@ -22,8 +22,10 @@ func TestRecordedEngineArrivals(t *testing.T) {
 	var trace struct {
 		Segment float64
 		Chunks  []struct {
-			AtMS float64 `json:"at_ms"`
-			PCM  []byte
+			AtMS      float64 `json:"at_ms"`
+			RequestID int64   `json:"request_id"`
+			Final     bool
+			PCM       []byte
 		}
 	}
 	if err := json.Unmarshal(raw, &trace); err != nil {
@@ -31,6 +33,7 @@ func TestRecordedEngineArrivals(t *testing.T) {
 	}
 	p := newOutputWithFakes(t, &fakeOutputEncoder{}, newFakeOutputTrack(), newFakeOutputClock(), 0)
 	index, offset, played, gaps, gapFrames := 0, 0, 0, 0, 0
+	requestID, sequence := int64(1), int64(0)
 	firstVoice, firstPCM := -1, trace.Chunks[0].AtMS
 	ended, started, waiting := false, false, false
 	var expected, actual []int16
@@ -46,15 +49,27 @@ func TestRecordedEngineArrivals(t *testing.T) {
 			for i := range samples {
 				samples[i] = int16(binary.LittleEndian.Uint16(input.PCM[i*2:]))
 			}
-			if p.Stats().QueuedSamples >= StreamBufferSamples {
+			if !input.Final && p.Stats().QueuedSamples >= StreamBufferSamples {
 				break
 			}
-			enqueueChunk(t, p, streamChunk(1, 7, int64(index), offset, samples))
+			// 要求IDと終端がある到着列は、要求ごとの初期待機と末尾の端数も再現する。
+			// IDのない従来の到着列は、一要求の連続PCMとして引き続き再生する。
+			if input.RequestID > 0 && input.RequestID != requestID {
+				requestID, sequence, offset = input.RequestID, 0, 0
+			}
+			if input.Final {
+				enqueueChunk(t, p, streamEnd(requestID, 7, sequence, offset))
+			} else {
+				enqueueChunk(t, p, streamChunk(requestID, 7, sequence, offset, samples))
+			}
 			offset += len(samples)
+			sequence++
 			index++
 		}
 		if index == len(trace.Chunks) && !ended {
-			enqueueChunk(t, p, streamEnd(1, 7, int64(index), offset))
+			if !trace.Chunks[len(trace.Chunks)-1].Final {
+				enqueueChunk(t, p, streamEnd(requestID, 7, sequence, offset))
+			}
 			ended = true
 		}
 		before := p.Stats().QueuedSamples

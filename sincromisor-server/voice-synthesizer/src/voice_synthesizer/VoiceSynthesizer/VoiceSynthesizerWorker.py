@@ -61,6 +61,7 @@ class VoiceSynthesizerWorker:
             logging.getLogger("sincro.VoiceSynthesizerWorker")
         )
         request_number = 0
+        previous_speech_id: int | None = None
         while True:
             with diagnostic.operation("receive"):
                 pack = await ws.receive_bytes()
@@ -80,9 +81,16 @@ class VoiceSynthesizerWorker:
                 message=result.voice_text,
                 audio_format="audio/wav",
                 style_id=self.__voicevox_style_id,
-                pre_phoneme_length=0.1,
+                pre_phoneme_length=(
+                    0.1
+                    if result.response_message.speech_id != previous_speech_id
+                    else 0.0
+                ),
                 post_phoneme_length=0.1,
             )
+            # 合成の成否やキャッシュ命中ではなく、接続で受理した音声要求順を使う。
+            # 新しい発話と新接続は先頭無音を戻し、後無音と句読点の休止は残す。
+            previous_speech_id = request.speech_id
             # 接続内の各テキスト増分に番号を割り当て、同じ発話の別要求も区別する。
             request_number += 1
             fields = {

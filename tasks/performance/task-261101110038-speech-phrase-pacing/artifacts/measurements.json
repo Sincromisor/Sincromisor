@@ -1,0 +1,352 @@
+[
+  {
+    "case": "decimal",
+    "variant": "legacy",
+    "fragments": [
+      {
+        "text": "値は3.",
+        "released_ms": 160.0,
+        "kana": "ネワ'/サン'",
+        "samples": 37376,
+        "mora_samples": 37376,
+        "pre": 0.1,
+        "post": 0.1
+      },
+      {
+        "text": "14で、",
+        "released_ms": 320.0,
+        "kana": "ジュウ'/ヨ'ンデ",
+        "samples": 43008,
+        "mora_samples": 43008,
+        "pre": 0.1,
+        "post": 0.1
+      },
+      {
+        "text": "1,",
+        "released_ms": 400.0,
+        "kana": "イチ'",
+        "samples": 29696,
+        "mora_samples": 29696,
+        "pre": 0.1,
+        "post": 0.1
+      },
+      {
+        "text": "234.",
+        "released_ms": 560.0,
+        "kana": "ニヒャク'/サ'ンジュウ/ヨ'ン",
+        "samples": 63488,
+        "mora_samples": 63488,
+        "pre": 0.1,
+        "post": 0.1
+      },
+      {
+        "text": "5円です。",
+        "released_ms": 760.0,
+        "kana": "ゴ'エンデ_ス",
+        "samples": 43008,
+        "mora_samples": 43008,
+        "pre": 0.1,
+        "post": 0.1
+      }
+    ],
+    "boundary_silence_ms": [
+      249.85,
+      247.52,
+      251.62,
+      254.35
+    ],
+    "duration_ms": 4512.0,
+    "playback": "stream_arrival_test.go:104: ARRIVALS segment=0.43 first_pcm_ms=356.0 first_voice_ms=460 rebuffer_count=0 rebuffer_ms=0 complete_ms=4880 samples=216576"
+  },
+  {
+    "case": "decimal",
+    "variant": "min12",
+    "fragments": [
+      {
+        "text": "値は3.14で、",
+        "released_ms": 320.0,
+        "kana": "ネワ'/サンテン'/イチヨ'ンデ",
+        "samples": 78336,
+        "mora_samples": 78336,
+        "pre": 0.1,
+        "post": 0.1
+      },
+      {
+        "text": "1,234.5円です。",
+        "released_ms": 760.0,
+        "kana": "セ'ン/ニヒャク'/サ'ンジュウ/ヨ'ンテン/ゴ'エンデ_ス",
+        "samples": 116224,
+        "mora_samples": 116224,
+        "pre": 0.0,
+        "post": 0.1
+      }
+    ],
+    "boundary_silence_ms": [
+      151.88
+    ],
+    "duration_ms": 4053.3333333333335,
+    "playback": "stream_arrival_test.go:104: ARRIVALS segment=0.43 first_pcm_ms=527.4 first_voice_ms=640 rebuffer_count=0 rebuffer_ms=0 complete_ms=4600 samples=194560"
+  },
+  {
+    "case": "short",
+    "variant": "legacy",
+    "fragments": [
+      {
+        "text": "はい、",
+        "released_ms": 120.0,
+        "kana": "ハ'イ",
+        "samples": 25088,
+        "mora_samples": 25088,
+        "pre": 0.1,
+        "post": 0.1
+      },
+      {
+        "text": "今日は、",
+        "released_ms": 280.0,
+        "kana": "キョ'オワ",
+        "samples": 31744,
+        "mora_samples": 31744,
+        "pre": 0.1,
+        "post": 0.1
+      },
+      {
+        "text": "晴れなので、",
+        "released_ms": 520.0,
+        "kana": "ハレ'ナノデ",
+        "samples": 44032,
+        "mora_samples": 44032,
+        "pre": 0.1,
+        "post": 0.1
+      },
+      {
+        "text": "公園で、",
+        "released_ms": 680.0,
+        "kana": "コオエンデ'",
+        "samples": 43008,
+        "mora_samples": 43008,
+        "pre": 0.1,
+        "post": 0.1
+      },
+      {
+        "text": "ゆっくり、",
+        "released_ms": 880.0,
+        "kana": "ユック'リ",
+        "samples": 36352,
+        "mora_samples": 36352,
+        "pre": 0.1,
+        "post": 0.1
+      },
+      {
+        "text": "散歩しましょう。",
+        "released_ms": 1200.0,
+        "kana": "サンポ'/シマショ'オ",
+        "samples": 56832,
+        "mora_samples": 56832,
+        "pre": 0.1,
+        "post": 0.1
+      }
+    ],
+    "boundary_silence_ms": [
+      268.98,
+      237.19,
+      266.12,
+      250.9,
+      264.35
+    ],
+    "duration_ms": 4938.666666666667,
+    "playback": "stream_arrival_test.go:104: ARRIVALS segment=0.43 first_pcm_ms=308.8 first_voice_ms=420 rebuffer_count=0 rebuffer_ms=0 complete_ms=5300 samples=237056"
+  },
+  {
+    "case": "short",
+    "variant": "min12",
+    "fragments": [
+      {
+        "text": "はい、",
+        "released_ms": 120.0,
+        "kana": "ハ'イ",
+        "samples": 25088,
+        "mora_samples": 25088,
+        "pre": 0.1,
+        "post": 0.1
+      },
+      {
+        "text": "今日は、晴れなので、公園で、",
+        "released_ms": 680.0,
+        "kana": "キョ'オワ、ハレ'ナノデ、コオエンデ'",
+        "samples": 102400,
+        "mora_samples": 102400,
+        "pre": 0.0,
+        "post": 0.1
+      },
+      {
+        "text": "ゆっくり、散歩しましょう。",
+        "released_ms": 1200.0,
+        "kana": "ユック'リ、サンポ'/シマショ'オ",
+        "samples": 83456,
+        "mora_samples": 83456,
+        "pre": 0.0,
+        "post": 0.1
+      }
+    ],
+    "boundary_silence_ms": [
+      170.5,
+      148.42
+    ],
+    "duration_ms": 4394.666666666667,
+    "playback": "stream_arrival_test.go:104: ARRIVALS segment=0.43 first_pcm_ms=313.9 first_voice_ms=420 rebuffer_count=1 rebuffer_ms=40 complete_ms=4760 samples=210944"
+  },
+  {
+    "case": "short",
+    "variant": "min8",
+    "fragments": [
+      {
+        "text": "はい、",
+        "released_ms": 120.0,
+        "kana": "ハ'イ",
+        "samples": 25088,
+        "mora_samples": 25088,
+        "pre": 0.1,
+        "post": 0.1
+      },
+      {
+        "text": "今日は、晴れなので、",
+        "released_ms": 520.0,
+        "kana": "キョ'オワ、ハレ'ナノデ",
+        "samples": 65024,
+        "mora_samples": 65024,
+        "pre": 0.0,
+        "post": 0.1
+      },
+      {
+        "text": "公園で、ゆっくり、",
+        "released_ms": 880.0,
+        "kana": "コオエンデ'、ユック'リ",
+        "samples": 68608,
+        "mora_samples": 68608,
+        "pre": 0.0,
+        "post": 0.1
+      },
+      {
+        "text": "散歩しましょう。",
+        "released_ms": 1200.0,
+        "kana": "サンポ'/シマショ'オ",
+        "samples": 52224,
+        "mora_samples": 52224,
+        "pre": 0.0,
+        "post": 0.1
+      }
+    ],
+    "boundary_silence_ms": [
+      169.96,
+      174.65,
+      170.77
+    ],
+    "duration_ms": 4394.666666666667,
+    "playback": "stream_arrival_test.go:104: ARRIVALS segment=0.43 first_pcm_ms=291.7 first_voice_ms=400 rebuffer_count=0 rebuffer_ms=0 complete_ms=4720 samples=210944"
+  },
+  {
+    "case": "short",
+    "variant": "padding",
+    "fragments": [
+      {
+        "text": "はい、",
+        "released_ms": 120.0,
+        "kana": "ハ'イ",
+        "samples": 25088,
+        "mora_samples": 25088,
+        "pre": 0.1,
+        "post": 0.1
+      },
+      {
+        "text": "今日は、",
+        "released_ms": 280.0,
+        "kana": "キョ'オワ",
+        "samples": 27136,
+        "mora_samples": 27136,
+        "pre": 0.0,
+        "post": 0.1
+      },
+      {
+        "text": "晴れなので、",
+        "released_ms": 520.0,
+        "kana": "ハレ'ナノデ",
+        "samples": 39424,
+        "mora_samples": 39424,
+        "pre": 0.0,
+        "post": 0.1
+      },
+      {
+        "text": "公園で、",
+        "released_ms": 680.0,
+        "kana": "コオエンデ'",
+        "samples": 38400,
+        "mora_samples": 38400,
+        "pre": 0.0,
+        "post": 0.1
+      },
+      {
+        "text": "ゆっくり、",
+        "released_ms": 880.0,
+        "kana": "ユック'リ",
+        "samples": 31744,
+        "mora_samples": 31744,
+        "pre": 0.0,
+        "post": 0.1
+      },
+      {
+        "text": "散歩しましょう。",
+        "released_ms": 1200.0,
+        "kana": "サンポ'/シマショ'オ",
+        "samples": 52224,
+        "mora_samples": 52224,
+        "pre": 0.0,
+        "post": 0.1
+      }
+    ],
+    "boundary_silence_ms": [
+      180.27,
+      145.69,
+      169.98,
+      144.08,
+      170.48
+    ],
+    "duration_ms": 4458.666666666667,
+    "playback": "stream_arrival_test.go:104: ARRIVALS segment=0.43 first_pcm_ms=314.3 first_voice_ms=420 rebuffer_count=0 rebuffer_ms=0 complete_ms=4840 samples=214016"
+  },
+  {
+    "case": "sparse",
+    "variant": "legacy",
+    "fragments": [
+      {
+        "text": "今日は天気がよいので公園を歩きながらゆっくりとお話ししましょう。",
+        "released_ms": 1280.0,
+        "kana": "キョ'オワ/テ'ンキガ/ヨ'イノデ/コオエンオ'/アルキナ'ガラ/ユック'リト/オハナ_シ'/シマショ'オ",
+        "samples": 215552,
+        "mora_samples": 215552,
+        "pre": 0.1,
+        "post": 0.1
+      }
+    ],
+    "boundary_silence_ms": [],
+    "duration_ms": 4490.666666666667,
+    "playback": "stream_arrival_test.go:104: ARRIVALS segment=0.43 first_pcm_ms=1484.5 first_voice_ms=1640 rebuffer_count=0 rebuffer_ms=0 complete_ms=5980 samples=215552"
+  },
+  {
+    "case": "sparse",
+    "variant": "min12",
+    "fragments": [
+      {
+        "text": "今日は天気がよいので公園を歩きながらゆっくりとお話ししましょう。",
+        "released_ms": 1280.0,
+        "kana": "キョ'オワ/テ'ンキガ/ヨ'イノデ/コオエンオ'/アルキナ'ガラ/ユック'リト/オハナ_シ'/シマショ'オ",
+        "samples": 215552,
+        "mora_samples": 215552,
+        "pre": 0.1,
+        "post": 0.1
+      }
+    ],
+    "boundary_silence_ms": [],
+    "duration_ms": 4490.666666666667,
+    "playback": "stream_arrival_test.go:104: ARRIVALS segment=0.43 first_pcm_ms=1493.8 first_voice_ms=1640 rebuffer_count=0 rebuffer_ms=0 complete_ms=5980 samples=215552"
+  }
+]

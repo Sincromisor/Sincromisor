@@ -326,12 +326,18 @@ def test_websocket_failure_closes_http(failure: str) -> None:
                 await asyncio.Future()
                 raise AssertionError("取消後は受信しない")
 
-            async def send_bytes(self, _: bytes) -> None:
+            async def send_bytes(self, pack: bytes) -> None:
+                result = TextProcessorResult.from_msgpack(pack)
+                assert result.voice_text == "途中。"
+                assert not result.end_of_response
+                assert len(result.history.messages) == 2
                 sent.set()
                 if failure == "send":
                     raise RuntimeError("send failed")
 
-        async with _server([_event("text-delta", {"text": "途中。"})], hold=True) as (
+        async with _server(
+            [_event("text-delta", {"text": "途中。短く、未完"})], hold=True
+        ) as (
             url,
             _,
             disconnected,
