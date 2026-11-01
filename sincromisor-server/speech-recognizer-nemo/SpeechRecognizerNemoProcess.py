@@ -21,6 +21,8 @@ from sincro_config import (
 from sincro_config.websocket_diagnostics import WebSocketDiagnostics
 from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
 from speech_recognizer_nemo.models import SpeechRecognizerNemoProcessArgument
+from speech_recognizer_nemo.recognition_storage import RecognitionStorage
+from speech_recognizer_nemo.recognition_storage_writer import RecognitionStorageWriter
 from speech_recognizer_nemo.recognizer_execution import RecognizerExecution
 from speech_recognizer_nemo.SpeechRecognizerNemo import SpeechRecognizerNemoWorker
 from speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerS3Client import (
@@ -83,22 +85,7 @@ class SpeechRecognizerNemoProcess:
             diagnostic = WebSocketDiagnostics(self.__logger)
             diagnostic.start()
             self.__sessions += 1
-            s3_client: SpeechRecognizerS3Client | None = None
             try:
-                s3_description: ServiceDescription | None = (
-                    self.sd_referrer.get_random_worker(worker_type="SincroS3")
-                )
-                if (
-                    s3_description is not None
-                    and self.__args.s3_access_key
-                    and self.__args.s3_secret_key
-                ):
-                    s3_client = SpeechRecognizerS3Client(
-                        s3_host=s3_description.service_address,
-                        s3_port=s3_description.service_port,
-                        access_key=self.__args.s3_access_key,
-                        secret_key=self.__args.s3_secret_key,
-                    )
                 with diagnostic.operation("accept"):
                     await ws.accept()
                 current_speech_id = -1
@@ -142,7 +129,7 @@ class SpeechRecognizerNemoProcess:
                         with diagnostic.operation("process"):
                             result: SpeechRecognizerResult = (
                                 await speech_recognizer.recognize(
-                                    spe_result=extractor_result, s3_client=s3_client
+                                    spe_result=extractor_result
                                 )
                             )
                     with diagnostic.operation("send"):
@@ -155,11 +142,6 @@ class SpeechRecognizerNemoProcess:
             else:
                 diagnostic.finish()
             finally:
-                if s3_client is not None:
-                    try:
-                        s3_client.close()
-                    except Exception as error:  # noqa: BLE001  # reason: 接続境界で安全な原因を記録し、他接続へ例外を波及させない。
-                        diagnostic.cleanup_failed(error)
                 self.__sessions -= 1
                 # 切断済みの接続は再度closeせず、後始末の失敗も主原因と別に記録する。
                 if (
@@ -171,18 +153,43 @@ class SpeechRecognizerNemoProcess:
                     except Exception as error:  # noqa: BLE001  # reason: 接続境界で安全な原因を記録し、他接続へ例外を波及させない。
                         diagnostic.cleanup_failed(error)
 
-        speech_recognizer = RecognizerExecution(
-            partial(
-                SpeechRecognizerNemoWorker,
-                voice_log_dir=self.__args.voice_log_dir,
-                proper_noun_enable=self.__args.proper_noun_enable,
-                proper_noun_dict_path=self.__args.proper_noun_dict_path,
-                proper_noun_context_biasing_enable=self.__args.proper_noun_context_biasing_enable,
-                proper_noun_context_biasing_beam_size=self.__args.proper_noun_context_biasing_beam_size,
-                proper_noun_nbest_enable=self.__args.proper_noun_nbest_enable,
-                proper_noun_nbest_beam_size=self.__args.proper_noun_nbest_beam_size,
+        def create_s3() -> SpeechRecognizerS3Client | None:
+            """保存専用スレッドから発見し、接続と独立したHTTPプールを生成する。"""
+            description: ServiceDescription | None = self.sd_referrer.get_random_worker(
+                worker_type="SincroS3"
             )
+            if (
+                description is None
+                or not self.__args.s3_access_key
+                or not self.__args.s3_secret_key
+            ):
+                return None
+            return SpeechRecognizerS3Client(
+                s3_host=description.service_address,
+                s3_port=description.service_port,
+                access_key=self.__args.s3_access_key,
+                secret_key=self.__args.s3_secret_key,
+            )
+
+        storage = RecognitionStorage(
+            RecognitionStorageWriter(self.__args.voice_log_dir, create_s3)
         )
+        try:
+            speech_recognizer = RecognizerExecution(
+                partial(
+                    SpeechRecognizerNemoWorker,
+                    proper_noun_enable=self.__args.proper_noun_enable,
+                    proper_noun_dict_path=self.__args.proper_noun_dict_path,
+                    proper_noun_context_biasing_enable=self.__args.proper_noun_context_biasing_enable,
+                    proper_noun_context_biasing_beam_size=self.__args.proper_noun_context_biasing_beam_size,
+                    proper_noun_nbest_enable=self.__args.proper_noun_nbest_enable,
+                    proper_noun_nbest_beam_size=self.__args.proper_noun_nbest_beam_size,
+                ),
+                storage=storage,
+            )
+        except BaseException:
+            storage.close()
+            raise
         try:
             uvicorn.run(
                 app, host=self.__args.host, port=self.__args.port, log_config=None
@@ -191,7 +198,10 @@ class SpeechRecognizerNemoProcess:
             pass
         finally:
             event.set()
-            speech_recognizer.close()
+            try:
+                speech_recognizer.close()
+            finally:
+                storage.close()
 
 
 if __name__ == "__main__":

@@ -85,6 +85,7 @@ func TestPipelineStageLogsIdentifyPartialRecognizerStop(t *testing.T) {
 	set.extractor.onPCM = func([]byte) {
 		set.extractor.results <- protocol.ExtractorResult{
 			SessionID: "session-partial-stage-log", SpeechID: 1, SequenceID: 1, Confirmed: false,
+			Voice: []byte{}, VoiceDType: "int16", VoiceSamplingRate: 16000, VoiceSampleBytes: 2, VoiceChannels: 1,
 		}
 	}
 	coordinator.mu.Lock()
@@ -281,7 +282,7 @@ func TestRuntimeFailureLogsIdentifyOperationAndPeer(t *testing.T) {
 				set.extractor.results <- protocol.ExtractorResult{SessionID: "wrong-secret", SpeechID: 7, SequenceID: 1}
 			case "send_extraction":
 				set.recognizer.sendError = errors.New("secret-write-error")
-				set.extractor.results <- protocol.ExtractorResult{SessionID: "runtime-session", SpeechID: 7, SequenceID: 1}
+				set.extractor.results <- extractionForTest("runtime-session", 7, 1, false, []byte{})
 			case "publish_audio":
 				for range outputQueueCapacity {
 					c.synthOut <- Output[protocol.SynthesizerChunk]{}

@@ -52,22 +52,21 @@ def stream_log(
             },
         )
         raise
-    if manager.log_synthesis and context.result is not None:
-        result = context.result
+    if manager.log_synthesis and context.query is not None:
+        # 保存省略時も、完成WAVを作らず生成条件と長さの成功ログを維持する。
+        query = context.query
         manager.logger.info(
             {
                 "event": "synthesis_result",
                 **ids,
-                "text": result.message,
+                "text": request.message,
                 "style_id": request.style_id,
-                "audio_format": result.audio_format,
-                "parameters": result.query.model_dump(
-                    exclude={"accent_phrases", "kana"}
-                ),
+                "audio_format": "audio/wav",
+                "parameters": query.model_dump(exclude={"accent_phrases", "kana"}),
                 "cache": context.cache_source,
                 "outcome": "success",
                 "query_time": perf_counter() - started,
-                "speaking_time": result.speaking_time,
+                "speaking_time": context.speaking_time,
             }
         )
     manager.logger.info(

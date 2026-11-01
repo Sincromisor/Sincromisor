@@ -77,7 +77,7 @@ def test_worker_close_reaches_session(monkeypatch):
     session = Mock()
     monkeypatch.setattr(requests, "Session", Mock(return_value=session))
     worker = VoiceSynthesizerWorker(
-        "unused", 1, 3, "unused", 1, "unused", 1, "key", "secret"
+        "unused", 1, 3, "unused", 1, "unused", 1, "key", "secret", cache_writer=Mock()
     )
     worker.close()
     session.close.assert_called_once()
@@ -93,7 +93,16 @@ def test_failure_before_session_creation(monkeypatch):
     monkeypatch.setattr(requests, "Session", session)
     with pytest.raises(ValueError, match="initialization failed"):
         VoiceSynthesizerWorker(
-            "unused", 1, 3, "unused", 1, "unused", 1, "key", "secret"
+            "unused",
+            1,
+            3,
+            "unused",
+            1,
+            "unused",
+            1,
+            "key",
+            "secret",
+            cache_writer=Mock(),
         )
     session.assert_not_called()
 
@@ -144,7 +153,16 @@ def test_worker_two_requests_use_one_session(endpoint, monkeypatch, fail):
         pass
 
     worker = VoiceSynthesizerWorker(
-        "127.0.0.1", port, 3, "unused", 1, "unused", 1, "key", "secret"
+        "127.0.0.1",
+        port,
+        3,
+        "unused",
+        1,
+        "unused",
+        1,
+        "key",
+        "secret",
+        cache_writer=Mock(),
     )
     try:
         if fail:

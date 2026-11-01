@@ -18,19 +18,17 @@ class Worker:
         self.calls = []
         self.decoding = "default"
 
-    def recognize(self, request, client):
+    def recognize(self, request):
         assert threading.get_ident() == self.thread
         assert self.decoding == "default"
-        assert not client.closed
         self.calls.append(request.session_id)
         self.started.set()
         self.decoding = "temporary"
         try:
             assert self.release.wait(3)
-            assert not client.closed
             if request.session_id == "failure":
                 raise ValueError("decode failed")
-            return request.session_id
+            return request.session_id, None
         finally:
             self.decoding = "default"
 
@@ -41,11 +39,10 @@ def test_serial_execution_cancellation_and_failure(caplog):
     async def run():
         execution = RecognizerExecution(Worker)
         worker = execution.worker
-        client = type("Client", (), {"closed": False})()
         try:
             running = asyncio.create_task(
                 execution.recognize(
-                    SpeechExtractorResult(start_at=0, session_id="first"), client
+                    SpeechExtractorResult(start_at=0, session_id="first")
                 )
             )
             async with asyncio.timeout(3):
@@ -53,7 +50,7 @@ def test_serial_execution_cancellation_and_failure(caplog):
                     await asyncio.sleep(0.001)
             queued = asyncio.create_task(
                 execution.recognize(
-                    SpeechExtractorResult(start_at=0, session_id="cancelled"), client
+                    SpeechExtractorResult(start_at=0, session_id="cancelled")
                 )
             )
             await asyncio.sleep(0)
@@ -71,25 +68,24 @@ def test_serial_execution_cancellation_and_failure(caplog):
             assert worker.decoding == "default"
             with pytest.raises(ValueError, match="decode failed"):
                 await execution.recognize(
-                    SpeechExtractorResult(start_at=0, session_id="failure"), client
+                    SpeechExtractorResult(start_at=0, session_id="failure")
                 )
             assert await asyncio.gather(
                 execution.recognize(
-                    SpeechExtractorResult(start_at=0, session_id="second"), client
+                    SpeechExtractorResult(start_at=0, session_id="second")
                 ),
                 execution.recognize(
-                    SpeechExtractorResult(start_at=0, session_id="third"), client
+                    SpeechExtractorResult(start_at=0, session_id="third")
                 ),
             ) == ["second", "third"]
             assert worker.calls == ["first", "failure", "second", "third"]
-            client.closed = True
         finally:
             worker.release.set()
             execution.close()
         assert execution.worker is None
         with pytest.raises(RuntimeError, match="closed"):
             await execution.recognize(
-                SpeechExtractorResult(start_at=0, session_id="late"), client
+                SpeechExtractorResult(start_at=0, session_id="late")
             )
 
     asyncio.run(run())
@@ -106,10 +102,10 @@ def test_wait_and_execution_timing(monkeypatch, caplog, fail):
     monkeypatch.setattr(recognizer_execution, "perf_counter", lambda: next(ticks))
 
     class TimedWorker:
-        def recognize(self, request, client):
+        def recognize(self, request):
             if fail:
                 raise ValueError("private-error")
-            return "private-result"
+            return "private-result", None
 
     async def run():
         execution = RecognizerExecution(TimedWorker)
@@ -123,9 +119,9 @@ def test_wait_and_execution_timing(monkeypatch, caplog, fail):
             )
             if fail:
                 with pytest.raises(ValueError, match="private-error"):
-                    await execution.recognize(request, None)
+                    await execution.recognize(request)
             else:
-                assert await execution.recognize(request, None) == "private-result"
+                assert await execution.recognize(request) == "private-result"
         finally:
             execution.close()
 

@@ -1,7 +1,5 @@
 """完成WAVキャッシュと逐次PCMを同じ区間契約へ接続する。保存は正常EOF後に限る。"""
 
-import io
-import wave
 from collections.abc import Generator, Iterator
 from dataclasses import dataclass
 from threading import Event
@@ -30,6 +28,8 @@ class StreamContext:
     operation: str = "process"
     cache_source: str = "generated"
     result: VoiceSynthesizerResult | None = None
+    query: VoiceVoxQuery | None = None
+    speaking_time: float = 0.0
 
 
 class _StreamingCacheRequest(VoiceSynthesizerRequest):
@@ -54,26 +54,6 @@ def _cached_pcm(
     )
     for pcm in iter_pcm(parts):
         yield result.query, pcm
-
-
-def _complete_result(
-    request: VoiceSynthesizerRequest, query: VoiceVoxQuery, pcm: bytearray
-) -> VoiceSynthesizerResult:
-    """全区間の検証後にだけPCMを完成WAVへ包み、既存の保存DTOへ戻す。"""
-    output = io.BytesIO()
-    with wave.open(output, "wb") as audio:
-        audio.setnchannels(1)
-        audio.setsampwidth(2)
-        audio.setframerate(48_000)
-        audio.writeframes(pcm)
-    return VoiceSynthesizerResult(
-        message=request.message,
-        query=query,
-        mora_queue=build_streaming_mora_queue(query),
-        speaking_time=len(pcm) / 96_000,
-        voice=output.getvalue(),
-        audio_format="audio/wav",
-    )
 
 
 def stream_voice(
@@ -115,10 +95,16 @@ def stream_voice(
         source.close()
     if query is None or context.cancelled.is_set():
         raise InterruptedError("Synthesis incomplete or cancelled")
+    # 成功ログは音声を含まないメタデータで成立させ、満杯時のWAV生成を避ける。
+    context.query = query
+    context.speaking_time = offset / 48_000
     if cached is None:
-        complete = _complete_result(request, query, full_pcm)
-        context.result = complete
-        manager.save_cached_voice(cache_request, complete, context)
+        manager.save_generated_voice(cache_request, query, full_pcm, context)
+    elif context.cache_source == "s3":
+        # S3命中も全WAVを検証してから昇格し、破損や取消済み音声をRedisへ広げない。
+        manager.save_cached_voice(cache_request, cached, context)
+    if context.cancelled.is_set():
+        raise InterruptedError("Synthesis cancelled")
     yield VoiceSynthesizerChunk(
         request_id=context.request_id,
         speech_id=request.speech_id,

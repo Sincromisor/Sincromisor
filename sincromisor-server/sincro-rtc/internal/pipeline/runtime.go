@@ -22,7 +22,9 @@ func (c *Coordinator) pcmLoop(work *generationWork, extractor ExtractorClient) {
 	}
 }
 
-func (c *Coordinator) extractorLoop(work *generationWork, extractor ExtractorClient, recognizer RecognizerClient) {
+// extractorLoop は全抽出入力を順序検証して世代の保留へ渡す。認識への送信待ちは
+// recognitionSendLoopが所有するため、ここでは次の差分も受信して未送信分を結合できる。
+func (c *Coordinator) extractorLoop(work *generationWork, extractor ExtractorClient) {
 	for {
 		select {
 		case <-work.ctx.Done():
@@ -31,7 +33,7 @@ func (c *Coordinator) extractorLoop(work *generationWork, extractor ExtractorCli
 			if !ok {
 				return
 			}
-			accepted, current, err := c.acceptExtraction(work.number, work.conv, value)
+			_, current, err := c.acceptExtraction(work.number, work.conv, value)
 			if !current {
 				continue
 			}
@@ -39,14 +41,12 @@ func (c *Coordinator) extractorLoop(work *generationWork, extractor ExtractorCli
 				c.runtimeFailure(work, pclient.ServiceExtractor, "validate_extraction", "invalid_data", "speech_id", value.SpeechID, "sequence_id", value.SequenceID)
 				return
 			}
-			if err := recognizer.SendExtraction(work.ctx, accepted); err != nil {
-				c.runtimeFailure(work, pclient.ServiceRecognizer, "send_extraction", "write_failed", "speech_id", value.SpeechID, "sequence_id", value.SequenceID)
-				return
-			}
 		}
 	}
 }
 
+// recognizerLoop は実送信要求だけを照合し、受理で次の送信を起こしてから表示を更新する。
+// 確定結果だけを履歴と文章処理へ渡し、暫定は同じメッセージの更新に使う。
 func (c *Coordinator) recognizerLoop(work *generationWork, recognizer RecognizerClient, processor ProcessorClient) {
 	for {
 		select {

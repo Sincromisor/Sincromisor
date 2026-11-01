@@ -100,6 +100,7 @@ def test_central_log_fixture(monkeypatch):
         1,
         "fixture",
         "private-key",
+        cache_writer=Mock(),
     )
     diagnostic = WebSocketDiagnostics(
         logging.getLogger("sincro.VoiceSynthesizerWorker")

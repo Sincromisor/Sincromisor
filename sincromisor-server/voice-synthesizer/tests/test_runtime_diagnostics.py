@@ -4,7 +4,9 @@ import io
 import json
 import logging
 import subprocess
+from threading import Event
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import msgpack
 import pytest
@@ -13,6 +15,9 @@ from botocore.response import StreamingBody
 from redis.exceptions import ConnectionError as RedisConnectionError
 from sincro_config.SincromisorLoggerConfig import JsonLogFormatter
 from sincro_models import SpeechExtractorResult, VoiceSynthesizerRequest
+from test_cache_promotion import cache_result
+from test_cache_writer import make_writer
+from voice_synthesizer.voice_stream import StreamContext
 from voice_synthesizer.VoiceSynthesizer import VoiceCacheManager
 from voice_synthesizer.VoiceSynthesizer.VoiceSynthesizer import VoiceSynthesizer
 
@@ -83,7 +88,7 @@ def test_encoder_failure_and_missing_command(tmp_path, monkeypatch, caplog):
         ),
     ],
 )
-def test_s3_read_fallback_is_classified(error, reason, caplog):
+def test_s3_read_fallback_is_classified(error, reason, caplog, monkeypatch):
     caplog.set_level(logging.INFO)
     manager = object.__new__(VoiceCacheManager)
     manager.logger = logging.getLogger("sincro.test_cache")
@@ -95,15 +100,17 @@ def test_s3_read_fallback_is_classified(error, reason, caplog):
     manager.bucket_name = "private-bucket"
     request = VoiceSynthesizerRequest(message="private-body", speech_id=8, style_id=3)
     ids = {"session_id": "session-a", "speech_id": 8}
-    assert manager._VoiceCacheManager__get_voice_s3(request, ids) is None  # noqa: SLF001 - 保存境界の代替動作を直接検証する。
+    assert manager._VoiceCacheManager__get_voice_s3(request, ids) is None
     row = json.loads(JsonLogFormatter().format(caplog.records[-1]))
     assert row["peer"] == "s3"
     assert row["reason"] == reason
     assert row["outcome"] == ("miss" if reason == "not_found" else "failed")
     assert "private-" not in json.dumps(row)
-    manager._VoiceCacheManager__put_voice_s3(  # noqa: SLF001 - 保存失敗の継続を直接検証する。
-        request, SimpleNamespace(to_msgpack=lambda: b"private-audio"), ids
-    )
+    writer, _, _ = make_writer(monkeypatch, s3=Mock(put_object=fail))
+    try:
+        assert writer.submit(request, cache_result(), StreamContext(1, Event(), ids))
+    finally:
+        writer.close()
     row = json.loads(JsonLogFormatter().format(caplog.records[-1]))
     assert row["stage"] == "write"
     assert row["outcome"] == "failed"
@@ -111,7 +118,7 @@ def test_s3_read_fallback_is_classified(error, reason, caplog):
     assert "private-" not in json.dumps(row)
 
 
-def test_corrupt_cache_and_redis_connection(caplog):
+def test_corrupt_cache_and_redis_connection(caplog, monkeypatch):
     caplog.set_level(logging.INFO)
     manager = object.__new__(VoiceCacheManager)
     manager.logger = logging.getLogger("sincro.test_cache")
@@ -135,12 +142,16 @@ def test_corrupt_cache_and_redis_connection(caplog):
 
     manager.redis = SimpleNamespace(get=fail, set=fail)
     with pytest.raises(RedisConnectionError):
-        manager._VoiceCacheManager__get_voice_redis(request, ids)  # noqa: SLF001 - 読取失敗の伝播を検証する。
+        manager._VoiceCacheManager__get_voice_redis(request, ids)
     assert caplog.records[-1].msg["reason"] == "connection_failed"
     # 書込失敗は生成結果を返す既存動作を維持する。
-    manager._VoiceCacheManager__put_voice_redis(  # noqa: SLF001 - 書込失敗時の継続を検証する。
-        request, SimpleNamespace(to_msgpack=lambda: b"private-audio"), ids
-    )
+    writer, _, _ = make_writer(monkeypatch, redis=Mock(set=fail))
+    try:
+        assert writer.submit(
+            request, cache_result(), StreamContext(1, Event(), ids), redis_only=True
+        )
+    finally:
+        writer.close()
     assert caplog.records[-1].msg["stage"] == "write"
     assert all(
         "private-" not in JsonLogFormatter().format(record)

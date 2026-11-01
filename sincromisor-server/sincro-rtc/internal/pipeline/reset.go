@@ -105,6 +105,7 @@ func (c *Coordinator) requestReset(generation uint64, service pclient.Service, c
 		oldWork.input.close()
 		_ = oldSet.Close()
 		oldWork.wg.Wait()
+		oldWork.conv.clearRecognition()
 		// 送信が再初期化と交差しても成功数を取りこぼさないよう、旧workerの回収後に確定する。
 		unreceived := uint64(0)
 		if oldWork.synthesisSent > oldWork.synthesisReceived {

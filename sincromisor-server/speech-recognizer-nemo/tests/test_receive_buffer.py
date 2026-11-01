@@ -6,13 +6,15 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 from sincro_config import ServiceDiscoveryReferrer, ServiceDiscoveryReporter
 from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
 from speech_recognizer_nemo import recognizer_execution
 from starlette.websockets import WebSocketState
 
 
-def test_receive_buffer_capacity_and_speech_ids(monkeypatch):
+@pytest.mark.parametrize("coalesced", [False, True])
+def test_receive_buffer_capacity_and_speech_ids(monkeypatch, coalesced):
     requests = [
         SpeechExtractorResult(
             session_id="a",
@@ -27,13 +29,18 @@ def test_receive_buffer_capacity_and_speech_ids(monkeypatch):
             1,
         )
     ]
+    if coalesced:
+        # 送信中の最初の差分を除き、同じ発話の未送信分だけを末尾通番で代表する。
+        combined = requests[3].model_copy(deep=True)
+        combined.voice = np.concatenate([request.voice for request in requests[1:4]])
+        requests = [requests[0], combined, requests[4]]
     received, sent, backing = [], [], []
 
     class Execution:
-        def __init__(self, factory):
+        def __init__(self, factory, storage):
             pass
 
-        async def recognize(self, spe_result, s3_client):
+        async def recognize(self, spe_result):
             voice = spe_result.voice
             assert voice.flags.writeable
             assert voice.flags.c_contiguous
@@ -115,6 +122,7 @@ def test_receive_buffer_capacity_and_speech_ids(monkeypatch):
             request.sequence_id,
             request.confirmed,
         )
-    assert backing[1] is backing[2]
-    assert backing[2] is not backing[3]
-    assert backing[3] is backing[4]
+    if not coalesced:
+        assert backing[1] is backing[2]
+        assert backing[2] is not backing[3]
+        assert backing[3] is backing[4]

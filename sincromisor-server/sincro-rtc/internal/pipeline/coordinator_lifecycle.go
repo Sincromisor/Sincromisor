@@ -76,6 +76,7 @@ func (c *Coordinator) Close() error {
 		}
 		if work != nil {
 			work.wg.Wait()
+			work.conv.clearRecognition()
 		}
 		c.wg.Wait()
 		// generation workerのjoinは通常producerを全て覆う。それに加えてoutputMuを

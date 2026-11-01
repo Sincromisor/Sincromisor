@@ -1,0 +1,13 @@
+id: task-261101110037-dialogue-endpoint-evaluation
+title: MediaPipeの入力窓と対話の発話終端の評価基準を確定する
+category: performance
+status: blocked
+depends_on: []
+superseded_by: null
+review: APPROVED
+reviewed_sha: null
+verdict: null
+attempts: 1
+created_at: 2026-11-01
+closed_at: null
+legacy_ids: []

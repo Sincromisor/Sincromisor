@@ -1,0 +1,161 @@
+{
+  "source_sha256": "8fe42b2c89fe500726181cff81efd4235cd1d96b96b82b2a786a62298e4cd10b",
+  "resampled_samples": 78166,
+  "results": {
+    "original": {
+      "request_count": 25,
+      "final_text_sha256": "20a15ae5c7551b89db05f8713661a55cff83a447f7a0a539c80e063e731b5076",
+      "timings": [
+        {
+          "samples": 3200,
+          "elapsed_ms": 18947.196975001134,
+          "updated_ms": 18947.202794952318
+        },
+        {
+          "samples": 6400,
+          "elapsed_ms": 502.30549299158156,
+          "updated_ms": 19449.53284796793
+        },
+        {
+          "samples": 9600,
+          "elapsed_ms": 392.9580440162681,
+          "updated_ms": 19842.521251994185
+        },
+        {
+          "samples": 12800,
+          "elapsed_ms": 576.0497850133106,
+          "updated_ms": 20418.6028369586
+        },
+        {
+          "samples": 16000,
+          "elapsed_ms": 484.4569549895823,
+          "updated_ms": 20903.14997197129
+        },
+        {
+          "samples": 19200,
+          "elapsed_ms": 542.4084280384704,
+          "updated_ms": 21445.610679977108
+        },
+        {
+          "samples": 22400,
+          "elapsed_ms": 414.9390530074015,
+          "updated_ms": 21860.616282967385
+        },
+        {
+          "samples": 25600,
+          "elapsed_ms": 382.0174959837459,
+          "updated_ms": 22242.66266898485
+        },
+        {
+          "samples": 28800,
+          "elapsed_ms": 401.6480499994941,
+          "updated_ms": 22644.33675899636
+        },
+        {
+          "samples": 32000,
+          "elapsed_ms": 402.5007390300743,
+          "updated_ms": 23046.864177973475
+        },
+        {
+          "samples": 35200,
+          "elapsed_ms": 487.2135989717208,
+          "updated_ms": 23534.110616950784
+        },
+        {
+          "samples": 38400,
+          "elapsed_ms": 471.7990679782815,
+          "updated_ms": 24005.93881495297
+        },
+        {
+          "samples": 41600,
+          "elapsed_ms": 507.9114419640973,
+          "updated_ms": 24513.88364698505
+        },
+        {
+          "samples": 44800,
+          "elapsed_ms": 423.97529899608344,
+          "updated_ms": 24937.88769596722
+        },
+        {
+          "samples": 48000,
+          "elapsed_ms": 432.9723099945113,
+          "updated_ms": 25370.89327594731
+        },
+        {
+          "samples": 51200,
+          "elapsed_ms": 525.8236979716457,
+          "updated_ms": 25896.750022948254
+        },
+        {
+          "samples": 54400,
+          "elapsed_ms": 517.5127570400946,
+          "updated_ms": 26414.294939953834
+        },
+        {
+          "samples": 57600,
+          "elapsed_ms": 514.2519020009786,
+          "updated_ms": 26928.577211976517
+        },
+        {
+          "samples": 60800,
+          "elapsed_ms": 504.3143450166099,
+          "updated_ms": 27432.923586980905
+        },
+        {
+          "samples": 64000,
+          "elapsed_ms": 542.4658940173686,
+          "updated_ms": 27975.41936096968
+        },
+        {
+          "samples": 67200,
+          "elapsed_ms": 543.645630008541,
+          "updated_ms": 28519.099050958175
+        },
+        {
+          "samples": 70400,
+          "elapsed_ms": 552.4045460042544,
+          "updated_ms": 29071.533586946316
+        },
+        {
+          "samples": 73600,
+          "elapsed_ms": 599.1088289883919,
+          "updated_ms": 29670.675035973545
+        },
+        {
+          "samples": 76800,
+          "elapsed_ms": 651.8833220470697,
+          "updated_ms": 30322.592107986566
+        },
+        {
+          "samples": 78166,
+          "elapsed_ms": 763.2133120205253,
+          "updated_ms": 31085.843579960056
+        }
+      ],
+      "pcm_sha256": "927f0a66998e17240a2aab1b1292adbeba03ba16f445e51f0ab53fe107f69416"
+    },
+    "coalesced": {
+      "request_count": 2,
+      "final_text_sha256": "20a15ae5c7551b89db05f8713661a55cff83a447f7a0a539c80e063e731b5076",
+      "timings": [
+        {
+          "samples": 3200,
+          "elapsed_ms": 340.4857600107789,
+          "updated_ms": 340.5044699902646
+        },
+        {
+          "samples": 78166,
+          "elapsed_ms": 814.4894469878636,
+          "updated_ms": 1155.0856169778854
+        }
+      ],
+      "pcm_sha256": "927f0a66998e17240a2aab1b1292adbeba03ba16f445e51f0ab53fe107f69416"
+    }
+  },
+  "note": "originalの初回18.95秒はGPU準備込み。実時間の改善率はこの比較から算出しない。接続内の要求区分だけを変え、同一採用モデルで比較した。",
+  "versions": {
+    "torch": "2.14.1",
+    "nemo_toolkit": "3.0.0",
+    "reazonspeech-nemo-asr": "3.0.0"
+  }
+}

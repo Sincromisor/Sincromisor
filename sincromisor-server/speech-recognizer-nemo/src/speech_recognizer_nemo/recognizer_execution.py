@@ -8,14 +8,19 @@ from time import perf_counter
 
 from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
 
+from .recognition_storage import RecognitionStorage
 from .SpeechRecognizerNemo import SpeechRecognizerNemoWorker
-from .SpeechRecognizerNemo.SpeechRecognizerS3Client import SpeechRecognizerS3Client
 
 
 class RecognizerExecution:
     """モデルの初期化・認識・解放を直列化し、取消でも使用中の資源を保持する。"""
 
-    def __init__(self, create_worker: Callable[[], SpeechRecognizerNemoWorker]) -> None:
+    def __init__(
+        self,
+        create_worker: Callable[[], SpeechRecognizerNemoWorker],
+        storage: RecognitionStorage | None = None,
+    ) -> None:
+        self.storage = storage
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="asr")
         try:
             self.worker: SpeechRecognizerNemoWorker | None = self.executor.submit(
@@ -28,46 +33,46 @@ class RecognizerExecution:
     async def recognize(
         self,
         spe_result: SpeechExtractorResult,
-        s3_client: SpeechRecognizerS3Client | None,
     ) -> SpeechRecognizerResult:
-        """未開始なら取り消し、開始済みなら復元・保存完了まで待って取消を伝える。"""
+        """未開始なら取り消し、開始済みならモデル復元後に取消を伝える。保存受理後は待たない。"""
         if self.worker is None:
             raise RuntimeError("Recognizer is closed.")
-        pending = self.executor.submit(
-            self.__recognize, spe_result, s3_client, perf_counter()
-        )
+        pending = self.executor.submit(self.__recognize, spe_result, perf_counter())
         result = asyncio.wrap_future(pending)
         try:
-            return await asyncio.shield(result)
+            recognized, trace = await asyncio.shield(result)
         except asyncio.CancelledError:
             pending.cancel()
-            # スレッドは取消で止まらない。接続のS3クライアントを解放する前に回収する。
+            # スレッドは取消で止まらない。入力バッファを再利用する前に推論を回収する。
             cleanup = asyncio.gather(result, return_exceptions=True)
             while not cleanup.done():
                 try:
                     await asyncio.shield(cleanup)
                 except asyncio.CancelledError:
-                    # 終了要求が重なっても使用中の接続資源を先に解放しない。
+                    # 終了要求が重なっても使用中の入力音声を先に解放しない。
                     continue
+            if self.storage is not None and spe_result.confirmed:
+                self.storage.cancelled(spe_result)
             raise
+        if self.storage is not None and spe_result.confirmed:
+            await self.storage.submit(spe_result, recognized, trace)
+        return recognized
 
     def __recognize(
         self,
         request: SpeechExtractorResult,
-        s3_client: SpeechRecognizerS3Client | None,
         queued_at: float,
-    ) -> SpeechRecognizerResult:
-        """実行開始後だけ待機と保存込み所要時間を記録する。未開始取消は記録しない。"""
+    ) -> tuple[SpeechRecognizerResult, dict[str, object] | None]:
+        """推論と補正だけを測り、保存待機を共有モデルの実行時間へ混ぜない。"""
         started = perf_counter()
         outcome = "failed"
         try:
             assert self.worker is not None
-            result = self.worker.recognize(request, s3_client)
+            result = self.worker.recognize(request)
             outcome = "success"
             return result
         finally:
-            # 既存のrecognition_processingは保存前まで。ここでは保存を含めて測り、
-            # 他接続の実行待ちや保存I/Oを推論時間と取り違えないようにする。
+            # 保存分離前のexecution_msとは意味が異なる。保存は専用イベントで測る。
             logging.getLogger("sincro.RecognizerExecution").info(
                 {
                     "event": "recognition_execution",

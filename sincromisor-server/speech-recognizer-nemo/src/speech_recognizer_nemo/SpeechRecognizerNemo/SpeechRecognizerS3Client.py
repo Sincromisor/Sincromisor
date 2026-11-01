@@ -1,6 +1,5 @@
 import io
 import logging
-import shutil
 from datetime import datetime
 from logging import Logger
 
@@ -37,7 +36,7 @@ class SpeechRecognizerS3Client:
         self.bucket_name: str = "speech-recognizer"
 
     def close(self) -> None:
-        """接続側が実行中の認識・保存を回収した後、HTTPプールを解放する。"""
+        """保存サービスが受理済み処理を回収した後、HTTPプールを解放する。"""
         self.s3_client.close()
 
     def __put_s3(
@@ -81,25 +80,8 @@ class SpeechRecognizerS3Client:
         json: str = result.to_json(dumps_opt={"indent": 4})
         self.__put_s3(object_name, json.encode("utf-8"), "application/json", result)
 
-    def export_voice_to_s3(self, result: SpeechExtractorResult) -> None:
-        """Opus変換可能なときだけ音声を保存する。未配置は明示して従来どおりスキップする。"""
-        time_text: str = datetime.fromtimestamp(result.start_at).strftime(
-            "%Y%m%d_%H%M%S.%f",
-        )
-        object_name: str
-        if shutil.which("opusenc"):
-            object_name = f"{result.session_id}/{result.speech_id:06d}_{time_text}.opus"
-            opus: bytes = result.to_opus()
-            self.__put_s3(object_name, opus, "audio/opus", result)
-        else:
-            self.logger.info(
-                {
-                    "event": "recognition_storage",
-                    "peer": "s3",
-                    "stage": "encode",
-                    "outcome": "skipped",
-                    "reason": "encoder_unavailable",
-                    "session_id": result.session_id,
-                    "speech_id": result.speech_id,
-                }
-            )
+    def export_voice_to_s3(self, result: SpeechExtractorResult, opus: bytes) -> None:
+        """保存担当が一度だけ圧縮したOpusを、従来のキーへ保存する。"""
+        time_text = datetime.fromtimestamp(result.start_at).strftime("%Y%m%d_%H%M%S.%f")
+        object_name = f"{result.session_id}/{result.speech_id:06d}_{time_text}.opus"
+        self.__put_s3(object_name, opus, "audio/opus", result)

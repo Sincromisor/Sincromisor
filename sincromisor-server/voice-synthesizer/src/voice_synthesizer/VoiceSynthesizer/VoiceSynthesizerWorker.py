@@ -11,6 +11,7 @@ from sincro_models import (
     TextProcessorResult,
     VoiceSynthesizerRequest,
 )
+from voice_synthesizer.cache_writer import VoiceCacheWriter
 from voice_synthesizer.stream_delivery import deliver_stream
 from voice_synthesizer.voice_stream import StreamContext
 
@@ -31,6 +32,8 @@ class VoiceSynthesizerWorker:
         s3_port: int,
         s3_access_key: str,
         s3_secret_key: str,
+        *,
+        cache_writer: VoiceCacheWriter,
     ) -> None:
         """接続ごとの音声キャッシュと話者スタイルを準備する。"""
         self.__vvox: VoiceCacheManager = VoiceCacheManager(
@@ -42,6 +45,7 @@ class VoiceSynthesizerWorker:
             s3_port=s3_port,
             s3_access_key=s3_access_key,
             s3_secret_key=s3_secret_key,
+            cache_writer=cache_writer,
         )
         self.__voicevox_style_id: int = voicevox_style_id
 

@@ -17,15 +17,21 @@ import (
 // 完了済み発話は最後のspeechIDとの比較、完了済み要求はrequestsからの削除で再受理を防ぐ。
 // 確定した会話履歴と世代をまたぐ抽出IDはCoordinatorが保持する。
 type conversation struct {
+	// muは抽出の順序、未送信・未応答の認識、文章処理の照合と現在の表示を保護する。
 	mu        sync.Mutex
 	sessionID string
 	speechID  int64
 	sequence  int64
 	open      bool
 
-	outstanding map[int64]protocol.ExtractorResult
-	requests    map[int64]protocol.ProcessorRequest
-	currentUser *protocol.ChatMessage
+	// outstandingは実送信中の最大1件だけを保持し、未送信音声はpendingが所有する。
+	outstanding      map[int64]protocol.ExtractorResult
+	pending          []pendingRecognition
+	pendingBytes     int
+	recognitionReady chan struct{}
+	recognitionSent  uint64
+	requests         map[int64]protocol.ProcessorRequest
+	currentUser      *protocol.ChatMessage
 }
 
 // extractionIdentity は再接続後も同じ発話を再送しないための、セッション共通の最終受理IDである。
@@ -40,7 +46,8 @@ type extractionIdentity struct {
 func newConversation(sessionID string) *conversation {
 	return &conversation{
 		sessionID: sessionID, speechID: -1, sequence: -1,
-		outstanding: make(map[int64]protocol.ExtractorResult), requests: make(map[int64]protocol.ProcessorRequest),
+		recognitionReady: make(chan struct{}, 1),
+		outstanding:      make(map[int64]protocol.ExtractorResult), requests: make(map[int64]protocol.ProcessorRequest),
 	}
 }
 
@@ -77,7 +84,7 @@ func (c *Coordinator) acceptExtraction(
 	return combined, true, err
 }
 
-// acceptExtraction は発話IDと通番を検証し、認識結果との照合が済むまで入力を保持する。
+// acceptExtraction は全入力の発話IDと通番を検証し、未送信差分だけを保留する。
 // 発話途中では同じ発話だけを受け、確定後はより大きい発話IDだけを受ける。
 func (c *conversation) acceptExtraction(value protocol.ExtractorResult) (protocol.ExtractorResult, error) {
 	c.mu.Lock()
@@ -96,10 +103,10 @@ func (c *conversation) acceptExtraction(value protocol.ExtractorResult) (protoco
 		}
 		c.open, c.speechID = true, value.SpeechID
 	}
+	if err := c.enqueueRecognition(value); err != nil {
+		return protocol.ExtractorResult{}, err
+	}
 	c.sequence = value.SequenceID
-	// Extractorの各partialは未送信の差分音声である。Recognizerも同じ単位で処理するため、
-	// ここで過去のpartialを結合すると同じframeを複数回認識へ渡してしまう。
-	c.outstanding[value.SequenceID] = value
 	if value.Confirmed {
 		c.open = false
 	}
@@ -116,6 +123,7 @@ func (c *conversation) acceptRecognition(value protocol.RecognizerResult) (proto
 		return protocol.ExtractorResult{}, errors.New("recognizer result has no matching extraction")
 	}
 	delete(c.outstanding, value.SequenceID)
+	c.signalRecognition()
 	return extraction, nil
 }
 

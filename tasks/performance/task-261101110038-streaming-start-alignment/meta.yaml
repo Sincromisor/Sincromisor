@@ -1,0 +1,13 @@
+id: task-261101110038-streaming-start-alignment
+title: 逐次音声の先頭区間と再生開始条件を整合する
+category: performance
+status: done
+depends_on: []
+superseded_by: null
+review: APPROVED
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-11-01
+closed_at: 2026-11-01
+legacy_ids: []

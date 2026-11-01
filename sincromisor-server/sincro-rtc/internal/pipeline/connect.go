@@ -130,10 +130,13 @@ func (c *Coordinator) validateSet(set ClientSet) error {
 	return nil
 }
 
+// startGenerationLocked は状態ロック下で6処理を同じ世代へ登録する。各処理は世代ctxで
+// 終了し、Closeまたは再初期化の所有者がwgを待つ。認識送信と抽出受信を分けて保留を集約する。
 func (c *Coordinator) startGenerationLocked(work *generationWork, set ClientSet) {
-	work.wg.Add(5)
+	work.wg.Add(6)
 	c.goWork(work, "pipeline_pcm", func() { c.pcmLoop(work, set.Extractor()) })
-	c.goWork(work, "pipeline_extractor", func() { c.extractorLoop(work, set.Extractor(), set.Recognizer()) })
+	c.goWork(work, "pipeline_extractor", func() { c.extractorLoop(work, set.Extractor()) })
+	c.goWork(work, "pipeline_recognition_send", func() { c.recognitionSendLoop(work, set.Recognizer()) })
 	c.goWork(work, "pipeline_recognizer", func() { c.recognizerLoop(work, set.Recognizer(), set.Processor()) })
 	c.goWork(work, "pipeline_processor", func() { c.processorLoop(work, set.Processor(), set.Synthesizer()) })
 	c.goWork(work, "pipeline_synthesizer", func() { c.synthLoop(work, set.Synthesizer()) })

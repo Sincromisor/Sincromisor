@@ -81,7 +81,16 @@ def test_wait_does_not_block_and_cancel_joins(monkeypatch, caplog, outcome):
             ),
         )
         worker = VoiceSynthesizerWorker(
-            "unused", 1, 3, "unused", 1, "unused", 1, "fixture", "fixture"
+            "unused",
+            1,
+            3,
+            "unused",
+            1,
+            "unused",
+            1,
+            "fixture",
+            "fixture",
+            cache_writer=Mock(),
         )
         packs = [request_pack(), b""]
 
@@ -172,7 +181,15 @@ def test_wait_does_not_block_and_cancel_joins(monkeypatch, caplog, outcome):
 
 def test_cache_timeout_and_partial_initialization_cleanup(monkeypatch):
     manager = VoiceCacheManager(
-        "127.0.0.1", 1, "127.0.0.1", 1, "127.0.0.1", 1, "fixture", "fixture"
+        "127.0.0.1",
+        1,
+        "127.0.0.1",
+        1,
+        "127.0.0.1",
+        1,
+        "fixture",
+        "fixture",
+        cache_writer=Mock(),
     )
     try:
         options = manager.redis.connection_pool.connection_kwargs
@@ -180,9 +197,9 @@ def test_cache_timeout_and_partial_initialization_cleanup(monkeypatch):
         assert options["socket_timeout"] == 30
         assert options["retry"].get_retries() == 0
         config = manager.s3_client.meta.config
-        assert config.connect_timeout == 60
-        assert config.read_timeout == 60
-        assert config.retries == {"mode": "legacy"}
+        assert config.connect_timeout == 5
+        assert config.read_timeout == 30
+        assert config.retries == {"total_max_attempts": 1, "mode": "standard"}
     finally:
         manager.close()
     module = import_module("voice_synthesizer.VoiceSynthesizer.VoiceCacheManager")
@@ -195,7 +212,15 @@ def test_cache_timeout_and_partial_initialization_cleanup(monkeypatch):
     )
     with pytest.raises(ValueError, match="init"):
         module.VoiceCacheManager(
-            "unused", 1, "unused", 1, "unused", 1, "fixture", "fixture"
+            "unused",
+            1,
+            "unused",
+            1,
+            "unused",
+            1,
+            "fixture",
+            "fixture",
+            cache_writer=Mock(),
         )
     redis.close.assert_called_once()
     s3.close.assert_called_once()
@@ -209,6 +234,7 @@ def test_real_worker_websocket_delayed_http_and_close(monkeypatch, disconnect):
         sent = []
         closes = []
         module = import_module("voice_synthesizer.VoiceSynthesizer.VoiceCacheManager")
+        cache_writer = Mock()
         redis = Mock(get=Mock(return_value=None))
         s3 = Mock(
             get_object=Mock(
@@ -251,7 +277,16 @@ def test_real_worker_websocket_delayed_http_and_close(monkeypatch, disconnect):
             await ws.prepare(request)
             handlers.append(asyncio.current_task())
             worker = VoiceSynthesizerWorker(
-                "127.0.0.1", port, 3, "unused", 1, "unused", 1, "fixture", "fixture"
+                "127.0.0.1",
+                port,
+                3,
+                "unused",
+                1,
+                "unused",
+                1,
+                "fixture",
+                "fixture",
+                cache_writer=cache_writer,
             )
 
             async def send_bytes(pack):
@@ -304,7 +339,9 @@ def test_real_worker_websocket_delayed_http_and_close(monkeypatch, disconnect):
                     assert final.final
                     await ws.close()
                     await asyncio.wait_for(finished.wait(), 5)
-                assert s3.put_object.call_count == (0 if disconnect else 1)
+                assert cache_writer.submit_generated.call_count == (
+                    0 if disconnect else 1
+                )
                 redis.close.assert_called_once()
                 s3.close.assert_called_once()
                 assert closes == [True]

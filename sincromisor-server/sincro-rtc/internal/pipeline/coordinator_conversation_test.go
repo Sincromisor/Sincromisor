@@ -68,6 +68,7 @@ func TestCoordinatorOnlySendsConfirmedRecognitionToProcessor(t *testing.T) {
 		sequence := int64(frame[0])
 		set.extractor.results <- protocol.ExtractorResult{
 			SessionID: "session-partial", SpeechID: 1, SequenceID: sequence, Confirmed: sequence == 4,
+			Voice: []byte{}, VoiceDType: "int16", VoiceSamplingRate: 16000, VoiceSampleBytes: 2, VoiceChannels: 1,
 		}
 	}
 	var messageID string
@@ -105,42 +106,25 @@ func TestCoordinatorOnlySendsConfirmedRecognitionToProcessor(t *testing.T) {
 	}
 }
 
-func TestCoordinatorForwardsEachExtractorPartialWithoutAccumulation(t *testing.T) {
+func TestCoordinatorForwardsEachExtractorPartialWhenRecognitionKeepsUp(t *testing.T) {
 	factory := &fakeFactory{t: t}
 	coordinator := newTestCoordinator(t, factory)
 	if err := coordinator.Start(context.Background(), "session-partials", "sincro"); err != nil {
-		t.Fatalf("Start() error = %v", err)
+		t.Fatal(err)
 	}
+	defer coordinator.Close()
 	set := factory.setAt(t, 0)
 	forwarded := make(chan protocol.ExtractorResult, 3)
-	set.extractor.onPCM = func(frame []byte) {
-		sequence := int64(frame[0])
-		set.extractor.results <- protocol.ExtractorResult{
-			SessionID: "session-partials", SpeechID: 1, SequenceID: sequence,
-			Confirmed: sequence == 3, Voice: append([]byte(nil), frame...),
-			VoiceDType: "int16", VoiceSamplingRate: 16_000, VoiceSampleBytes: 2, VoiceChannels: 1,
-		}
-	}
 	set.recognizer.onExtraction = func(value protocol.ExtractorResult) { forwarded <- value }
-	frames := make([][]byte, 3)
-	for index := range frames {
-		frames[index] = make([]byte, pcmFrameBytes)
-		frames[index][0] = byte(index + 1)
-		if err := coordinator.SubmitPCM(frames[index]); err != nil {
-			t.Fatalf("SubmitPCM(%d) error = %v", index, err)
-		}
-	}
-	for index, want := range frames {
+	for sequence := int64(1); sequence <= 3; sequence++ {
+		want := []byte{byte(sequence), 0}
+		set.extractor.results <- extractionForTest("session-partials", 1, sequence, sequence == 3, want)
 		got := receive(t, forwarded)
-		if !bytes.Equal(got.Voice, want) {
-			t.Fatalf("partial %d voice = %d bytes, want only its %d-byte frame", index, len(got.Voice), len(want))
+		if !bytes.Equal(got.Voice, want) || got.Confirmed != (sequence == 3) {
+			t.Fatalf("partial %d was changed", sequence)
 		}
-		if got.Confirmed != (index == len(frames)-1) {
-			t.Fatalf("partial %d confirmed = %t", index, got.Confirmed)
-		}
-	}
-	if err := coordinator.Close(); err != nil {
-		t.Fatalf("Close() error = %v", err)
+		set.recognizer.results <- recognitionForTest(got)
+		receive(t, coordinator.TextResults())
 	}
 }
 
@@ -196,7 +180,7 @@ func TestConversationRejectsProcessorIntermediateFinalMixups(t *testing.T) {
 
 func TestConversationRejectsSpeechIDRegression(t *testing.T) {
 	conv := newConversation("session")
-	first := protocol.ExtractorResult{SessionID: "session", SpeechID: 10, SequenceID: 1, Confirmed: true}
+	first := extractionForTest("session", 10, 1, true, []byte{})
 	if _, err := conv.acceptExtraction(first); err != nil {
 		t.Fatalf("first confirmed extraction error = %v", err)
 	}
@@ -208,7 +192,7 @@ func TestConversationRejectsSpeechIDRegression(t *testing.T) {
 	if _, err := conv.acceptExtraction(regressed); err == nil {
 		t.Fatal("acceptExtraction() reused a completed speech ID")
 	}
-	next := protocol.ExtractorResult{SessionID: "session", SpeechID: 11, SequenceID: 2}
+	next := extractionForTest("session", 11, 2, false, []byte{})
 	if _, err := conv.acceptExtraction(next); err != nil {
 		t.Fatalf("next partial extraction error = %v", err)
 	}

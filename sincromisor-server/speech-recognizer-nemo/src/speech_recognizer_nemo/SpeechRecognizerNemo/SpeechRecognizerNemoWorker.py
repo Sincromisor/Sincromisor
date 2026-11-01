@@ -1,8 +1,5 @@
-import json
 import logging
-import shutil
 from dataclasses import dataclass
-from datetime import datetime
 from logging import Logger
 from pathlib import Path
 from time import perf_counter
@@ -10,13 +7,11 @@ from traceback import clear_frames
 from typing import Any
 
 from sincro_config import SincromisorLoggerConfig
-from sincro_config.runtime_diagnostics import failure_fields
 from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
 
 from .ProperNounDictionary import ProperNounDictionary
 from .RecognizerPostProcessor import RecognizerPostProcessor
 from .SpeechRecognizerNemo import EncodedAudio, SpeechRecognizerNemo
-from .SpeechRecognizerS3Client import SpeechRecognizerS3Client
 
 
 @dataclass(frozen=True)
@@ -48,23 +43,21 @@ class ProperNounDictionaryAvailability:
 
 
 class SpeechRecognizerNemoWorker:
-    """音声認識、固有名詞補正、結果保存をまとめて扱うワーカー。"""
+    """共有モデルの音声認識と固有名詞補正を担い、保存情報を呼出元へ返す。"""
 
     def __init__(
         self,
-        voice_log_dir: str | None,
         proper_noun_enable: bool = False,
         proper_noun_dict_path: str | None = None,
         proper_noun_context_biasing_enable: bool = False,
         proper_noun_context_biasing_beam_size: int = 4,
         proper_noun_nbest_enable: bool = False,
         proper_noun_nbest_beam_size: int = 4,
-    ):
+    ) -> None:
         # 認識本体と辞書系機能を初期化し、機能ごとの有効/無効をここで確定する。
         self.logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         self.log_conversation = SincromisorLoggerConfig.conversation_enabled()
         self.s2t: SpeechRecognizerNemo = SpeechRecognizerNemo()
-        self.voice_log_dir: str | None = voice_log_dir
         (
             self.proper_noun_dictionary,
             self.proper_noun_dictionary_availability,
@@ -91,9 +84,8 @@ class SpeechRecognizerNemoWorker:
     def recognize(
         self,
         spe_result: SpeechExtractorResult,
-        s3_client: SpeechRecognizerS3Client | None,
-    ) -> SpeechRecognizerResult:
-        """抽出済み音声を認識し、必要なら固有名詞補正とログ出力まで行う。"""
+    ) -> tuple[SpeechRecognizerResult, dict[str, object] | None]:
+        """音声を認識・補正し、GPU参照を含まない結果と保存用補正情報を返す。"""
         start_t = perf_counter()
         # 暫定・確定とも一要求内だけで所有し、保存や次要求へ持ち越さない。
         encoded: EncodedAudio | None = None
@@ -139,14 +131,7 @@ class SpeechRecognizerNemoWorker:
                 "voice_size": int(spe_result.voice.size),
             }
         )
-        if spe_result.confirmed and self.voice_log_dir:
-            # confirmed 音声のみを証跡として残し、途中結果のログ爆発を避ける。
-            self.__export_result(sr_result, correction_trace=correction_trace)
-            self.__export_voice(spe_result)
-        if spe_result.confirmed and s3_client is not None:
-            s3_client.export_result_to_s3(sr_result)
-            s3_client.export_voice_to_s3(spe_result)
-        return sr_result
+        return sr_result, correction_trace
 
     def __load_proper_noun_dictionary(
         self,
@@ -783,84 +768,3 @@ class SpeechRecognizerNemoWorker:
             if text != "</s>":
                 return float(score)
         return 0.0
-
-    def __export_result(
-        self,
-        result: SpeechRecognizerResult,
-        correction_trace: dict[str, Any] | None = None,
-    ) -> Path | None:
-        """認識結果と補正 trace をローカルログへ保存する。"""
-        if self.voice_log_dir is None:
-            return None
-        diagnostic = {
-            "event": "recognition_storage",
-            "peer": "local",
-            "stage": "write",
-            "session_id": result.session_id,
-            "speech_id": result.speech_id,
-            "sequence_id": result.sequence_id,
-        }
-        try:
-            time_text: str = datetime.fromtimestamp(result.start_at).strftime(
-                "%Y%m%d_%H%M%S.%f"
-            )
-            write_dir: Path = Path(self.voice_log_dir, result.session_id)
-            write_dir.mkdir(parents=True, exist_ok=True)
-            write_path: Path = Path(
-                write_dir, f"{result.speech_id:06d}_{time_text}.json"
-            )
-            with open(write_path, "w", encoding="utf-8") as text:
-                result_json = result.to_json(dumps_opt={"indent": 4})
-                text.write(result_json)
-            if correction_trace is not None:
-                trace_path = write_path.with_suffix(".trace.json")
-                with open(trace_path, "w", encoding="utf-8") as text:
-                    text.write(
-                        json.dumps(correction_trace, ensure_ascii=False, indent=4)
-                    )
-            self.logger.info({**diagnostic, "outcome": "success"})
-            return write_path
-        except OSError as error:
-            self.logger.warning(
-                {**diagnostic, **failure_fields(error), "outcome": "failed"}
-            )
-            raise
-
-    def __export_voice(self, result: SpeechExtractorResult) -> Path | None:
-        """入力音声を opus 優先で保存し、後追い検証できるようにする。"""
-        if self.voice_log_dir is None:
-            return None
-        diagnostic = {
-            "event": "recognition_storage",
-            "peer": "local",
-            "stage": "write",
-            "session_id": result.session_id,
-            "speech_id": result.speech_id,
-            "sequence_id": result.sequence_id,
-        }
-        try:
-            time_text: str = datetime.fromtimestamp(result.start_at).strftime(
-                "%Y%m%d_%H%M%S.%f",
-            )
-            write_dir: Path = Path(self.voice_log_dir, result.session_id)
-            write_dir.mkdir(parents=True, exist_ok=True)
-            write_path: Path
-            if shutil.which("opusenc"):
-                write_path = Path(
-                    write_dir,
-                    f"{result.speech_id:06d}_{time_text}.opus",
-                )
-                result.to_opusfile(path=str(write_path))
-            else:
-                write_path = Path(
-                    write_dir,
-                    f"{result.speech_id:06d}_{time_text}.wav",
-                )
-                result.to_wavfile(path=str(write_path))
-            self.logger.info({**diagnostic, "outcome": "success"})
-            return write_path
-        except OSError as error:
-            self.logger.warning(
-                {**diagnostic, **failure_fields(error), "outcome": "failed"}
-            )
-            raise

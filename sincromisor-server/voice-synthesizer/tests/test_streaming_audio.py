@@ -107,6 +107,7 @@ def test_stream_cache_saved_only_after_complete(outcome):
     manager = SimpleNamespace(
         load_cached_voice=Mock(return_value=None),
         save_cached_voice=Mock(),
+        save_generated_voice=Mock(),
         vsynth=SimpleNamespace(generate_pcm=generated),
     )
     iterator = stream_voice(manager, request, context)
@@ -114,14 +115,19 @@ def test_stream_cache_saved_only_after_complete(outcome):
     assert not first.final
     assert first.sequence == 0
     assert first.sample_offset == 0
-    manager.save_cached_voice.assert_not_called()
+    manager.save_generated_voice.assert_not_called()
     if outcome == "complete":
         tail = list(iterator)
         assert tail[-1].final
         assert tail[-1].sample_offset == 4900
         assert tail[0].sample_offset == 4800
         assert not tail[0].message
-        cached_request, result, _ = manager.save_cached_voice.call_args.args
+        from voice_synthesizer.cache_writer import _complete_result
+
+        cached_request, saved_query, saved_pcm, _ = (
+            manager.save_generated_voice.call_args.args
+        )
+        result = _complete_result(cached_request, saved_query, saved_pcm)
         assert cached_request.redis_key().startswith("streaming-pcm-v1/")
         with wave.open(io.BytesIO(result.voice)) as wav:
             assert wav.readframes(4900) == first.pcm + tail[0].pcm
@@ -130,7 +136,7 @@ def test_stream_cache_saved_only_after_complete(outcome):
         assert b"".join(c.pcm for c in again) == first.pcm + tail[0].pcm
         assert again[-1].final
         assert again[0].request_id == 2
-        assert manager.save_cached_voice.call_count == 1
+        assert manager.save_generated_voice.call_count == 1
     elif outcome == "close":
         iterator.close()
     else:
@@ -138,7 +144,7 @@ def test_stream_cache_saved_only_after_complete(outcome):
             context.cancelled.set()
         with pytest.raises(InterruptedError if outcome == "cancel" else ValueError):
             list(iterator)
-        manager.save_cached_voice.assert_not_called()
+        manager.save_generated_voice.assert_not_called()
     assert finished == [True]
 
 
@@ -276,6 +282,9 @@ def test_production_worker_streams_before_http_eof(
         await runner.setup()
         site = web.TCPSite(runner, "127.0.0.1", 0)
         await site.start()
+        from test_cache_writer import make_writer
+
+        writer, _, _ = make_writer(monkeypatch, redis=redis, s3=s3)
         worker = VoiceSynthesizerWorker(
             "127.0.0.1",
             runner.addresses[0][1],
@@ -286,6 +295,7 @@ def test_production_worker_streams_before_http_eof(
             1,
             "fixture",
             "fixture",
+            cache_writer=writer,
         )
         packs = [request_pack(), b""]
 
@@ -328,6 +338,7 @@ def test_production_worker_streams_before_http_eof(
                     24001,
                 ]
                 assert all(not c.message and not c.mora_queue for c in sent[1:])
+                await asyncio.to_thread(writer.close)
                 s3.put_object.assert_called_once()
                 redis.set.assert_called_once()
             else:
@@ -339,12 +350,13 @@ def test_production_worker_streams_before_http_eof(
                 s3.put_object.assert_not_called()
                 redis.set.assert_not_called()
             assert http_parameters == [
-                {"speaker": "3", "segment_length": "0.3", "max_segment_length": "2.4"}
+                {"speaker": "3", "segment_length": "0.43", "max_segment_length": "2.4"}
             ]
         finally:
             release.set()
             await asyncio.gather(task, return_exceptions=True)
             worker.close()
+            await asyncio.to_thread(writer.close)
             await runner.cleanup()
 
     asyncio.run(run())

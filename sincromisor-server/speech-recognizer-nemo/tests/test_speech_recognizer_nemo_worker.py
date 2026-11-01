@@ -141,41 +141,6 @@ class FakeRerankAwareDeferredPostProcessor(FakePostProcessor):
 
 
 class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
-    def test_storage_permission_diagnostic(self) -> None:
-        """認識JSONと入力音声の保存拒否を、本文や保存パスなしで会話へ対応付ける。"""
-        worker = object.__new__(SpeechRecognizerNemoWorker)
-        worker.voice_log_dir = "/private-test-path"
-        worker.logger = logging.getLogger("sincro.storage_test")
-        result = SpeechExtractorResult(session_id="session-a", speech_id=8, start_at=0)
-        output = io.StringIO()
-        handler = logging.StreamHandler(output)
-        handler.setFormatter(JsonLogFormatter())
-        worker.logger.addHandler(handler)
-        try:
-            for method in (
-                worker._SpeechRecognizerNemoWorker__export_voice,
-                worker._SpeechRecognizerNemoWorker__export_result,
-            ):
-                with (
-                    patch.object(
-                        Path, "mkdir", side_effect=PermissionError("private-token")
-                    ),
-                    self.assertRaises(PermissionError),
-                ):
-                    method(result)
-            rows = [json.loads(line) for line in output.getvalue().splitlines()]
-            self.assertEqual(len(rows), 2)
-            self.assertTrue(
-                all(
-                    row["reason"] == "permission_denied"
-                    and row["session_id"] == "session-a"
-                    for row in rows
-                )
-            )
-            self.assertNotIn("private-", output.getvalue())
-        finally:
-            worker.logger.removeHandler(handler)
-
     def test_conversation_log_switch(self) -> None:
         """モデルを人工結果へ置換し、本文の記録だけが切り替わることを確認する。"""
         for enabled in ("true", "false"):
@@ -187,7 +152,7 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
                     FakeSpeechRecognizerNemo,
                 ),
             ):
-                worker = SpeechRecognizerNemoWorker(voice_log_dir=None)
+                worker = SpeechRecognizerNemoWorker()
                 output = io.StringIO()
                 handler = logging.StreamHandler(output)
                 handler.setFormatter(JsonLogFormatter())
@@ -195,7 +160,7 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
                 old_level = worker.logger.level
                 worker.logger.setLevel(logging.INFO)
                 try:
-                    result = worker.recognize(
+                    result, _ = worker.recognize(
                         SpeechExtractorResult(
                             session_id="session-a",
                             speech_id=1,
@@ -204,7 +169,6 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
                             confirmed=True,
                             voice=np.zeros(160, dtype=np.int16),
                         ),
-                        None,
                     )
                 finally:
                     worker.logger.removeHandler(handler)
@@ -232,7 +196,6 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
                 "sincro.SpeechRecognizerNemoWorker", level="INFO"
             ) as logs:
                 SpeechRecognizerNemoWorker(
-                    voice_log_dir=None,
                     proper_noun_enable=False,
                     proper_noun_dict_path=str(self.fixture_path),
                     proper_noun_context_biasing_enable=True,
@@ -266,7 +229,6 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
                 "sincro.SpeechRecognizerNemoWorker", level="WARNING"
             ) as logs:
                 SpeechRecognizerNemoWorker(
-                    voice_log_dir=None,
                     proper_noun_enable=True,
                     proper_noun_dict_path=str(missing_path),
                     proper_noun_context_biasing_enable=True,
@@ -298,7 +260,6 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
                     "sincro.SpeechRecognizerNemoWorker", level="WARNING"
                 ) as logs:
                     SpeechRecognizerNemoWorker(
-                        voice_log_dir=None,
                         proper_noun_enable=True,
                         proper_noun_dict_path=str(invalid_csv_path),
                         proper_noun_nbest_enable=True,
@@ -337,7 +298,6 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
                         "sincro.SpeechRecognizerNemoWorker", level="WARNING"
                     ) as logs:
                         SpeechRecognizerNemoWorker(
-                            voice_log_dir=None,
                             proper_noun_enable=True,
                             proper_noun_dict_path=str(csv_path),
                             proper_noun_context_biasing_enable=True,
@@ -364,13 +324,12 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
             return_value=fake_nemo,
         ):
             worker = SpeechRecognizerNemoWorker(
-                voice_log_dir=None,
                 proper_noun_enable=False,
                 proper_noun_dict_path=None,
             )
             worker.post_processor = FakePostProcessor()
 
-            partial_result = worker.recognize(
+            partial_result, _ = worker.recognize(
                 SpeechExtractorResult(
                     session_id="session",
                     speech_id=1,
@@ -379,9 +338,8 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
                     confirmed=False,
                     voice=np.zeros(8, dtype=np.int16),
                 ),
-                s3_client=None,
             )
-            confirmed_result = worker.recognize(
+            confirmed_result, _ = worker.recognize(
                 SpeechExtractorResult(
                     session_id="session",
                     speech_id=1,
@@ -390,7 +348,6 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
                     confirmed=True,
                     voice=np.zeros(8, dtype=np.int16),
                 ),
-                s3_client=None,
             )
 
         self.assertEqual(partial_result.result_text(), "しんくろみそーるです")
@@ -402,31 +359,24 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
             "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
             return_value=FakeSpeechRecognizerNemo(),
         ):
-            with tempfile.TemporaryDirectory() as temp_dir:
-                worker = SpeechRecognizerNemoWorker(
-                    voice_log_dir=temp_dir,
-                    proper_noun_enable=False,
-                    proper_noun_dict_path=None,
-                )
-                worker.post_processor = FakeDeferredPostProcessor()
+            worker = SpeechRecognizerNemoWorker(
+                proper_noun_enable=False,
+                proper_noun_dict_path=None,
+            )
+            worker.post_processor = FakeDeferredPostProcessor()
 
-                worker.recognize(
-                    SpeechExtractorResult(
-                        session_id="session",
-                        speech_id=1,
-                        sequence_id=2,
-                        start_at=1.0,
-                        confirmed=True,
-                        voice=np.zeros(8, dtype=np.int16),
-                    ),
-                    s3_client=None,
-                )
+            _, correction_trace = worker.recognize(
+                SpeechExtractorResult(
+                    session_id="session",
+                    speech_id=1,
+                    sequence_id=2,
+                    start_at=1.0,
+                    confirmed=True,
+                    voice=np.zeros(8, dtype=np.int16),
+                ),
+            )
 
-                trace_files = list(Path(temp_dir, "session").glob("*.trace.json"))
-                self.assertEqual(len(trace_files), 1)
-                correction_trace = json.loads(
-                    trace_files[0].read_text(encoding="utf-8")
-                )
+            self.assertIsNotNone(correction_trace)
 
         self.assertEqual(correction_trace["deferred_yomi"], ["たぶんね"])
         self.assertEqual(len(correction_trace["deferred_entries"]), 1)
@@ -448,50 +398,42 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
             "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
             return_value=fake_nemo,
         ):
-            with tempfile.TemporaryDirectory() as temp_dir:
-                worker = SpeechRecognizerNemoWorker(
-                    voice_log_dir=temp_dir,
-                    proper_noun_enable=False,
-                    proper_noun_dict_path=None,
-                    proper_noun_context_biasing_enable=True,
-                    proper_noun_context_biasing_beam_size=5,
-                )
-                worker.proper_noun_dictionary = ProperNounDictionary.load_from_csv(
-                    self.fixture_path
-                )
-                worker.post_processor = FakeDeferredPostProcessor()
+            worker = SpeechRecognizerNemoWorker(
+                proper_noun_enable=False,
+                proper_noun_dict_path=None,
+                proper_noun_context_biasing_enable=True,
+                proper_noun_context_biasing_beam_size=5,
+            )
+            worker.proper_noun_dictionary = ProperNounDictionary.load_from_csv(
+                self.fixture_path
+            )
+            worker.post_processor = FakeDeferredPostProcessor()
 
-                partial_result = worker.recognize(
-                    SpeechExtractorResult(
-                        session_id="session",
-                        speech_id=1,
-                        sequence_id=1,
-                        start_at=1.0,
-                        confirmed=False,
-                        voice=np.zeros(8, dtype=np.int16),
-                    ),
-                    s3_client=None,
-                )
-                self.assertEqual(partial_result.result_text(), "しんくろみそーるです")
-                self.assertIsNone(fake_nemo.last_candidates_kwargs)
+            partial_result, _ = worker.recognize(
+                SpeechExtractorResult(
+                    session_id="session",
+                    speech_id=1,
+                    sequence_id=1,
+                    start_at=1.0,
+                    confirmed=False,
+                    voice=np.zeros(8, dtype=np.int16),
+                ),
+            )
+            self.assertEqual(partial_result.result_text(), "しんくろみそーるです")
+            self.assertIsNone(fake_nemo.last_candidates_kwargs)
 
-                confirmed_result = worker.recognize(
-                    SpeechExtractorResult(
-                        session_id="session",
-                        speech_id=1,
-                        sequence_id=2,
-                        start_at=1.0,
-                        confirmed=True,
-                        voice=np.zeros(8, dtype=np.int16),
-                    ),
-                    s3_client=None,
-                )
+            confirmed_result, correction_trace = worker.recognize(
+                SpeechExtractorResult(
+                    session_id="session",
+                    speech_id=1,
+                    sequence_id=2,
+                    start_at=1.0,
+                    confirmed=True,
+                    voice=np.zeros(8, dtype=np.int16),
+                ),
+            )
 
-                trace_files = list(Path(temp_dir, "session").glob("*.trace.json"))
-                self.assertEqual(len(trace_files), 1)
-                correction_trace = json.loads(
-                    trace_files[0].read_text(encoding="utf-8")
-                )
+            self.assertIsNotNone(correction_trace)
 
         self.assertEqual(confirmed_result.result_text(), "タブンネです")
         self.assertEqual(fake_nemo.last_candidates_kwargs["strategy"], "malsd_batch")
@@ -524,36 +466,29 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
             "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
             return_value=fake_nemo,
         ):
-            with tempfile.TemporaryDirectory() as temp_dir:
-                worker = SpeechRecognizerNemoWorker(
-                    voice_log_dir=temp_dir,
-                    proper_noun_enable=False,
-                    proper_noun_dict_path=None,
-                    proper_noun_nbest_enable=True,
-                    proper_noun_nbest_beam_size=3,
-                )
-                worker.proper_noun_dictionary = ProperNounDictionary.load_from_csv(
-                    self.fixture_path
-                )
-                worker.post_processor = FakeRerankAwareDeferredPostProcessor()
+            worker = SpeechRecognizerNemoWorker(
+                proper_noun_enable=False,
+                proper_noun_dict_path=None,
+                proper_noun_nbest_enable=True,
+                proper_noun_nbest_beam_size=3,
+            )
+            worker.proper_noun_dictionary = ProperNounDictionary.load_from_csv(
+                self.fixture_path
+            )
+            worker.post_processor = FakeRerankAwareDeferredPostProcessor()
 
-                confirmed_result = worker.recognize(
-                    SpeechExtractorResult(
-                        session_id="session",
-                        speech_id=2,
-                        sequence_id=1,
-                        start_at=1.0,
-                        confirmed=True,
-                        voice=np.zeros(8, dtype=np.int16),
-                    ),
-                    s3_client=None,
-                )
+            confirmed_result, correction_trace = worker.recognize(
+                SpeechExtractorResult(
+                    session_id="session",
+                    speech_id=2,
+                    sequence_id=1,
+                    start_at=1.0,
+                    confirmed=True,
+                    voice=np.zeros(8, dtype=np.int16),
+                ),
+            )
 
-                trace_files = list(Path(temp_dir, "session").glob("*.trace.json"))
-                self.assertEqual(len(trace_files), 1)
-                correction_trace = json.loads(
-                    trace_files[0].read_text(encoding="utf-8")
-                )
+            self.assertIsNotNone(correction_trace)
 
         self.assertEqual(confirmed_result.result_text(), "タブンネです")
         self.assertEqual(fake_nemo.last_nbest_kwargs["strategy"], "alsd")
@@ -587,38 +522,31 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
             "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
             return_value=fake_nemo,
         ):
-            with tempfile.TemporaryDirectory() as temp_dir:
-                worker = SpeechRecognizerNemoWorker(
-                    voice_log_dir=temp_dir,
-                    proper_noun_enable=False,
-                    proper_noun_dict_path=None,
-                    proper_noun_context_biasing_enable=True,
-                    proper_noun_context_biasing_beam_size=5,
-                    proper_noun_nbest_enable=True,
-                    proper_noun_nbest_beam_size=3,
-                )
-                worker.proper_noun_dictionary = ProperNounDictionary.load_from_csv(
-                    self.fixture_path
-                )
-                worker.post_processor = FakeDeferredPostProcessor()
+            worker = SpeechRecognizerNemoWorker(
+                proper_noun_enable=False,
+                proper_noun_dict_path=None,
+                proper_noun_context_biasing_enable=True,
+                proper_noun_context_biasing_beam_size=5,
+                proper_noun_nbest_enable=True,
+                proper_noun_nbest_beam_size=3,
+            )
+            worker.proper_noun_dictionary = ProperNounDictionary.load_from_csv(
+                self.fixture_path
+            )
+            worker.post_processor = FakeDeferredPostProcessor()
 
-                confirmed_result = worker.recognize(
-                    SpeechExtractorResult(
-                        session_id="session",
-                        speech_id=3,
-                        sequence_id=1,
-                        start_at=1.0,
-                        confirmed=True,
-                        voice=np.zeros(8, dtype=np.int16),
-                    ),
-                    s3_client=None,
-                )
+            confirmed_result, correction_trace = worker.recognize(
+                SpeechExtractorResult(
+                    session_id="session",
+                    speech_id=3,
+                    sequence_id=1,
+                    start_at=1.0,
+                    confirmed=True,
+                    voice=np.zeros(8, dtype=np.int16),
+                ),
+            )
 
-                trace_files = list(Path(temp_dir, "session").glob("*.trace.json"))
-                self.assertEqual(len(trace_files), 1)
-                correction_trace = json.loads(
-                    trace_files[0].read_text(encoding="utf-8")
-                )
+            self.assertIsNotNone(correction_trace)
 
         self.assertEqual(confirmed_result.result_text(), "タブンネです")
         self.assertIsNone(fake_nemo.last_nbest_kwargs)
@@ -636,36 +564,29 @@ class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
             "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
             return_value=fake_nemo,
         ):
-            with tempfile.TemporaryDirectory() as temp_dir:
-                worker = SpeechRecognizerNemoWorker(
-                    voice_log_dir=temp_dir,
-                    proper_noun_enable=False,
-                    proper_noun_dict_path=None,
-                    proper_noun_context_biasing_enable=True,
-                    proper_noun_context_biasing_beam_size=5,
-                )
-                worker.proper_noun_dictionary = ProperNounDictionary.load_from_csv(
-                    self.fixture_path
-                )
-                worker.post_processor = FakePostProcessor()
+            worker = SpeechRecognizerNemoWorker(
+                proper_noun_enable=False,
+                proper_noun_dict_path=None,
+                proper_noun_context_biasing_enable=True,
+                proper_noun_context_biasing_beam_size=5,
+            )
+            worker.proper_noun_dictionary = ProperNounDictionary.load_from_csv(
+                self.fixture_path
+            )
+            worker.post_processor = FakePostProcessor()
 
-                confirmed_result = worker.recognize(
-                    SpeechExtractorResult(
-                        session_id="session",
-                        speech_id=4,
-                        sequence_id=1,
-                        start_at=1.0,
-                        confirmed=True,
-                        voice=np.zeros(8, dtype=np.int16),
-                    ),
-                    s3_client=None,
-                )
+            confirmed_result, correction_trace = worker.recognize(
+                SpeechExtractorResult(
+                    session_id="session",
+                    speech_id=4,
+                    sequence_id=1,
+                    start_at=1.0,
+                    confirmed=True,
+                    voice=np.zeros(8, dtype=np.int16),
+                ),
+            )
 
-                trace_files = list(Path(temp_dir, "session").glob("*.trace.json"))
-                self.assertEqual(len(trace_files), 1)
-                correction_trace = json.loads(
-                    trace_files[0].read_text(encoding="utf-8")
-                )
+            self.assertIsNotNone(correction_trace)
 
         self.assertEqual(confirmed_result.result_text(), "Sincromisorです")
         self.assertIsNone(fake_nemo.last_candidates_kwargs)
@@ -703,7 +624,6 @@ class EncodedReuseTests(unittest.TestCase):
                     return_value=fake,
                 ):
                     worker = SpeechRecognizerNemoWorker(
-                        voice_log_dir=None,
                         proper_noun_enable=False,
                         proper_noun_context_biasing_enable=True,
                         proper_noun_nbest_enable=True,
@@ -725,9 +645,9 @@ class EncodedReuseTests(unittest.TestCase):
                         ValueError("baseline")
                     )
                     with self.assertRaises(ValueError):
-                        worker.recognize(request, None)
+                        worker.recognize(request)
                 else:
-                    result = worker.recognize(request, None)
+                    result, _ = worker.recognize(request)
                     self.assertEqual(result.speech_id, 1)
                 self.assertEqual(len(fake.encoded_refs), 1)
                 self.assertIsNone(fake.encoded_refs[0]())
@@ -770,9 +690,7 @@ class EncodedReuseTests(unittest.TestCase):
                 "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
                 return_value=fake,
             ):
-                execution = RecognizerExecution(
-                    lambda: SpeechRecognizerNemoWorker(voice_log_dir=None)
-                )
+                execution = RecognizerExecution(SpeechRecognizerNemoWorker)
             request = SpeechExtractorResult(
                 session_id="fixture",
                 speech_id=1,
@@ -781,7 +699,7 @@ class EncodedReuseTests(unittest.TestCase):
                 confirmed=False,
                 voice=np.zeros(8, dtype=np.int16),
             )
-            pending = asyncio.create_task(execution.recognize(request, None))
+            pending = asyncio.create_task(execution.recognize(request))
             try:
                 await asyncio.wait_for(started.wait(), 2)
                 pending.cancel()
@@ -792,7 +710,7 @@ class EncodedReuseTests(unittest.TestCase):
                 with self.assertRaises(asyncio.CancelledError):
                     await pending
                 self.assertIsNone(fake.encoded_refs[0]())
-                await execution.recognize(request, None)
+                await execution.recognize(request)
                 self.assertEqual(len(fake.encoded_refs), 2)
                 self.assertTrue(all(ref() is None for ref in fake.encoded_refs))
             finally:

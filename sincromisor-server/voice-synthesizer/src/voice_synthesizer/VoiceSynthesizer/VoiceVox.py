@@ -105,7 +105,9 @@ class VoiceVox:
             url=f"{self.base_url}/streaming_synthesis",
             params={
                 self.style_id_key: style_id,
-                "segment_length": 0.3,
+                # 40フレームを要求し、再サンプル後とHTTPの9600byte読取を通しても
+                # 初期再生に必要な300msが次のEngine区間より先に届く量を確保する。
+                "segment_length": 0.43,
                 "max_segment_length": 2.4,
             },
             headers={"Content-Type": "application/json"},

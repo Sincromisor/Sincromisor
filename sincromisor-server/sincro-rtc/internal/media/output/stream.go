@@ -9,7 +9,7 @@ import (
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/pipeline/protocol"
 )
 
-// StreamBufferSamples はEngine最初の0.3秒区間に合わせた初期・再開バッファ量と先読みの停止点である。
+// StreamBufferSamples は受信済み300msを要求する初期・再開バッファ量と先読みの停止点である。
 // 生成不足を完全には防げないため、不足時は音声位置を固定して同量まで再度待つ。
 const StreamBufferSamples = SampleRate * 3 / 10
 

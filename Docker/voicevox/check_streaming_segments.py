@@ -81,3 +81,23 @@ def test_invalid_segments_rejected_before_streaming(
             True,
             max_segment_length=cap,
         )
+
+
+@pytest.mark.parametrize(("segment", "expected_first"), [(0.3, 13280), (0.43, 19920)])
+def test_first_segment_after_resampling(segment: float, expected_first: int) -> None:
+    """採用再サンプラーの保持を含め、HTTP読取後の初期再生量を固定する。"""
+    query = _gen_hello_hiho_query()
+    query.speedScale = 0.3
+    query.outputSamplingRate = 48000
+    query.outputStereo = False
+    engine = TTSEngine(MockCoreWrapper())
+    count, stream = engine.synthesize_wave_stream(
+        query, StyleId(1), 0, segment, True, max_segment_length=2.4
+    )
+    chunks = list(stream)
+    assert len(chunks[0]) == expected_first
+    assert sum(map(len, chunks)) == count
+    # Content-Length応答の9600byte読取には44byteヘッダーも含まれる。
+    reads = (44 + expected_first * 2) // 9600
+    delivered_samples = ((reads * 9600 - 44) // 9600) * 4800
+    assert delivered_samples == (4800 if segment == 0.3 else 14400)

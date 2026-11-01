@@ -78,7 +78,16 @@ async def serve_worker(monkeypatch, protocol_class):
     async def endpoint(ws: WebSocket):
         await ws.accept()
         worker = VoiceSynthesizerWorker(
-            "unused", 1, 3, "unused", 1, "unused", 1, "fixture", "fixture"
+            "unused",
+            1,
+            3,
+            "unused",
+            1,
+            "unused",
+            1,
+            "fixture",
+            "fixture",
+            cache_writer=Mock(),
         )
         try:
             await worker.communicate(ws)

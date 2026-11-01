@@ -20,7 +20,8 @@ type ExtractorResult struct {
 	SessionID string `msgpack:"session_id"`
 	// SpeechID は同じ発話の partial/confirmed result を関連付ける識別子である。
 	SpeechID int64 `msgpack:"speech_id"`
-	// SequenceID は extractor が result を送るたびに割り当てる順序識別子である。
+	// SequenceID はExtractor入力の順序識別子である。Recognizer向けに未送信差分を
+	// 結合した要求では末尾の入力を代表し、単調増加するが連番でなくてよい。
 	SequenceID int64 `msgpack:"sequence_id"`
 	// StartAt は発話開始時刻を Unix time の秒で表す。
 	StartAt float64 `msgpack:"start_at"`
@@ -46,7 +47,7 @@ type RecognizerResult struct {
 	SessionID string
 	// SpeechID は認識元となった発話の識別子である。
 	SpeechID int64
-	// SequenceID は認識元 extractor result の順序識別子である。
+	// SequenceID は認識へ実送信した差分要求の通番であり、結合時は末尾の抽出入力を代表する。
 	SequenceID int64
 	// StartAt は発話開始時刻を Unix time の秒で表す。
 	StartAt float64

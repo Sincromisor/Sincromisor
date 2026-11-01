@@ -1,20 +1,18 @@
-"""完成音声のRedis/S3取得と保存を所有し、通常生成と逐次生成へ同じ保存境界を渡す。"""
+"""完成音声の読取りを接続内で所有し、保存はサービス所有の処理へ受け渡す。"""
 
-import io
 import logging
 from collections.abc import Iterator
 from contextlib import ExitStack
 from logging import Logger
+from threading import Event
 from time import perf_counter
 
 import boto3
 from botocore.client import BaseClient
-from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 from botocore.response import StreamingBody
 from redis import Redis
 from redis.backoff import NoBackoff
-from redis.exceptions import RedisError
 from redis.retry import Retry
 from sincro_config import SincromisorLoggerConfig
 from sincro_config.runtime_diagnostics import failure_fields
@@ -22,7 +20,9 @@ from sincro_models import (
     VoiceSynthesizerChunk,
     VoiceSynthesizerRequest,
     VoiceSynthesizerResult,
+    VoiceVoxQuery,
 )
+from voice_synthesizer.cache_writer import S3_CONFIG, VoiceCacheWriter
 from voice_synthesizer.stream_logging import stream_log
 from voice_synthesizer.voice_stream import StreamContext, stream_voice
 
@@ -45,8 +45,11 @@ class VoiceCacheManager:
         s3_port: int,
         s3_access_key: str,
         s3_secret_key: str,
+        *,
+        cache_writer: VoiceCacheWriter,
     ) -> None:
         """接続ごとのキャッシュクライアントと独立した生成ログ設定を準備する。"""
+        self.cache_writer = cache_writer
         self.log_synthesis = SincromisorLoggerConfig.synthesis_enabled()
         self.logger: Logger = logging.getLogger("sincro." + self.__class__.__name__)
         # 初期化途中の失敗も含め、取得した接続を逆順に必ず解放する。
@@ -66,9 +69,7 @@ class VoiceCacheManager:
                 aws_access_key_id=s3_access_key,
                 aws_secret_access_key=s3_secret_key,
                 region_name="us-east-1",
-                config=Config(
-                    signature_version="s3v4", s3={"addressing_style": "path"}
-                ),
+                config=S3_CONFIG,
             )
             resources.callback(self.s3_client.close)
             self.bucket_name: str = "voice-synthesizer"
@@ -90,7 +91,7 @@ class VoiceCacheManager:
         session_id: str | None = None,
         sequence_id: int | None = None,
     ) -> VoiceSynthesizerResult:
-        """キャッシュ内容・保存順序を変えず、取得元と実際の生成条件を記録する。
+        """取得順序を維持し、保存を予約して取得元と実際の生成条件を記録する。
 
         会話IDは運用ログだけに使い、キャッシュキー・MessagePackへ追加しない。
         """
@@ -119,7 +120,12 @@ class VoiceCacheManager:
                 source = "s3"
                 result = self.__get_voice_s3(vs_request, ids)
                 if result is not None:
-                    self.__put_voice_redis(vs_request, result, ids)
+                    self.cache_writer.submit(
+                        vs_request,
+                        result,
+                        StreamContext(0, Event(), ids),
+                        redis_only=True,
+                    )
             if result is None:
                 source = "generated"
                 try:
@@ -128,8 +134,9 @@ class VoiceCacheManager:
                     )
                 except Exception as error:
                     raise self.VoiceSynthesizerServerException from error
-                self.__put_voice_redis(vs_request, result, ids)
-                self.__put_voice_s3(vs_request, result, ids)
+                self.cache_writer.submit(
+                    vs_request, result, StreamContext(0, Event(), ids)
+                )
         except Exception as error:
             cause = error.__cause__ or error
             failure = {
@@ -194,11 +201,17 @@ class VoiceCacheManager:
         result = self.__get_voice_s3(request, context.ids)
         if result is None:
             context.cache_source = "generated"
-        elif not context.cancelled.is_set():
-            # 通常取得と同じく昇格し、同じ音声の次要求でS3を再読取りしない。
-            # 書込み失敗は既存の診断だけに留め、取得済み音声の配信は継続する。
-            self.__put_voice_redis(request, result, context.ids)
         return result
+
+    def save_generated_voice(
+        self,
+        request: VoiceSynthesizerRequest,
+        query: VoiceVoxQuery,
+        pcm: bytearray,
+        context: StreamContext,
+    ) -> None:
+        """WAV検証済みPCMの保存枠を予約し、その枠内だけで完成WAVを作る。"""
+        self.cache_writer.submit_generated(request, query, pcm, context)
 
     def save_cached_voice(
         self,
@@ -206,13 +219,12 @@ class VoiceCacheManager:
         result: VoiceSynthesizerResult,
         context: StreamContext,
     ) -> None:
-        """正常EOF後の完成音声だけを保存し、取消が来たら次の書込みへ進まない。"""
+        """WAV検証後だけ保存を予約する。受理済み保存は以後の接続取消に依存しない。"""
         if context.cancelled.is_set():
             raise InterruptedError("Synthesis cancelled")
-        self.__put_voice_redis(request, result, context.ids)
-        if context.cancelled.is_set():
-            raise InterruptedError("Synthesis cancelled")
-        self.__put_voice_s3(request, result, context.ids)
+        self.cache_writer.submit(
+            request, result, context, redis_only=context.cache_source == "s3"
+        )
 
     def __cache_event(
         self,
@@ -286,39 +298,3 @@ class VoiceCacheManager:
         except Exception as error:
             self.__cache_event("s3", stage, ids, started, error)
             raise
-
-    def __put_voice_redis(
-        self,
-        vs_request: VoiceSynthesizerRequest,
-        vs_result: VoiceSynthesizerResult,
-        ids: dict[str, object],
-    ) -> None:
-        """保存不能でも生成結果を返す既存動作を維持し、操作とIDを残す。"""
-        started = perf_counter()
-        try:
-            self.redis.set(
-                vs_request.redis_key(), vs_result.to_msgpack(), ex=60 * 60 * 24 * 7
-            )
-            self.__cache_event("redis", "write", ids, started)
-        except RedisError as error:
-            self.__cache_event("redis", "write", ids, started, error)
-
-    def __put_voice_s3(
-        self,
-        vs_request: VoiceSynthesizerRequest,
-        vs_result: VoiceSynthesizerResult,
-        ids: dict[str, object],
-    ) -> None:
-        """S3保存不能でも生成結果を返す。キー・本文・認証は診断へ出さない。"""
-        started = perf_counter()
-        try:
-            payload = vs_result.to_msgpack()
-            self.s3_client.put_object(
-                Bucket=self.bucket_name,
-                Key=vs_request.s3_key(),
-                Body=io.BytesIO(payload),
-                ContentType="application/octet-stream",
-            )
-            self.__cache_event("s3", "write", ids, started)
-        except (ClientError, BotoCoreError) as error:
-            self.__cache_event("s3", "write", ids, started, error)

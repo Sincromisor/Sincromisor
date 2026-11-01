@@ -3,6 +3,8 @@
 import asyncio
 import logging
 import logging.config
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from logging import Logger
 from threading import Event
 
@@ -19,6 +21,7 @@ from sincro_config import (
 from sincro_config.websocket_diagnostics import WebSocketDiagnostics
 from starlette.websockets import WebSocketState
 from voice_synthesizer.backpressure_websocket import BackpressureWebSocketProtocol
+from voice_synthesizer.cache_writer import VoiceCacheWriter
 from voice_synthesizer.models import VoiceSynthesizerProcessArgument
 from voice_synthesizer.VoiceSynthesizer import VoiceSynthesizerWorker
 
@@ -51,7 +54,18 @@ class VoiceSynthesizerProcess:
             consul_agent_host=self.__args.consul_agent_host,
             consul_agent_port=self.__args.consul_agent_port,
         )
-        app: FastAPI = FastAPI()
+        cache_writer: VoiceCacheWriter | None = None
+
+        @asynccontextmanager
+        async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
+            """接続回収後に保存キューを完了し、最後にサービス所有クライアントを閉じる。"""
+            try:
+                yield
+            finally:
+                if cache_writer is not None:
+                    await asyncio.to_thread(cache_writer.close)
+
+        app: FastAPI = FastAPI(lifespan=lifespan)
         event: Event = Event()
         self.sd_reporter: ServiceDiscoveryReporter = ServiceDiscoveryReporter(
             worker_type="VoiceSynthesizer",
@@ -72,6 +86,7 @@ class VoiceSynthesizerProcess:
         @app.websocket("/api/v1/VoiceSynthesizer/synthesize")
         async def websocket_chat_endpoint(ws: WebSocket) -> None:
             """接続単位の診断と後始末を所有し、要求処理の主原因を保持する。"""
+            nonlocal cache_writer
             # 本文を持つ要求の処理はワーカーへ委ね、ここでは接続の生存期間を管理する。
             diagnostic = WebSocketDiagnostics(self.__logger)
             diagnostic.start()
@@ -93,6 +108,17 @@ class VoiceSynthesizerProcess:
                 )
                 if voicevox_description is None:
                     raise RuntimeError("No SincroVoiceVox worker found.")
+                # 最初の接続で発見した保存先へ専用接続を作り、以後はサービス内で共有する。
+                # 接続ごとの読取クライアントは背景保存へ貸し出さない。
+                if cache_writer is None:
+                    cache_writer = VoiceCacheWriter(
+                        redis_host=redis_description.service_address,
+                        redis_port=redis_description.service_port,
+                        s3_host=s3_description.service_address,
+                        s3_port=s3_description.service_port,
+                        s3_access_key=self.__args.s3_access_key,
+                        s3_secret_key=self.__args.s3_secret_key,
+                    )
                 with diagnostic.operation("accept"):
                     await ws.accept()
                 voice_synthesizer = VoiceSynthesizerWorker(
@@ -105,6 +131,7 @@ class VoiceSynthesizerProcess:
                     s3_port=s3_description.service_port,
                     s3_access_key=self.__args.s3_access_key,
                     s3_secret_key=self.__args.s3_secret_key,
+                    cache_writer=cache_writer,
                 )
                 await voice_synthesizer.communicate(ws=ws, diagnostic=diagnostic)
             except asyncio.CancelledError as error:

@@ -9,6 +9,7 @@ import wave
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import import_module
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 from botocore.exceptions import ClientError
@@ -95,6 +96,9 @@ def test_generation_cache_and_failure(
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
+    from test_cache_writer import make_writer
+
+    writer, _, _ = make_writer(monkeypatch, redis=redis, s3=s3)
     manager = VoiceCacheManager(
         "127.0.0.1",
         server.server_port,
@@ -104,11 +108,16 @@ def test_generation_cache_and_failure(
         1,
         "fixture",
         "fixture-secret",
+        cache_writer=writer,
     )
     output = io.StringIO()
     handler = logging.StreamHandler(output)
     handler.setFormatter(JsonLogFormatter())
-    loggers = [manager.logger, logging.getLogger("sincro.VoiceSynthesizer")]
+    loggers = [
+        manager.logger,
+        writer.logger,
+        logging.getLogger("sincro.VoiceSynthesizer"),
+    ]
     previous = [(logger.level, logger.propagate) for logger in loggers]
     for logger in loggers:
         logger.setLevel(logging.INFO)
@@ -132,6 +141,8 @@ def test_generation_cache_and_failure(
                     request, session_id="session-a", sequence_id=2
                 ).to_msgpack()
             )
+            with writer._condition:  # noqa: SLF001  # reason: 保存完了後の命中だけを決定的に確認する。
+                assert writer._condition.wait_for(lambda: writer._count == 0, timeout=3)  # noqa: SLF001  # reason: 非同期保存の完了を待って反復取得を確認する。
         assert results[0] == results[1] == results[2]
         assert state.calls == 2
         redis_data.clear()
@@ -222,6 +233,7 @@ def test_generation_cache_and_failure(
                 for event in events
             )
     finally:
+        writer.close()
         for logger, (level, propagate) in zip(loggers, previous, strict=True):
             logger.removeHandler(handler)
             logger.setLevel(level)
@@ -273,7 +285,16 @@ def test_worker_preserves_ids_and_skips_final(monkeypatch, caplog):
         lambda **kwargs: SimpleNamespace(stream_voice=stream_voice),
     )
     worker = VoiceSynthesizerWorker(
-        "unused", 1, 3, "unused", 1, "unused", 1, "fixture", "fixture"
+        "unused",
+        1,
+        3,
+        "unused",
+        1,
+        "unused",
+        1,
+        "fixture",
+        "fixture",
+        cache_writer=Mock(),
     )
     request = TextProcessorRequest(
         session_id="session-a",
