@@ -6,7 +6,7 @@
 - `.env`、Docker Composeサービス、Pion / フロントエンド設定の3点を常に整合させる。
 - `full` / `rtc`プロファイルはPion版 `sincro-rtc`を起動する。
 
-利用者向けの接続・配置は[別端末からの利用と分散配置](../../guides/network-deployment.md)、ソースの変更は[ローカル開発](local-development.md)を参照する。
+利用者向けの接続・配置は[別端末からの利用と分散配置](../../guides/network-deployment.md)を参照する。
 
 ## ローカル起動の原則
 
