@@ -1,0 +1,13 @@
+id: task-261104021446-secure-browser-test-launch
+title: ブラウザーテストをシステムChromeとサンドボックスへ統一する
+category: frontend-maintenance
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-11-04
+closed_at: 2026-11-04
+legacy_ids: []

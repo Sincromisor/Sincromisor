@@ -32,7 +32,7 @@ export PATH="$HOME/.local/bin:$PATH"
 | --------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | 指定なし        | 開発ツール、全サービスの Python 依存、Docker、NVIDIA Container Toolkit を導入し、CUDA コンテナで GPU を確認する          |
 | `--without-gpu` | Toolkit 導入と GPU 確認を省く。GPU のない環境で静的検査・単体テストなどを行う場合に使う。Python 全サービス依存は導入する |
-| `--browser`     | Playwright CLI を `~/.local` に、Google Chrome とブラウザー用 OS 依存を追加する。ほかの指定と併用できる                  |
+| `--browser`     | Google Chromeとブラウザー用OS依存を追加する。Playwright CLIはリポジトリの固定済み依存を使う。ほかの指定と併用できる      |
 
 Ubuntu 標準の Node.js / npm、Go、C/C++ ビルドツール、FFmpeg、Opus、音声処理ライブラリ、Git、ripgrep、ShellCheck を導入する。Python は uv で `.python-version` の 3.14 を用意し、`uv sync --locked --group dev --group full` を実行する。Go の必要バージョンは `go.mod` と標準の自動ツールチェーン取得に従う。
 
@@ -72,4 +72,6 @@ HTTP が開けても WebRTC の UDP が到達するとは限らない。既定�
 - [WSL の systemd](https://learn.microsoft.com/en-us/windows/wsl/systemd)、[WSL ネットワーク](https://learn.microsoft.com/en-us/windows/wsl/networking): Windows 側の手動準備と接続条件を確認する。
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)、[Go ツールチェーン](https://go.dev/doc/toolchain)、[Playwright CLI](https://github.com/microsoft/playwright-cli): 公式の導入とバージョン選択機能を使う。
 
-`--browser`は固定済みPlaywrightで自動テスト用Chromiumを`work/playwright-browsers`へ取得する。実機確認用Chromeは別途導入する。ブラウザーの取得は通常の`npm ci`では実行しない。
+`--browser`は固定済みPlaywrightの導入コマンドでシステムChromeを導入する。
+操作CLIと自動テストはこのChromeを使う。通常の`npm ci`ではブラウザーを導入・更新しない。
+導入後はOS側でChromeを更新し、[ブラウザーの更新と保護](../../documents/rules/playwright-cli.md#ブラウザーの更新と保護)に従って確認する。

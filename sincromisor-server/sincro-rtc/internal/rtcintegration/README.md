@@ -16,6 +16,11 @@
 - `SINCRO_RTC_INTEGRATION_CONSUL_BINARY`
 - `SINCRO_RTC_INTEGRATION_FFMPEG_BINARY`
 
+`SINCRO_RTC_INTEGRATION_CHROMIUM_BINARY`には、更新済みのシステムChromeの絶対パスを指定する。
+Playwright側が実際のブラウザーの版を検査し、サンドボックスを有効にして起動する。
+必要な版と更新手順は[ブラウザーの更新と保護](../../../../documents/rules/playwright-cli.md#ブラウザーの更新と保護)に従う。
+古いキャッシュの実行ファイルを指定した場合は停止し、サンドボックスの無効化による回避は行わない。
+
 専用Consulが使うループバックの8500番ポートが空いていることを確認し、Goモジュールのルートで実行する。
 
 ```sh

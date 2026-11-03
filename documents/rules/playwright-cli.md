@@ -10,6 +10,25 @@
 
 利用するオプションは `npm run browser -- open --help`、その他の操作は `npm run browser -- --help` と対象コマンドのヘルプで確認する。
 
+## ブラウザーの更新と保護
+
+操作CLIと通常のテストは、OS側で更新するGoogle ChromeのStableチャネルを使う。
+Playwrightが指定するChromiumと、システムChromeの更新は別であり、`npm ci`だけではブラウザーを更新できない。
+未導入の場合は`npm run browser:install`でChromeを導入する。このコマンドはシステムへ変更を加えるため、
+導入済みChromeの更新はOSのパッケージ管理やChromeの更新機能で行う。
+Linuxでは`google-chrome --version`で実行ファイルの版を確認する。
+
+テストの共通設定は[`playwright.browser.ts`](../../playwright.browser.ts)に置く。
+`chromiumSandbox: true`を指定し、テスト開始前に実行するブラウザーの版を検査する。
+下限は2026-10-29の修正を含む`156.0.8078.79`であり、最新版を保証する値ではない。
+Chromeのセキュリティ更新を継続し、必要に応じて下限も更新する。
+古い実行ファイルやサンドボックス付きで起動できない環境では停止し、`--no-sandbox`で回避しない。
+操作CLIでも`--browser=chrome`を使い、設定ファイルや環境変数でサンドボックスを無効化しない。
+
+リポジトリルートの`npm run browser:test:security`で、ページを外部へ接続せずに起動引数を確認する。
+Linuxでは`chrome://sandbox`の保護状態も確認する。
+専用プロファイルは認証状態を分離するものであり、ブラウザーの更新やサンドボックスの代わりにはならない。
+
 ## Chromeの専用プロファイル
 
 CLIでChromeを起動する場合は、専用ディレクトリを `--profile` に指定する。普段使うChromeのユーザーデータディレクトリやプロファイルを指定しない。専用プロファイルはリポジトリの外へ置き、Cookieやログイン状態をGit管理しない。
@@ -54,6 +73,11 @@ npm run browser -- -s=sincromisor close
 
 既存テストの実行・修正が目的なら、ブラウザー操作から始めず [テストの実行と調査](../../.agents/skills/playwright-cli/references/playwright-tests.md) を読む。新しいテストは要求結果の確認に必要な場合だけ作る。
 
+`npm run browser:test`は[`playwright.config.ts`](../../playwright.config.ts)を使う。
+通常の画面試験は別途開発サーバーを起動して実行する。CSS試験は`npm run browser:test:css`、
+RTC試験は[RTC統合試験の手順](../../sincromisor-server/sincro-rtc/internal/rtcintegration/README.md)から実行する。
+いずれも共通のブラウザー保護設定を使い、RTCの実行ファイル指定にも版の検査を適用する。
+
 ## 公式スキルの更新
 
 `playwright-cli install --skills=agents` で導入する公式スキルと `references/` は、上流の原文資料としてGit管理する。プロジェクト固有の運用は本書に置き、公式スキルの汎用例より本書を優先する。更新時はスキル本文と参照資料をまとめて確認し、リンク先の欠落と利用コマンドの変更を確認する。公式資料の英語表記は原文として保持する。
@@ -61,6 +85,11 @@ npm run browser -- -s=sincromisor close
 公式スキルは固定済みCLIより新しい場合がある。追加オプションを利用する前に、対象コマンドのヘルプで対応を確認する。CLI 0.1.22のヘルプには、公式例の `tab-new --isolated-context` と `cookie-delete --domain` は掲載されていない。
 
 ## 参照
+
+[Chromeのセキュリティ更新](https://chromereleases.googleblog.com/2026/10/stable-channel-update-for-desktop_02107719452.html)、
+[Playwrightのブラウザー選択](https://playwright.dev/docs/browsers)、
+[サンドボックス設定](https://playwright.dev/docs/api/class-browsertype#browser-type-launch-option-chromium-sandbox)
+（2026-11-04参照）。システムChromeの利用、修正版の下限、サンドボックスの明示的な有効化に適用する。
 
 [Playwright CLI公式ドキュメント](https://github.com/microsoft/playwright-cli)（2026-10-11参照）。本プロジェクトでは名前付きセッションによる操作と専用プロファイルの永続化を採用する。インストール済みCLIの `open --help` で `--browser`、`--headed`、`--profile` の対応を確認した。
 

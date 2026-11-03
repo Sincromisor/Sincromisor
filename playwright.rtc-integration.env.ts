@@ -1,3 +1,7 @@
+import type { FullConfig } from "@playwright/test";
+
+import verifyBrowser from "./playwright.browser";
+
 /** Go試験から渡される実行環境。読み込み時には検証せず、エディターからの一覧取得を許可する。 */
 export const rtcIntegrationEnv = {
 	chromiumBinary: process.env.SINCRO_RTC_INTEGRATION_CHROMIUM_BINARY,
@@ -7,9 +11,11 @@ export const rtcIntegrationEnv = {
 
 /**
  * PlaywrightのglobalSetupとして実行し、ブラウザー起動前に必須入力を検査する。
- * 一覧取得では呼ばれない。実行ファイルや固定音声の詳細な検査とサービス起動はGo側が所有する。
+ * 一覧取得では呼ばれない。ファイルの存在検査とサービス起動はGo側、ブラウザーの版と保護設定は共通検査が所有する。
  */
-export default function validateRtcIntegrationEnvironment(): void {
+export default async function validateRtcIntegrationEnvironment(
+	config: FullConfig,
+): Promise<void> {
 	const required = {
 		SINCRO_RTC_INTEGRATION_CHROMIUM_BINARY: rtcIntegrationEnv.chromiumBinary,
 		SINCRO_RTC_INTEGRATION_BASE_URL: rtcIntegrationEnv.baseURL,
@@ -26,4 +32,5 @@ export default function validateRtcIntegrationEnvironment(): void {
 				"-run '^TestFrontendBrowserHarness$' -count=1 -v",
 		);
 	}
+	await verifyBrowser(config);
 }

@@ -1,5 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
+import { browserTestUse } from "./playwright.browser";
+
 // CSSの挿入順と配信形態で優先順位が変わらないことを、同じ実ページで確認する。
 // この設定が専用ポートのサーバーを起動・終了し、既存サービスは再利用しない。
 export default defineConfig({
@@ -7,7 +9,8 @@ export default defineConfig({
 	outputDir: "./work/css-test-results",
 	reporter: "line",
 	workers: 1,
-	use: { channel: "chrome", reducedMotion: "reduce" },
+	globalSetup: "./playwright.browser.ts",
+	use: { ...browserTestUse, reducedMotion: "reduce" },
 	projects: [
 		{ name: "開発", use: { baseURL: "http://127.0.0.1:5175" } },
 		{ name: "本番", use: { baseURL: "http://127.0.0.1:5176" } },
