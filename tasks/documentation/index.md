@@ -51,5 +51,6 @@
 | [task-261025052500-mastra-studio-user-guide](./task-261025052500-mastra-studio-user-guide/task.md)                             | Mastra Studioのサインインと会話設定の操作ガイドを作成する           | ✅ PASS | —                                        |
 | [task-261025052500-proper-noun-dictionary-user-guide](./task-261025052500-proper-noun-dictionary-user-guide/task.md)           | 音声認識の固有名詞辞書の追加ガイドを作成する                        | ✅ PASS | —                                        |
 | [task-261025052501-network-deployment-user-guide](./task-261025052501-network-deployment-user-guide/task.md)                   | 別端末からの利用と分散配置の案内をガイドにまとめる                  | ✅ PASS | —                                        |
+| [task-261103204742-public-documentation-boundaries](./task-261103204742-public-documentation-boundaries/task.md)               | 公開文書の対象読者と記録範囲を整理する                              | ✅ PASS | —                                        |
 
 <!-- AUTOGEN:tasks END -->
