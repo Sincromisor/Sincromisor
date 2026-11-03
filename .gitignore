@@ -9,6 +9,7 @@ __pycache__
 node_modules
 node_modules/
 work/
+work.agents/
 # 閲覧制限付き調査記録・実写動画などの非公開原本。
 work/private-artifacts/
 .env
