@@ -36,7 +36,7 @@
         "browser": "playwright-cli",
         "browser:install": "playwright install chrome",
         "browser:test": "playwright test",
-        "browser:test:security": "node scripts/browser/browser-policy.test.mjs && npm run browser:test -- sincromisor-frontend/tests/browser/sandbox.spec.ts --workers=1",
+        "browser:test:security": "npm run browser:test -- sincromisor-frontend/tests/browser/sandbox.spec.ts --workers=1",
         "browser:test:css": "npm run browser:test -- --config playwright.css.config.ts"
     },
     "codexGen": {

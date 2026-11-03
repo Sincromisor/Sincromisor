@@ -121,7 +121,7 @@ func startPion(t *testing.T, environment harnessenv.Environment) (string, *testp
 	return baseURL, pion
 }
 
-// runPlaywright はChromiumとpage/contextの所有をPlaywrightに委ね、終了codeをそのまま合否にする。
+// runPlaywright はシステムChromeの選択とブラウザー・ページの生存期間をPlaywrightに委ね、終了コードを合否にする。
 func runPlaywright(
 	t *testing.T,
 	environment harnessenv.Environment,
@@ -135,7 +135,6 @@ func runPlaywright(
 		Args: []string{filepath.Join(environment.RepositoryRoot, "node_modules", "@playwright", "test", "cli.js"), "test", "--config", filepath.Join(environment.RepositoryRoot, "playwright.rtc-integration.config.ts")},
 		Env: append(os.Environ(),
 			"SINCRO_RTC_INTEGRATION_BASE_URL="+baseURL,
-			"SINCRO_RTC_INTEGRATION_CHROMIUM_BINARY="+environment.Chromium.Path,
 			"SINCRO_RTC_INTEGRATION_AUDIO_FIXTURE="+environment.AudioFixture,
 		),
 		Dir: environment.RepositoryRoot,

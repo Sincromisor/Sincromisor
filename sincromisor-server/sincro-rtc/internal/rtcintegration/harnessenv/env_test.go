@@ -20,8 +20,6 @@ func TestLoadValidatesAllInputsAndVersions(t *testing.T) {
 			return []byte("go version go1.26.9 linux/amd64\n"), nil
 		case "node":
 			return []byte("v18.20.0\n"), nil
-		case "chromium":
-			return []byte("Chromium 140.0\n"), nil
 		case "consul":
 			return []byte("Consul v1.21.0\nextra\n"), nil
 		case "ffmpeg":
@@ -35,14 +33,14 @@ func TestLoadValidatesAllInputsAndVersions(t *testing.T) {
 		t.Fatalf("load() error = %v", err)
 	}
 	if !filepath.IsAbs(got.RepositoryRoot) || !filepath.IsAbs(got.FrontendDist) ||
-		!filepath.IsAbs(got.AudioFixture) || len(got.Inputs) != 8 {
+		!filepath.IsAbs(got.AudioFixture) || len(got.Inputs) != 7 {
 		t.Fatalf("environment paths/inputs = %+v", got)
 	}
 	if got.Inputs[2].SHA256 == nil || len(*got.Inputs[2].SHA256) != 64 {
 		t.Fatalf("audio SHA256 = %v", got.Inputs[2].SHA256)
 	}
 	wantProbes := []string{
-		"go version", "node --version", "chromium --version", "consul version", "ffmpeg -version",
+		"go version", "node --version", "consul version", "ffmpeg -version",
 	}
 	if !slices.Equal(probes, wantProbes) {
 		t.Fatalf("probes = %v, want %v", probes, wantProbes)
@@ -58,9 +56,9 @@ func TestLoadRejectsInvalidBoundaryInputs(t *testing.T) {
 		{
 			name: "missing environment",
 			mutate: func(_ *testing.T, _ string, env map[string]string) {
-				delete(env, chromiumBinaryEnv)
+				delete(env, nodeBinaryEnv)
 			},
-			want: chromiumBinaryEnv + " is not set",
+			want: nodeBinaryEnv + " is not set",
 		},
 		{
 			name: "relative executable",
@@ -212,7 +210,7 @@ func makeEnvironmentFixture(t *testing.T) (string, map[string]string) {
 	}
 	environment := make(map[string]string)
 	for envName, name := range map[string]string{
-		goBinaryEnv: "go", nodeBinaryEnv: "node", chromiumBinaryEnv: "chromium",
+		goBinaryEnv: "go", nodeBinaryEnv: "node",
 		consulBinaryEnv: "consul", ffmpegBinaryEnv: "ffmpeg",
 	} {
 		path := filepath.Join(repository, "bin", name)

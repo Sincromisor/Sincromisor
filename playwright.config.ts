@@ -7,6 +7,5 @@ export default defineConfig({
 	testDir: "./sincromisor-frontend/tests",
 	testIgnore: ["**/styles/**", "**/rtc-integration/**"],
 	outputDir: "./work.agents/browser-test-results",
-	globalSetup: "./playwright.browser.ts",
 	use: browserTestUse,
 });

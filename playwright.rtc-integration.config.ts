@@ -17,7 +17,6 @@ export default defineConfig({
 		headless: true,
 		launchOptions: {
 			...browserTestUse.launchOptions,
-			executablePath: rtcIntegrationEnv.chromiumBinary,
 			args: [
 				"--use-fake-device-for-media-stream",
 				"--use-fake-ui-for-media-stream",

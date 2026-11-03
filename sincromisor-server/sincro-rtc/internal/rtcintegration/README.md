@@ -12,14 +12,13 @@
 
 - `SINCRO_RTC_INTEGRATION_GO_BINARY`
 - `SINCRO_RTC_INTEGRATION_NODE_BINARY`
-- `SINCRO_RTC_INTEGRATION_CHROMIUM_BINARY`
 - `SINCRO_RTC_INTEGRATION_CONSUL_BINARY`
 - `SINCRO_RTC_INTEGRATION_FFMPEG_BINARY`
 
-`SINCRO_RTC_INTEGRATION_CHROMIUM_BINARY`には、更新済みのシステムChromeの絶対パスを指定する。
-Playwright側が実際のブラウザーの版を検査し、サンドボックスを有効にして起動する。
-必要な版と更新手順は[ブラウザーの更新と保護](../../../../documents/rules/playwright-cli.md#ブラウザーの更新と保護)に従う。
-古いキャッシュの実行ファイルを指定した場合は停止し、サンドボックスの無効化による回避は行わない。
+ブラウザーはPlaywrightの共通設定からシステムChromeを選び、サンドボックスを有効にして起動する。
+旧`SINCRO_RTC_INTEGRATION_CHROMIUM_BINARY`は廃止したため、実行環境から指定を削除する。
+Chromeの導入・更新は[ブラウザーの更新と保護](../../../../documents/rules/playwright-cli.md#ブラウザーの更新と保護)に従う。
+ブラウザーの固定バージョン検査は行わず、サンドボックスの無効化による起動失敗の回避も行わない。
 
 専用Consulが使うループバックの8500番ポートが空いていることを確認し、Goモジュールのルートで実行する。
 

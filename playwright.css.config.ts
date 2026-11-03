@@ -9,7 +9,6 @@ export default defineConfig({
 	outputDir: "./work/css-test-results",
 	reporter: "line",
 	workers: 1,
-	globalSetup: "./playwright.browser.ts",
 	use: { ...browserTestUse, reducedMotion: "reduce" },
 	projects: [
 		{ name: "開発", use: { baseURL: "http://127.0.0.1:5175" } },

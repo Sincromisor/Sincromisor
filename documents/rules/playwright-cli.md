@@ -19,10 +19,9 @@ Playwrightが指定するChromiumと、システムChromeの更新は別であ�
 Linuxでは`google-chrome --version`で実行ファイルの版を確認する。
 
 テストの共通設定は[`playwright.browser.ts`](../../playwright.browser.ts)に置く。
-`chromiumSandbox: true`を指定し、テスト開始前に実行するブラウザーの版を検査する。
-下限は2026-10-29の修正を含む`156.0.8078.79`であり、最新版を保証する値ではない。
-Chromeのセキュリティ更新を継続し、必要に応じて下限も更新する。
-古い実行ファイルやサンドボックス付きで起動できない環境では停止し、`--no-sandbox`で回避しない。
+通常・CSS・RTCのテストは`channel: "chrome"`と`chromiumSandbox: true`を共有する。
+ブラウザーの固定バージョン検査や、そのための追加起動は行わない。Chromeのセキュリティ更新はOS側で継続する。
+Chromeが未導入、またはサンドボックス付きで起動できない環境では起動に失敗し、`--no-sandbox`で回避しない。
 操作CLIでも`--browser=chrome`を使い、設定ファイルや環境変数でサンドボックスを無効化しない。
 
 リポジトリルートの`npm run browser:test:security`で、ページを外部へ接続せずに起動引数を確認する。
@@ -76,7 +75,7 @@ npm run browser -- -s=sincromisor close
 `npm run browser:test`は[`playwright.config.ts`](../../playwright.config.ts)を使う。
 通常の画面試験は別途開発サーバーを起動して実行する。CSS試験は`npm run browser:test:css`、
 RTC試験は[RTC統合試験の手順](../../sincromisor-server/sincro-rtc/internal/rtcintegration/README.md)から実行する。
-いずれも共通のブラウザー保護設定を使い、RTCの実行ファイル指定にも版の検査を適用する。
+いずれも共通のブラウザー保護設定を使い、RTCでもブラウザーの実行ファイルを個別指定しない。
 
 ## 公式スキルの更新
 
@@ -86,10 +85,9 @@ RTC試験は[RTC統合試験の手順](../../sincromisor-server/sincro-rtc/inter
 
 ## 参照
 
-[Chromeのセキュリティ更新](https://chromereleases.googleblog.com/2026/10/stable-channel-update-for-desktop_02107719452.html)、
 [Playwrightのブラウザー選択](https://playwright.dev/docs/browsers)、
 [サンドボックス設定](https://playwright.dev/docs/api/class-browsertype#browser-type-launch-option-chromium-sandbox)
-（2026-11-04参照）。システムChromeの利用、修正版の下限、サンドボックスの明示的な有効化に適用する。
+（2026-11-04参照）。システムChromeの利用とサンドボックスの明示的な有効化に適用する。
 
 [Playwright CLI公式ドキュメント](https://github.com/microsoft/playwright-cli)（2026-10-11参照）。本プロジェクトでは名前付きセッションによる操作と専用プロファイルの永続化を採用する。インストール済みCLIの `open --help` で `--browser`、`--headed`、`--profile` の対応を確認した。
 

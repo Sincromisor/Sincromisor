@@ -8,11 +8,10 @@ import (
 )
 
 const (
-	goBinaryEnv       = "SINCRO_RTC_INTEGRATION_GO_BINARY"
-	nodeBinaryEnv     = "SINCRO_RTC_INTEGRATION_NODE_BINARY"
-	chromiumBinaryEnv = "SINCRO_RTC_INTEGRATION_CHROMIUM_BINARY"
-	consulBinaryEnv   = "SINCRO_RTC_INTEGRATION_CONSUL_BINARY"
-	ffmpegBinaryEnv   = "SINCRO_RTC_INTEGRATION_FFMPEG_BINARY"
+	goBinaryEnv     = "SINCRO_RTC_INTEGRATION_GO_BINARY"
+	nodeBinaryEnv   = "SINCRO_RTC_INTEGRATION_NODE_BINARY"
+	consulBinaryEnv = "SINCRO_RTC_INTEGRATION_CONSUL_BINARY"
+	ffmpegBinaryEnv = "SINCRO_RTC_INTEGRATION_FFMPEG_BINARY"
 )
 
 // Input はRTC統合試験の検査済み入力を成果物へ転記するための値である。
@@ -36,8 +35,8 @@ type Tool struct {
 
 // Environment はRTC統合試験全体で共有する検査済み入力である。
 //
-// 値は immutable として扱う。後続処理は各 Tool.Path をprocessへ直接指定し、
-// PATHによる再解決を行わない。
+// 値は変更せずに扱い、後続処理は各Tool.Pathをプロセスへ直接指定する。
+// Chromeの選択と起動はPlaywright設定が所有し、この構造体には含めない。
 type Environment struct {
 	RepositoryRoot string
 	ModuleRoot     string
@@ -45,7 +44,6 @@ type Environment struct {
 	AudioFixture   string
 	Go             Tool
 	Node           Tool
-	Chromium       Tool
 	Consul         Tool
 	FFmpeg         Tool
 	Inputs         []Input
@@ -53,10 +51,10 @@ type Environment struct {
 
 type commandRunner func(context.Context, string, ...string) ([]byte, error)
 
-// Load はモジュールの配置と5つの環境変数からRTC統合試験の全入力を一括検査する。
+// Load はモジュールの配置と環境変数からGo側が所有する試験入力を一括検査する。
 //
-// 一件でも未設定、相対 path、欠落、権限不備、version 不整合があれば部分的な
-// Environment を返さない。外部 process は version probe の間だけ起動する。
+// 一件でも未設定、相対パス、欠落、権限不備、バージョン不整合があれば部分的な
+// Environmentを返さない。外部プロセスはバージョン確認の間だけ起動する。
 func Load(ctx context.Context) (Environment, error) {
 	moduleRoot, err := discoverModuleRoot()
 	if err != nil {
@@ -121,10 +119,6 @@ func load(
 	if err != nil {
 		return Environment{}, err
 	}
-	chromiumTool, err := inspectTool(ctx, getenv, run, chromiumBinaryEnv, []string{"--version"}, requireNonEmpty)
-	if err != nil {
-		return Environment{}, err
-	}
 	consulTool, err := inspectTool(ctx, getenv, run, consulBinaryEnv, []string{"version"}, requireNonEmpty)
 	if err != nil {
 		return Environment{}, err
@@ -140,7 +134,6 @@ func load(
 		{Name: "audio_fixture", Path: audioFixture, Version: "wav", SHA256: &audioSHA},
 		{Name: "go", Path: goTool.Path, Version: goTool.Version},
 		{Name: "node", Path: nodeTool.Path, Version: nodeTool.Version},
-		{Name: "chromium", Path: chromiumTool.Path, Version: chromiumTool.Version},
 		{Name: "consul", Path: consulTool.Path, Version: consulTool.Version},
 		{Name: "ffmpeg", Path: ffmpegTool.Path, Version: ffmpegTool.Version},
 	}
@@ -151,7 +144,6 @@ func load(
 		AudioFixture:   audioFixture,
 		Go:             goTool,
 		Node:           nodeTool,
-		Chromium:       chromiumTool,
 		Consul:         consulTool,
 		FFmpeg:         ffmpegTool,
 		Inputs:         inputs,
