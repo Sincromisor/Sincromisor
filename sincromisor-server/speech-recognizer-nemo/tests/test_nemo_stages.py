@@ -78,13 +78,19 @@ def recognizer(monkeypatch, **kwargs):
 
 
 @pytest.mark.parametrize("nbest", [False, True])
-def test_preprocessing_and_candidates(monkeypatch, nbest):
+@pytest.mark.parametrize("floating", [False, True])
+def test_preprocessing_and_candidates(monkeypatch, nbest, floating):
     obj = recognizer(monkeypatch, nbest=nbest)
-    audio = np.arange(16, dtype=np.int16)
+    audio = np.array([-32768, -1, 0, 1, 32767], dtype=np.int16)
+    expected = audio.astype(np.float32) / 32768.0
+    if floating:
+        audio = expected.copy()
+    original = audio.copy()
     result = obj.transcribe_with_score(audio)
     assert result == [("認識", -1.0)] * (2 if nbest else 1)
-    np.testing.assert_array_equal(obj.model.input.numpy()[0], np.pad(audio, 8000))
-    assert obj.model.input.dtype == torch.int16
+    np.testing.assert_array_equal(obj.model.input.numpy()[0], np.pad(expected, 8000))
+    np.testing.assert_array_equal(audio, original)
+    assert obj.model.input.dtype == torch.float32
     assert obj.model.events == ["begin", "encode", "end", "begin", "decode", "end"]
     assert not obj.model.active
 

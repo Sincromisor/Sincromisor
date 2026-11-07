@@ -1,7 +1,9 @@
 # ruff: noqa: PT009
 import logging
 import unittest
+from importlib import import_module
 from pathlib import Path
+from unittest.mock import patch
 
 from speech_recognizer_nemo.SpeechRecognizerNemo import (
     ProperNounDictionary,
@@ -44,6 +46,28 @@ class FakeTokenizer:
 
 
 class RecognizerPostProcessorTest(unittest.TestCase):
+    def test_empty_dictionary_does_not_initialize_tokenizer(self) -> None:
+        module = import_module(
+            "speech_recognizer_nemo.SpeechRecognizerNemo.RecognizerPostProcessor"
+        )
+        with patch.object(module, "SudachiDictionary") as dictionary:
+            processor = RecognizerPostProcessor(ProperNounDictionary.empty())
+        dictionary.assert_not_called()
+        self.assertFalse(processor.enabled)
+
+    def test_tokenizer_failure_disables_optional_correction(self) -> None:
+        module = import_module(
+            "speech_recognizer_nemo.SpeechRecognizerNemo.RecognizerPostProcessor"
+        )
+        with (
+            patch.object(module, "SudachiDictionary", side_effect=OSError("missing")),
+            self.assertLogs("sincro.RecognizerPostProcessor", level="WARNING"),
+        ):
+            processor = RecognizerPostProcessor(self.dictionary)
+        self.assertFalse(processor.enabled)
+        original = [("元の認識", 0.5)]
+        self.assertEqual(processor.apply(original).corrected_result, tuple(original))
+
     def setUp(self) -> None:
         fixture_path = Path(__file__).with_name("fixtures") / "proper_nouns.csv"
         self.dictionary = ProperNounDictionary.load_from_csv_with_logger(

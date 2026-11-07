@@ -61,7 +61,11 @@ class SpeechRecognizerNemo:
 
     @torch.inference_mode()
     def encode(self, audio: np.ndarray) -> EncodedAudio:
-        """16kHz音声を従来どおり正規化・余白追加し、エンコーダー出力と有効長を返す。"""
+        """16kHzモノラルPCMを浮動小数点振幅へ揃え、余白付き音声をエンコードする。"""
+        # norm_audioとNeMoの配列入力は整数PCMの振幅を変換しない。
+        # 浮動小数点の呼出元は既に正規化済みなので、二重に縮小しない。
+        if audio.dtype == np.int16:
+            audio = audio.astype(np.float32) / 32768.0
         org_audio = AudioData(audio, 16000)  # ty: ignore[invalid-argument-type]  # reason: upstream waveform注釈はnp.float32だが実値はndarray / 解消条件: upstream修正後
         padded = pad_audio(norm_audio(org_audio), self.PAD_SECONDS).waveform
         with self._inference(padded) as config:

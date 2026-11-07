@@ -57,7 +57,8 @@ class FakeSpeechRecognizerNemo:
         }
         if boosting_phrases:
             self.last_candidates_kwargs = kwargs
-            return [("タブンネです", 0.8), ("</s>", 1.0)]
+            # 実際のNeMoと同様、各要素は文章全体の代替候補。
+            return [("タブンネです", 0.8), ("たぶんねです", 0.7)]
 
         self.last_nbest_kwargs = kwargs
         return [
@@ -141,6 +142,30 @@ class FakeRerankAwareDeferredPostProcessor(FakePostProcessor):
 
 
 class SpeechRecognizerNemoWorkerTest(unittest.TestCase):
+    def test_empty_context_candidates_keep_baseline(self) -> None:
+        with patch(
+            "speech_recognizer_nemo.SpeechRecognizerNemo.SpeechRecognizerNemoWorker.SpeechRecognizerNemo",
+            FakeSpeechRecognizerNemo,
+        ):
+            worker = SpeechRecognizerNemoWorker(proper_noun_context_biasing_enable=True)
+        worker.proper_noun_dictionary = ProperNounDictionary.load_from_csv(
+            self.fixture_path
+        )
+        worker.post_processor = FakeDeferredPostProcessor()
+        with patch.object(worker.s2t, "decode_candidates", return_value=[]):
+            result, trace = worker.recognize(
+                SpeechExtractorResult(
+                    session_id="session",
+                    speech_id=1,
+                    sequence_id=1,
+                    start_at=0,
+                    confirmed=True,
+                    voice=np.zeros(8, dtype=np.int16),
+                )
+            )
+        self.assertEqual(result.result_text(), "しんくろみそーるです")
+        self.assertFalse(trace["context_biasing"]["adopted"])
+
     def test_conversation_log_switch(self) -> None:
         """モデルを人工結果へ置換し、本文の記録だけが切り替わることを確認する。"""
         for enabled in ("true", "false"):

@@ -415,7 +415,7 @@ class SpeechRecognizerNemoWorker:
 
         start_t = perf_counter()
         try:
-            biasing_result = self.s2t.decode_candidates(
+            biasing_candidates = self.s2t.decode_candidates(
                 encoded,
                 strategy=self.context_biasing_config.strategy,
                 beam_size=self.context_biasing_config.beam_size,
@@ -437,6 +437,9 @@ class SpeechRecognizerNemoWorker:
                 "error": repr(exc),
             }
 
+        # 再デコードは文章全体の代替候補を返す。候補を断片として連結せず、
+        # NeMoの先頭候補だけを比較する。候補の再順位付けは後段のN-bestが担う。
+        biasing_result = biasing_candidates[:1]
         baseline_text = post_process_result.corrected_text
         biasing_text = self.__result_text(tuple(biasing_result))
         resolved_candidates = self.__resolve_deferred_candidates(

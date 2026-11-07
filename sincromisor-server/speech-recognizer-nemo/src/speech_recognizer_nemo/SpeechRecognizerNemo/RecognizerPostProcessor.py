@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any
 
@@ -92,9 +93,9 @@ class RecognizerPostProcessor:
     ) -> None:
         # tokenizer を外から差し替えられるようにして、テストでは Sudachi 依存を弱める。
         self.proper_noun_dictionary = proper_noun_dictionary
-        self.tokenizer = (
-            tokenizer if tokenizer is not None else self._create_tokenizer()
-        )
+        self.tokenizer = tokenizer
+        if self.tokenizer is None and proper_noun_dictionary.entries:
+            self.tokenizer = self._create_tokenizer()
         # 共有Workerは直列実行する。解析結果は_analyze_textで独立した値へ取り出す。
         self.morphemes = (
             self.tokenizer.tokenize("") if self.tokenizer is not None else None
@@ -186,10 +187,18 @@ class RecognizerPostProcessor:
         )
 
     def _create_tokenizer(self) -> Any | None:
-        """Sudachi が利用可能な環境では full 辞書で tokenizer を生成する。"""
+        """有効な辞書があるときだけSudachiを生成し、失敗時は補正を無効にする。"""
         if SudachiDictionary is None or SudachiSplitMode is None:
             return None
-        return SudachiDictionary(dict="full").tokenizer(mode=SudachiSplitMode.C)
+        try:
+            return SudachiDictionary(dict="full").tokenizer(mode=SudachiSplitMode.C)
+        except (
+            Exception
+        ):  # reason: 任意の辞書補正の初期化失敗で通常認識を停止させない。
+            logging.getLogger("sincro.RecognizerPostProcessor").warning(
+                "Proper noun tokenizer initialization failed.", exc_info=True
+            )
+            return None
 
     def _analyze_text(self, text: str) -> list[_AnalyzedMorpheme]:
         """認識テキストを、辞書照合に必要な読み付き形態素列へ変換する。"""
