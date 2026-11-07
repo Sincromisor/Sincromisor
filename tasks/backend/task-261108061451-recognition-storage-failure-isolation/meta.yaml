@@ -1,0 +1,13 @@
+id: task-261108061451-recognition-storage-failure-isolation
+title: 認識記録の保存障害を保存先ごとに分離する
+category: backend
+status: done
+depends_on: []
+superseded_by: null
+review: APPROVED
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-11-08
+closed_at: 2026-11-08
+legacy_ids: []

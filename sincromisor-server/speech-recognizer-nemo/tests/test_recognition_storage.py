@@ -102,29 +102,48 @@ def test_slow_storage_releases_model_and_copies_owned_data(max_jobs):
     asyncio.run(run())
 
 
-def test_copy_failure_releases_reserved_capacity(monkeypatch):
+@pytest.mark.parametrize("failure", ["copy", "submit"])
+def test_handoff_failure_preserves_recognition_and_releases_capacity(
+    monkeypatch, caplog, failure
+):
     async def run():
         writer = SlowWriter()
         storage = RecognitionStorage(writer, max_jobs=1, max_bytes=8)
         audio = request()
+
+        class Worker:
+            def recognize(self, audio):
+                return result(audio), None
+
+        execution = RecognizerExecution(Worker, storage=storage)
         try:
             with monkeypatch.context() as context:
                 context.setattr(
-                    SpeechExtractorResult,
-                    "model_copy",
-                    lambda *a, **kw: (_ for _ in ()).throw(ValueError("copy failed")),
+                    SpeechExtractorResult if failure == "copy" else storage.executor,
+                    "model_copy" if failure == "copy" else "submit",
+                    lambda *a, **kw: (_ for _ in ()).throw(
+                        ValueError("private failure")
+                    ),
                 )
-                with pytest.raises(ValueError, match="copy failed"):
-                    await storage.submit(audio, result(audio), None)
+                output = await execution.recognize(audio)
+                assert output.result_text() == "試験"
             assert storage.jobs == 0
             assert storage.bytes == 0
             await storage.submit(audio, result(audio), None)
         finally:
             writer.release.set()
+            execution.close()
             storage.close()
         assert len(writer.saved) == 1
 
     asyncio.run(run())
+    assert "private failure" not in caplog.text
+    assert any(
+        isinstance(row.msg, dict)
+        and row.msg.get("stage") == "handoff"
+        and row.msg.get("outcome") == "failed"
+        for row in caplog.records
+    )
 
 
 def test_close_wakes_waiter_and_drains_accepted_job():

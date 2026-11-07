@@ -2,9 +2,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 30 件）
+## タスク一覧（自動生成 / 全 31 件）
 
-### done（完了） — 30 件
+### done（完了） — 31 件
 
 | タスク                                                                                                                         | タイトル                                                | 判定    | 依存                                                                                 |
 | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------ |
@@ -38,5 +38,6 @@
 | [task-261025214003-prune-python-dependencies](./task-261025214003-prune-python-dependencies/task.md)                           | Python依存の未使用宣言と本番への不要導入を整理する      | ✅ PASS | —                                                                                    |
 | [task-261107202016-server-smart-turn](./task-261107202016-server-smart-turn/task.md)                                           | SileroとSmart Turnでサーバーの発話終端を判定する        | ✅ PASS | —                                                                                    |
 | [task-261108061122-recognizer-candidate-input-correctness](./task-261108061122-recognizer-candidate-input-correctness/task.md) | 音声認識の候補選択と入力正規化を修正する                | ✅ PASS | —                                                                                    |
+| [task-261108061451-recognition-storage-failure-isolation](./task-261108061451-recognition-storage-failure-isolation/task.md)   | 認識記録の保存障害を保存先ごとに分離する                | ✅ PASS | —                                                                                    |
 
 <!-- AUTOGEN:tasks END -->

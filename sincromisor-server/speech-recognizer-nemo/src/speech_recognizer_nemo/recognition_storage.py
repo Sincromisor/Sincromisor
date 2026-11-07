@@ -74,9 +74,15 @@ class RecognitionStorage:
                 self.executor.submit(
                     self.__write, audio, output, correction, perf_counter()
                 )
-        except BaseException:
+        except BaseException as error:
             self.__release(size)
-            raise
+            if not isinstance(error, Exception):
+                raise
+            # 保存のコピー・投入失敗も認識成功から分離する。取消や終了要求は伝播する。
+            self.__diagnostic(
+                result, "handoff", "failed", started, **failure_fields(error)
+            )
+            return
         self.__diagnostic(result, "handoff", "accepted", started)
 
     async def __reserve(self, size: int) -> None:
@@ -157,9 +163,10 @@ class RecognitionStorage:
         stage: str,
         outcome: str,
         started: float,
-        **fields: float,
+        **fields: object,
     ) -> None:
-        self.logger.info(
+        log = self.logger.warning if outcome == "failed" else self.logger.info
+        log(
             {
                 "event": "recognition_storage",
                 "stage": stage,
