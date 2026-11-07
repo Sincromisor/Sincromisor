@@ -233,6 +233,7 @@
     - MediaPipe / カメラ由来の観測スナップショットであり、後段共有の `CanonicalUpperBodyState`ではない。
     - `leftArm` / `rightArm`の目標は追跡入力映像の観測値を正規化したもので、身体のローカル座標系で表す到達距離 / 仰角 / 開き具合などの意味量は標準化した推定処理の責務とする。
 - `SincroHandMotionSnapshot`
+    - 左右割当の手首は全画面正規化画像座標、掌方向・指の形状は `worldLandmarks` の手中心原点・メートル座標から計算する。画像座標のzはROI幅で復元するが、縦横の尺度が異なる画像座標を3D距離へ混ぜない。3Dの21点が欠損・非有限、または掌寸法が1mm未満なら `landmarks_missing` と既定の不明特徴量へ戻す。ライブと未加工結果の再生で同じ処理を使う。旧ログのworldLandmarks欠損を画像座標で補わず、保存値閲覧と再計算結果を区別する。
     - `trackingEnabled`
     - `detected`
     - `leftHand` / `rightHand`

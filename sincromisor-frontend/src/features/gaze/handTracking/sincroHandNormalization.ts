@@ -9,8 +9,8 @@ import type {
 import { handWarningsFromRoi, type SincroHandObservation } from "./sincroHandAssignmentSnapshot";
 import {
     createSincroHandFeatureSnapshot,
-    type FullFrameHandLandmark,
     HAND_LANDMARK,
+    hasUsableHandWorldLandmarks,
 } from "./sincroHandFeatures";
 import {
     type SincroHandPoint2,
@@ -18,7 +18,10 @@ import {
     uniqueHandWarnings,
 } from "./sincroHandMotionSnapshot";
 
-/** 切り抜き内の座標を全画面へ復元する。点数不足は拒否し、非有限値はゼロと欠損警告へ置き換える。 */
+/** x/yは全画面の幅/高さ、zは全画面幅を単位とする。異方性があるため3D形状計算には使わない。 */
+type FullFrameHandLandmark = { x: number; y: number; z: number };
+
+/** 切り抜き内の座標を全画面へ復元する。zはROI幅で拡縮する。点数不足は拒否し、非有限値はゼロと欠損警告へ置き換える。 */
 export function restoreHandLandmarksToFullFrame(input: {
     landmarks: readonly NormalizedLandmark[];
     roi?: SincroRoiRect;
@@ -38,7 +41,7 @@ export function restoreHandLandmarksToFullFrame(input: {
         restored.push({
             x: point[0],
             y: point[1],
-            z: Number.isFinite(landmark.z) ? landmark.z : 0,
+            z: Number.isFinite(landmark.z) ? landmark.z * (input.roi?.width ?? 1) : 0,
         });
         if (!Number.isFinite(landmark.z)) {
             addHandWarning(warnings, "landmarks_missing");
@@ -47,7 +50,7 @@ export function restoreHandLandmarksToFullFrame(input: {
     return { landmarks: restored, warnings };
 }
 
-/** ROI座標を全画面へ戻して観測値を作る。左右はまだ割り当てず、後段でPose手首と照合する。 */
+/** 手首の画像座標を全画面へ戻し、形状はメートル座標で計算する。左右は後段でPose手首と照合する。 */
 export function normalizeSincroHandLandmarkerResult(input: {
     result: HandLandmarkerResult;
     roi?: SincroRoiObservation;
@@ -65,6 +68,9 @@ export function normalizeSincroHandLandmarkerResult(input: {
         if (restored === undefined) {
             continue;
         }
+        const worldLandmarks = input.result.worldLandmarks[handIndex];
+        if (!hasUsableHandWorldLandmarks(worldLandmarks))
+            addHandWarning(restored.warnings, "landmarks_missing");
         const handedness = readHandedness(input.result.handedness[handIndex]);
         const confidence = clamp01(handedness.score);
         const warnings = uniqueHandWarnings([
@@ -79,7 +85,7 @@ export function normalizeSincroHandLandmarkerResult(input: {
             handednessLabel: handedness.label,
             handednessScore: confidence,
             features: createSincroHandFeatureSnapshot({
-                landmarks: restored.landmarks,
+                landmarks: worldLandmarks ?? [],
                 confidence,
                 landmarksMissing: warnings.includes("landmarks_missing"),
             }),

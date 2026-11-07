@@ -1,8 +1,13 @@
-/** 全画面へ復元済みの手ランドマークから低次元特徴量を作る。推論・ROI復元・左右割当は扱わない。 */
-import type { SincroHandFeatureSnapshot, SincroHandTuple3 } from "./sincroHandMotionSnapshot";
+/** メートル単位の手ランドマークから低次元特徴量を作る。推論・ROI復元・左右割当は扱わない。 */
+import {
+    cloneSincroHandFeatureSnapshot,
+    DEFAULT_SINCRO_HAND_FEATURE_SNAPSHOT,
+    type SincroHandFeatureSnapshot,
+    type SincroHandTuple3,
+} from "./sincroHandMotionSnapshot";
 
-/** x/yは全画面正規化座標、zはMediaPipeの値を維持する。非有限座標の補正は正規化側で終える。 */
-export type FullFrameHandLandmark = {
+/** 手中心原点のworldLandmarks。x/y/zはすべてメートルで、画像の正規化座標を渡さない。 */
+export type HandWorldLandmark = {
     x: number;
     y: number;
     z: number;
@@ -33,16 +38,18 @@ export const HAND_LANDMARK = {
     littleTip: 20,
 };
 
-/** 復元済みランドマークから手のひら方向と指の低次元特徴を作る。手の開閉は信頼度と欠損を考慮する。 */
+/** メートル座標から手のひら方向と指の低次元特徴を作る。手の開閉は信頼度と欠損を考慮する。 */
 export function createSincroHandFeatureSnapshot(input: {
-    landmarks: readonly FullFrameHandLandmark[];
+    landmarks: readonly HandWorldLandmark[];
     confidence: number;
     landmarksMissing: boolean;
 }): SincroHandFeatureSnapshot {
-    // 掌寸法の下限を0.001にして、指特徴量の比率計算でゼロ除算を避ける。
-    const palmSize = Math.max(
-        distance3d(input.landmarks[HAND_LANDMARK.wrist], input.landmarks[HAND_LANDMARK.middleMcp]),
-        0.001,
+    if (input.landmarksMissing || !hasUsableHandWorldLandmarks(input.landmarks)) {
+        return cloneSincroHandFeatureSnapshot(DEFAULT_SINCRO_HAND_FEATURE_SNAPSHOT);
+    }
+    const palmSize = distance3d(
+        input.landmarks[HAND_LANDMARK.wrist],
+        input.landmarks[HAND_LANDMARK.middleMcp],
     );
     const fingerCurl = {
         thumb: calculateFingerCurl(
@@ -106,6 +113,18 @@ export function createSincroHandFeatureSnapshot(input: {
     };
 }
 
+/** 21点と有限座標、1mm以上の掌を要求する。欠損・退化を正常な握り拳として扱わない。 */
+export function hasUsableHandWorldLandmarks(
+    landmarks: readonly HandWorldLandmark[] | undefined,
+): landmarks is readonly HandWorldLandmark[] {
+    return (
+        landmarks !== undefined &&
+        landmarks.length === 21 &&
+        landmarks.every((point) => [point.x, point.y, point.z].every(Number.isFinite)) &&
+        distance3d(landmarks[HAND_LANDMARK.wrist], landmarks[HAND_LANDMARK.middleMcp]) >= 0.001
+    );
+}
+
 /** 信頼度0.2未満・欠損は不明とし、親指以外の平均曲げ量0.35・0.72を境に開閉を判定する。 */
 export function determineSincroHandOpenness(input: {
     fingerCurl: Pick<SincroHandFeatureSnapshot, "fingerCurl">["fingerCurl"];
@@ -131,7 +150,7 @@ export function determineSincroHandOpenness(input: {
 }
 
 // 手首から中指の付け根へ向かう単位方向。長さが無ければ従来の画面上向きへ戻す。
-function palmDirection(landmarks: readonly FullFrameHandLandmark[]): SincroHandTuple3 {
+function palmDirection(landmarks: readonly HandWorldLandmark[]): SincroHandTuple3 {
     return normalizeTuple3(
         vector3(landmarks[HAND_LANDMARK.wrist], landmarks[HAND_LANDMARK.middleMcp]),
         [0, -1, 0],
@@ -139,7 +158,7 @@ function palmDirection(landmarks: readonly FullFrameHandLandmark[]): SincroHandT
 }
 
 // 人差し指と小指の付け根への外積を使い、退化時は正面方向へ戻す。
-function palmNormal(landmarks: readonly FullFrameHandLandmark[]): SincroHandTuple3 {
+function palmNormal(landmarks: readonly HandWorldLandmark[]): SincroHandTuple3 {
     const wrist = landmarks[HAND_LANDMARK.wrist];
     const index = landmarks[HAND_LANDMARK.indexMcp];
     const little = landmarks[HAND_LANDMARK.littleMcp];
@@ -150,7 +169,7 @@ function palmNormal(landmarks: readonly FullFrameHandLandmark[]): SincroHandTupl
 
 // 掌寸法の1.6倍を指の伸長基準とする既存の近似。関節回転を復元するものではない。
 function calculateFingerCurl(
-    landmarks: readonly FullFrameHandLandmark[],
+    landmarks: readonly HandWorldLandmark[],
     mcpIndex: number,
     tipIndex: number,
     palmSize: number,
@@ -160,7 +179,7 @@ function calculateFingerCurl(
 
 // 隣接する付け根への方向差を60度で割って0〜1へ制限する。
 function fingerSplay(
-    landmarks: readonly FullFrameHandLandmark[],
+    landmarks: readonly HandWorldLandmark[],
     firstMcpIndex: number,
     secondMcpIndex: number,
 ): number {
@@ -172,15 +191,15 @@ function fingerSplay(
 }
 
 // 親指先と小指付け根の近さを掌寸法の2倍で評価する。
-function thumbOppose(landmarks: readonly FullFrameHandLandmark[], palmSize: number): number {
+function thumbOppose(landmarks: readonly HandWorldLandmark[], palmSize: number): number {
     const thumbTip = landmarks[HAND_LANDMARK.thumbTip];
     const littleMcp = landmarks[HAND_LANDMARK.littleMcp];
     return clamp01(1 - distance3d(thumbTip, littleMcp) / (palmSize * 2));
 }
 
 function vector3(
-    from: FullFrameHandLandmark | undefined,
-    to: FullFrameHandLandmark | undefined,
+    from: HandWorldLandmark | undefined,
+    to: HandWorldLandmark | undefined,
 ): SincroHandTuple3 {
     if (from === undefined || to === undefined) {
         return [0, 0, 0];
@@ -205,8 +224,8 @@ function normalizeTuple3(value: SincroHandTuple3, fallback: SincroHandTuple3): S
 }
 
 function distance3d(
-    left: FullFrameHandLandmark | undefined,
-    right: FullFrameHandLandmark | undefined,
+    left: HandWorldLandmark | undefined,
+    right: HandWorldLandmark | undefined,
 ): number {
     if (left === undefined || right === undefined) {
         return 0;

@@ -28,9 +28,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 57 件）
+## タスク一覧（自動生成 / 全 58 件）
 
-### done（完了） — 57 件
+### done（完了） — 58 件
 
 | タスク                                                                                                                                 | タイトル                                                   | 判定    | 依存                                                                                                                                                          |
 | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -91,5 +91,6 @@
 | [task-261107174417-repair-silero-inference-state](./task-261107174417-repair-silero-inference-state/task.md)                           | Silero VADの状態と入力文脈を正しく引き継ぐ                 | ✅ PASS | —                                                                                                                                                             |
 | [task-261107174732-preserve-continuous-vad-audio](./task-261107174732-preserve-continuous-vad-audio/task.md)                           | 学習VADへ連続音声を欠落なく渡す                            | ✅ PASS | `task-261107174417-repair-silero-inference-state`                                                                                                             |
 | [task-261107175402-separate-face-validity-from-expression](./task-261107175402-separate-face-validity-from-expression/task.md)         | 顔追跡の有効性を表情の強さから分離する                     | ✅ PASS | —                                                                                                                                                             |
+| [task-261107175550-normalize-hand-geometry](./task-261107175550-normalize-hand-geometry/task.md)                                       | 手の形状計算をROIと画像比率から独立させる                  | ✅ PASS | —                                                                                                                                                             |
 
 <!-- AUTOGEN:tasks END -->

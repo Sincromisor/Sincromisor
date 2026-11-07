@@ -93,7 +93,7 @@ describe("Sincro hand motion snapshot", () => {
         });
     });
 
-    it("掌方向と曲げ・開き・親指の特徴量を既存の尺度で計算する", () => {
+    it("掌方向と曲げ・開き・親指の特徴量をメートル座標で計算する", () => {
         const landmarks = createLandmarks();
         landmarks[0] = createLandmark(0, 0);
         landmarks[2] = createLandmark(1, 0);
@@ -185,7 +185,7 @@ describe("Sincro hand motion snapshot", () => {
         expect(restored?.warnings).toEqual([]);
         expect(restored?.landmarks[0]?.x).toBeCloseTo(0.35);
         expect(restored?.landmarks[0]?.y).toBeCloseTo(0.7);
-        expect(restored?.landmarks[0]?.z).toBeCloseTo(0.1);
+        expect(restored?.landmarks[0]?.z).toBeCloseTo(0.02);
     });
 
     it.each(["roi", "full-frame-fallback"] as const)(

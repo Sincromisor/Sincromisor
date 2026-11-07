@@ -15,6 +15,7 @@ export type SincroHandWarningCode =
     | "pose_stale_for_roi"
     | "model_not_loaded";
 
+/** メートル単位の手中心座標から計算した方向・比率。3D観測が使えない場合はopennessがunknownになる。 */
 export type SincroHandFeatureSnapshot = {
     palmNormal: SincroHandTuple3;
     palmDirection: SincroHandTuple3;
