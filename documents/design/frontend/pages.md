@@ -52,6 +52,8 @@ npm --prefix sincromisor-frontend run build
 
 [PostCSS設定](../../../sincromisor-frontend/postcss.config.js)はネスト展開とカスケードレイヤーの平坦化だけを行う。レイヤー順をセレクターの詳細度へ変換し、OBSが追加する低詳細度の通常CSSにアプリの指定が一律に負けることを防ぐ。開発・本番で同じ処理を使う。色・CSS変数などはブラウザーのネイティブ実装を使い、本番出力の圧縮とCSSの取り込みはViteへ委ねる。JavaScriptのビルド対象はViteの既定を使う。
 
+ReactのJSX変換と開発時のFast Refreshは `@vitejs/plugin-react` のOxc経路を使う。SWC固有プラグインを必要としないため、別のSWC変換器は導入しない。根拠は[Vite公式プラグイン説明](https://vite.dev/plugins/)（2026-11-07確認）。
+
 OBS更新時は同梱CEFの版を確認し、CSS対象を引き上げる際はトップ・起動前設定の広幅／狭幅での配置と操作を比較する。新しいCSS構文はCEFの対応を確認して採用する。他エンジンのブラウザーは、版の新しさだけで対応済みと判断しない。
 追加CSSの通常の`dialog`指定はアプリの寸法・枠色を上書きせず、`!important`による明示指定は反映する。`npm run browser:test:css`は専用サーバーを起動・終了し、開発・本番の3ページと2画面幅で、OBS既定CSS・通常指定・`!important`・挿入位置の違いを[ブラウザーテスト](../../../sincromisor-frontend/tests/styles/obsCss.spec.ts)で確認する。
 
