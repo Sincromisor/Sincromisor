@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 from fastapi import WebSocketDisconnect
 from sincro_config import ServiceDiscoveryReferrer, ServiceDiscoveryReporter
@@ -134,11 +135,15 @@ def test_service_entry_diagnostics(
     class Socket:
         client_state = WebSocketState.CONNECTED
         application_state = WebSocketState.CONNECTED
+        first = True
 
         async def accept(self):
             pass
 
         async def receive_bytes(self):
+            if service == "speech-recognizer-nemo" and not self.first:
+                await asyncio.Future()
+            self.first = False
             if scenario in ("normal", "abnormal"):
                 self.client_state = WebSocketState.DISCONNECTED
                 raise WebSocketDisconnect(
@@ -151,7 +156,11 @@ def test_service_entry_diagnostics(
                     session_id="fixture-session"
                 ).to_msgpack()
             return SpeechExtractorResult(
-                session_id="fixture-session", speech_id=1, sequence_id=1, start_at=0
+                session_id="fixture-session",
+                speech_id=1,
+                sequence_id=1,
+                start_at=0,
+                voice=np.zeros(4, dtype=np.int16),
             ).to_msgpack()
 
         async def send_bytes(self, _):

@@ -139,3 +139,59 @@ def test_wait_and_execution_timing(monkeypatch, caplog, fail):
             "outcome": "failed" if fail else "success",
         }
     ]
+
+
+def test_capacity_retains_cancelled_queue_slots_and_releases_audio(monkeypatch):
+    import gc
+    import weakref
+
+    async def run():
+        execution = RecognizerExecution(Worker, max_pending=2)
+        worker = execution.worker
+        first = asyncio.create_task(
+            execution.recognize(SpeechExtractorResult(session_id="running", start_at=0))
+        )
+        try:
+            assert await asyncio.to_thread(worker.started.wait, 2)
+            queued_request = SpeechExtractorResult(session_id="queued", start_at=0)
+            reference = weakref.ref(queued_request)
+            queued = asyncio.create_task(execution.recognize(queued_request))
+            await asyncio.sleep(0)
+            queued.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await queued
+            del queued_request, queued
+            await asyncio.sleep(0)
+            gc.collect()
+            assert reference() is None
+            # 取消済み項目を実行器が回収するまで、再投入で内部キューを膨らませない。
+            with pytest.raises(RuntimeError, match="capacity"):
+                await execution.recognize(
+                    SpeechExtractorResult(session_id="full", start_at=0)
+                )
+            worker.release.set()
+            assert await first == "running"
+            await asyncio.to_thread(execution.executor.submit(lambda: None).result)
+            with monkeypatch.context() as context:
+                context.setattr(
+                    execution.executor,
+                    "submit",
+                    lambda *a: (_ for _ in ()).throw(RuntimeError("submit failed")),
+                )
+                with pytest.raises(RuntimeError, match="submit failed"):
+                    await execution.recognize(
+                        SpeechExtractorResult(session_id="rejected", start_at=0)
+                    )
+            assert (
+                await execution.recognize(
+                    SpeechExtractorResult(session_id="later", start_at=0)
+                )
+                == "later"
+            )
+            assert worker.calls == ["running", "later"]
+        finally:
+            worker.release.set()
+            await asyncio.gather(first, return_exceptions=True)
+            execution.close()
+
+    asyncio.run(run())

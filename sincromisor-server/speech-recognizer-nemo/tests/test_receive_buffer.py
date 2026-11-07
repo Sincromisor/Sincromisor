@@ -67,20 +67,27 @@ def test_receive_buffer_capacity_and_speech_ids(monkeypatch, coalesced):
 
         def __init__(self):
             self.packs = [request.to_msgpack() for request in requests] + [b""]
+            self.replies = asyncio.Queue()
+            self.first = True
 
         async def accept(self):
             pass
 
         async def receive_bytes(self):
+            if not self.first:
+                await self.replies.get()
+            self.first = False
             return self.packs.pop(0)
 
         async def send_bytes(self, pack):
             sent.append(SpeechRecognizerResult.from_msgpack(pack))
+            self.replies.put_nowait(None)
 
         async def close(self):
             pass
 
     def run(app, **kwargs):
+        assert kwargs["ws_max_size"] == 1 << 20
         route = next(route for route in app.routes if route.path.endswith("/recognize"))
         asyncio.run(route.endpoint(Socket()))
 
@@ -125,4 +132,4 @@ def test_receive_buffer_capacity_and_speech_ids(monkeypatch, coalesced):
     if not coalesced:
         assert backing[1] is backing[2]
         assert backing[2] is not backing[3]
-        assert backing[3] is backing[4]
+        assert backing[3] is not backing[4]

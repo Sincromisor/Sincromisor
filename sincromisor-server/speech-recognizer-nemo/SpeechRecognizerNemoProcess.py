@@ -7,7 +7,6 @@ from functools import partial
 from logging import Logger
 from threading import Event
 
-import numpy as np
 import uvicorn
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import JSONResponse
@@ -19,8 +18,8 @@ from sincro_config import (
     SincromisorLoggerConfig,
 )
 from sincro_config.websocket_diagnostics import WebSocketDiagnostics
-from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
 from speech_recognizer_nemo.models import SpeechRecognizerNemoProcessArgument
+from speech_recognizer_nemo.recognition_connection import recognize_connection
 from speech_recognizer_nemo.recognition_storage import RecognitionStorage
 from speech_recognizer_nemo.recognition_storage_writer import RecognitionStorageWriter
 from speech_recognizer_nemo.recognizer_execution import RecognizerExecution
@@ -88,52 +87,7 @@ class SpeechRecognizerNemoProcess:
             try:
                 with diagnostic.operation("accept"):
                     await ws.accept()
-                current_speech_id = -1
-                current_speech_buffer = np.empty(0, dtype=np.int16)
-                used_samples = 0
-                while True:
-                    with diagnostic.operation("receive"):
-                        pack = await ws.receive_bytes()
-                    if not pack:
-                        break
-                    with diagnostic.operation("decode"):
-                        extractor_result = SpeechExtractorResult.from_msgpack(pack)
-                    diagnostic.ids = {
-                        "session_id": extractor_result.session_id,
-                        "speech_id": extractor_result.speech_id,
-                        "sequence_id": extractor_result.sequence_id,
-                    }
-                    with diagnostic.operation("process"):
-                        if current_speech_id != extractor_result.speech_id:
-                            current_speech_id = extractor_result.speech_id
-                            used_samples = 0
-                        needed = used_samples + extractor_result.voice.size
-                        if needed > current_speech_buffer.size:
-                            # 容量不足時だけ倍増し、発話内の使用済み音声を移す。
-                            expanded = np.empty(
-                                max(needed, current_speech_buffer.size * 2),
-                                dtype=np.int16,
-                            )
-                            expanded[:used_samples] = current_speech_buffer[
-                                :used_samples
-                            ]
-                            current_speech_buffer = expanded
-                        # 初回も受信bytesを参照せず、認識へ書込み可能な連続配列を渡す。
-                        np.copyto(
-                            current_speech_buffer[used_samples:needed],
-                            extractor_result.voice,
-                            casting="no",
-                        )
-                        used_samples = needed
-                        extractor_result.voice = current_speech_buffer[:used_samples]
-                        with diagnostic.operation("process"):
-                            result: SpeechRecognizerResult = (
-                                await speech_recognizer.recognize(
-                                    spe_result=extractor_result
-                                )
-                            )
-                    with diagnostic.operation("send"):
-                        await ws.send_bytes(result.to_msgpack())
+                await recognize_connection(ws, speech_recognizer, diagnostic)
             except asyncio.CancelledError as error:
                 diagnostic.finish(error)
                 raise
@@ -192,7 +146,11 @@ class SpeechRecognizerNemoProcess:
             raise
         try:
             uvicorn.run(
-                app, host=self.__args.host, port=self.__args.port, log_config=None
+                app,
+                host=self.__args.host,
+                port=self.__args.port,
+                log_config=None,
+                ws_max_size=1 << 20,
             )
         except KeyboardInterrupt:
             pass

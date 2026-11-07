@@ -2,8 +2,10 @@
 
 import asyncio
 import logging
+from collections import deque
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+from threading import BoundedSemaphore
 from time import perf_counter
 
 from sincro_models import SpeechExtractorResult, SpeechRecognizerResult
@@ -19,7 +21,12 @@ class RecognizerExecution:
         self,
         create_worker: Callable[[], SpeechRecognizerNemoWorker],
         storage: RecognitionStorage | None = None,
+        max_pending: int = 32,
     ) -> None:
+        """実行中と待機中を合計32件まで受け入れ、共有モデルと待機音声の増加を抑える。"""
+        if max_pending <= 0:
+            raise ValueError("Recognizer capacity must be positive.")
+        self.capacity = BoundedSemaphore(max_pending)
         self.storage = storage
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="asr")
         try:
@@ -37,20 +44,36 @@ class RecognizerExecution:
         """未開始なら取り消し、開始済みならモデル復元後に取消を伝える。保存受理後は待たない。"""
         if self.worker is None:
             raise RuntimeError("Recognizer is closed.")
-        pending = self.executor.submit(self.__recognize, spe_result, perf_counter())
+        if not self.capacity.acquire(blocking=False):
+            raise RuntimeError("Recognizer capacity exceeded.")
+        # deque.popはスレッド間でも原子的。実行側と取消側の一方だけが入力を取得する。
+        inputs = deque([spe_result])
+        try:
+            pending = self.executor.submit(self.__recognize, inputs, perf_counter())
+        except BaseException:
+            self.capacity.release()
+            raise
+        # Future.cancelでは内部キューの項目が残るため、取消も実際の取出し後に枠を返す。
+        # 保存受渡し待ちでは推論枠を占有しない。
+        pending.add_done_callback(lambda _future: self.capacity.release())
         result = asyncio.wrap_future(pending)
         try:
-            recognized, trace = await asyncio.shield(result)
+            completed = await asyncio.shield(result)
+            assert completed is not None
+            recognized, trace = completed
         except asyncio.CancelledError:
-            pending.cancel()
-            # スレッドは取消で止まらない。入力バッファを再利用する前に推論を回収する。
-            cleanup = asyncio.gather(result, return_exceptions=True)
-            while not cleanup.done():
-                try:
-                    await asyncio.shield(cleanup)
-                except asyncio.CancelledError:
-                    # 終了要求が重なっても使用中の入力音声を先に解放しない。
-                    continue
+            try:
+                # 未開始なら音声参照を直ちに外し、キュー項目は空のまま回収させる。
+                inputs.pop()
+            except IndexError:
+                # 開始済みスレッドは取消で止まらない。入力を再利用する前に推論を回収する。
+                cleanup = asyncio.gather(result, return_exceptions=True)
+                while not cleanup.done():
+                    try:
+                        await asyncio.shield(cleanup)
+                    except asyncio.CancelledError:
+                        # 終了要求が重なっても使用中の入力音声を先に解放しない。
+                        continue
             if self.storage is not None and spe_result.confirmed:
                 self.storage.cancelled(spe_result)
             raise
@@ -60,10 +83,14 @@ class RecognizerExecution:
 
     def __recognize(
         self,
-        request: SpeechExtractorResult,
+        inputs: deque[SpeechExtractorResult],
         queued_at: float,
-    ) -> tuple[SpeechRecognizerResult, dict[str, object] | None]:
+    ) -> tuple[SpeechRecognizerResult, dict[str, object] | None] | None:
         """推論と補正だけを測り、保存待機を共有モデルの実行時間へ混ぜない。"""
+        try:
+            request = inputs.pop()
+        except IndexError:
+            return None
         started = perf_counter()
         outcome = "failed"
         try:
