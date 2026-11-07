@@ -75,6 +75,9 @@
 
 ## 設計判断
 
+- [ADR-261107 MediaPipe追跡構成の選択](decisions/ADR-261107-mediapipe-tracking-composition.md)
+    - 現行Holistic APIとの比較、個別Landmarkerを維持する理由と見直し条件
+
 - [ADR-260726 Pionコーデックの概念実証](decisions/ADR-260726-pion-codec-poc.md)
 - [ADR-260222 React移行](decisions/ADR-260222-react-migration.md)
 - [ADR-260430重ねて表示する画面の外枠の責務](decisions/ADR-260430-overlay-frame.md)

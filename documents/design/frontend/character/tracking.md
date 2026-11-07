@@ -11,6 +11,8 @@
 - 段階8のHand / Face ROIはPose起点の全画面の正規化座標契約として `roiTracking`に置き、MediaPipe実行やReliabilityMap変換とは分ける。
 - Hand / Face ROIは低頻度の任意処理として扱い、Poseが古くなった、ROI許容時間超過、メインスレッド代替処理を統計とmotion-debug指標で観測できる。
 
+個別Landmarkerの採用理由とHolisticとの比較は[追跡構成の判断](../../decisions/ADR-261107-mediapipe-tracking-composition.md)を参照する。HolisticはWebで利用可能であり、現行構成は顔変換行列と部位別実行の契約を理由に維持する。
+
 ## 対象範囲
 
 - 対象

@@ -182,6 +182,8 @@ Pose 領域分割マスクは、公式に Pose Landmarker の出力として利�
 
 ### 5.1 推奨構成
 
+> **2026-11-07補足**: HolisticはWebで利用可能であり、未提供を不採用理由にしない。以下は当時の構成提案として残す。現行APIとの比較と個別構成を維持する理由は[採用判断](../../../design/decisions/ADR-261107-mediapipe-tracking-composition.md)を参照する。処理速度・精度の優劣は未測定である。
+
 MediaPipe Holistic の設計思想では、姿勢を毎フレーム推定し、その結果から顔 / 手の ROI 事前情報を作ることで、速い動きへの追従性と左右一貫性を高めます。Google Research の解説でも、姿勢予測を ROI 事前情報として使うことが、左手と右手の取り違えや体部位の混同を抑えると説明されています。([Google Research][5])
 
 `Sincromisor` では、Holistic をそのまま使うより、次のような自前処理の組み立てが扱いやすいです。
