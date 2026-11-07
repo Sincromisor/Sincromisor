@@ -4,7 +4,6 @@ import asyncio
 import logging
 import logging.config
 from logging import Logger
-from threading import Event
 
 import uvicorn
 from fastapi import FastAPI, WebSocket
@@ -38,7 +37,6 @@ class SpeechExtractorProcess:
     def start(self) -> None:
         """発見登録後にAPIを起動し、Uvicornでも共通ログ設定を維持する。"""
         app: FastAPI = FastAPI()
-        event: Event = Event()
         if not self.__args.consul_agent_host or not self.__args.consul_agent_port:
             raise RuntimeError(
                 "Consul agent is not set. Service discovery will not be available.",
@@ -50,7 +48,6 @@ class SpeechExtractorProcess:
             public_bind_host=self.__args.public_bind_host,
             public_bind_port=self.__args.public_bind_port,
         )
-        self.sd_reporter.start()
 
         @app.get("/api/v1/SpeechExtractor/statuses")
         async def get_status() -> JSONResponse:
@@ -76,6 +73,8 @@ class SpeechExtractorProcess:
                     speRequest = SpeechExtractorInitializeRequest.from_msgpack(
                         pack=pack
                     )
+                if speRequest.voice_sample_bytes != 2:
+                    raise ValueError("Extractor requires signed 16-bit PCM")
                 diagnostic.ids = {"session_id": speRequest.session_id}
                 speechExtractor = SpeechExtractorWorker(
                     session_id=speRequest.session_id,
@@ -106,13 +105,13 @@ class SpeechExtractorProcess:
 
         SpeechExtractorWorker.setup_model()
         try:
+            self.sd_reporter.start()
             uvicorn.run(
                 app, host=self.__args.host, port=self.__args.port, log_config=None
             )
         except KeyboardInterrupt:
             pass
         finally:
-            event.set()
             SpeechExtractorWorker.close_model()
 
 

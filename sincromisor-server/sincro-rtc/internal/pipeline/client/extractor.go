@@ -26,7 +26,8 @@ type Extractor struct {
 }
 
 // NewExtractor は会話モード、期限、依存を検証し、通信前の接続を作る。
-// nowは初期化時刻の取得に必須である。無音の区切りはchatで1000 ms、sincroで600 msとし、他のモードを拒否する。
+// nowは初期化時刻の取得に必須である。終端モデルの判定待ちはchatで1000 ms、sincroで600 msとする。
+// 未完了時の延長と無音上限はExtractorが担当する。他のモードを拒否する。
 func NewExtractor(
 	cfg Config,
 	resolver discovery.Resolver,

@@ -4,6 +4,20 @@
 
 受信PCMから発話区間を組み立て、認識へ差分音声と終端確定を渡す。現在の責務と動作は[SpeechExtractor設計](../../documents/design/backend/services/speech-extractor.md)を参照する。
 
+## モデルの事前準備
+
+リポジトリルートで依存を導入し、モデルを固定版・SHA-256照合付きで取得する。
+
+```sh
+uv sync --locked --group speech-extractor
+cd sincromisor-server
+uv run --no-sync python -m speech_extractor.model_assets
+```
+
+モデルは`assets/3rd_party/turn/`へ配置する。Dockerイメージはビルド時に同じ処理を実行する。
+閉域環境では準備済みの2ファイルをコピーする。サービス起動はモデルを取得せず、欠落・別版・破損を拒否する。
+版・ライセンス・前処理の出典は[資材一覧](../assets/3rd_party/turn/README.md)を参照する。
+
 ## 発話終端の比較評価
 
 利用許可済みの16kHz・モノラル・符号付き16ビットPCM WAVと、同じWAVへの事前注釈を用意する。小声、息継ぎ、言いよどみ、短い応答、無音閾値前後の間を含める。録音と注釈は非公開領域で管理し、実行前に録音を聞いて注釈を確定し、実行結果へ合わせて変更しない。

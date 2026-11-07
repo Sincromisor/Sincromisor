@@ -37,20 +37,6 @@ USER ${SINCRO_USER_ID}
 COPY --from=ghcr.io/astral-sh/uv:0.13.5 --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     /uv /uvx ${SINCRO_USER_DIR}/.local/bin/
 
-# MediaPipeの実行時依存
-# 音声分類器の共有ライブラリもEGL/GLESへリンクするため、GPU未使用でも必要。
-# libegl1 / libgles2: libEGL.so.1 / libGLESv2.so.2
-# libgl1: libGL.so.1
-# libglib2.0-0t64: libgthread-2.0.so.0
-USER root
-# 基底イメージの自動削除を解除し、取得済みdebを排他キャッシュへ保持する。
-RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
-    --mount=type=cache,target=/var/cache/apt/archives,sharing=locked \
-    rm -f /etc/apt/apt.conf.d/docker-clean && \
-    apt-get update \
-    && apt-get install --no-install-recommends -y libegl1 libgles2 libgl1 libglib2.0-0t64
-
-USER ${SINCRO_USER_ID}
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./pyproject.toml \
     ./uv.lock \
@@ -109,10 +95,10 @@ COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
     ./sincromisor-server/speech-extractor \
     ${SINCRO_USER_DIR}/sincromisor-server/speech-extractor
-# 分類器が作業ディレクトリから参照するYAMNetとライセンスを含める。
+# 発話モデルのライセンスを配置する。重みは固定版取得処理で検証して用意する。
 COPY --chown=${SINCRO_USER_ID}:${SINCRO_USER_ID} \
-    ./sincromisor-server/assets/3rd_party \
-    ${SINCRO_USER_DIR}/sincromisor-server/assets/3rd_party
+    ./sincromisor-server/assets/3rd_party/turn \
+    ${SINCRO_USER_DIR}/sincromisor-server/assets/3rd_party/turn
 
 # ソース配置後もロックを検証してワークスペースを導入する。
 RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
@@ -120,8 +106,9 @@ RUN --mount=type=cache,target=${SINCRO_USER_DIR}/.cache,uid=1001,gid=1001 \
 
 WORKDIR ${SINCRO_USER_DIR}/sincromisor-server
 
-# importだけでは検出できない共有ライブラリ不足を、分類器の初期化で検出する。
-RUN uv run --no-sync python -c "from speech_extractor.SpeechExtractor import SpeechExtractorWorker; SpeechExtractorWorker.setup_model(); SpeechExtractorWorker.classifier.close()"
+# ビルド時だけ取得し、2モデルのロードを検証する。起動時はネットワーク不要。
+RUN uv run --no-sync python -m speech_extractor.model_assets && \
+    uv run --no-sync python -c "from speech_extractor.SpeechExtractor import SpeechExtractorWorker; SpeechExtractorWorker.setup_model(); SpeechExtractorWorker.close_model()"
 
 # 起動時は対象グループを含む導入済み環境をそのまま使う。
 CMD ["uv", "run", "--no-sync", "speech-extractor/SpeechExtractorProcess.py"]

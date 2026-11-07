@@ -2,56 +2,40 @@
 
 ## 要約
 
-- SpeechExtractorは音声フレームから音声区間を抽出する下流サービスである。
-- Goパイプライン調停器からWebSocket + msgpackで音声を受け取り、発話区間の結果を返す。
-- 通信契約は `contracts/audio-pipeline-websocket.md`を正本とする。
+SpeechExtractorは16kHzモノラル音声から発話区間を抽出し、Silero VADとSmart Turnで発話終端を判断する。推論はサーバーCPU上で行い、外部推論APIを使わない。通信契約は[音声パイプライン契約](../../contracts/audio-pipeline-websocket.md)を正本とする。
 
-## 対象範囲
+## 発話検出と終端判断
 
-- 対象
-    - SpeechExtractorサービス
-    - 音声区間抽出のサービス境界
-    - Goパイプライン調停器との接続
-- 非対象
-    - RTCシグナリング
-    - SpeechRecognizer以降
+- Goから20ms・640バイトのs16le PCMを連続して受け、欠落なく512サンプル（32ms）へ組み直す。
+- Silero v6.2の再帰状態と直前64サンプルは接続ごとに保持する。発話確率の開始閾値は0.5、継続閾値は0.35。発話を検出するまで先行500msを保持する。
+- 発話内の無音を削らず、音声認識へ差分を送る。発話中は3,200サンプル以上が揃った32ms境界で送信するため、通常の区間は224msであり、VADの32msごとには認識要求を出さない。休止中の音声は発話再開か確定時に送る。
+- Smart Turn v3.2には現在の発話の直近最大8秒を渡す。短い入力は先頭をゼロ埋めし、Whisper形式の特徴量へ変換する。送信済みPCMも判定用履歴に保持するが、Recognizerへは再送しない。
+- `max_silence_ms`はchatが1,000ms、sincroが600ms。従来の無音確定閾値から、Smart Turnの初回判定待ちと推論失敗時の代替確定の基準へ意味が変わる。値は短縮せず、閾値以上となる最初の32ms境界以降で判定する。
+- 完了確率が0.5超なら確定し、未完了なら同じ発話で待つ。同じ休止で繰り返し推論しない。発話が再開した後の次の休止では、累積した文脈を使って再判定する。
+- 連続非発話3,000msを待機上限とする。初期値は品質最適化済みを意味しない。無音時間は受信PCMのサンプル数で測り、ネットワークや推論の待ち時間を無音へ加算しない。
 
-## 責務
+`SpeechExtractorResult`の差分PCM・`speech_id`・`sequence_id`・`confirmed`の形式は維持する。`start_at`は発話検出時に一度設定し、同じ発話内では変更しない。終端評価には壁時計の`start_at`ではなく入力サンプル位置を使う。
 
-- 音声フレームを受信する。
-- `max_silence_ms`などのパラメータに従って音声区間を区切る。
-- `SpeechExtractorResult`を返す。
+## 非同期処理と所有権
 
-## 分類器の実行と終了
+サービスは共有する2モデルと、VAD・Smart Turnそれぞれ専用の単一スレッド実行器を所有する。各実行器は実行中・未開始の合計32要求を上限とし、超過は失敗を返す。VAD履歴と発話状態は接続ごとに保持する。
 
-16kHzの入力は3200サンプル（200ms）以上が揃った時点で分類へ渡す。20ms単位の通常入力では10フレームで判定し、最小長ちょうどでも次フレームを待たない。Goから渡す無音閾値はchatが1,000ms、sincroが600msであり、200ms区間ではそれぞれ5区間・3区間の連続非Speechで確定する。先行音声500msと判定閾値は維持する。
+接続内では受信・VADと発話状態更新・送信を別タスクとする。受信キューは100フレーム（2秒）、送信キューは32区間までとし、満杯時にPCMを黙って捨てず接続異常にする。送信は5秒で打ち切る。Smart Turn待ちで受信やVADを停止しない。
 
-サービスが所有する1本の専用スレッドで、共有AudioClassifierの生成・分類・closeを順に実行する。接続側は分類結果を非同期に待ち、発話状態とsequence_idの更新・WebSocket送信を担当する。未開始の取消済み要求は分類せず、実行中の分類はサービス終了時に回収してから分類器を閉じる。
+終端推論は接続につき1要求までとし、発話IDと最後のSpeechサンプル位置が一致する結果だけを採用する。受信済みPCMが溜まっている間はモデル結果による確定を保留し、発話再開を先に検出する。次発話・再接続・切断を跨ぐ結果を採用しない。
 
-## 入力窓と発話終端の評価
+切断で接続タスクをまとめて取り消し、未開始推論も取り消す。開始済みのONNX処理は強制停止せず実行器が回収し、サービス終了では回収後に共有モデルを解放する。
 
-モデルの入力窓、APIが受理する最短入力、アプリの判定周期、無音閾値は別の量である。同梱YAMNetはfloat32の15,600サンプル（16kHzで975ms）を入力とする。採用MediaPipe 1.1.1の `AUDIO_CLIPS`は200ms・旧220msを受理し、短入力の分類結果は975msへ末尾をゼロ埋めした入力と一致する。1サンプルも受理されるが、発話判定に使えることを意味しない。
+## 障害と診断
 
-975ms以下の入力には時刻0の結果が1件返り、15,601サンプルでは0ms・975msの2件となる。返却時刻は各呼出し内の位置であり、セッションの入力位置や発話終了時刻ではない。評価では各入力の先頭サンプル位置を別に保持し、分類に使った区間の末尾と確定送信位置を対応付ける。`start_at`はSpeech検出のたびに更新されるため終端遅延の基準にしない。
+モデル欠落・ハッシュ不一致・ロード失敗は起動失敗とする。Sileroの推論失敗は発話の検出自体が不可能なため接続異常とする。Smart Turnの推論失敗は未完了と区別して記録し、対象の休止が継続中なら従来相当の無音確定へ縮退する。開始済み推論が戻らなくてもPCM上の無音上限で発話を確定できるが、ONNX処理の強制終了保証は設けない。
 
-APIの受理・ゼロ埋めは[実モデル試験](../../../../sincromisor-server/speech-extractor/tests/test_model_input_window.py)で再現できる。日本語の小声・息継ぎ・言いよどみを含む注釈済み固定音声での品質は未確認であり、入力窓の長さだけを理由に200msを不正としたり975msへ変更したりしない。評価の未完条件は[入力窓と終端評価タスク](../../../../tasks/performance/task-261101110037-dialogue-endpoint-evaluation/task.md)に保持する。
+`turn_inference`は採用可否・完了確率・待ち行列を含む推論時間、`speech_endpoint`は確定理由・発話ID・入力サンプル位置を記録する。音声や認識本文は含めない。
 
-## 設定・配備
+## 準備と検証
 
-- Docker Composeと環境変数は `infrastructure/compose.md`を確認する。
-- 現状はMediaPipe音声Classification / Yamnet系を基準とし、RNNoiseは検討対象として扱う。
+Python 3.14、ONNX Runtime、NumPyを用い、`uv.lock`で実際の採用版を固定する。MediaPipeは旧方式比較用の`endpoint-evaluation`グループだけに残す。モデルとライセンスは[資材一覧](../../../../sincromisor-server/assets/3rd_party/turn/README.md)、準備・評価は[サービスREADME](../../../../sincromisor-server/speech-extractor/README.md)を参照する。Dockerビルド時に固定モデルを取得・検証し、起動時には依存更新もモデル取得も行わない。
 
-## 変更時の確認
+実音声による新旧比較は[品質評価タスク](../../../../tasks/performance/task-261107202017-smart-turn-quality/task.md)で扱う。録音と事前注釈がない段階で、日本語の途中確定や小声の品質改善を確認済みとはしない。以前の[入力窓評価](../../../../tasks/performance/task-261101110037-dialogue-endpoint-evaluation/task.md)は旧YAMNet方式の記録として保持する。
 
-- 結果モデルを変える場合は `contracts/audio-pipeline-websocket.md`とRecognizer側を同時に更新する。
-- VAD / 無音パラメータを変える場合はGoパイプライン調停器のパスパラメータとDocker Compose環境変数を確認する。
-- フロント側VADとは役割が異なるため、`frontend/audio/vad.md`と混同しない。
-
-## 依存の再現性
-
-MediaPipeは`mediapipe>=1.1.1`の範囲指定とし、実際の採用版1.1.1はルートの`uv.lock`で固定する。Python 3.14と`uv sync --locked --group speech-extractor`を使い、起動時に依存を自動更新しない。
-
-## 参照
-
-- `documents/design/contracts/audio-pipeline-websocket.md`
-- `documents/design/archive/legacy-flat/backend_speech_extractor.md`
+フロント側は通常会話でVADゲートと学習VADを停止する。詳細は[フロントVAD](../../frontend/audio/vad.md)を参照する。通信形式を変える場合はGoとRecognizerを同時に確認する。

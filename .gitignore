@@ -56,3 +56,6 @@ SincromisorCLI
 .playwright-cli/
 
 sincromisor-server/agent-server/.mastra
+
+# 発話モデルは固定版取得コマンドで準備し、起動時には取得しない。
+sincromisor-server/assets/3rd_party/turn/*.onnx

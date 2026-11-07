@@ -5,6 +5,11 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
+if not os.environ.get("SINCRO_TEST_YAMNET"):
+    pytest.skip("旧実モデル確認時だけ読み込む", allow_module_level=True)
+pytest.importorskip("mediapipe", reason="旧モデル比較専用の依存")
+
 from mediapipe.tasks import python
 from mediapipe.tasks.python import audio
 from mediapipe.tasks.python.components import containers
