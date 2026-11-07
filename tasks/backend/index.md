@@ -2,9 +2,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 28 件）
+## タスク一覧（自動生成 / 全 29 件）
 
-### done（完了） — 28 件
+### done（完了） — 29 件
 
 | タスク                                                                                                             | タイトル                                                | 判定    | 依存                                                                                 |
 | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------ |
@@ -36,5 +36,6 @@
 | [task-261018215553-synthesis-request-backpressure](./task-261018215553-synthesis-request-backpressure/task.md)     | 音声合成の未完了要求上限で待機し会話切断を防ぐ          | ✅ PASS | —                                                                                    |
 | [task-261024154944-refresh-server-dependencies](./task-261024154944-refresh-server-dependencies/task.md)           | サーバーのPython・Go・AgentServer依存を更新する         | ✅ PASS | —                                                                                    |
 | [task-261025214003-prune-python-dependencies](./task-261025214003-prune-python-dependencies/task.md)               | Python依存の未使用宣言と本番への不要導入を整理する      | ✅ PASS | —                                                                                    |
+| [task-261107202016-server-smart-turn](./task-261107202016-server-smart-turn/task.md)                               | SileroとSmart Turnでサーバーの発話終端を判定する        | ✅ PASS | —                                                                                    |
 
 <!-- AUTOGEN:tasks END -->

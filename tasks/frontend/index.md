@@ -2,9 +2,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 44 件）
+## タスク一覧（自動生成 / 全 45 件）
 
-### done（完了） — 44 件
+### done（完了） — 45 件
 
 | タスク                                                                                                                 | タイトル                                                   | 判定    | 依存                                                                                           |
 | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------- |
@@ -52,5 +52,6 @@
 | [task-261025054927-startup-action-alignment](./task-261025054927-startup-action-alignment/task.md)                     | 起動前の戻る導線と開始操作を整列する                       | ✅ PASS | `task-261025054927-settings-shared-layout`                                                     |
 | [task-261025054928-settings-alignment-regression](./task-261025054928-settings-alignment-regression/task.md)           | 設定画面の整列をPlaywrightで回帰確認する                   | ✅ PASS | `task-261025054927-startup-action-alignment`, `task-261025055639-settings-fixed-footer-height` |
 | [task-261025055639-settings-fixed-footer-height](./task-261025055639-settings-fixed-footer-height/task.md)             | 基本設定のカテゴリ切替で固定操作欄が動く不具合を修正する   | ✅ PASS | `task-261025054927-settings-shared-layout`                                                     |
+| [task-261107202016-server-owned-voice-gate](./task-261107202016-server-owned-voice-gate/task.md)                       | 通常会話の音声送信からクライアントVADゲートを外す          | ✅ PASS | —                                                                                              |
 
 <!-- AUTOGEN:tasks END -->
