@@ -1,0 +1,13 @@
+id: task-261108012755-dependency-declaration-cleanup
+title: 外部依存の使用箇所と宣言を整理
+category: dependency-security
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-11-08
+closed_at: 2026-11-08
+legacy_ids: []

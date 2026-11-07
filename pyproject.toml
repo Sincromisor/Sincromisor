@@ -15,7 +15,6 @@ requires-python = ">=3.14,<3.15"
 endpoint-evaluation = ["mediapipe>=1.1.1"]
 
 dev = [
-    "python-dotenv>=1.2.4",
     "pytest>=9.1.1",
     "redis>=8.1.0",
     "ruff>=0.17.2",
@@ -84,7 +83,6 @@ members = [
     "sincromisor-server/speech-extractor",
     "sincromisor-server/voice-synthesizer",
     "sincromisor-server/text-processor",
-    "sincromisor-server/sincro-models",
 ]
 
 [tool.uv.sources]

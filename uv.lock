@@ -2333,15 +2333,6 @@ wheels = [
 ]
 
 [[package]]
-name = "python-dotenv"
-version = "1.2.4"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/74/26/2fbeedb218a787a5eea551c7532cac4e009f83d689dd2faa0d0353473f86/python_dotenv-1.2.4.tar.gz", hash = "sha256:f0d53e69935a851c0dcc78f3ab7aaccd8cabef0b92382b576b824212902873c0", size = 60824, upload-time = "2026-10-01T05:36:10Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/60/d1/38f3a3405989a89ac18390803e70c6ad7c7760da4f9b83cbeca0c44a0c72/python_dotenv-1.2.4-py3-none-any.whl", hash = "sha256:42269a8a5b3fd54ffa6f3d84b18abed50064717576b4ecf03dc4a55d8aa04fdc", size = 23266, upload-time = "2026-10-01T05:36:08.633Z" },
-]
-
-[[package]]
 name = "python-ulid"
 version = "4.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2758,7 +2749,6 @@ default-groups = []
 [package.dev-dependencies]
 dev = [
     { name = "pytest" },
-    { name = "python-dotenv" },
     { name = "redis" },
     { name = "ruff" },
     { name = "ty" },
@@ -2792,7 +2782,6 @@ voice-synthesizer = [
 [package.metadata.requires-dev]
 dev = [
     { name = "pytest", specifier = ">=9.1.1" },
-    { name = "python-dotenv", specifier = ">=1.2.4" },
     { name = "redis", specifier = ">=8.1.0" },
     { name = "ruff", specifier = ">=0.17.2" },
     { name = "ty", specifier = ">=0.0.91" },
@@ -2907,9 +2896,11 @@ dependencies = [
     { name = "fastapi" },
     { name = "numpy" },
     { name = "onnxruntime" },
+    { name = "pydantic" },
     { name = "setproctitle" },
     { name = "sincro-config" },
     { name = "sincro-models" },
+    { name = "starlette" },
     { name = "uvicorn" },
     { name = "websockets" },
 ]
@@ -2919,9 +2910,11 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.162.0" },
     { name = "numpy", specifier = ">=2.5.4,<3" },
     { name = "onnxruntime", specifier = ">=1.31.1" },
+    { name = "pydantic", specifier = ">=2.14.1" },
     { name = "setproctitle", specifier = ">=1.3.8" },
     { name = "sincro-config", editable = "sincromisor-server/sincro-config" },
     { name = "sincro-models", editable = "sincromisor-server/sincro-models" },
+    { name = "starlette", specifier = ">=1.9.0" },
     { name = "uvicorn", specifier = ">=0.54.0" },
     { name = "websockets", specifier = ">=17.3" },
 ]
@@ -2932,15 +2925,19 @@ version = "2.0.0"
 source = { editable = "sincromisor-server/speech-recognizer-nemo" }
 dependencies = [
     { name = "boto3" },
+    { name = "botocore" },
     { name = "fastapi" },
     { name = "nemo-toolkit", extra = ["asr"] },
     { name = "numpy" },
+    { name = "omegaconf" },
     { name = "reazonspeech-nemo-asr" },
     { name = "setproctitle" },
     { name = "sincro-config" },
     { name = "sincro-models" },
+    { name = "starlette" },
     { name = "sudachidict-full" },
     { name = "sudachipy" },
+    { name = "torch" },
     { name = "uvicorn" },
     { name = "websockets" },
 ]
@@ -2948,15 +2945,19 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "boto3", specifier = ">=1.43.118" },
+    { name = "botocore", specifier = ">=1.43.118" },
     { name = "fastapi", specifier = ">=0.162.0" },
     { name = "nemo-toolkit", extras = ["asr"], specifier = ">=3.0.0,<4" },
     { name = "numpy", specifier = ">=2.5.4,<3" },
+    { name = "omegaconf", specifier = ">=2.3.0" },
     { name = "reazonspeech-nemo-asr", git = "https://github.com/reazon-research/ReazonSpeech.git?subdirectory=pkg%2Fnemo-asr" },
     { name = "setproctitle", specifier = ">=1.3.8" },
     { name = "sincro-config", editable = "sincromisor-server/sincro-config" },
     { name = "sincro-models", editable = "sincromisor-server/sincro-models" },
+    { name = "starlette", specifier = ">=1.9.0" },
     { name = "sudachidict-full", specifier = ">=20261015" },
     { name = "sudachipy", specifier = ">=0.7.0" },
+    { name = "torch", specifier = ">=2.14.1" },
     { name = "uvicorn", specifier = ">=0.54.0" },
     { name = "websockets", specifier = ">=17.3" },
 ]
@@ -3115,6 +3116,7 @@ dependencies = [
     { name = "setproctitle" },
     { name = "sincro-config" },
     { name = "sincro-models" },
+    { name = "starlette" },
     { name = "sudachidict-full" },
     { name = "sudachipy" },
     { name = "uvicorn" },
@@ -3129,6 +3131,7 @@ requires-dist = [
     { name = "setproctitle", specifier = ">=1.3.8" },
     { name = "sincro-config", editable = "sincromisor-server/sincro-config" },
     { name = "sincro-models", editable = "sincromisor-server/sincro-models" },
+    { name = "starlette", specifier = ">=1.9.0" },
     { name = "sudachidict-full", specifier = ">=20261015" },
     { name = "sudachipy", specifier = ">=0.7.0" },
     { name = "uvicorn", specifier = ">=0.54.0" },
@@ -3444,12 +3447,15 @@ version = "2.0.0"
 source = { editable = "sincromisor-server/voice-synthesizer" }
 dependencies = [
     { name = "boto3" },
+    { name = "botocore" },
     { name = "fastapi" },
+    { name = "pydantic" },
     { name = "redis", extra = ["hiredis"] },
     { name = "requests" },
     { name = "setproctitle" },
     { name = "sincro-config" },
     { name = "sincro-models" },
+    { name = "starlette" },
     { name = "uvicorn" },
     { name = "websockets" },
 ]
@@ -3457,12 +3463,15 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "boto3", specifier = ">=1.43.118" },
+    { name = "botocore", specifier = ">=1.43.118" },
     { name = "fastapi", specifier = ">=0.162.0" },
+    { name = "pydantic", specifier = ">=2.14.1" },
     { name = "redis", extras = ["hiredis"], specifier = ">=8.1.0" },
     { name = "requests", specifier = ">=2.34.2" },
     { name = "setproctitle", specifier = ">=1.3.8" },
     { name = "sincro-config", editable = "sincromisor-server/sincro-config" },
     { name = "sincro-models", editable = "sincromisor-server/sincro-models" },
+    { name = "starlette", specifier = ">=1.9.0" },
     { name = "uvicorn", specifier = ">=0.54.0" },
     { name = "websockets", specifier = ">=17.3" },
 ]

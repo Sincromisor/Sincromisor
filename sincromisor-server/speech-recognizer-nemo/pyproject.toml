@@ -5,6 +5,10 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14,<3.15"
 dependencies = [
+    "botocore>=1.43.118",
+    "omegaconf>=2.3.0",
+    "starlette>=1.9.0",
+    "torch>=2.14.1",
     "sincro-config",
     "sincro-models",
     "numpy>=2.5.4,<3",

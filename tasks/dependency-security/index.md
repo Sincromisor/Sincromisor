@@ -2,9 +2,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 9 件）
+## タスク一覧（自動生成 / 全 10 件）
 
-### done（完了） — 9 件
+### done（完了） — 10 件
 
 | タスク                                                                                                                                 | タイトル                                   | 判定    | 依存 |
 | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ------- | ---- |
@@ -16,6 +16,7 @@
 | [task-261011143119-dependabot-remediation](./task-261011143119-dependabot-remediation/task.md)                                         | 依存パッケージの修正と配布処理の確認       | ✅ PASS | —    |
 | [task-261011144531-remove-retired-nue-asr](./task-261011144531-remove-retired-nue-asr/task.md)                                         | 廃止済みNue-ASR実装と依存定義の削除        | ✅ PASS | —    |
 | [task-261025210425-dependabot-pillow-filelock](./task-261025210425-dependabot-pillow-filelock/task.md)                                 | Pillowとfilelockを修正版へ更新する         | ✅ PASS | —    |
+| [task-261108012755-dependency-declaration-cleanup](./task-261108012755-dependency-declaration-cleanup/task.md)                         | 外部依存の使用箇所と宣言を整理             | ✅ PASS | —    |
 | [task-4000-uv-audit-remediation](./task-4000-uv-audit-remediation/task.md)                                                             | uv audit remediation                       | ✅ PASS | —    |
 
 <!-- AUTOGEN:tasks END -->

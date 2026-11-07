@@ -5,6 +5,9 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14,<3.15"
 dependencies = [
+    "botocore>=1.43.118",
+    "pydantic>=2.14.1",
+    "starlette>=1.9.0",
     "sincro-config",
     "sincro-models",
     "redis[hiredis]>=8.1.0",
