@@ -22,7 +22,11 @@ type AudioPanelVadControlsProps = {
     manager: DebugConsoleManager;
 };
 
+/** 診断時だけローカルVADを調整できるようにし、通常会話では無効な操作を表示しない。 */
 export function AudioPanelVadControls({ audio, manager }: AudioPanelVadControlsProps) {
+    if (!audio.clientVadEnabled) {
+        return <p>会話中の発話判定はサーバーで行います。VADの調整は音声診断で利用できます。</p>;
+    }
     const updateLearnedVadTuning = (patch: Partial<LearnedVadTuningUiConfig>): void => {
         manager.applyLocalLearnedVadTuning({
             ...audio.learnedVadTuning,

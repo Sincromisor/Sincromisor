@@ -30,6 +30,7 @@ export function learnedVadFramesLabel(snapshot: DebugConsoleSnapshot): string {
 }
 
 export function localVadEngineLabel(snapshot: DebugConsoleSnapshot): string {
+    if (!snapshot.audio.clientVadEnabled) return "RMS";
     if (snapshot.audio.vadThresholdMode === "learned") {
         return "Silero";
     }

@@ -94,7 +94,12 @@ export class UserMediaManager {
         this.onAudioConstraintRuntimeApplyCallback = callback;
     }
 
-    // VAD判定に連動して無音時の送信音量を0にするかを切り替える。
+    /** 診断モードだけクライアントVADを許可する。マイク取得前から適用して語頭の欠落を防ぐ。 */
+    setClientVadEnabled(enabled: boolean): void {
+        this.audioProcessor.setClientVadEnabled(enabled);
+    }
+
+    // 診断時にVAD判定と連動して送信音量を0にするかを切り替える。
     setVadGateEnabled(enabled: boolean): void {
         this.audioProcessor.setVadGateEnabled(enabled);
     }

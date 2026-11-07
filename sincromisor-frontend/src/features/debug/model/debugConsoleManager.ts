@@ -104,6 +104,14 @@ export class DebugConsoleManager {
         this.rtcStopHandler();
     }
 
+    /** 会話モードの実効方針を診断UIへ伝える。VADの保存方式とは独立し、利用者操作を発火しない。 */
+    setClientVadEnabled(enabled: boolean): void {
+        this.updateSnapshot((snapshot) => ({
+            ...snapshot,
+            audio: { ...snapshot.audio, clientVadEnabled: enabled },
+        }));
+    }
+
     setLocalVadThresholdMode(mode: VadThresholdMode): void {
         this.audioControls.setLocalVadThresholdMode(mode);
     }

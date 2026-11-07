@@ -37,7 +37,7 @@ VRMの状態と選択は[起動前VRM部品](../../../../sincromisor-frontend/sr
 | ノイズを抑える `enableNoiseSuppression`         | 真偽値、`true`                             | 前後。ノイズ抑制                                                                              |
 | 音の回り込みを抑える `enableEchoCancellation`   | 真偽値、`true`                             | 前後。エコー除去                                                                              |
 | 音量を自動で整える `enableAutoGainControl`      | 真偽値、`false`                            | 前後。自動利得調整                                                                            |
-| 無音時の送信を抑える `enableVadGate`            | 真偽値、`false`                            | 前後。方式の選択は開発者ツール                                                                |
+| 無音時の送信を抑える `enableVadGate`            | 真偽値、`false`                            | 音声診断の前後だけ表示。通常会話では保存値によらず適用しない。方式の選択は開発者ツール        |
 | にぎやかな場所向けに調整 `enableVenueNoiseMode` | 真偽値、`false`                            | 前後。フィルター・VAD閾値をまとめて適用                                                       |
 | 顔の向きでマイクを自動ミュート `enableAutoMute` | 真偽値、`false`                            | 前後。視線が必要。無効時はオフへ戻し操作不可理由を表示。`echo` / `playback`接続中は適用しない |
 

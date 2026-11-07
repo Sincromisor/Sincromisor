@@ -158,6 +158,12 @@ export class SincroAudioInputController {
     private applyMicSettingsToUserMedia(forceAll: boolean): void {
         const next = this.readMicSettingsSnapshot();
         const prev = this.micSettingsSnapshot;
+        if (forceAll || prev === undefined || prev.talkMode !== next.talkMode) {
+            // 保存済みgate/learnedの復元やマイク開始より先に、通常会話の音声欠落と端末推論を抑止する。
+            const clientVadEnabled = next.talkMode === "echo" || next.talkMode === "playback";
+            this.userMediaManager.setClientVadEnabled(clientVadEnabled);
+            this.debugConsoleManager.setClientVadEnabled(clientVadEnabled);
+        }
 
         if (forceAll || prev === undefined || prev.audioInputDeviceId !== next.audioInputDeviceId) {
             this.userMediaManager.setAudioInputDeviceId(next.audioInputDeviceId);
@@ -286,4 +292,5 @@ type MicSettingsSnapshot = Pick<
     | "enableVadGate"
     | "enableVenueNoiseMode"
     | "audioInputDeviceId"
+    | "talkMode"
 >;

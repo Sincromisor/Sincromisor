@@ -86,6 +86,8 @@ export class LearnedVadWorkerClient {
         }
         this.worker = worker;
         worker.onmessage = (event: MessageEvent<LearnedVadWorkerMessage>) => {
+            // 診断終了・方式変更後に届いた旧Workerの判定を再利用しない。
+            if (this.worker !== worker || !this.enabled) return;
             const data = event.data;
             if (!data?.type) {
                 return;
@@ -114,6 +116,7 @@ export class LearnedVadWorkerClient {
             this.publishState();
         };
         worker.onerror = (event: ErrorEvent) => {
+            if (this.worker !== worker || !this.enabled) return;
             this.status = "fallback";
             this.probability = undefined;
             this.isSpeech = false;
@@ -124,8 +127,13 @@ export class LearnedVadWorkerClient {
         this.postTuningConfig();
     }
 
-    // 学習VAD有効化を切り替える。ON/OFF時に推論状態はリセットして誤判定を持ち越さない。
+    // 有効時だけWorkerを生成する。無効化はWorkerを終了し、音声・判定を次の診断へ持ち越さない。
     setEnabled(enabled: boolean): void {
+        if (!enabled) {
+            this.dispose();
+            this.publishState();
+            return;
+        }
         this.ensureWorker();
         this.enabled = enabled;
         this.probability = undefined;

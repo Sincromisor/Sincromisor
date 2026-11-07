@@ -17,6 +17,7 @@ it("Workerが代替状態になれば古い発話判定を捨ててWorkletのRMS
         },
     );
     const runtime = new UserMediaVadRuntime();
+    runtime.setClientVadEnabled(true);
     runtime.setVadThresholdMode("learned");
     worker?.onmessage?.({ data: { type: "vad-prob", probability: 0.9, isSpeech: true } });
     const silence = { type: "vad", isSpeech: false, rms: 0, peak: 0 };

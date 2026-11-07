@@ -22,6 +22,7 @@ export class UserMediaAudioProcessor {
     private readonly vadRuntime = new UserMediaVadRuntime();
     private audioContext?: AudioContext;
     private vadGateEnabled = false;
+    private clientVadEnabled = false;
     private outputGainNode?: GainNode;
     private vadNode?: AudioWorkletNode;
     private highpassNode?: BiquadFilterNode;
@@ -40,13 +41,21 @@ export class UserMediaAudioProcessor {
         this.vadRuntime.setLearnedVadStateCallback(callback);
     }
 
+    /** 通常会話は音声をサーバーへ渡し、クライアントの発話検出は診断時だけ許可する。保存設定は変更しない。 */
+    setClientVadEnabled(enabled: boolean): void {
+        this.clientVadEnabled = enabled;
+        this.vadRuntime.setClientVadEnabled(enabled);
+        this.setVadGateEnabled(this.vadGateEnabled);
+    }
+
+    /** 診断用のゲート設定を保持し、通常会話では常に音声を通す。 */
     setVadGateEnabled(enabled: boolean): void {
         this.vadGateEnabled = enabled;
         if (!this.outputGainNode || !this.audioContext) {
             return;
         }
         this.outputGainNode.gain.setTargetAtTime(
-            enabled ? 0 : 1,
+            this.clientVadEnabled && enabled ? 0 : 1,
             this.audioContext.currentTime,
             0.02,
         );
@@ -188,7 +197,7 @@ export class UserMediaAudioProcessor {
 
         const gateGain = context.createGain();
         this.outputGainNode = gateGain;
-        gateGain.gain.value = this.vadGateEnabled ? 0 : 1;
+        gateGain.gain.value = this.clientVadEnabled && this.vadGateEnabled ? 0 : 1;
         vadNode.port.onmessage = (event: MessageEvent<VadWorkletMessage>) => {
             this.handleVadWorkletMessage(event.data, gateGain);
         };
@@ -212,7 +221,7 @@ export class UserMediaAudioProcessor {
 
     private handleVadWorkletMessage(data: VadWorkletMessage | undefined, gateGain: GainNode): void {
         const report = this.vadRuntime.handleWorkletMessage(data);
-        if (!report || !this.vadGateEnabled || !this.audioContext) {
+        if (!report || !this.clientVadEnabled || !this.vadGateEnabled || !this.audioContext) {
             return;
         }
         gateGain.gain.setTargetAtTime(report.isSpeech ? 1 : 0, this.audioContext.currentTime, 0.02);

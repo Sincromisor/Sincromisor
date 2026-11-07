@@ -39,6 +39,7 @@ export class UserMediaVadRuntime {
     private autoLastThresholdApplyAtMs = 0;
     private learnedVadStreamRecoveryLastAtMs = 0;
     private learnedVadStrictMode = false;
+    private clientVadEnabled = false;
 
     constructor() {
         this.learnedVadClient = new LearnedVadWorkerClient((report: LearnedVadStateReport) => {
@@ -75,6 +76,13 @@ export class UserMediaVadRuntime {
         }
     }
 
+    /** 方式の保存値を保ち、通常会話への切替時は学習WorkerとPCM転送を終了する。 */
+    setClientVadEnabled(enabled: boolean): void {
+        this.clientVadEnabled = enabled;
+        this.setLearnedVadEnabled(enabled && this.vadThresholdMode === "learned");
+    }
+
+    /** 診断方式を保持する。通常会話中のlearned選択は設定だけを更新し、推論を開始しない。 */
     setVadThresholdMode(mode: VadThresholdMode): void {
         this.vadThresholdMode = mode;
         if (mode === "manual") {
@@ -140,7 +148,8 @@ export class UserMediaVadRuntime {
     attachVadNode(vadNode: AudioWorkletNode): void {
         this.vadNode = vadNode;
         this.postVadThresholds();
-        this.syncLearnedVadStreamState();
+        // dispose後の再接続でも、診断モードに限り保存された学習方式を再開する。
+        this.setLearnedVadEnabled(this.clientVadEnabled && this.vadThresholdMode === "learned");
     }
 
     clearVadNode(): void {
@@ -185,7 +194,11 @@ export class UserMediaVadRuntime {
     }
 
     private recoverLearnedVadStreamIfNeeded(): void {
-        if (this.vadThresholdMode !== "learned" || this.learnedVadClient.hasValidPrediction()) {
+        if (
+            !this.clientVadEnabled ||
+            this.vadThresholdMode !== "learned" ||
+            this.learnedVadClient.hasValidPrediction()
+        ) {
             return;
         }
         const now = performance.now();
@@ -197,7 +210,7 @@ export class UserMediaVadRuntime {
     }
 
     private resolveSpeechState(fallbackVadReport: VadStateReport): boolean {
-        if (this.vadThresholdMode !== "learned") {
+        if (!this.clientVadEnabled || this.vadThresholdMode !== "learned") {
             return fallbackVadReport.isSpeech;
         }
         if (!this.learnedVadClient.hasValidPrediction()) {
@@ -209,13 +222,14 @@ export class UserMediaVadRuntime {
         return this.learnedVadClient.getSpeechState();
     }
 
+    /** 診断の許可と保存方式を実行状態へ反映し、不要なPCM転送も止める。 */
     private setLearnedVadEnabled(enabled: boolean): void {
-        this.learnedVadClient.setEnabled(enabled);
+        this.learnedVadClient.setEnabled(enabled && this.clientVadEnabled);
         this.syncLearnedVadStreamState();
     }
 
     private syncLearnedVadStreamState(): void {
-        const shouldEnable = this.vadThresholdMode === "learned";
+        const shouldEnable = this.clientVadEnabled && this.vadThresholdMode === "learned";
         this.learnedVadClient.syncAudioFrameStreaming(this.vadNode, shouldEnable);
         if (!shouldEnable) {
             this.learnedVadStreamRecoveryLastAtMs = 0;
@@ -240,7 +254,7 @@ export class UserMediaVadRuntime {
     }
 
     private updateAutoVadThreshold(report: { isSpeech: boolean; rms: number }): void {
-        if (this.vadThresholdMode !== "auto") {
+        if (!this.clientVadEnabled || this.vadThresholdMode !== "auto") {
             return;
         }
         if (!report.isSpeech) {

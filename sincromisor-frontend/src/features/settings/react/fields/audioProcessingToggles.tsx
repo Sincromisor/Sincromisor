@@ -40,13 +40,15 @@ export function AudioProcessingToggles({
                 disabled={uiState.enableAutoGainControlDisabled}
                 onChange={(checked) => onApplySettings({ enableAutoGainControl: checked })}
             />
-            <SettingsToggle
-                density={toggleDensity}
-                label="無音時の送信を抑える"
-                checked={!!settings.enableVadGate}
-                disabled={uiState.enableVadGateDisabled}
-                onChange={(checked) => onApplySettings({ enableVadGate: checked })}
-            />
+            {settings.talkMode === "echo" || settings.talkMode === "playback" ? (
+                <SettingsToggle
+                    density={toggleDensity}
+                    label="無音時の送信を抑える"
+                    checked={!!settings.enableVadGate}
+                    disabled={uiState.enableVadGateDisabled}
+                    onChange={(checked) => onApplySettings({ enableVadGate: checked })}
+                />
+            ) : null}
             <SettingsToggle
                 density={toggleDensity}
                 label="にぎやかな場所向けに調整"
