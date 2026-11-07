@@ -5,9 +5,12 @@ import threading
 
 import numpy as np
 import pytest
+from sincro_config.websocket_diagnostics import WebSocketDiagnostics
 from sincro_models import SpeechExtractorResult
 from speech_extractor.model_execution import ModelExecution
 from speech_extractor.SpeechExtractor import SpeechExtractorWorker
+from speech_extractor.SpeechExtractor.SpeechExtractorWorker import TurnPrediction
+from speech_extractor.turn_state import TurnState
 
 
 class Models:
@@ -235,5 +238,48 @@ def test_receive_overload_is_explicit_failure(models):
             assert any(isinstance(e, asyncio.QueueFull) for e in error.value.exceptions)
         finally:
             release.set()
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("probability", [0.9, None])
+def test_received_tail_speech_invalidates_completed_prediction(models, probability):
+    async def run():
+        worker = SpeechExtractorWorker("tail")
+        worker.diagnostic = WebSocketDiagnostics(worker.logger)
+        state = TurnState("tail", 600)
+        state.feed(np.ones(512, np.int16), 0.9)
+        for _ in range(19):
+            state.feed(np.zeros(512, np.int16), 0.01)
+        token, _ = state.candidate()
+
+        async def completed():
+            return TurnPrediction(token, probability, 1)
+
+        worker.pending = asyncio.create_task(completed())
+        await worker.pending
+        incoming, outgoing = asyncio.Queue(), asyncio.Queue()
+        incoming.put_nowait(np.zeros(320, np.int16).tobytes())
+        incoming.put_nowait(
+            np.concatenate((np.zeros(192, np.int16), np.ones(128, np.int16))).tobytes()
+        )
+        task = asyncio.create_task(worker._consume(incoming, outgoing, state))  # noqa: SLF001  # reason: 受信端数と完了済み推論の競合境界を固定して確認する。
+        try:
+            await until(lambda: len(models.frames) == 1)
+            await asyncio.sleep(0.005)
+            assert outgoing.empty()
+            assert worker.pending is not None
+            assert state.active
+            # 残り128サンプルの再開を分類してから、160ms境界で旧結果を破棄する。
+            for _ in range(6):
+                incoming.put_nowait(np.ones(320, np.int16).tobytes())
+            await until(lambda: worker.pending is None)
+            assert len(models.frames) == 5
+            assert not state.accepts(token)
+            assert state.active
+            while not outgoing.empty():
+                assert not outgoing.get_nowait().confirmed
+        finally:
+            await stop(task)
 
     asyncio.run(run())

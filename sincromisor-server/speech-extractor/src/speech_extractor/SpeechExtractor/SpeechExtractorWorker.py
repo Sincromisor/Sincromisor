@@ -127,18 +127,24 @@ class SpeechExtractorWorker:
                     packet = state.feed(pcm, probability)
                     if packet is not None:
                         outgoing.put_nowait(packet)
-                    # 受信済み音声が残る間は古い判定で確定しない。次のフレームで再開を先に検出する。
+                    # 推論は休止中に始められるが、採用は端数も分類してから。160msごとに両フレームが整列する。
                     if incoming.empty() and remainder.size < 512:
-                        self._endpoint(state, outgoing)
+                        self._endpoint(
+                            state, outgoing, allow_confirmation=remainder.size == 0
+                        )
                     elif state.active and state.silence >= state.MAX_SILENCE:
                         self._finish(state, outgoing, "silence_limit")
 
     def _endpoint(
-        self, state: TurnState, outgoing: asyncio.Queue[SpeechExtractorResult]
+        self,
+        state: TurnState,
+        outgoing: asyncio.Queue[SpeechExtractorResult],
+        *,
+        allow_confirmation: bool = True,
     ) -> None:
         """結果採用、無音上限、次推論の順に判断する。発話状態の更新はこのイベントループだけが行う。"""
         reason: str | None = None
-        if self.pending is not None and self.pending.done():
+        if allow_confirmation and self.pending is not None and self.pending.done():
             prediction = self.pending.result()
             self.pending = None
             accepted = state.accepts(prediction.token)

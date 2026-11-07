@@ -83,7 +83,9 @@ Pythonの4サービスは公式イメージ `ghcr.io/astral-sh/uv:0.13.5`のバ�
 起動時は `uv run --no-sync`でビルド済み環境を使う。
 ルートの `.dockerignore`でローカル依存・生成物・実設定・保存領域を除外する。
 Pythonは全メンバーの依存宣言を保持し、ソースは対象サービスと `sincro-config` / `sincro-models`だけを配置する。
-音声区間抽出にはYAMNet素材も配置する。AgentServerは独立したコンテキストの `.dockerignore`を使う。
+音声区間抽出はビルド時にSileroとSmart Turnの固定モデルを取得・検証し、ライセンスとともに配置する。
+モデルの版と準備方法は[音声区間抽出](../backend/services/speech-extractor.md#準備と検証)を参照する。
+AgentServerは独立したコンテキストの `.dockerignore`を使う。
 依存を変更するときは開発環境で `npm install`または `uv lock`を実行し、
 依存宣言とロックの差分を一緒に確認・コミットしてから再ビルドする。
 
