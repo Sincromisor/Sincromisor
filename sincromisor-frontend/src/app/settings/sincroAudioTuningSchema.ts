@@ -29,12 +29,12 @@ export const sincroAudioTuningSchema = z.object({
             onThreshold: z.number().min(0.01).max(0.99).catch(defaults.onThreshold),
             offThreshold: z.number().min(0.01).max(0.98).catch(defaults.offThreshold),
             hangoverMs: z.number().int().min(0).max(1200).catch(defaults.hangoverMs),
-            minInferIntervalMs: z
+            minReportIntervalMs: z
                 .number()
                 .int()
                 .min(20)
                 .max(400)
-                .catch(defaults.minInferIntervalMs),
+                .catch(defaults.minReportIntervalMs),
             onConsecutiveFrames: z
                 .number()
                 .int()

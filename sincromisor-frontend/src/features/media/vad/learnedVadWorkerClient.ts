@@ -29,8 +29,8 @@ export type LearnedVadTuningConfig = {
     offThreshold: number;
     // 一度Speechになった後、OFF条件を満たしても保持する時間(ms)。
     hangoverMs: number;
-    // 推論実行間隔(ms)。小さいほど応答性は上がるがCPU負荷も上がる。
-    minInferIntervalMs: number;
+    // 定期通知の最小間隔(ms)。音声推論と発話状態の変化は間引かない。
+    minReportIntervalMs: number;
     // ON閾値を連続で超える必要フレーム数。誤反応抑制に効く。
     onConsecutiveFrames: number;
     // OFF閾値を連続で下回る必要フレーム数。状態の揺れ抑制に効く。
@@ -42,7 +42,7 @@ const DEFAULT_TUNING: LearnedVadTuningConfig = {
     onThreshold: 0.5,
     offThreshold: 0.35,
     hangoverMs: 180,
-    minInferIntervalMs: 80,
+    minReportIntervalMs: 80,
     onConsecutiveFrames: 2,
     offConsecutiveFrames: 2,
 };
@@ -94,6 +94,10 @@ export class LearnedVadWorkerClient {
                 // Worker起動/モデル読込/フォールバック状態を UI 表示へそのまま伝える。
                 if (data.status) {
                     this.status = data.status;
+                    // 起動待ち・代替・停止では古い確率を無効にし、既存WorkletのRMS判定へ戻す。
+                    this.probability = undefined;
+                    this.isSpeech = false;
+                    this.hasPrediction = false;
                 }
                 this.publishState(data.message);
                 return;
@@ -111,6 +115,9 @@ export class LearnedVadWorkerClient {
         };
         worker.onerror = (event: ErrorEvent) => {
             this.status = "fallback";
+            this.probability = undefined;
+            this.isSpeech = false;
+            this.hasPrediction = false;
             this.publishState(`${event.message}`);
         };
         worker.postMessage({ type: "init" });
@@ -149,10 +156,10 @@ export class LearnedVadWorkerClient {
                 config.hangoverMs !== undefined
                     ? Math.max(0, Math.min(1200, Math.round(config.hangoverMs)))
                     : this.tuning.hangoverMs,
-            minInferIntervalMs:
-                config.minInferIntervalMs !== undefined
-                    ? Math.max(20, Math.min(400, Math.round(config.minInferIntervalMs)))
-                    : this.tuning.minInferIntervalMs,
+            minReportIntervalMs:
+                config.minReportIntervalMs !== undefined
+                    ? Math.max(20, Math.min(400, Math.round(config.minReportIntervalMs)))
+                    : this.tuning.minReportIntervalMs,
             onConsecutiveFrames:
                 config.onConsecutiveFrames !== undefined
                     ? Math.max(1, Math.min(10, Math.round(config.onConsecutiveFrames)))
@@ -270,14 +277,14 @@ export class LearnedVadWorkerClient {
     }
 
     // Worker側推論パラメータを一括送信する。
-    // しきい値・hangover・間引き設定は Worker 側で最終判定に使われる。
+    // しきい値・hangover・通知間隔は Worker 側で最終判定に使われる。
     private postTuningConfig(): void {
         this.worker?.postMessage({
             type: "set-params",
             onThreshold: this.tuning.onThreshold,
             offThreshold: this.tuning.offThreshold,
             hangoverMs: this.tuning.hangoverMs,
-            minInferIntervalMs: this.tuning.minInferIntervalMs,
+            minReportIntervalMs: this.tuning.minReportIntervalMs,
             onConsecutiveFrames: this.tuning.onConsecutiveFrames,
             offConsecutiveFrames: this.tuning.offConsecutiveFrames,
         });

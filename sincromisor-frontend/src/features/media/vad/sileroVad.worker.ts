@@ -1,7 +1,8 @@
 import { InferenceSession } from "onnxruntime-web/wasm";
 import { SileroVadInference } from "./sileroVadInference";
-import { linearResample, normalizePcmFrame, positiveNumberOrDefault, rmsOf } from "./sileroVadPcm";
+import { normalizePcmFrame, positiveNumberOrDefault } from "./sileroVadPcm";
 import { SileroVadSpeechState } from "./sileroVadSpeechState";
+import { SileroVadStream } from "./sileroVadStream";
 
 type InitMessage = {
     type: "init";
@@ -18,7 +19,7 @@ type SetParamsMessage = {
     onThreshold?: number;
     offThreshold?: number;
     hangoverMs?: number;
-    minInferIntervalMs?: number;
+    minReportIntervalMs?: number;
     onConsecutiveFrames?: number;
     offConsecutiveFrames?: number;
 };
@@ -39,14 +40,20 @@ let available = false;
 let inference: SileroVadInference | undefined;
 let busy = false;
 let generation = 0;
-let pendingFrame: { pcm: Float32Array; sampleRate: number } | undefined;
+const stream = new SileroVadStream();
+let queuedFrames: Float32Array[] = [];
+let inputSampleRate: number | undefined;
+let audioTimeMs = 0;
+let lastSpeech = false;
+// 1秒を超える古い音声を判定し続けず、既存Workletの即時RMS判定へ退避する。
+const MAX_QUEUED_FRAMES = Math.floor(1000 / 32);
 
 const DEFAULT_MODEL_URL = "/3rd_party/silero-vad/silero_vad.onnx";
 
-// 推論間引き間隔(ms)。描画負荷とのトレードオフ調整に使う。
-let minInferIntervalMs = 80;
+// 定期通知だけを間引く。発話状態の変化はゲート開閉へ即時反映する。
+let minReportIntervalMs = 80;
 
-let lastInferAtMs = 0;
+let lastReportAtMs = 0;
 const speechState = new SileroVadSpeechState();
 
 // メインスレッドへWorker状態を通知する。
@@ -83,21 +90,9 @@ async function initialize(config?: InitMessage): Promise<void> {
     }
 }
 
-// 音声を16kHzへ変換する。連続フレームへの蓄積は後続の音声処理で扱う。
-async function inferProbability(
-    pcm: Float32Array,
-    sampleRate: number,
-): Promise<number | undefined> {
-    if (!available || !inference) return undefined;
-    const pcm16k = linearResample(pcm, sampleRate, 16000);
-    const frame = new Float32Array(512);
-    frame.set(pcm16k.subarray(Math.max(0, pcm16k.length - 512)), Math.max(0, 512 - pcm16k.length));
-    return inference.infer(frame);
-}
-
 // Workerメッセージ処理:
 // - init / set-enabled / set-params は制御系
-// - audio-frame は推論系（最新フレームのみ保持して負荷上昇を抑制）
+// - audio-frame は連続PCM。推論は直列化し、停止・代替処理時に系列全体をリセットする。
 self.onmessage = async (event: MessageEvent<WorkerInputMessage>) => {
     const data = event.data;
     if (!data?.type) {
@@ -121,69 +116,87 @@ self.onmessage = async (event: MessageEvent<WorkerInputMessage>) => {
     await handleAudioFrame(data);
 };
 
-function setWorkerEnabled(nextEnabled: boolean): void {
+// 切替は処理中フレームも無効にする。busyは実行中のawaitが戻るまで維持する。
+function resetStream(): void {
     generation += 1;
-    enabled = !!nextEnabled;
     inference?.reset();
-    pendingFrame = undefined;
+    stream.reset();
+    queuedFrames = [];
+    inputSampleRate = undefined;
     speechState.reset();
-    lastInferAtMs = 0;
-    postStatus(enabled ? "running" : "idle");
+    audioTimeMs = 0;
+    lastReportAtMs = 0;
+    lastSpeech = false;
+}
+
+function setWorkerEnabled(nextEnabled: boolean): void {
+    enabled = nextEnabled;
+    resetStream();
+    available = inference !== undefined;
+    postStatus(!enabled ? "idle" : available ? "running" : "loading");
 }
 
 function updateWorkerParams(data: SetParamsMessage): void {
     // 各パラメータはUI入力の異常値を受けても安全な範囲に丸める。
     speechState.setParams(data);
-    if (typeof data.minInferIntervalMs === "number" && Number.isFinite(data.minInferIntervalMs)) {
-        minInferIntervalMs = Math.max(20, Math.min(400, Math.round(data.minInferIntervalMs)));
+    if (typeof data.minReportIntervalMs === "number" && Number.isFinite(data.minReportIntervalMs)) {
+        minReportIntervalMs = Math.max(20, Math.min(400, Math.round(data.minReportIntervalMs)));
     }
 }
 
+// 全サンプルを蓄積し、負荷上限に達した場合だけ系列を終了してRMSへ退避する。
 async function handleAudioFrame(data: AudioFrameMessage): Promise<void> {
+    if (!available || !inference) return;
     const pcm = normalizePcmFrame(data.pcm);
     const sampleRate = positiveNumberOrDefault(data.sampleRate, 48000);
-    if (!pcm || pcm.length === 0) {
+    if (!pcm || pcm.length === 0) return;
+    if (inputSampleRate !== undefined && inputSampleRate !== sampleRate) {
+        resetStream();
+        postStatus("running", "Audio sample rate changed; VAD state reset");
+    }
+    inputSampleRate = sampleRate;
+    queuedFrames.push(...stream.push(pcm, sampleRate));
+    if (queuedFrames.length > MAX_QUEUED_FRAMES) {
+        fallbackToRms("Audio inference backlog exceeded one second");
         return;
     }
-
-    // 推論が詰まってもキューを増やさず最新フレームだけ保持し、描画・音声処理への波及を抑える。
-    pendingFrame = { pcm, sampleRate };
-    if (busy) {
-        // 推論キューが増え続けると描画負荷へ波及するため、常に最新フレームのみ保持する。
-        return;
-    }
+    if (busy) return;
     busy = true;
-    while (pendingFrame) {
-        const current = pendingFrame;
-        pendingFrame = undefined;
-        const now = Date.now();
-        if (now - lastInferAtMs < minInferIntervalMs) {
-            continue;
-        }
-        lastInferAtMs = now;
+    try {
+        await drainFrames();
+    } finally {
+        busy = false;
+    }
+}
 
+// 推論の順序と状態を一か所で所有する。停止・レート変更・過負荷後の結果は配信しない。
+async function drainFrames(): Promise<void> {
+    while (enabled && available && inference && queuedFrames.length > 0) {
+        const frame = queuedFrames.shift();
+        if (!frame) return;
         const currentGeneration = generation;
         let probability: number | undefined;
         try {
-            probability = await inferProbability(current.pcm, current.sampleRate);
-        } catch (e) {
+            probability = await inference.infer(frame);
+        } catch (error) {
             if (currentGeneration !== generation) continue;
-            available = false;
-            postStatus("fallback", `${e}`);
+            fallbackToRms(String(error));
+            return;
         }
-
-        // 停止・再開を跨いだ出力は、代替判定も含めて新しいセッションへ渡さない。
-        if (currentGeneration !== generation || !enabled) continue;
-        if (probability === undefined) {
-            const rms = rmsOf(current.pcm);
-            probability = Math.max(0, Math.min(1, (rms - 0.01) * 18));
+        if (currentGeneration !== generation || probability === undefined) continue;
+        audioTimeMs += 32;
+        const speech = speechState.update(probability, audioTimeMs);
+        if (speech !== lastSpeech || audioTimeMs - lastReportAtMs >= minReportIntervalMs) {
+            self.postMessage({ type: "vad-prob", probability, isSpeech: speech });
+            lastReportAtMs = audioTimeMs;
         }
-        const speech = speechState.update(probability);
-        self.postMessage({
-            type: "vad-prob",
-            probability,
-            isSpeech: speech,
-        });
+        lastSpeech = speech;
     }
-    busy = false;
+}
+
+// 学習確率をRMSから捏造せず、クライアントに学習判定の無効化を知らせる。
+function fallbackToRms(message: string): void {
+    available = false;
+    resetStream();
+    postStatus("fallback", message);
 }

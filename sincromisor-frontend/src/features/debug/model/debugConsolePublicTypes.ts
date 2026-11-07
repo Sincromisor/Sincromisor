@@ -18,7 +18,7 @@ export type LearnedVadTuningUiConfig = {
     onThreshold: number;
     offThreshold: number;
     hangoverMs: number;
-    minInferIntervalMs: number;
+    minReportIntervalMs: number;
     onConsecutiveFrames: number;
     offConsecutiveFrames: number;
 };

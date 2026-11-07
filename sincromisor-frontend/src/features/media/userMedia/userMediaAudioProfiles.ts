@@ -19,16 +19,16 @@ export const AUTO_VAD_OFFSET = 0.003;
 export const AUTO_VAD_UPDATE_INTERVAL_MS = 500;
 
 // 学習VADプリセット（発話確率0.5/0.35はSilero公式既定を基準とする）:
-// low_cpu: 推論頻度を抑えて負荷優先
+// low_cpu: 定期通知を抑える。音声は全フレーム推論する
 // balanced: 通常運用向け
-// high_accuracy: 応答性/取りこぼし低減優先（負荷高め）
+// high_accuracy: 通知頻度と無音の保持時間を増やす
 export const LEARNED_VAD_TUNING_PRESETS: Record<LearnedVadPerformanceMode, LearnedVadTuningConfig> =
     {
         low_cpu: {
             onThreshold: 0.5,
             offThreshold: 0.35,
             hangoverMs: 160,
-            minInferIntervalMs: 140,
+            minReportIntervalMs: 140,
             onConsecutiveFrames: 2,
             offConsecutiveFrames: 2,
         },
@@ -36,7 +36,7 @@ export const LEARNED_VAD_TUNING_PRESETS: Record<LearnedVadPerformanceMode, Learn
             onThreshold: 0.5,
             offThreshold: 0.35,
             hangoverMs: 180,
-            minInferIntervalMs: 80,
+            minReportIntervalMs: 80,
             onConsecutiveFrames: 2,
             offConsecutiveFrames: 2,
         },
@@ -44,7 +44,7 @@ export const LEARNED_VAD_TUNING_PRESETS: Record<LearnedVadPerformanceMode, Learn
             onThreshold: 0.5,
             offThreshold: 0.35,
             hangoverMs: 240,
-            minInferIntervalMs: 40,
+            minReportIntervalMs: 40,
             onConsecutiveFrames: 3,
             offConsecutiveFrames: 2,
         },

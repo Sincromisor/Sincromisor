@@ -113,7 +113,7 @@ const DEFAULT_LEARNED_VAD_TUNING: LearnedVadTuningUiConfig = {
     onThreshold: 0.5,
     offThreshold: 0.35,
     hangoverMs: 180,
-    minInferIntervalMs: 80,
+    minReportIntervalMs: 80,
     onConsecutiveFrames: 2,
     offConsecutiveFrames: 2,
 };

@@ -39,7 +39,7 @@ function LearnedVadPerformanceModeSelect({ audio, manager }: LearnedVadPerforman
         <div className="audioControlGroup">
             <label className="audioControlLabel" htmlFor="localVadLearnedPerformanceMode">
                 Preset
-                <span>負荷/精度</span>
+                <span>通知/応答</span>
             </label>
             <select
                 id="localVadLearnedPerformanceMode"
@@ -52,8 +52,8 @@ function LearnedVadPerformanceModeSelect({ audio, manager }: LearnedVadPerforman
                 }
             >
                 <option value="balanced">標準</option>
-                <option value="low_cpu">低負荷</option>
-                <option value="high_accuracy">高精度</option>
+                <option value="low_cpu">通知控えめ</option>
+                <option value="high_accuracy">通知頻繁</option>
             </select>
         </div>
     );
@@ -101,15 +101,15 @@ function LearnedVadThresholdControls({ audio, onTuningChange }: LearnedVadThresh
             onChange: (value) => onTuningChange({ hangoverMs: value }),
         },
         {
-            id: "localVadLearnedInferIntervalMs",
-            label: "Infer Interval",
-            valueLabel: `${Math.round(audio.learnedVadTuning.minInferIntervalMs)}ms`,
+            id: "localVadLearnedReportIntervalMs",
+            label: "通知間隔",
+            valueLabel: `${Math.round(audio.learnedVadTuning.minReportIntervalMs)}ms`,
             min: 20,
             max: 400,
             step: 10,
-            value: audio.learnedVadTuning.minInferIntervalMs,
+            value: audio.learnedVadTuning.minReportIntervalMs,
             disabled,
-            onChange: (value) => onTuningChange({ minInferIntervalMs: value }),
+            onChange: (value) => onTuningChange({ minReportIntervalMs: value }),
         },
     ];
 

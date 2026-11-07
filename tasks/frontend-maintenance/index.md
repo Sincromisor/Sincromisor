@@ -28,9 +28,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 55 件）
+## タスク一覧（自動生成 / 全 56 件）
 
-### done（完了） — 55 件
+### done（完了） — 56 件
 
 | タスク                                                                                                                                 | タイトル                                                   | 判定    | 依存                                                                                                                                                          |
 | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -89,5 +89,6 @@
 | [task-261104021446-secure-browser-test-launch](./task-261104021446-secure-browser-test-launch/task.md)                                 | ブラウザーテストをシステムChromeとサンドボックスへ統一する | ✅ PASS | —                                                                                                                                                             |
 | [task-261104025646-simplify-browser-test-policy](./task-261104025646-simplify-browser-test-policy/task.md)                             | ブラウザーテストの固定版検査と実行ファイル指定を廃止する   | ✅ PASS | —                                                                                                                                                             |
 | [task-261107174417-repair-silero-inference-state](./task-261107174417-repair-silero-inference-state/task.md)                           | Silero VADの状態と入力文脈を正しく引き継ぐ                 | ✅ PASS | —                                                                                                                                                             |
+| [task-261107174732-preserve-continuous-vad-audio](./task-261107174732-preserve-continuous-vad-audio/task.md)                           | 学習VADへ連続音声を欠落なく渡す                            | ✅ PASS | `task-261107174417-repair-silero-inference-state`                                                                                                             |
 
 <!-- AUTOGEN:tasks END -->

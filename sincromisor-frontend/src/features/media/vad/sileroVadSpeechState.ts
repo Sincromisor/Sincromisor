@@ -3,7 +3,6 @@ export type SileroVadSpeechParams = {
     onThreshold?: number;
     offThreshold?: number;
     hangoverMs?: number;
-    minInferIntervalMs?: number;
     onConsecutiveFrames?: number;
     offConsecutiveFrames?: number;
 };
@@ -25,6 +24,7 @@ export class SileroVadSpeechState {
         this.onConsecutiveCount = 0;
         this.offConsecutiveCount = 0;
         this.isSpeech = false;
+        this.lastSpeechAtMs = 0;
     }
 
     /** 有限の指定値だけ反映し、終了閾値を開始より低く制限する。 */
@@ -61,9 +61,8 @@ export class SileroVadSpeechState {
         }
     }
 
-    /** 1フレームの発話確率で状態を進める。保持時間は処理時刻のミリ秒で測る。 */
-    update(probability: number): boolean {
-        const now = Date.now();
+    /** 1フレームの発話確率で状態を進める。保持時間は入力系列のミリ秒で測り、処理の遅れに左右されない。 */
+    update(probability: number, now: number = performance.now()): boolean {
         if (probability >= this.modeOnThreshold) {
             this.onConsecutiveCount += 1;
             this.offConsecutiveCount = 0;
