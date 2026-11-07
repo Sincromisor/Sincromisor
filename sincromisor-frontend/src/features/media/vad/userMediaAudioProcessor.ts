@@ -22,7 +22,7 @@ export class UserMediaAudioProcessor {
     private readonly vadRuntime = new UserMediaVadRuntime();
     private audioContext?: AudioContext;
     private vadGateEnabled = false;
-    private clientVadEnabled = false;
+    private diagnosticVadEnabled = false;
     private outputGainNode?: GainNode;
     private vadNode?: AudioWorkletNode;
     private highpassNode?: BiquadFilterNode;
@@ -41,21 +41,22 @@ export class UserMediaAudioProcessor {
         this.vadRuntime.setLearnedVadStateCallback(callback);
     }
 
-    /** 通常会話は音声をサーバーへ渡し、クライアントの発話検出は診断時だけ許可する。保存設定は変更しない。 */
-    setClientVadEnabled(enabled: boolean): void {
-        this.clientVadEnabled = enabled;
-        this.vadRuntime.setClientVadEnabled(enabled);
+    /** 診断の学習VADと調整閾値を許可する。通常会話の軽量ゲートとは別に保存設定を保持する。 */
+    setDiagnosticVadEnabled(enabled: boolean): void {
+        this.diagnosticVadEnabled = enabled;
+        this.vadRuntime.setDiagnosticVadEnabled(enabled);
         this.setVadGateEnabled(this.vadGateEnabled);
     }
 
-    /** 診断用のゲート設定を保持し、通常会話では常に音声を通す。 */
+    /** 通常会話はWorkletで無音化し、診断時だけ既存のVAD判定でGainNodeを制御する。 */
     setVadGateEnabled(enabled: boolean): void {
         this.vadGateEnabled = enabled;
+        this.syncSilenceGate();
         if (!this.outputGainNode || !this.audioContext) {
             return;
         }
         this.outputGainNode.gain.setTargetAtTime(
-            this.clientVadEnabled && enabled ? 0 : 1,
+            this.diagnosticVadEnabled && enabled ? 0 : 1,
             this.audioContext.currentTime,
             0.02,
         );
@@ -181,6 +182,7 @@ export class UserMediaAudioProcessor {
         this.vadRuntime.dispose();
     }
 
+    /** Worklet生成後に保存設定を同期し、通常会話と診断のどちらが無音化するかを接続前に確定する。 */
     private async createVadProcessingChain(context: AudioContext): Promise<GainNode> {
         this.highpassNode = this.createHighpassNode(context);
         this.lowpassNode = this.createLowpassNode(context);
@@ -194,16 +196,26 @@ export class UserMediaAudioProcessor {
         const vadNode = new AudioWorkletNode(context, "vad-processor");
         this.vadNode = vadNode;
         this.vadRuntime.attachVadNode(vadNode);
+        this.syncSilenceGate();
 
         const gateGain = context.createGain();
         this.outputGainNode = gateGain;
-        gateGain.gain.value = this.clientVadEnabled && this.vadGateEnabled ? 0 : 1;
+        gateGain.gain.value = this.diagnosticVadEnabled && this.vadGateEnabled ? 0 : 1;
         vadNode.port.onmessage = (event: MessageEvent<VadWorkletMessage>) => {
             this.handleVadWorkletMessage(event.data, gateGain);
         };
         return gateGain;
     }
 
+    /** ノード再作成・モード変更・設定変更のすべてで軽量ゲートの実効状態を送る。 */
+    private syncSilenceGate(): void {
+        this.vadNode?.port.postMessage({
+            type: "silence-gate",
+            enabled: this.vadGateEnabled && !this.diagnosticVadEnabled,
+        });
+    }
+
+    /** 共通のフィルターとWorkletを直列に接続する。通常会話では末尾のGainNodeを開いたままにする。 */
     private connectAudioNodes(options: {
         source: MediaStreamAudioSourceNode;
         gateGain: GainNode;
@@ -219,9 +231,10 @@ export class UserMediaAudioProcessor {
         options.gateGain.connect(options.destination);
     }
 
+    /** 通知は音量表示に使い、診断時だけ通知結果でGainNodeを動かす。通常会話はWorklet内で判断済み。 */
     private handleVadWorkletMessage(data: VadWorkletMessage | undefined, gateGain: GainNode): void {
         const report = this.vadRuntime.handleWorkletMessage(data);
-        if (!report || !this.clientVadEnabled || !this.vadGateEnabled || !this.audioContext) {
+        if (!report || !this.diagnosticVadEnabled || !this.vadGateEnabled || !this.audioContext) {
             return;
         }
         gateGain.gain.setTargetAtTime(report.isSpeech ? 1 : 0, this.audioContext.currentTime, 0.02);

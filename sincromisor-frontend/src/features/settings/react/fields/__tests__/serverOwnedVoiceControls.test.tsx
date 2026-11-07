@@ -19,11 +19,10 @@ it.each(["chat", "sincro", "echo", "playback"])(
             />,
         );
         expect(html).toContain("マイクをミュートする");
-        expect(html.includes("無音時の送信を抑える")).toBe(
-            talkMode === "echo" || talkMode === "playback",
-        );
+        expect(html).toContain("無音時の送信を抑える");
+        expect(html).toContain("小声が欠ける場合はオフ");
         const manager = DebugConsoleManager.getManager();
-        manager.setClientVadEnabled(talkMode === "echo" || talkMode === "playback");
+        manager.setDiagnosticVadEnabled(talkMode === "echo" || talkMode === "playback");
         const debug = renderToStaticMarkup(
             <AudioPanelVadControls audio={manager.getSnapshot().audio} manager={manager} />,
         );
@@ -32,3 +31,7 @@ it.each(["chat", "sincro", "echo", "playback"])(
         );
     },
 );
+
+it("無音ゲートの既定値は無効を維持する", () => {
+    expect(defaultSincroAppSettingsSnapshot.enableVadGate).toBe(false);
+});

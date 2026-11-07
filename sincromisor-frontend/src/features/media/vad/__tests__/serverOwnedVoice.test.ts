@@ -45,7 +45,7 @@ Object.defineProperty(Context.prototype, "audioWorklet", { value: undefined });
 
 afterEach(() => vi.unstubAllGlobals());
 
-it("通常会話は保存learned/gateでも音声を通し、診断終了後・再取得時もWorkerを動かさない", async () => {
+it("通常会話は保存gateを軽量ゲートへ渡し、診断終了後・再取得時も学習Workerを動かさない", async () => {
     const workers: {
         terminate: ReturnType<typeof vi.fn>;
         onmessage?: (e: { data: unknown }) => void;
@@ -84,7 +84,18 @@ it("通常会話は保存learned/gateでも音声を通し、診断終了後・�
     processor.setVadThresholdMode("learned");
     await processor.buildProcessedAudioTrack(new MediaStreamTrack());
     expect(workers).toHaveLength(0);
+    expect(Worklet.latest.port.postMessage).toHaveBeenCalledWith({
+        type: "silence-gate",
+        enabled: true,
+    });
+    processor.setVadGateEnabled(false);
+    expect(Worklet.latest.port.postMessage).toHaveBeenLastCalledWith({
+        type: "silence-gate",
+        enabled: false,
+    });
+    processor.setVadGateEnabled(true);
     expect(Context.latest.gain.gain.value).toBe(1);
+    Context.latest.gain.gain.setTargetAtTime.mockClear();
     const silence = { type: "vad", isSpeech: false, rms: 0, peak: 0 };
     Worklet.latest.port.onmessage?.({ data: silence });
     expect(Context.latest.gain.gain.setTargetAtTime).not.toHaveBeenCalled();
@@ -92,20 +103,32 @@ it("通常会話は保存learned/gateでも音声を通し、診断終了後・�
         type: "learned-vad-stream",
         enabled: false,
     });
-    processor.setClientVadEnabled(true);
+    processor.setDiagnosticVadEnabled(true);
     expect(processor.getVadThresholdMode()).toBe("learned");
     expect(workers).toHaveLength(1);
+    expect(Worklet.latest.port.postMessage).toHaveBeenLastCalledWith({
+        type: "silence-gate",
+        enabled: false,
+    });
     Worklet.latest.port.onmessage?.({ data: silence });
     expect(Context.latest.gain.gain.setTargetAtTime).toHaveBeenLastCalledWith(0, 0, 0.02);
-    processor.setClientVadEnabled(false);
+    processor.setDiagnosticVadEnabled(false);
     expect(workers[0].terminate).toHaveBeenCalledOnce();
+    expect(Worklet.latest.port.postMessage).toHaveBeenLastCalledWith({
+        type: "silence-gate",
+        enabled: true,
+    });
     expect(Context.latest.gain.gain.setTargetAtTime).toHaveBeenLastCalledWith(1, 0, 0.02);
     workers[0].onmessage?.({ data: { type: "vad-prob", probability: 1, isSpeech: true } });
     processor.setVadThresholdMode("learned");
     await processor.buildProcessedAudioTrack(new MediaStreamTrack());
     expect(workers).toHaveLength(1);
     expect(Context.latest.gain.gain.value).toBe(1);
-    processor.setClientVadEnabled(true);
+    expect(Worklet.latest.port.postMessage).toHaveBeenLastCalledWith({
+        type: "silence-gate",
+        enabled: true,
+    });
+    processor.setDiagnosticVadEnabled(true);
     expect(workers).toHaveLength(2);
     processor.dispose();
 });

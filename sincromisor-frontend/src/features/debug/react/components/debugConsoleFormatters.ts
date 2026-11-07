@@ -29,8 +29,9 @@ export function learnedVadFramesLabel(snapshot: DebugConsoleSnapshot): string {
     return `tx:${tx} rx:${rx}`;
 }
 
+/** 通常会話では保存された診断方式を表示せず、音量表示用のRMSを示す。軽量ゲートの開閉とは別。 */
 export function localVadEngineLabel(snapshot: DebugConsoleSnapshot): string {
-    if (!snapshot.audio.clientVadEnabled) return "RMS";
+    if (!snapshot.audio.diagnosticVadEnabled) return "RMS";
     if (snapshot.audio.vadThresholdMode === "learned") {
         return "Silero";
     }

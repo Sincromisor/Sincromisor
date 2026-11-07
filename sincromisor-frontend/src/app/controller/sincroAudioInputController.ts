@@ -159,10 +159,10 @@ export class SincroAudioInputController {
         const next = this.readMicSettingsSnapshot();
         const prev = this.micSettingsSnapshot;
         if (forceAll || prev === undefined || prev.talkMode !== next.talkMode) {
-            // 保存済みgate/learnedの復元やマイク開始より先に、通常会話の音声欠落と端末推論を抑止する。
-            const clientVadEnabled = next.talkMode === "echo" || next.talkMode === "playback";
-            this.userMediaManager.setClientVadEnabled(clientVadEnabled);
-            this.debugConsoleManager.setClientVadEnabled(clientVadEnabled);
+            // 設定復元・マイク開始より先に診断の許可を決め、通常会話に学習VADや強いゲートを持ち込まない。
+            const diagnosticVadEnabled = next.talkMode === "echo" || next.talkMode === "playback";
+            this.userMediaManager.setDiagnosticVadEnabled(diagnosticVadEnabled);
+            this.debugConsoleManager.setDiagnosticVadEnabled(diagnosticVadEnabled);
         }
 
         if (forceAll || prev === undefined || prev.audioInputDeviceId !== next.audioInputDeviceId) {

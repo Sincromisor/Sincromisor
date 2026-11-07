@@ -40,8 +40,8 @@ type AudioPanelSnapshot = {
     localVadIsSpeech: boolean;
     localWarningState: "ok" | "silent" | "error";
     localWarningText: string;
-    /** クライアントの発話判定と設定操作を許可する診断モードか。保存対象ではない。 */
-    clientVadEnabled: boolean;
+    /** 診断用VADの調整・学習処理を許可するか。通常会話の軽量ゲートとは別で、保存対象ではない。 */
+    diagnosticVadEnabled: boolean;
     vadThresholdMode: VadThresholdMode;
     vadRmsThreshold: number;
     filterConfig: AudioFilterControlConfig;
@@ -157,7 +157,7 @@ function createDefaultAudioSnapshot(): AudioPanelSnapshot {
         localVadIsSpeech: false,
         localWarningState: "ok",
         localWarningText: "Normal",
-        clientVadEnabled: false,
+        diagnosticVadEnabled: false,
         vadThresholdMode: "manual",
         vadRmsThreshold: 0.015,
         filterConfig: { ...DEFAULT_AUDIO_FILTER_CONFIG },

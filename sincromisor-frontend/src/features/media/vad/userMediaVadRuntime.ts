@@ -39,7 +39,7 @@ export class UserMediaVadRuntime {
     private autoLastThresholdApplyAtMs = 0;
     private learnedVadStreamRecoveryLastAtMs = 0;
     private learnedVadStrictMode = false;
-    private clientVadEnabled = false;
+    private diagnosticVadEnabled = false;
 
     constructor() {
         this.learnedVadClient = new LearnedVadWorkerClient((report: LearnedVadStateReport) => {
@@ -77,8 +77,8 @@ export class UserMediaVadRuntime {
     }
 
     /** 方式の保存値を保ち、通常会話への切替時は学習WorkerとPCM転送を終了する。 */
-    setClientVadEnabled(enabled: boolean): void {
-        this.clientVadEnabled = enabled;
+    setDiagnosticVadEnabled(enabled: boolean): void {
+        this.diagnosticVadEnabled = enabled;
         this.setLearnedVadEnabled(enabled && this.vadThresholdMode === "learned");
     }
 
@@ -149,7 +149,7 @@ export class UserMediaVadRuntime {
         this.vadNode = vadNode;
         this.postVadThresholds();
         // dispose後の再接続でも、診断モードに限り保存された学習方式を再開する。
-        this.setLearnedVadEnabled(this.clientVadEnabled && this.vadThresholdMode === "learned");
+        this.setLearnedVadEnabled(this.diagnosticVadEnabled && this.vadThresholdMode === "learned");
     }
 
     clearVadNode(): void {
@@ -195,7 +195,7 @@ export class UserMediaVadRuntime {
 
     private recoverLearnedVadStreamIfNeeded(): void {
         if (
-            !this.clientVadEnabled ||
+            !this.diagnosticVadEnabled ||
             this.vadThresholdMode !== "learned" ||
             this.learnedVadClient.hasValidPrediction()
         ) {
@@ -210,7 +210,7 @@ export class UserMediaVadRuntime {
     }
 
     private resolveSpeechState(fallbackVadReport: VadStateReport): boolean {
-        if (!this.clientVadEnabled || this.vadThresholdMode !== "learned") {
+        if (!this.diagnosticVadEnabled || this.vadThresholdMode !== "learned") {
             return fallbackVadReport.isSpeech;
         }
         if (!this.learnedVadClient.hasValidPrediction()) {
@@ -224,12 +224,13 @@ export class UserMediaVadRuntime {
 
     /** 診断の許可と保存方式を実行状態へ反映し、不要なPCM転送も止める。 */
     private setLearnedVadEnabled(enabled: boolean): void {
-        this.learnedVadClient.setEnabled(enabled && this.clientVadEnabled);
+        this.learnedVadClient.setEnabled(enabled && this.diagnosticVadEnabled);
         this.syncLearnedVadStreamState();
     }
 
+    /** WorkerとWorkletのPCM転送を同じ診断許可に揃え、再接続でも通常会話へ推論を持ち込まない。 */
     private syncLearnedVadStreamState(): void {
-        const shouldEnable = this.clientVadEnabled && this.vadThresholdMode === "learned";
+        const shouldEnable = this.diagnosticVadEnabled && this.vadThresholdMode === "learned";
         this.learnedVadClient.syncAudioFrameStreaming(this.vadNode, shouldEnable);
         if (!shouldEnable) {
             this.learnedVadStreamRecoveryLastAtMs = 0;
@@ -254,7 +255,7 @@ export class UserMediaVadRuntime {
     }
 
     private updateAutoVadThreshold(report: { isSpeech: boolean; rms: number }): void {
-        if (!this.clientVadEnabled || this.vadThresholdMode !== "auto") {
+        if (!this.diagnosticVadEnabled || this.vadThresholdMode !== "auto") {
             return;
         }
         if (!report.isSpeech) {

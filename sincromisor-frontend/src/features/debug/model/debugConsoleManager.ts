@@ -105,10 +105,10 @@ export class DebugConsoleManager {
     }
 
     /** 会話モードの実効方針を診断UIへ伝える。VADの保存方式とは独立し、利用者操作を発火しない。 */
-    setClientVadEnabled(enabled: boolean): void {
+    setDiagnosticVadEnabled(enabled: boolean): void {
         this.updateSnapshot((snapshot) => ({
             ...snapshot,
-            audio: { ...snapshot.audio, clientVadEnabled: enabled },
+            audio: { ...snapshot.audio, diagnosticVadEnabled: enabled },
         }));
     }
 

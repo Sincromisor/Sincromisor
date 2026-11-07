@@ -1,4 +1,9 @@
-/** 音声を次段へそのまま渡し、先頭チャンネルの発話判定と学習用PCMをメインスレッドへ送る。 */
+// 通常会話では診断用RMS下限と同じ振幅まで通す。保持時間は既存の学習VAD標準値に合わせる。
+// 小声を必ず保護する値ではないため、ゲートは任意かつ既定で無効とする。
+const SILENCE_GATE_THRESHOLD = 0.001;
+const SILENCE_GATE_HOLD_SECONDS = 0.18;
+
+/** 通常会話の軽量無音化と、診断用の発話通知・学習用PCM送信を担当する。 */
 class VadProcessor extends AudioWorkletProcessor {
     /** 検出閾値とPCM蓄積領域を初期化し、メインスレッドからの設定変更を受け付ける。 */
     constructor() {
@@ -10,13 +15,14 @@ class VadProcessor extends AudioWorkletProcessor {
         // hangover: 発話検知後すぐにSilenceへ戻さないための保持フレーム数。
         this.hangoverFrames = 12;
         this.currentHangover = 0;
+        this.silenceGateEnabled = false;
+        this.silenceGateRemainingSamples = 0;
         // 毎フレーム通知するとUI更新負荷が高いため、数フレームごとに集約して通知する。
         this.reportEveryFrames = 4;
         this.frameCounter = 0;
         // 学習ベースVAD向けにPCMフレームを送るかどうか。
-        // ブラウザ実装差で制御メッセージが初回に届かないケースを避けるため、既定で有効化しておく。
-        // 実際の推論ON/OFFはメインスレッド側(WorkerClient.enabled)でもガードしている。
-        this.learnedVadStreamEnabled = true;
+        // 診断で明示的に要求された場合だけ転送する。通常会話の開始直後にも余分な転送をしない。
+        this.learnedVadStreamEnabled = false;
         this.learnedVadFrameSize = 1536; // 48kHzで約32ms。送信頻度を抑えてCPU負荷を下げる。
         this.learnedVadFrameBuffer = new Float32Array(this.learnedVadFrameSize);
         this.learnedVadFrameWriteIndex = 0;
@@ -25,6 +31,14 @@ class VadProcessor extends AudioWorkletProcessor {
         this.port.onmessage = (event) => {
             const data = event.data;
             if (!data) {
+                return;
+            }
+            if (data.type === "silence-gate") {
+                this.silenceGateEnabled = data.enabled === true;
+                // 切替直後は開いて始め、以前の無音状態を持ち越さない。
+                this.silenceGateRemainingSamples = Math.ceil(
+                    globalThis.sampleRate * SILENCE_GATE_HOLD_SECONDS,
+                );
                 return;
             }
             if (data.type === "learned-vad-stream") {
@@ -37,13 +51,18 @@ class VadProcessor extends AudioWorkletProcessor {
             if (data.type !== "vad-threshold") {
                 return;
             }
-            if (typeof data.rmsThreshold === "number" && Number.isFinite(data.rmsThreshold)) {
-                this.rmsThreshold = Math.max(0.001, Math.min(0.2, data.rmsThreshold));
-            }
-            if (typeof data.peakThreshold === "number" && Number.isFinite(data.peakThreshold)) {
-                this.peakThreshold = Math.max(0.01, Math.min(0.99, data.peakThreshold));
-            }
+            this.applyDiagnosticThresholds(data);
         };
+    }
+
+    /** 診断用閾値だけを検証・制限する。通常会話の無音化閾値は上書きしない。 */
+    applyDiagnosticThresholds(data) {
+        if (typeof data.rmsThreshold === "number" && Number.isFinite(data.rmsThreshold)) {
+            this.rmsThreshold = Math.max(0.001, Math.min(0.2, data.rmsThreshold));
+        }
+        if (typeof data.peakThreshold === "number" && Number.isFinite(data.peakThreshold)) {
+            this.peakThreshold = Math.max(0.01, Math.min(0.99, data.peakThreshold));
+        }
     }
 
     /** 音声処理スレッドから呼ばれる。無入力時は状態を進めず、trueを返して処理を継続する。 */
@@ -59,7 +78,7 @@ class VadProcessor extends AudioWorkletProcessor {
             return true;
         }
 
-        this.copyInputToOutput(input, output);
+        this.copyInputToOutput(input, output, this.shouldSilenceInput(input));
 
         if (this.learnedVadStreamEnabled) {
             this.pushLearnedVadFrame(channelData);
@@ -101,8 +120,31 @@ class VadProcessor extends AudioWorkletProcessor {
         return true;
     }
 
-    /** 出力チャンネルが多い場合は最後の入力を複製する。発話判定では音声を加工しない。 */
-    copyInputToOutput(input, output) {
+    /** 入力ブロック全体を先に確認し、音が戻ったブロックは通知を待たずそのまま通す。 */
+    shouldSilenceInput(input) {
+        if (!this.silenceGateEnabled) return false;
+        // 片側だけに声がある場合も消さない。非有限値は無音と断定せず通す。
+        const audible = input.some((channel) =>
+            channel.some(
+                (value) => !Number.isFinite(value) || Math.abs(value) >= SILENCE_GATE_THRESHOLD,
+            ),
+        );
+        if (audible) {
+            this.silenceGateRemainingSamples = Math.ceil(
+                globalThis.sampleRate * SILENCE_GATE_HOLD_SECONDS,
+            );
+            return false;
+        }
+        const held = this.silenceGateRemainingSamples > 0;
+        this.silenceGateRemainingSamples = Math.max(
+            0,
+            this.silenceGateRemainingSamples - input[0].length,
+        );
+        return !held;
+    }
+
+    /** 出力数と時間軸は保ち、閉鎖時も同じ長さのゼロPCMを渡す。余分な出力には最後の入力を複製する。 */
+    copyInputToOutput(input, output, silence) {
         if (output && output.length > 0) {
             for (let ch = 0; ch < output.length; ch += 1) {
                 const out = output[ch];
@@ -110,7 +152,8 @@ class VadProcessor extends AudioWorkletProcessor {
                 if (!src) {
                     continue;
                 }
-                out.set(src);
+                if (silence) out.fill(0);
+                else out.set(src);
             }
         }
     }

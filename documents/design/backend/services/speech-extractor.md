@@ -38,4 +38,4 @@ Python 3.14、ONNX Runtime、NumPyを用い、`uv.lock`で実際の採用版を�
 
 実音声による新旧比較は[品質評価タスク](../../../../tasks/performance/task-261107202017-smart-turn-quality/task.md)で扱う。録音と事前注釈がない段階で、日本語の途中確定や小声の品質改善を確認済みとはしない。以前の[入力窓評価](../../../../tasks/performance/task-261101110037-dialogue-endpoint-evaluation/task.md)は旧YAMNet方式の記録として保持する。
 
-フロント側は通常会話でVADゲートと学習VADを停止する。詳細は[フロントVAD](../../frontend/audio/vad.md)を参照する。通信形式を変える場合はGoとRecognizerを同時に確認する。
+フロント側は通常会話で学習VADを停止し、利用者が有効にした場合だけ軽量ゲートで無音化する。詳細は[フロントVAD](../../frontend/audio/vad.md)を参照する。通信形式を変える場合はGoとRecognizerを同時に確認する。

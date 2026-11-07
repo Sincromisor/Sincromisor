@@ -42,7 +42,7 @@ it("保存済み診断方式は通常会話で実行せず、echo切替時だけ
     const { SincroAppSettingsPersistence } = await import(
         "../../settings/sincroAppSettingsPersistence"
     );
-    const clientVad = vi.spyOn(UserMediaManager.prototype, "setClientVadEnabled");
+    const clientVad = vi.spyOn(UserMediaManager.prototype, "setDiagnosticVadEnabled");
     const gate = vi.spyOn(UserMediaManager.prototype, "setVadGateEnabled");
     const dialog = SincroAppSettingsModel.getShared();
     dialog.updateSettings({ talkMode: "chat", enableVadGate: true }, "restore");
@@ -65,5 +65,5 @@ it("保存済み診断方式は通常会話で実行せず、echo切替時だけ
     audio.restoreTuning(persistence);
     expect(workers).toHaveLength(1);
     expect(dialog.getSetting("enableVadGate")).toBe(true);
-    expect(debug.getSnapshot().audio.clientVadEnabled).toBe(false);
+    expect(debug.getSnapshot().audio.diagnosticVadEnabled).toBe(false);
 });

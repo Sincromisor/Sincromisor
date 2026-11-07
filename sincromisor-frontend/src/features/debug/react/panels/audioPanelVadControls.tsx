@@ -22,10 +22,14 @@ type AudioPanelVadControlsProps = {
     manager: DebugConsoleManager;
 };
 
-/** 診断時だけローカルVADを調整できるようにし、通常会話では無効な操作を表示しない。 */
+/** 診断用VADの調整を表示する。通常会話の軽量ゲートは一般設定で切り替える。 */
 export function AudioPanelVadControls({ audio, manager }: AudioPanelVadControlsProps) {
-    if (!audio.clientVadEnabled) {
-        return <p>会話中の発話判定はサーバーで行います。VADの調整は音声診断で利用できます。</p>;
+    if (!audio.diagnosticVadEnabled) {
+        return (
+            <p>
+                通常会話の軽量無音ゲートは音声設定で切り替えられます。発話終端はサーバーで判断し、詳細なVAD調整は音声診断で利用できます。
+            </p>
+        );
     }
     const updateLearnedVadTuning = (patch: Partial<LearnedVadTuningUiConfig>): void => {
         manager.applyLocalLearnedVadTuning({

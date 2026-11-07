@@ -94,12 +94,12 @@ export class UserMediaManager {
         this.onAudioConstraintRuntimeApplyCallback = callback;
     }
 
-    /** 診断モードだけクライアントVADを許可する。マイク取得前から適用して語頭の欠落を防ぐ。 */
-    setClientVadEnabled(enabled: boolean): void {
-        this.audioProcessor.setClientVadEnabled(enabled);
+    /** 診断用VADだけを許可する。マイク取得前から適用し、通常会話で学習Workerを起動しない。 */
+    setDiagnosticVadEnabled(enabled: boolean): void {
+        this.audioProcessor.setDiagnosticVadEnabled(enabled);
     }
 
-    // 診断時にVAD判定と連動して送信音量を0にするかを切り替える。
+    /** 無音化の保存設定を反映する。通常会話は軽量ゲート、診断は選択したVADを使う。 */
     setVadGateEnabled(enabled: boolean): void {
         this.audioProcessor.setVadGateEnabled(enabled);
     }

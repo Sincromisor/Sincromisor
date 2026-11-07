@@ -4,7 +4,8 @@ import type {
     LearnedVadTuningConfig,
 } from "./userMediaTypes";
 
-export const VAD_WORKLET_MODULE_URL = "/worklets/vad-processor.js?v=20260222a";
+/** 制御メッセージ追加時に版を更新し、軽量ゲートを知らない旧Workletのキャッシュを避ける。 */
+export const VAD_WORKLET_MODULE_URL = "/worklets/vad-processor.js?v=20261107a";
 
 export const DEFAULT_VAD_RMS_THRESHOLD = 0.015;
 export const DEFAULT_VAD_PEAK_THRESHOLD = 0.06;

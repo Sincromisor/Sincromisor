@@ -8,12 +8,12 @@ const source = readFileSync(
 );
 
 // 配信する実ファイルを登録入口から読み、通知は実際と同様に複製・移譲する。
-function createProcessor() {
+function createProcessor(sampleRate = 48000) {
     const messages = [];
     let Processor;
     runInNewContext(source, {
         Float32Array,
-        sampleRate: 48000,
+        sampleRate,
         AudioWorkletProcessor: class {
             port = {
                 postMessage(message, transfer = []) {
@@ -76,6 +76,7 @@ it("閾値の不正入力を無視し、有効値は範囲内へ制限する", (
 
 it("PCMを1536標本ずつ移譲し、停止時の端数を再開後へ混ぜない", () => {
     const { processor, messages } = createProcessor();
+    processor.port.onmessage({ data: { type: "learned-vad-stream", enabled: true } });
     processor.process([[new Float32Array(1000).fill(0.25)]], []);
     processor.process([[new Float32Array(600).fill(0.5)]], []);
     const first = messages.find((message) => message.type === "audio-frame");
@@ -91,4 +92,50 @@ it("PCMを1536標本ずつ移譲し、停止時の端数を再開後へ混ぜな
     expect(frames).toHaveLength(2);
     expect(frames[1].pcm).toEqual(new Float32Array(1536).fill(1));
     expect(first.pcm[0]).toBe(0.25);
+});
+
+// 実Workletの出力PCMで無音化と時間軸を検査する。通知だけのモックでは語頭欠落を検出できない。
+function processAudio(processor, input) {
+    const output = input.map((channel) => new Float32Array(channel.length).fill(1));
+    processor.process([input], [output]);
+    return output;
+}
+
+it.each([44100, 48000])("%iHzでも180ms保持し、復帰ブロックを削らず時間軸を保つ", (rate) => {
+    const { processor, messages } = createProcessor(rate);
+    const send = (data) => processor.port.onmessage({ data });
+    const quiet = new Float32Array(128).fill(0.0005);
+    expect(processAudio(processor, [quiet])[0]).toEqual(quiet);
+    send({ type: "silence-gate", enabled: true });
+    const heldBlocks = Math.ceil(Math.ceil(rate * 0.18) / quiet.length);
+    for (let i = 0; i < heldBlocks; i += 1) {
+        expect(processAudio(processor, [quiet])[0]).toEqual(quiet);
+    }
+    expect(processAudio(processor, [quiet])[0]).toEqual(new Float32Array(128));
+    // 診断用の強い閾値が保存されていても、通常会話の軽量ゲートへ適用しない。
+    send({ type: "vad-threshold", rmsThreshold: 0.2, peakThreshold: 0.99 });
+    const onset = quiet.slice();
+    onset[127] = 0.002;
+    expect(processAudio(processor, [onset])[0]).toEqual(onset);
+    for (let i = 0; i < heldBlocks; i += 1) {
+        expect(processAudio(processor, [quiet])[0]).toEqual(quiet);
+    }
+    expect(processAudio(processor, [quiet])[0]).toEqual(new Float32Array(128));
+    send({ type: "silence-gate", enabled: false });
+    expect(processAudio(processor, [quiet])[0]).toEqual(quiet);
+    send({ type: "silence-gate", enabled: true });
+    expect(processAudio(processor, [quiet])[0]).toEqual(quiet);
+    expect(messages.filter((message) => message.type === "audio-frame")).toEqual([]);
+});
+
+it("片側の音声と不明な入力は通し、設定なしではPCMを転送しない", () => {
+    const { processor, messages } = createProcessor();
+    processor.port.onmessage({ data: { type: "silence-gate", enabled: true } });
+    for (let i = 0; i < 100; i += 1) processAudio(processor, [new Float32Array(128)]);
+    const input = [new Float32Array(128).fill(0.0005), new Float32Array(128).fill(0.002)];
+    expect(processAudio(processor, input)).toEqual(input);
+    for (let i = 0; i < 100; i += 1) processAudio(processor, [new Float32Array(128)]);
+    const unknown = new Float32Array(128).fill(Number.NaN);
+    expect(processAudio(processor, [unknown])[0]).toEqual(unknown);
+    expect(messages.filter((message) => message.type === "audio-frame")).toEqual([]);
 });
