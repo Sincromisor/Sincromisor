@@ -1,3 +1,4 @@
+/** 発話確率と継続回数の調整値。確率閾値はSilero公式既定0.5/0.35を基準とする。 */
 export type SileroVadSpeechParams = {
     onThreshold?: number;
     offThreshold?: number;
@@ -7,9 +8,10 @@ export type SileroVadSpeechParams = {
     offConsecutiveFrames?: number;
 };
 
+/** 確率を発話状態へ変換する。無音への復帰には連続判定と保持時間の両方を要求する。 */
 export class SileroVadSpeechState {
-    private modeOnThreshold = 0.0008;
-    private modeOffThreshold = 0.0004;
+    private modeOnThreshold = 0.5;
+    private modeOffThreshold = 0.35;
     private hangoverMs = 180;
     private onConsecutiveFrames = 2;
     private offConsecutiveFrames = 2;
@@ -18,19 +20,21 @@ export class SileroVadSpeechState {
     private onConsecutiveCount = 0;
     private offConsecutiveCount = 0;
 
+    /** 入力系列の切替で、前系列の発話と連続回数を破棄する。 */
     reset(): void {
         this.onConsecutiveCount = 0;
         this.offConsecutiveCount = 0;
         this.isSpeech = false;
     }
 
+    /** 有限の指定値だけ反映し、終了閾値を開始より低く制限する。 */
     setParams(params: SileroVadSpeechParams): void {
         if (typeof params.onThreshold === "number" && Number.isFinite(params.onThreshold)) {
-            this.modeOnThreshold = Math.max(0.0001, Math.min(0.1, params.onThreshold));
+            this.modeOnThreshold = Math.max(0.01, Math.min(0.99, params.onThreshold));
         }
         if (typeof params.offThreshold === "number" && Number.isFinite(params.offThreshold)) {
             this.modeOffThreshold = Math.max(
-                0.00005,
+                0.01,
                 Math.min(this.modeOnThreshold * 0.95, params.offThreshold),
             );
         }
@@ -57,6 +61,7 @@ export class SileroVadSpeechState {
         }
     }
 
+    /** 1フレームの発話確率で状態を進める。保持時間は処理時刻のミリ秒で測る。 */
     update(probability: number): boolean {
         const now = Date.now();
         if (probability >= this.modeOnThreshold) {

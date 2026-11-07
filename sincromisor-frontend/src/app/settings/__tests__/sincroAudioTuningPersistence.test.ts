@@ -89,7 +89,7 @@ it("実音声コールバックでプリセットと手動調整を復元し、�
     });
     expect(app.media.getAudioFilterConfig()).toEqual(before.filterConfig);
     expect(app.media.getLearnedVadTuning()).toEqual(before.learnedVadTuning);
-    expect(app.media.getLearnedVadTuning().onThreshold).toBe(0.00055);
+    expect(app.media.getLearnedVadTuning().onThreshold).toBe(0.5);
     expect(app.media.getVadThresholds()).toMatchObject({
         rmsThreshold: 0.05,
         peakThreshold: 0.12,
@@ -142,6 +142,6 @@ it("不正な音声項目だけを既定へ戻し、プリセットの精度と�
         filterConfig: { highpassHz: 120, lowpassEnabled: true, lowpassHz: 4500 },
         vadThresholdMode: undefined,
         vadRmsThreshold: undefined,
-        learnedVadTuning: { onThreshold: 0.00055, onConsecutiveFrames: 2 },
+        learnedVadTuning: { onThreshold: 0.5, onConsecutiveFrames: 2 },
     });
 });

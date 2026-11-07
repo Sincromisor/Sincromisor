@@ -26,8 +26,8 @@ export const sincroAudioTuningSchema = z.object({
     learnedVadStrictMode: z.boolean().optional().catch(undefined),
     learnedVadTuning: z
         .object({
-            onThreshold: z.number().min(0.0001).max(0.1).catch(defaults.onThreshold),
-            offThreshold: z.number().min(0.00005).max(0.08).catch(defaults.offThreshold),
+            onThreshold: z.number().min(0.01).max(0.99).catch(defaults.onThreshold),
+            offThreshold: z.number().min(0.01).max(0.98).catch(defaults.offThreshold),
             hangoverMs: z.number().int().min(0).max(1200).catch(defaults.hangoverMs),
             minInferIntervalMs: z
                 .number()

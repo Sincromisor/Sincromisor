@@ -39,8 +39,8 @@ export type LearnedVadTuningConfig = {
 
 // バランス重視の既定値。会場騒音環境ではプリセットやUIから再調整する想定。
 const DEFAULT_TUNING: LearnedVadTuningConfig = {
-    onThreshold: 0.0008,
-    offThreshold: 0.0004,
+    onThreshold: 0.5,
+    offThreshold: 0.35,
     hangoverMs: 180,
     minInferIntervalMs: 80,
     onConsecutiveFrames: 2,
@@ -136,14 +136,14 @@ export class LearnedVadWorkerClient {
     // UIから渡されたチューニング値を検証・補正してWorkerへ反映する。
     setTuningConfig(config: Partial<LearnedVadTuningConfig>): void {
         this.tuning = {
-            // 閾値レンジは Silero実測レンジ(小数点第4位付近)に合わせている。
+            // 閾値は発話確率。旧実装由来の極小値は保存境界で既定へ戻す。
             onThreshold:
                 config.onThreshold !== undefined
-                    ? Math.max(0.0001, Math.min(0.1, config.onThreshold))
+                    ? Math.max(0.01, Math.min(0.99, config.onThreshold))
                     : this.tuning.onThreshold,
             offThreshold:
                 config.offThreshold !== undefined
-                    ? Math.max(0.00005, Math.min(0.08, config.offThreshold))
+                    ? Math.max(0.01, Math.min(0.98, config.offThreshold))
                     : this.tuning.offThreshold,
             hangoverMs:
                 config.hangoverMs !== undefined
@@ -164,7 +164,7 @@ export class LearnedVadWorkerClient {
         };
         // on/offの関係が崩れないように補正する。
         if (this.tuning.offThreshold >= this.tuning.onThreshold) {
-            this.tuning.offThreshold = Math.max(0.00005, this.tuning.onThreshold * 0.7);
+            this.tuning.offThreshold = Math.max(0.01, this.tuning.onThreshold * 0.7);
         }
         this.postTuningConfig();
     }

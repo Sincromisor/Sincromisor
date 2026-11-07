@@ -18,31 +18,31 @@ export const AUTO_VAD_MULTIPLIER = 2.2;
 export const AUTO_VAD_OFFSET = 0.003;
 export const AUTO_VAD_UPDATE_INTERVAL_MS = 500;
 
-// 学習VADプリセット:
+// 学習VADプリセット（発話確率0.5/0.35はSilero公式既定を基準とする）:
 // low_cpu: 推論頻度を抑えて負荷優先
 // balanced: 通常運用向け
 // high_accuracy: 応答性/取りこぼし低減優先（負荷高め）
 export const LEARNED_VAD_TUNING_PRESETS: Record<LearnedVadPerformanceMode, LearnedVadTuningConfig> =
     {
         low_cpu: {
-            onThreshold: 0.0012,
-            offThreshold: 0.0006,
+            onThreshold: 0.5,
+            offThreshold: 0.35,
             hangoverMs: 160,
             minInferIntervalMs: 140,
             onConsecutiveFrames: 2,
             offConsecutiveFrames: 2,
         },
         balanced: {
-            onThreshold: 0.0008,
-            offThreshold: 0.0004,
+            onThreshold: 0.5,
+            offThreshold: 0.35,
             hangoverMs: 180,
             minInferIntervalMs: 80,
             onConsecutiveFrames: 2,
             offConsecutiveFrames: 2,
         },
         high_accuracy: {
-            onThreshold: 0.00055,
-            offThreshold: 0.00025,
+            onThreshold: 0.5,
+            offThreshold: 0.35,
             hangoverMs: 240,
             minInferIntervalMs: 40,
             onConsecutiveFrames: 3,

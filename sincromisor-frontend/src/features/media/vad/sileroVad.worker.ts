@@ -1,11 +1,6 @@
-import { InferenceSession, Tensor } from "onnxruntime-web/wasm";
-import {
-    linearResample,
-    normalizePcmFrame,
-    normalizeWindow,
-    positiveNumberOrDefault,
-    rmsOf,
-} from "./sileroVadPcm";
+import { InferenceSession } from "onnxruntime-web/wasm";
+import { SileroVadInference } from "./sileroVadInference";
+import { linearResample, normalizePcmFrame, positiveNumberOrDefault, rmsOf } from "./sileroVadPcm";
 import { SileroVadSpeechState } from "./sileroVadSpeechState";
 
 type InitMessage = {
@@ -41,9 +36,9 @@ type WorkerInputMessage = InitMessage | SetEnabledMessage | SetParamsMessage | A
 let enabled = false;
 let initialized = false;
 let available = false;
-let session: InferenceSession | undefined;
-let modelStateTensor: Tensor | undefined;
+let inference: SileroVadInference | undefined;
 let busy = false;
+let generation = 0;
 let pendingFrame: { pcm: Float32Array; sampleRate: number } | undefined;
 
 const DEFAULT_MODEL_URL = "/3rd_party/silero-vad/silero_vad.onnx";
@@ -53,12 +48,6 @@ let minInferIntervalMs = 80;
 
 let lastInferAtMs = 0;
 const speechState = new SileroVadSpeechState();
-
-type OnnxDim = number | string | bigint | null;
-
-type OnnxInputMetadata = {
-    dimensions?: ReadonlyArray<OnnxDim>;
-};
 
 // メインスレッドへWorker状態を通知する。
 function postStatus(
@@ -72,37 +61,6 @@ function postStatus(
     });
 }
 
-// ONNXメタデータの可変次元を実テンソル作成用の安全な数値配列へ解決する。
-function resolveDims(dims: ReadonlyArray<OnnxDim> | undefined, fallback: number[]): number[] {
-    const source = dims && dims.length > 0 ? dims : fallback;
-    return source.map((d: OnnxDim) => (typeof d === "number" && d > 0 ? d : 1));
-}
-
-// 次元配列からバッファサイズを計算する。
-function tensorSize(dims: ReadonlyArray<number>): number {
-    return dims.reduce((a: number, b: number) => a * b, 1);
-}
-
-// `inputNames` と同順で返る `inputMetadata` から対象入力の次元情報を取り出す。
-function getInputDims(
-    currentSession: InferenceSession,
-    inputName: string,
-): ReadonlyArray<OnnxDim> | undefined {
-    const inputIndex = currentSession.inputNames.indexOf(inputName);
-    if (inputIndex < 0 || inputIndex >= currentSession.inputMetadata.length) {
-        return undefined;
-    }
-    const metadata: unknown = currentSession.inputMetadata[inputIndex];
-    return isOnnxInputMetadata(metadata) ? metadata.dimensions : undefined;
-}
-
-function isOnnxInputMetadata(value: unknown): value is OnnxInputMetadata {
-    if (!value || typeof value !== "object" || !("dimensions" in value)) {
-        return false;
-    }
-    return value.dimensions === undefined || Array.isArray(value.dimensions);
-}
-
 // ONNX Runtimeセッションを初期化する。失敗時はfallbackモードへ遷移する。
 async function initialize(config?: InitMessage): Promise<void> {
     if (initialized) {
@@ -112,10 +70,11 @@ async function initialize(config?: InitMessage): Promise<void> {
     const modelUrl = config?.modelUrl ?? DEFAULT_MODEL_URL;
     try {
         // Worker 内で ONNX Runtime を初期化し、メインスレッドの描画負荷と分離する。
-        session = await InferenceSession.create(modelUrl, {
+        const session = await InferenceSession.create(modelUrl, {
             executionProviders: ["wasm"],
             graphOptimizationLevel: "all",
         });
+        inference = new SileroVadInference(session);
         available = true;
         postStatus(enabled ? "running" : "ready", "Silero VAD model loaded");
     } catch (e) {
@@ -124,80 +83,16 @@ async function initialize(config?: InitMessage): Promise<void> {
     }
 }
 
-// 1フレーム分の音声から speech probability を推論する。
-// できるだけモデル差異に強くするため、入力/出力名は文字列パターンで解決する。
+// 音声を16kHzへ変換する。連続フレームへの蓄積は後続の音声処理で扱う。
 async function inferProbability(
     pcm: Float32Array,
     sampleRate: number,
 ): Promise<number | undefined> {
-    if (!available || session === undefined) {
-        return undefined;
-    }
+    if (!available || !inference) return undefined;
     const pcm16k = linearResample(pcm, sampleRate, 16000);
-    const frame = normalizeWindow(pcm16k, 512);
-    const result = await session.run(buildInferenceFeeds(frame));
-    return readInferenceProbability(result);
-}
-
-function buildInferenceFeeds(frame: Float32Array): Record<string, Tensor> {
-    const feeds: Record<string, Tensor> = {};
-    if (!session) {
-        return feeds;
-    }
-    // モデル差分に耐えるため、input/output 名を厳密固定せずパターンで解決する。
-    for (const inputName of session.inputNames) {
-        const lower = `${inputName}`.toLowerCase();
-        if (lower.includes("input")) {
-            feeds[inputName] = new Tensor("float32", frame, [1, frame.length]);
-            continue;
-        }
-        if (lower.includes("sr")) {
-            feeds[inputName] = new Tensor("int64", new BigInt64Array([16000n]), [1]);
-            continue;
-        }
-        if (lower.includes("state")) {
-            if (!modelStateTensor) {
-                const dims = getInputDims(session, inputName);
-                const resolvedDims = resolveDims(dims, [2, 1, 128]);
-                const stateSize = tensorSize(resolvedDims);
-                modelStateTensor = new Tensor("float32", new Float32Array(stateSize), resolvedDims);
-            }
-            feeds[inputName] = modelStateTensor;
-            continue;
-        }
-        const dims = getInputDims(session, inputName);
-        if (!dims || dims.length === 0) {
-            continue;
-        }
-        const resolvedDims = resolveDims(dims, [1]);
-        const size = tensorSize(resolvedDims);
-        feeds[inputName] = new Tensor("float32", new Float32Array(size), resolvedDims);
-    }
-    return feeds;
-}
-
-function readInferenceProbability(result: Record<string, Tensor>): number | undefined {
-    if (!session) {
-        return undefined;
-    }
-    let probability: number | undefined;
-    for (const outputName of session.outputNames) {
-        const output = result[outputName];
-        if (!output?.data || output.data.length === 0) {
-            continue;
-        }
-        const lower = `${outputName}`.toLowerCase();
-        if (lower.includes("state")) {
-            modelStateTensor = output;
-            continue;
-        }
-        const p = Number(output.data[0]);
-        if (Number.isFinite(p)) {
-            probability = Math.max(0, Math.min(1, p));
-            break;
-        }
-    }
-    return probability;
+    const frame = new Float32Array(512);
+    frame.set(pcm16k.subarray(Math.max(0, pcm16k.length - 512)), Math.max(0, 512 - pcm16k.length));
+    return inference.infer(frame);
 }
 
 // Workerメッセージ処理:
@@ -227,12 +122,12 @@ self.onmessage = async (event: MessageEvent<WorkerInputMessage>) => {
 };
 
 function setWorkerEnabled(nextEnabled: boolean): void {
+    generation += 1;
     enabled = !!nextEnabled;
-    if (!enabled) {
-        pendingFrame = undefined;
-        busy = false;
-        speechState.reset();
-    }
+    inference?.reset();
+    pendingFrame = undefined;
+    speechState.reset();
+    lastInferAtMs = 0;
     postStatus(enabled ? "running" : "idle");
 }
 
@@ -267,14 +162,18 @@ async function handleAudioFrame(data: AudioFrameMessage): Promise<void> {
         }
         lastInferAtMs = now;
 
+        const currentGeneration = generation;
         let probability: number | undefined;
         try {
             probability = await inferProbability(current.pcm, current.sampleRate);
         } catch (e) {
+            if (currentGeneration !== generation) continue;
             available = false;
             postStatus("fallback", `${e}`);
         }
 
+        // 停止・再開を跨いだ出力は、代替判定も含めて新しいセッションへ渡さない。
+        if (currentGeneration !== generation || !enabled) continue;
         if (probability === undefined) {
             const rms = rmsOf(current.pcm);
             probability = Math.max(0, Math.min(1, (rms - 0.01) * 18));

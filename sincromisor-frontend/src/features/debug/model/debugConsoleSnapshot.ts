@@ -110,8 +110,8 @@ const DEFAULT_AUDIO_FILTER_CONFIG: AudioFilterControlConfig = {
 };
 
 const DEFAULT_LEARNED_VAD_TUNING: LearnedVadTuningUiConfig = {
-    onThreshold: 0.0008,
-    offThreshold: 0.0004,
+    onThreshold: 0.5,
+    offThreshold: 0.35,
     hangoverMs: 180,
     minInferIntervalMs: 80,
     onConsecutiveFrames: 2,
