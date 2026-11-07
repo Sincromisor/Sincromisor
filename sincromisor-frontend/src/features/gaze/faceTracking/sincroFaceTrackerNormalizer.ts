@@ -7,6 +7,7 @@ import {
     type SincroFaceMotionSource,
 } from "./sincroFaceMotionSnapshot";
 
+/** 検出結果を顔観測へ変換する。有効性は幾何入力で判断し、表情係数の大小を使わない。 */
 export function normalizeSincroFaceLandmarkerResult(input: {
     result: FaceLandmarkerResult;
     inferenceTimeMs: number;
@@ -16,8 +17,17 @@ export function normalizeSincroFaceLandmarkerResult(input: {
     roi?: SincroRoiObservation;
     warnings: string[];
 }): SincroFaceMotionSnapshot {
-    const detected = input.result.faceLandmarks.length > 0;
-    if (!detected) {
+    const landmarks = input.result.faceLandmarks[0];
+    const matrix = input.result.facialTransformationMatrixes[0];
+    const reason = !landmarks?.length
+        ? "face_not_detected"
+        : !landmarks.every((point) => [point.x, point.y, point.z].every(Number.isFinite))
+          ? "face_landmarks_invalid"
+          : matrix !== undefined &&
+              (matrix.data.length !== 16 || !matrix.data.every(Number.isFinite))
+            ? "face_transform_invalid"
+            : undefined;
+    if (reason !== undefined) {
         return {
             ...DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
             headPose: { ...DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT.headPose },
@@ -29,16 +39,16 @@ export function normalizeSincroFaceLandmarkerResult(input: {
             inferenceTimeMs: input.inferenceTimeMs,
             inferenceFps: input.inferenceFps,
             lastUpdatedAtMs: input.nowMs,
-            fallbackReason: "face_not_detected",
+            fallbackReason: reason,
         };
     }
 
     const blendshapes = normalizeBlendshapes(input.result.faceBlendshapes[0]?.categories ?? []);
-    const matrix = input.result.facialTransformationMatrixes[0];
     return {
         trackingEnabled: true,
-        detected,
-        confidence: estimateConfidence(blendshapes),
+        detected: true,
+        // APIは検出確率を返さない。1は有効な観測を表し、ROI整合性や鮮度は後段で評価する。
+        confidence: 1,
         headPose: normalizeHeadPose(matrix),
         blendshapes,
         source: input.source,
@@ -50,6 +60,7 @@ export function normalizeSincroFaceLandmarkerResult(input: {
     };
 }
 
+/** 停止・推論失敗時の無効な観測を作る。前フレームの姿勢や表情を持ち越さない。 */
 export function createSincroFaceFallbackSnapshot(
     reason: string,
     nowMs: number,
@@ -66,6 +77,7 @@ export function createSincroFaceFallbackSnapshot(
     };
 }
 
+// 欠損・非有限の表情係数だけを中立値へ戻し、観測全体の有効性と分けて扱う。
 function normalizeBlendshapes(categories: Category[]): Record<string, number> {
     const values: Record<string, number> = {};
     for (const category of categories) {
@@ -107,14 +119,6 @@ function normalizeHeadPose(matrix: Matrix | undefined) {
         rollDeg: radToDeg(rollRad),
         matrix: [...values],
     };
-}
-
-function estimateConfidence(blendshapes: Record<string, number>): number {
-    const scores = Object.values(blendshapes);
-    if (scores.length === 0) {
-        return 1;
-    }
-    return clamp01(Math.max(...scores));
 }
 
 function clamp01(value: number): number {

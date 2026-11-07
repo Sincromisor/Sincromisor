@@ -23,6 +23,7 @@ type SincroMotionFaceSectionProps = {
     tracker: DebugConsoleSnapshot["sincroMotion"]["tracker"];
 };
 
+/** 顔観測の診断表示。有効性と表情の強さを別々に示す。 */
 export function SincroMotionFaceSection({ face, tracker }: SincroMotionFaceSectionProps) {
     return (
         <article className="sincroMotionSection">
@@ -34,7 +35,7 @@ export function SincroMotionFaceSection({ face, tracker }: SincroMotionFaceSecti
                 <dd>
                     {formatTrackingStatus(face.trackingEnabled, face.detected, face.fallbackReason)}
                 </dd>
-                <dt>Confidence</dt>
+                <dt>入力の有効性</dt>
                 <dd>{formatRatio(face.confidence)}</dd>
                 <dt>Head</dt>
                 <dd>{formatHeadPose(face)}</dd>

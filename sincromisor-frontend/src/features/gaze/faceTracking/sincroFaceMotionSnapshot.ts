@@ -12,6 +12,7 @@ export type SincroFaceMotionSource = "roi" | "full-frame" | "full-frame-fallback
 export type SincroFaceMotionSnapshot = {
     trackingEnabled: boolean;
     detected: boolean;
+    /** 正常な幾何入力は1、未検出・不正入力は0。モデルの検出確率や表情の強さではない。 */
     confidence: number;
     headPose: SincroFaceHeadPoseSnapshot;
     blendshapes: Record<string, number>;

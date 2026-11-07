@@ -106,7 +106,8 @@
     - ROI理由コードは `hand_roi_skipped`、`face_roi_skipped`、`roi_fallback_full_frame`、`roi_inference_over_budget`、`pose_stale_for_roi`、`hand_roi_paused`、`face_roi_paused`を使う。予算報告の `target` / `observed`構造は変えず、詳細は `SincroTrackerWorkerStats.roi`に閉じる。
 - `SincroFaceTracker`
     - FaceLandmarkerから頭部姿勢、ブレンドシェイプ、信頼度を抽出する。
-    - `SincroFaceMotionSnapshot`を出力する。
+    - `SincroFaceMotionSnapshot`
+    - `confidence`は正常な幾何入力で `1`、未検出・不正入力で `0`となる有効性の値であり、モデルの検出確率ではない。表情係数は表情の強さだけに使い、無表情でも頭部追跡と中立姿勢の較正を継続する。空ランドマーク・非有限座標・不正な行列を拒否し、行列の省略は従来の中立Euler値へ戻す。ROI整合性と鮮度は後段の信頼性層で評価する。を出力する。
     - `detect()`は従来どおり全画面FaceLandmarker推論を行う。
     - `detectWithRoi(videoFrame, poseSnapshot, timestampMs, options?)`はPose顔ROIが有効なフレームだけ切り抜き推論を試し、ROI欠損、ROI顔未検出、整合性スコア `0`では同一フレームで全画面代替処理を1回だけ実行する。v1の `options`は空オブジェクトの予約枠であり設定フィールドは持たない。
     - ROI推論の切り抜き内の座標系のランドマークは整合性判定にだけ使い、スナップショットには `SincroRoiObservation`、`source`、`warnings`だけを残す。ImageBitmap / canvas / MediaPipe未加工の結果は保存しない。

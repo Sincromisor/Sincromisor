@@ -145,7 +145,7 @@ describe("SincroFaceTracker ROI snapshots", () => {
         expect(snapshot.source).toBe("full-frame");
         expect(snapshot.roi).toBeUndefined();
         expect(snapshot.warnings).toEqual([]);
-        expect(snapshot.confidence).toBeCloseTo(0.82);
+        expect(snapshot.confidence).toBe(1);
         expect(landmarker.frames).toEqual([TEST_VIDEO_FRAME]);
     });
 
