@@ -1,0 +1,13 @@
+id: task-261107202016-server-owned-voice-gate
+title: 通常会話の音声送信からクライアントVADゲートを外す
+category: frontend
+status: done
+depends_on: []
+superseded_by: null
+review: APPROVED
+reviewed_sha: 763492100315b42396b265fde69fd3e30666d1ec
+verdict: PASS
+attempts: 1
+created_at: 2026-11-07
+closed_at: 2026-11-07
+legacy_ids: []
