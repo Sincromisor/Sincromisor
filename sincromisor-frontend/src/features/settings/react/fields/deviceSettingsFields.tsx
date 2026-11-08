@@ -58,7 +58,7 @@ export function DeviceSelectionHint({
     return <SettingsHintList messages={messages} />;
 }
 
-/** 項目名を入力へ関連付け、変更を共通設定の適用窓口へ渡す。 */
+/** 不在の選択機器も選択肢に残し、ブラウザーが既定機器へ戻ったように表示するのを防ぐ。 */
 export function AudioInputDeviceField({
     settings,
     uiState,
@@ -70,6 +70,7 @@ export function AudioInputDeviceField({
     style,
 }: DeviceFieldBaseProps) {
     const inputId = useId();
+    const hintId = useId();
     return (
         <div className={className} style={style}>
             <SettingsHelpLabel
@@ -79,6 +80,7 @@ export function AudioInputDeviceField({
             />
             <SettingsSelect
                 id={inputId}
+                aria-describedby={hintId}
                 value={settings.audioInputDeviceId ?? ""}
                 onChange={(event) =>
                     onApplySettings({
@@ -88,25 +90,35 @@ export function AudioInputDeviceField({
                 disabled={uiState.audioInputDeviceDisabled}
             >
                 <option value="">ブラウザ既定のマイクを使う</option>
+                {settings.audioInputDeviceId &&
+                    !snapshot.audioInputs.some(
+                        (item) => item.deviceId === settings.audioInputDeviceId,
+                    ) && (
+                        <option value={settings.audioInputDeviceId} disabled>
+                            選択中のマイク（一覧にありません）
+                        </option>
+                    )}
                 {snapshot.audioInputs.map((option) => (
                     <option key={option.deviceId} value={option.deviceId}>
                         {option.label}
                     </option>
                 ))}
             </SettingsSelect>
-            <DeviceSelectionHint
-                emptyMessage="利用可能なマイクが見つかりません。接続後に再読み込みしてください。"
-                snapshot={snapshot}
-                selection={selection}
-                optionsCount={snapshot.audioInputs.length}
-                unavailableReason={uiHints.audioInputDeviceReason}
-                kindLabel="マイク"
-            />
+            <div id={hintId}>
+                <DeviceSelectionHint
+                    emptyMessage="利用可能なマイクが見つかりません。接続後に「機器一覧を更新」を押してください。"
+                    snapshot={snapshot}
+                    selection={selection}
+                    optionsCount={snapshot.audioInputs.length}
+                    unavailableReason={uiHints.audioInputDeviceReason}
+                    kindLabel="マイク"
+                />
+            </div>
         </div>
     );
 }
 
-/** 項目名を入力へ関連付け、変更を共通設定の適用窓口へ渡す。 */
+/** 不在の選択機器も選択肢に残し、ブラウザーが既定機器へ戻ったように表示するのを防ぐ。 */
 export function VideoInputDeviceField({
     settings,
     uiState,
@@ -118,6 +130,7 @@ export function VideoInputDeviceField({
     style,
 }: DeviceFieldBaseProps) {
     const inputId = useId();
+    const hintId = useId();
     return (
         <div className={className} style={style}>
             <SettingsHelpLabel
@@ -127,6 +140,7 @@ export function VideoInputDeviceField({
             />
             <SettingsSelect
                 id={inputId}
+                aria-describedby={hintId}
                 value={settings.videoInputDeviceId ?? ""}
                 onChange={(event) =>
                     onApplySettings({
@@ -136,20 +150,30 @@ export function VideoInputDeviceField({
                 disabled={uiState.videoInputDeviceDisabled}
             >
                 <option value="">ブラウザ既定のカメラを使う</option>
+                {settings.videoInputDeviceId &&
+                    !snapshot.videoInputs.some(
+                        (item) => item.deviceId === settings.videoInputDeviceId,
+                    ) && (
+                        <option value={settings.videoInputDeviceId} disabled>
+                            選択中のカメラ（一覧にありません）
+                        </option>
+                    )}
                 {snapshot.videoInputs.map((option) => (
                     <option key={option.deviceId} value={option.deviceId}>
                         {option.label}
                     </option>
                 ))}
             </SettingsSelect>
-            <DeviceSelectionHint
-                emptyMessage="利用可能なカメラが見つかりません。接続後に再読み込みしてください。"
-                snapshot={snapshot}
-                selection={selection}
-                optionsCount={snapshot.videoInputs.length}
-                unavailableReason={uiHints.videoInputDeviceReason}
-                kindLabel="カメラ"
-            />
+            <div id={hintId}>
+                <DeviceSelectionHint
+                    emptyMessage="利用可能なカメラが見つかりません。接続後に「機器一覧を更新」を押してください。"
+                    snapshot={snapshot}
+                    selection={selection}
+                    optionsCount={snapshot.videoInputs.length}
+                    unavailableReason={uiHints.videoInputDeviceReason}
+                    kindLabel="カメラ"
+                />
+            </div>
         </div>
     );
 }

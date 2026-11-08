@@ -60,6 +60,7 @@ export function ConfigurationDialogSettingsPanel() {
             <input
                 ref={vrmFileInputRef}
                 type="file"
+                hidden
                 accept=".vrm"
                 className="configurationDialogReactSettingsPanel__fileInput"
                 tabIndex={-1}

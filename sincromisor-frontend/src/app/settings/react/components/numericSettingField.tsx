@@ -1,5 +1,6 @@
+import { useEffect, useId, useState } from "react";
 import {
-    SettingsHelpBadge,
+    SettingsHelpLabel,
     SettingsInput,
 } from "../../../../features/settings/react/primitives/settingsPrimitives";
 
@@ -13,7 +14,7 @@ type NumericSettingFieldProps = {
     onChange: (value: number) => void;
 };
 
-/** 有限な入力値をアプリへ渡す。設定ごとの丸めと範囲制御は適用側が担う。 */
+/** 入力途中はローカルに保持し、Enterかフォーカス移動で適用する。丸めと範囲制御は適用側が担う。 */
 export function NumericSettingField({
     label,
     help,
@@ -23,27 +24,33 @@ export function NumericSettingField({
     step,
     onChange,
 }: NumericSettingFieldProps) {
+    const inputId = useId();
+    const [draft, setDraft] = useState<string>();
+    // プリセットなど外部で確定値が変わったときは、その値を表示する。
+    useEffect(() => setDraft(String(value)), [value]);
     return (
-        // 数値入力の最終丸めは AppController 側で行うため、UI では入力値をそのまま渡す。
         <div style={{ display: "grid", gap: "4px" }}>
-            <span style={{ opacity: 0.8, display: "flex", alignItems: "center" }}>
-                {label}
-                {help ? <SettingsHelpBadge label={label} help={help} /> : null}
-            </span>
+            <SettingsHelpLabel htmlFor={inputId} text={label} help={help} />
             <SettingsInput
+                id={inputId}
                 type="number"
-                value={Number.isFinite(value) ? value : 0}
+                value={draft ?? value}
                 min={min}
                 max={max}
                 step={step}
-                aria-label={label}
-                onChange={(event) => {
-                    const nextValue = Number(event.target.value);
-                    if (!Number.isFinite(nextValue)) {
-                        return;
+                onChange={(event) => setDraft(event.currentTarget.value)}
+                onBlur={(event) => {
+                    // 空欄や未完成の負号は0として保存せず、直前の確定値へ戻す。
+                    const nextValue = event.currentTarget.valueAsNumber;
+                    if (Number.isFinite(nextValue)) onChange(nextValue);
+                    setDraft(undefined);
+                }}
+                onKeyDown={(event) => {
+                    if (event.key === "Enter") event.currentTarget.blur();
+                    if (event.key === "Escape") {
+                        event.stopPropagation();
+                        setDraft(undefined);
                     }
-                    // 最終的な丸め/範囲制御は AppController 側で行い、UIは入力値をそのまま渡す。
-                    onChange(nextValue);
                 }}
             />
         </div>

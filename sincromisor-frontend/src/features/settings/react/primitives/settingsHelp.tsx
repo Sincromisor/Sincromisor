@@ -26,7 +26,7 @@ export function SettingsHelpTooltip({ label, help, children }: HelpTooltipProps)
     const bubbleRef = useRef<HTMLSpanElement | null>(null);
     const [visible, setVisible] = useState(false);
     const position = useTooltipPosition(visible, containerRef, bubbleRef);
-    useDismissTooltip(visible, containerRef, setVisible);
+    useDismissTooltip(visible, containerRef, bubbleRef, setVisible);
     if (!help) return <>{children}</>;
     // modal dialogの外へ出すとブラウザーに隠されるため、起動前はdialog直下へ置く。
     const portalRoot = visible ? (containerRef.current?.closest("dialog") ?? document.body) : null;
@@ -47,10 +47,20 @@ export function SettingsHelpTooltip({ label, help, children }: HelpTooltipProps)
                 onClick={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    setVisible((prev) => !prev);
+                    // ホバーやフォーカス直後のクリックでも説明を閉じない。
+                    setVisible(true);
                 }}
                 onMouseEnter={() => setVisible(true)}
-                onMouseLeave={() => setVisible(false)}
+                onMouseLeave={(event) => {
+                    if (
+                        document.activeElement !== containerRef.current &&
+                        !(
+                            event.relatedTarget instanceof Node &&
+                            bubbleRef.current?.contains(event.relatedTarget)
+                        )
+                    )
+                        setVisible(false);
+                }}
                 onFocus={() => setVisible(true)}
                 onBlur={() => setVisible(false)}
             >
@@ -64,6 +74,16 @@ export function SettingsHelpTooltip({ label, help, children }: HelpTooltipProps)
                         role="tooltip"
                         className="settingsPrimitiveHelpTooltip__bubble"
                         style={position}
+                        onMouseLeave={(event) => {
+                            if (
+                                document.activeElement !== containerRef.current &&
+                                !(
+                                    event.relatedTarget instanceof Node &&
+                                    containerRef.current?.contains(event.relatedTarget)
+                                )
+                            )
+                                setVisible(false);
+                        }}
                     >
                         {help}
                     </span>,
@@ -109,22 +129,35 @@ function useTooltipPosition(
 function useDismissTooltip(
     visible: boolean,
     containerRef: RefObject<HTMLButtonElement | null>,
+    bubbleRef: RefObject<HTMLSpanElement | null>,
     setVisible: (visible: boolean) => void,
 ): void {
     useEffect(() => {
         if (!visible) return;
         const dismiss = () => setVisible(false);
         const handlePointerDown = (event: PointerEvent) => {
-            if (event.target instanceof Node && !containerRef.current?.contains(event.target))
+            if (
+                event.target instanceof Node &&
+                !containerRef.current?.contains(event.target) &&
+                !bubbleRef.current?.contains(event.target)
+            )
                 dismiss();
         };
+        // ホバーで開いた説明も、入力のフォーカス位置に依存せず閉じられる。
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== "Escape") return;
+            event.stopPropagation();
+            dismiss();
+        };
         document.addEventListener("pointerdown", handlePointerDown);
+        document.addEventListener("keydown", handleKeyDown, true);
         window.addEventListener("resize", dismiss);
         return () => {
             document.removeEventListener("pointerdown", handlePointerDown);
+            document.removeEventListener("keydown", handleKeyDown, true);
             window.removeEventListener("resize", dismiss);
         };
-    }, [visible, containerRef, setVisible]);
+    }, [visible, containerRef, bubbleRef, setVisible]);
 }
 
 /** 項目名を保持する共通の説明ボタン。 */

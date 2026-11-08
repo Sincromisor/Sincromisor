@@ -125,12 +125,15 @@ export function PurposeDeviceField({
             />
             <SettingsButton
                 type="button"
+                aria-label={`${kind === "audio" ? "マイク" : "カメラ"}の機器一覧を更新`}
                 onClick={handleRefreshDevices}
                 disabled={state.mediaDeviceSnapshot.isRefreshing}
             >
                 {state.mediaDeviceSnapshot.isRefreshing ? "更新中..." : "機器一覧を更新"}
             </SettingsButton>
-            {refreshMessage ? <SettingsHint>{refreshMessage}</SettingsHint> : null}
+            <div role="status">
+                {refreshMessage ? <SettingsHint>{refreshMessage}</SettingsHint> : null}
+            </div>
         </div>
     );
 }

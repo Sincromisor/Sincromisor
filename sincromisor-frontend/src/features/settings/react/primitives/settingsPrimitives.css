@@ -144,7 +144,7 @@
         font-size: var(--sincro-font-size-100);
         white-space: normal;
         word-break: break-word;
-        pointer-events: none;
+        pointer-events: auto;
         font-family: var(--sincro-font-family-base);
         text-align: left;
     }
@@ -152,8 +152,9 @@
     .settingsPrimitiveHelpBadge {
         display: inline-grid;
         place-items: center;
-        width: 18px;
-        height: 18px;
+        width: 24px;
+        height: 24px;
+        flex-shrink: 0;
         margin-left: var(--sincro-space-100);
         border-radius: var(--sincro-radius-pill);
         border: 1px solid rgba(255, 255, 255, 0.2);
@@ -164,6 +165,14 @@
         cursor: help;
         user-select: none;
         touch-action: manipulation;
+    }
+
+    /* アンカーと説明の隙間を渡る間もホバーを切らさず、拡大表示で読めるようにする。 */
+    .settingsPrimitiveHelpTooltip__bubble::before {
+        content: "";
+        position: absolute;
+        inset: -8px 0;
+        z-index: -1;
     }
 
     .settingsPrimitiveHelpLabel {

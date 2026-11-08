@@ -2,9 +2,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 46 件）
+## タスク一覧（自動生成 / 全 47 件）
 
-### done（完了） — 46 件
+### done（完了） — 47 件
 
 | タスク                                                                                                                 | タイトル                                                   | 判定    | 依存                                                                                           |
 | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------- |
@@ -54,5 +54,6 @@
 | [task-261025055639-settings-fixed-footer-height](./task-261025055639-settings-fixed-footer-height/task.md)             | 基本設定のカテゴリ切替で固定操作欄が動く不具合を修正する   | ✅ PASS | `task-261025054927-settings-shared-layout`                                                     |
 | [task-261107202016-server-owned-voice-gate](./task-261107202016-server-owned-voice-gate/task.md)                       | 通常会話の音声送信からクライアントVADゲートを外す          | ✅ PASS | —                                                                                              |
 | [task-261107222126-restore-lightweight-silence-gate](./task-261107222126-restore-lightweight-silence-gate/task.md)     | 通常会話で任意の軽量無音ゲートを利用できるようにする       | ✅ PASS | —                                                                                              |
+| [task-261108195656-ui-ux-review-fixes](./task-261108195656-ui-ux-review-fixes/task.md)                                 | 設定画面の入力・説明・画面縮小時の操作を改善する           | ✅ PASS | —                                                                                              |
 
 <!-- AUTOGEN:tasks END -->

@@ -20,19 +20,38 @@ export function SettingsNavigation({
 }: SettingsNavigationProps) {
     const rootRef = useRef<HTMLDivElement>(null);
     const tabsRef = useRef<HTMLDivElement>(null);
+    const selectRef = useRef<HTMLSelectElement>(null);
+    const transferFocus = useRef(false);
     const [compact, setCompact] = useState(false);
     useLayoutEffect(() => {
         const root = rootRef.current;
         const tabs = tabsRef.current;
         if (!root || !tabs) return;
         // 選択欄表示中もタブの自然幅を測れるよう、測定対象は描画したまま非表示にする。
-        const measure = () => setCompact(tabs.scrollWidth > root.clientWidth);
+        let previousCompact = false;
+        const measure = () => {
+            const nextCompact = tabs.scrollWidth > root.clientWidth;
+            if (nextCompact !== previousCompact) {
+                transferFocus.current = root.contains(document.activeElement);
+                previousCompact = nextCompact;
+                setCompact(nextCompact);
+            }
+        };
         const observer = new ResizeObserver(measure);
         observer.observe(root);
         observer.observe(tabs);
         measure();
         return () => observer.disconnect();
     }, []);
+    // 消える分類操作だけを引き継ぎ、本文の入力中はフォーカスを動かさない。
+    useLayoutEffect(() => {
+        if (!transferFocus.current) return;
+        transferFocus.current = false;
+        const target = compact
+            ? selectRef.current
+            : tabsRef.current?.querySelector<HTMLElement>('[aria-selected="true"]');
+        target?.focus({ preventScroll: true });
+    }, [compact]);
     const panelId = `${idPrefix}-settings-shell-panel-${activeId}`;
     return (
         <div ref={rootRef} className={`settingsShell__navigation${compact ? " is-compact" : ""}`}>
@@ -56,6 +75,7 @@ export function SettingsNavigation({
                 <label className="settingsShell__navSelectLabel">
                     <span>カテゴリ</span>
                     <select
+                        ref={selectRef}
                         className="settingsShell__navSelect"
                         aria-label={`${title} カテゴリ`}
                         aria-controls={panelId}

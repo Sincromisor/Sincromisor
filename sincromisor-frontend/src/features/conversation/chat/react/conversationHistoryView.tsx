@@ -20,6 +20,7 @@ function readPositions(node: HTMLElement): HistoryMessagePosition[] {
 /** 保持履歴を時系列で読み返す。末尾でだけ追従し、閲覧中は残る発話の位置とフォーカスを維持する。 */
 export function ConversationHistoryView({ isVisible }: { isVisible: boolean }) {
     const { messages, systemIconUrl } = useChatSnapshot();
+    const visibleMessages = messages.filter((item) => item.message.message_type !== "error");
     const scrollRef = useRef<HTMLElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
     const following = useRef(true);
@@ -59,17 +60,15 @@ export function ConversationHistoryView({ isVisible }: { isVisible: boolean }) {
                 }}
             >
                 <div ref={listRef} className="conversationHistory__list">
-                    {[...messages]
-                        .reverse()
-                        .filter((item) => item.message.message_type !== "error")
-                        .map((record) => (
-                            <ChatMessageItem
-                                key={record.message.message_id}
-                                record={record}
-                                systemIconUrl={systemIconUrl}
-                                idPrefix="history-msg"
-                            />
-                        ))}
+                    {visibleMessages.length === 0 ? <p>会話履歴はまだありません。</p> : null}
+                    {[...visibleMessages].reverse().map((record) => (
+                        <ChatMessageItem
+                            key={record.message.message_id}
+                            record={record}
+                            systemIconUrl={systemIconUrl}
+                            idPrefix="history-msg"
+                        />
+                    ))}
                 </div>
             </section>
             {!atLatest ? (

@@ -37,7 +37,9 @@
         display: grid;
         min-height: 0;
         min-width: 0;
-        grid-template-rows: auto minmax(0, 1fr) auto;
+        /* 本文の操作領域を残し、高さが足りない場合だけ見出し・操作欄も一緒にスクロールする。 */
+        grid-template-rows: auto minmax(10rem, 1fr) auto;
+        overflow: auto;
         gap: var(--settings-shell-gap);
         color: var(--sincro-color-overlay-text-primary);
         font: 14px/1.55 var(--sincro-font-family-base);

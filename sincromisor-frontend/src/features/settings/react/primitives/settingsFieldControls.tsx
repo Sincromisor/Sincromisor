@@ -60,6 +60,7 @@ export function SettingsRange({
                 max={max}
                 step={step}
                 value={value}
+                aria-valuetext={valueLabel}
                 disabled={disabled}
                 aria-describedby={description || disabled ? descriptionId : undefined}
                 className="settingsPrimitiveRange__input"
