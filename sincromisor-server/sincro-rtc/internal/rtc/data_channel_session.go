@@ -12,6 +12,11 @@ const (
 // 属性検証、同label object identity、OnOpen identity確認を通過した同じobjectだけをdispatcherへ渡す。
 // dispatcherはreadinessを変更せず、audioを含むAND latchとCoordinator遅延開始を迂回しない。
 func (s *Session) handleDataChannel(channel *webrtc.DataChannel) {
+	// 両チャネルとも空のprotocolだけを契約とし、未知の形式を登録前に拒否する。
+	if channel.Protocol() != "" {
+		_ = s.Close("invalid_data_channel")
+		return
+	}
 	label := channel.Label()
 	switch label {
 	case textChannelLabel:

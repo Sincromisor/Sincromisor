@@ -16,7 +16,8 @@ type statusWriter struct {
 }
 
 // responseBuffer は要求のpanic境界が確定可否を判断するまで応答全体を保持する。
-// 有限JSONと静的配信が使う非ストリーミングResponseWriterだけを実装し、
+// 有限なAPI・状態・指標応答だけを対象とし、静的ファイルは直接配信する。
+// 非ストリーミングResponseWriterだけを実装し、
 // FlusherまたはHijackerを必要とする処理は対象にしない。
 type responseBuffer struct {
 	header http.Header

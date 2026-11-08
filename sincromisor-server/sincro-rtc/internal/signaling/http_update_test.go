@@ -26,11 +26,12 @@ func TestRevisionContractFixtures(t *testing.T) {
 	if err := json.Unmarshal(request.SessionID, &sessionID); err != nil {
 		t.Fatalf("decode update session fixture: %v", err)
 	}
-	if request.OfferRequestID == nil || request.OfferRevision == nil {
+	requestID, revision, identityErr := decodeOfferIdentity(request)
+	if identityErr != nil {
 		t.Fatalf("update request identity is missing")
 	}
 	if _, err := ulid.ParseStrict(sessionID); err != nil ||
-		*request.OfferRevision != 2 || !validUUID(*request.OfferRequestID) {
+		revision != 2 || !validUUID(requestID) {
 		t.Fatalf("update request identity = %q/%v/%v", sessionID, request.OfferRevision, request.OfferRequestID)
 	}
 
@@ -42,9 +43,9 @@ func TestRevisionContractFixtures(t *testing.T) {
 	if err := json.Unmarshal(answerBytes, &answer); err != nil {
 		t.Fatalf("decode update answer fixture: %v", err)
 	}
-	if answer.SessionID != sessionID || answer.Revision != *request.OfferRevision {
+	if answer.SessionID != sessionID || answer.Revision != revision {
 		t.Fatalf("answer identity = %s/%d, want %s/%d",
-			answer.SessionID, answer.Revision, sessionID, *request.OfferRevision)
+			answer.SessionID, answer.Revision, sessionID, revision)
 	}
 }
 

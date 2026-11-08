@@ -31,6 +31,8 @@ export class RTCTalkClient {
     private bundle: RtcPeerConnectionBundle;
     private bundleGeneration = 0;
     private candidateSendFlight: Promise<void> = Promise.resolve();
+    // Answer待ちとHTTP送信待ちを合算し、接続世代の候補保持を64件までに制限する。
+    private pendingCandidateCount = 0;
     private readonly chatMessageService = ChatMessageService.getService();
     private readonly diagnostics: RtcBundleDiagnostics;
     private readonly disconnectedGrace: RtcDisconnectedGraceTimer;
@@ -38,6 +40,8 @@ export class RTCTalkClient {
     private isMuted = false;
     private readonly logger = DebugConsoleManager.getManager();
     private negotiationFlight?: Promise<void>;
+    // 更新開始前の旧候補待機中も、重複した失敗通知を同じ更新処理へ合流させる。
+    private restarting = false;
     private negotiationState = new RtcNegotiationStateMachine();
     private pendingIdentity?: RtcOfferIdentity;
     private readonly sincroConfig: SincroRTCConfig;
@@ -47,6 +51,8 @@ export class RTCTalkClient {
     telopChannelCallback: (msg: TelopChannelMessage) => void = () => {};
     /** text_ch受信を上位conversation層へ通知する差し替え可能callback。 */
     textChannelCallback: (msg: ChatMessage) => void = () => {};
+    /** 新しい接続世代の受信開始前に、上位の発話順序などセッション固有状態を破棄する。 */
+    sessionResetCallback: () => void = () => {};
     /** 接続復帰時は引数なし、terminal/degraded時は表示message付きでhealth UIへ通知する。 */
     rtcHealthCallback: (message?: string) => void = () => {};
 
@@ -64,7 +70,7 @@ export class RTCTalkClient {
             logger: this.logger,
         });
         this.disconnectedGrace = new RtcDisconnectedGraceTimer({
-            onGraceExpired: () => void this.recoverFromIceFailure(),
+            onGraceExpired: () => void this.recoverFromIceFailure(true),
         });
     }
 
@@ -95,16 +101,20 @@ export class RTCTalkClient {
         frontendLogger.diagnostics.state("rtc", "closed");
         frontendLogger.diagnostics.setSession();
         this.negotiationState.close();
+        this.pendingCandidateCount = 0;
         this.generationAbortController.abort();
+        this.stopPendingAudioTrack();
         this.pendingIdentity = undefined;
         this.bundleGeneration += 1;
         closeRtcPeerConnection(this.bundle);
         this.logger.resetRealtimeStats();
     }
 
-    /** 現bundleのaudio senderをmute/unmuteする。 */
+    /** 送信中と差し替え待機中の両トラックへミュートを反映する。 */
     setMute(mute: boolean): void {
         this.isMuted = mute;
+        // replaceTrack待機中はsenderが旧トラックを指すため、次に送るトラックも同期する。
+        this.audioTrack.enabled = !mute;
         setRtcAudioMute({
             isMuted: mute,
             logger: this.logger,
@@ -131,12 +141,30 @@ export class RTCTalkClient {
         return this.runNegotiation(identity, false, previousSessionId);
     }
 
-    private runRestartNegotiation(): Promise<void> {
+    private runRestartNegotiation(requireDisconnected: boolean): Promise<void> {
         if (this.negotiationFlight !== undefined) {
             return this.negotiationFlight;
         }
-        const identity = this.negotiationState.beginRestart();
-        return this.runNegotiation(identity, true);
+        this.restarting = true;
+        const generation = this.bundleGeneration;
+        // 旧改訂の候補を送り終えてから更新Offerを作る。待機中に追加された候補も同じ列で完了させる。
+        const flight = (async () => {
+            let candidates: Promise<void>;
+            do {
+                candidates = this.candidateSendFlight;
+                await candidates;
+            } while (candidates !== this.candidateSendFlight);
+            if (!this.isCurrentGeneration(generation)) return;
+            if (requireDisconnected && this.negotiationState.state !== "restartPending") return;
+            const identity = this.negotiationState.beginRestart();
+            this.pendingIdentity = identity;
+            await this.performNegotiation(generation, identity, true);
+        })().finally(() => {
+            this.restarting = false;
+            if (this.negotiationFlight === flight) this.negotiationFlight = undefined;
+        });
+        this.negotiationFlight = flight;
+        return flight;
     }
 
     private runNegotiation(
@@ -218,6 +246,14 @@ export class RTCTalkClient {
         if (!this.isCurrentGeneration(generation)) {
             return;
         }
+        if (this.pendingCandidateCount >= 64) {
+            void this.handleGenerationFailure(
+                new Error("RTC candidate queue overflow."),
+                this.pendingIdentity,
+            );
+            return;
+        }
+        this.pendingCandidateCount += 1;
         const normalized =
             candidate !== null && (candidate.candidate ?? "").trim() === "" ? null : candidate;
         const revision = this.pendingIdentity?.revision ?? this.negotiationState.identity?.revision;
@@ -254,14 +290,18 @@ export class RTCTalkClient {
         if (!this.isCurrentGeneration(generation)) {
             return;
         }
-        await sendRtcIceCandidate({
-            candidate,
-            logger: this.logger,
-            offerRevision: revision,
-            sessionId,
-            signal: this.generationAbortController.signal,
-            sincroConfig: this.sincroConfig,
-        });
+        try {
+            await sendRtcIceCandidate({
+                candidate,
+                logger: this.logger,
+                offerRevision: revision,
+                sessionId,
+                signal: this.generationAbortController.signal,
+                sincroConfig: this.sincroConfig,
+            });
+        } finally {
+            if (this.isCurrentGeneration(generation)) this.pendingCandidateCount -= 1;
+        }
     }
 
     private onIceConnectionState(generation: number, state: RTCIceConnectionState): void {
@@ -292,29 +332,36 @@ export class RTCTalkClient {
         this.disconnectedGrace.schedule();
     }
 
-    private async recoverFromIceFailure(): Promise<void> {
+    /** 猶予満了の場合だけ自然復帰を再確認し、失敗通知と候補送信を一つの再接続へ合流させる。 */
+    private async recoverFromIceFailure(requireDisconnected = false): Promise<void> {
         this.disconnectedGrace.cancel();
         const flight = this.negotiationFlight;
         if (flight !== undefined) {
-            if (this.negotiationState.state !== "connected") {
+            if (this.restarting) return flight;
+            if (
+                this.negotiationState.state !== "connected" &&
+                this.negotiationState.state !== "restartPending"
+            ) {
                 return flight;
             }
             const generation = this.bundleGeneration;
-            // Answer commit後のcandidate flush中もflightは残る。failed intentを捨てず、同じgenerationが
-            // connectedのまま完了した場合だけ再評価して、initializing/restartingとの重複を避ける。
+            // Answer後の候補送信中に生じた失敗・猶予満了を保持し、同じ世代が
+            // connectedまたはrestartPendingで完了した場合に再評価する。
             await flight;
             if (
                 !this.isCurrentGeneration(generation) ||
-                this.negotiationState.state !== "connected"
+                (this.negotiationState.state !== "connected" &&
+                    this.negotiationState.state !== "restartPending")
             ) {
                 return;
             }
-            return this.recoverFromIceFailure();
+            if (requireDisconnected && this.negotiationState.state !== "restartPending") return;
+            return this.recoverFromIceFailure(requireDisconnected);
         }
         if (this.negotiationState.mode === "legacy") {
             return this.replaceBundle(this.negotiationState.identity?.sessionId);
         }
-        return this.runRestartNegotiation();
+        return this.runRestartNegotiation(requireDisconnected);
     }
 
     private async handleGenerationFailure(
@@ -344,11 +391,13 @@ export class RTCTalkClient {
         this.generationAbortController = new AbortController();
         // 旧generationのrejected candidate chainを新bundleへ継承しない。
         this.candidateSendFlight = Promise.resolve();
+        this.pendingCandidateCount = 0;
         this.bundleGeneration += 1;
         closeRtcPeerConnection({
             ...this.bundle,
             stopSenderTracks: false,
         });
+        this.sessionResetCallback();
         this.bundle = this.createBundle();
         await this.runInitialNegotiation(previousSessionId);
     }
@@ -359,7 +408,9 @@ export class RTCTalkClient {
         this.diagnostics.stop();
         this.pendingIdentity = undefined;
         this.negotiationState.close();
+        this.pendingCandidateCount = 0;
         this.generationAbortController.abort();
+        this.stopPendingAudioTrack();
         this.bundleGeneration += 1;
         closeRtcPeerConnection(this.bundle);
         const target = this.talkMode === "echo" ? "入力音声の折り返し診断" : "RTCサーバー";
@@ -391,6 +442,17 @@ export class RTCTalkClient {
             sincroConfig: this.sincroConfig,
             signal: this.generationAbortController.signal,
         });
+    }
+
+    /** senderのトラックはbundle解放へ任せ、差し替え待機中の新トラックだけを補完して停止する。 */
+    private stopPendingAudioTrack(): void {
+        if (
+            !this.bundle.peerConnection
+                .getSenders()
+                .some((sender) => sender.track === this.audioTrack)
+        ) {
+            this.audioTrack.stop();
+        }
     }
 
     private isCurrentGeneration(generation: number): boolean {

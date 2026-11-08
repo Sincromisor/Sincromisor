@@ -121,3 +121,32 @@ func TestOutputSpeechLagBoundaryAbortOrderAndNextCadence(t *testing.T) {
 		t.Fatalf("Run() error = %v, want context.Canceled", err)
 	}
 }
+
+func TestEchoDropsStalePCMOnSchedulerLag(t *testing.T) {
+	clock := newFakeOutputClock()
+	encoder := &fakeOutputEncoder{}
+	track := newFakeOutputTrack()
+	processor := newOutputWithFakes(t, encoder, track, clock, 0)
+	if err := processor.EnqueueEchoPCM(constantPCM(3*frameSamples, 11)); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := runOutput(t, processor, ctx)
+	clock.waitTimer(t)
+	clock.advance(FrameDuration + SpeechLagAbortThreshold + time.Nanosecond)
+	waitForOutputStat(t, processor, func(stats Stats) bool { return stats.EchoQueuedSamples == 0 })
+	assertNoSample(t, track)
+	if err := processor.EnqueueEchoPCM(constantPCM(frameSamples, 22)); err != nil {
+		t.Fatal(err)
+	}
+	clock.advance(FrameDuration)
+	receiveSample(t, track)
+	if got := encoder.frameAt(t, 0)[0]; got != 22 {
+		t.Fatalf("echo sample = %d, want fresh sample 22", got)
+	}
+	cancel()
+	if err := <-done; !errors.Is(err, context.Canceled) {
+		t.Fatalf("Run = %v", err)
+	}
+}

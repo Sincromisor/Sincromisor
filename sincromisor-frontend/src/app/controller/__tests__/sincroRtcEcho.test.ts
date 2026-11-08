@@ -4,6 +4,7 @@ import { SincroRtcSessionController } from "../sincroRtcSessionController";
 
 const clients = vi.hoisted(() => {
     const list: Array<{
+        sessionResetCallback?: () => void;
         setMute: ReturnType<typeof vi.fn>;
         stop: ReturnType<typeof vi.fn>;
         telopChannelCallback?: (message: TelopChannelMessage) => void;
@@ -28,6 +29,7 @@ it.each(["echo", "playback"])(
             { setLocalAudioTrack: vi.fn() },
             { addTextChannelMessage: vi.fn(), addTelopChannelMessage: vi.fn() },
             {
+                getConfig: vi.fn(),
                 config: { offerURL: "/offer", candidateURL: "/candidate", iceServers: [] },
             },
         );
@@ -64,7 +66,10 @@ it("playbackの旧周回・過去時刻を表示へ戻さず再接続時は判�
     const controller = new SincroRtcSessionController(
         { setLocalAudioTrack: vi.fn() },
         { addTextChannelMessage: vi.fn(), addTelopChannelMessage },
-        { config: { offerURL: "/offer", candidateURL: "/candidate", iceServers: [] } },
+        {
+            getConfig: vi.fn(),
+            config: { offerURL: "/offer", candidateURL: "/candidate", iceServers: [] },
+        },
     );
     const track: MediaStreamTrack = Object.assign(Object.create(EventTarget.prototype), {
         kind: "audio",
@@ -86,9 +91,57 @@ it("playbackの旧周回・過去時刻を表示へ戻さず再接続時は判�
     callback?.(message(2, 0.5));
     callback?.(message(2, 0.2));
     expect(addTelopChannelMessage).toHaveBeenCalledTimes(3);
-    controller.stop();
-    controller.start(track, "playback");
+    clients[clients.length - 1]?.sessionResetCallback?.();
     clients[clients.length - 1]?.telopChannelCallback?.(message(1, 0));
     expect(addTelopChannelMessage).toHaveBeenCalledTimes(4);
+    controller.stop();
+});
+
+it("設定取得中の開始を保留し、停止後には遅延接続を作らない", async () => {
+    const config = { offerURL: "/offer", candidateURL: "/candidate", iceServers: [] };
+    let resolveConfig = (_value: typeof config) => {};
+    const getConfig = vi.fn(
+        () =>
+            new Promise<typeof config>((resolve) => {
+                resolveConfig = resolve;
+            }),
+    );
+    const controller = new SincroRtcSessionController(
+        { setLocalAudioTrack: vi.fn() },
+        { addTextChannelMessage: vi.fn(), addTelopChannelMessage: vi.fn() },
+        { getConfig },
+    );
+    const track = { kind: "audio", stop: vi.fn() } as unknown as MediaStreamTrack;
+    const before = clients.length;
+    const starting = controller.start(track, "chat");
+    expect(clients).toHaveLength(before);
+    resolveConfig(config);
+    await starting;
+    expect(clients).toHaveLength(before + 1);
+    controller.stop();
+    const pending = controller.start(track, "chat");
+    controller.stop();
+    resolveConfig(config);
+    await pending;
+    expect(clients).toHaveLength(before + 1);
+    expect(track.stop).toHaveBeenCalledOnce();
+});
+
+it("設定取得失敗後の明示開始で接続できる", async () => {
+    const getConfig = vi
+        .fn()
+        .mockRejectedValueOnce(new Error("unavailable"))
+        .mockResolvedValueOnce({ offerURL: "/offer", candidateURL: "/candidate", iceServers: [] });
+    const controller = new SincroRtcSessionController(
+        { setLocalAudioTrack: vi.fn() },
+        { addTextChannelMessage: vi.fn(), addTelopChannelMessage: vi.fn() },
+        { getConfig },
+    );
+    const track = { kind: "audio", stop: vi.fn() } as unknown as MediaStreamTrack;
+    const before = clients.length;
+    await controller.start(track, "chat");
+    expect(clients).toHaveLength(before);
+    await controller.start(track, "chat");
+    expect(clients).toHaveLength(before + 1);
     controller.stop();
 });

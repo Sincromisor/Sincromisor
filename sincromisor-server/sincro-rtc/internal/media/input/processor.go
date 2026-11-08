@@ -202,7 +202,12 @@ func (s *inputStream) flushPrefix(ctx context.Context, observer Observer, submit
 func (s *inputStream) remember(sequence uint64) {
 	s.recent[sequence] = struct{}{}
 	if sequence >= reorderWindowPackets {
-		delete(s.recent, sequence-reorderWindowPackets)
+		// 欠損番号ではrememberが呼ばれないため、今回の番号から窓外全体を回収する。
+		for previous := range s.recent {
+			if previous <= sequence-reorderWindowPackets {
+				delete(s.recent, previous)
+			}
+		}
 	}
 }
 

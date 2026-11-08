@@ -76,7 +76,9 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (result Answer, retur
 	if deadline, ok := ctx.Deadline(); ok {
 		gatherTimeout = time.Until(deadline)
 		if gatherTimeout <= 0 {
-			_ = coordinator.Close()
+			if coordinator != nil {
+				_ = coordinator.Close()
+			}
 			return Answer{}, ctx.Err()
 		}
 	}
@@ -96,7 +98,10 @@ func (m *Manager) Create(ctx context.Context, offer Offer) (result Answer, retur
 		recorder: m.config.Recorder,
 	})
 	if err != nil {
-		_ = coordinator.Close()
+		// 診断モードは下流Coordinatorを持たず、構築の失敗原因をそのまま返す。
+		if coordinator != nil {
+			_ = coordinator.Close()
+		}
 		return Answer{}, err
 	}
 	m.mu.Lock()

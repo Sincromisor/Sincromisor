@@ -70,12 +70,10 @@ export class RtcSignalingHttpError extends Error {
  * 場合は次のHTTP実行を開始しない。
  */
 export async function postRtcSignalingJson(request: RtcSignalingRequest): Promise<unknown> {
-    const response = await executeRtcSignalingWithRetry(request);
-    // HTTP retryはresponse受信までを対象とする。200 body parse failureはidentity不明のterminal errorであり再送しない。
-    return response.json();
+    return executeRtcSignalingWithRetry(request);
 }
 
-async function executeRtcSignalingWithRetry(request: RtcSignalingRequest): Promise<Response> {
+async function executeRtcSignalingWithRetry(request: RtcSignalingRequest): Promise<unknown> {
     const clock = request.retryClock ?? defaultClock;
     const fetchImplementation = request.fetch ?? fetch;
     const deadline = clock.now() + TOTAL_DEADLINE_MS;
@@ -90,7 +88,7 @@ async function executeRtcSignalingWithRetry(request: RtcSignalingRequest): Promi
         }
 
         try {
-            const response = await executeRequest({
+            const { response, value } = await executeRequest({
                 body: request.body,
                 clock,
                 fetchImplementation,
@@ -100,7 +98,7 @@ async function executeRtcSignalingWithRetry(request: RtcSignalingRequest): Promi
                 url: request.url,
             });
             if (response.ok) {
-                return response;
+                return value;
             }
             if (!isRetryableStatus(response.status) || execution === MAX_HTTP_EXECUTIONS) {
                 throw new RtcSignalingHttpError(
@@ -114,6 +112,7 @@ async function executeRtcSignalingWithRetry(request: RtcSignalingRequest): Promi
                 execution,
                 operation: request.operation,
                 retryAfter: response.headers.get("Retry-After"),
+                signal: request.signal,
             });
         } catch (error) {
             if (error instanceof RtcSignalingHttpError) {
@@ -138,6 +137,7 @@ async function executeRtcSignalingWithRetry(request: RtcSignalingRequest): Promi
                 deadline,
                 execution,
                 operation: request.operation,
+                signal: request.signal,
             });
         }
     }
@@ -154,8 +154,10 @@ type ExecuteRequestParams = {
     url: string;
 };
 
-/** 一回のHTTP実行と失敗診断を所有し、取消タイマーを必ず解除する。再試行は呼出元に委ねる。 */
-async function executeRequest(params: ExecuteRequestParams): Promise<Response> {
+/** ヘッダーと本文の受信を同じ期限・中断通知で管理し、完了時に購読とタイマーを解除する。 */
+async function executeRequest(
+    params: ExecuteRequestParams,
+): Promise<{ response: Response; value?: unknown }> {
     const controller = new AbortController();
     const abortFromParent = () => controller.abort();
     params.parentSignal?.addEventListener("abort", abortFromParent, { once: true });
@@ -176,7 +178,19 @@ async function executeRequest(params: ExecuteRequestParams): Promise<Response> {
                 operation: params.operation,
                 http_status: response.status,
             });
-        return response;
+        if (!response.ok) {
+            // 再試行中も不要な本文を読み続けず、接続資源を解放する。
+            // 本文が既に壊れていても、復旧判断に必要な受信済み404/410などの状態を維持する。
+            await response.body?.cancel().catch(() => {});
+            return { response };
+        }
+        try {
+            return { response, value: await response.json() };
+        } catch (error) {
+            // 時間切れ・世代中断は通信失敗として扱い、不正JSONだけは再送せず終了する。
+            if (controller.signal.aborted) throw error;
+            throw terminalError(params.operation, "RTC signaling response JSON is invalid.", error);
+        }
     } catch (error) {
         frontendLogger.diagnostic("signaling", "failed", { operation: params.operation });
         throw error;
@@ -192,6 +206,7 @@ type RetryWaitParams = {
     execution: number;
     operation: RtcSignalingOperation;
     retryAfter?: string | null;
+    signal?: AbortSignal;
 };
 
 async function waitBeforeRetry(params: RetryWaitParams): Promise<void> {
@@ -202,8 +217,19 @@ async function waitBeforeRetry(params: RetryWaitParams): Promise<void> {
     if (remainingMs <= 0 || waitMs >= remainingMs) {
         throw terminalError(params.operation, "RTC signaling retry delay exceeds deadline.");
     }
-    await new Promise<void>((resolve) => {
-        params.clock.setTimeout(resolve, waitMs);
+    // 停止後にRetry-Afterの期限まで交渉を残さず、待機も接続世代の生存期間に従わせる。
+    await new Promise<void>((resolve, reject) => {
+        const onAbort = () => {
+            params.clock.clearTimeout(timer);
+            params.signal?.removeEventListener("abort", onAbort);
+            reject(terminalError(params.operation, "RTC signaling generation was closed."));
+        };
+        const timer = params.clock.setTimeout(() => {
+            params.signal?.removeEventListener("abort", onAbort);
+            resolve();
+        }, waitMs);
+        params.signal?.addEventListener("abort", onAbort, { once: true });
+        if (params.signal?.aborted) onAbort();
     });
 }
 

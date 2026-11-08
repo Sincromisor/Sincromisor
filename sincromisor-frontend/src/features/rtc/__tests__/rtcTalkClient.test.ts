@@ -179,7 +179,7 @@ describe("RTCTalkClient owner state machine", () => {
         mocks.negotiation.mockReturnValueOnce(restart.promise);
         mocks.callbacks[0]?.onIceConnectionStateChange("failed");
         mocks.callbacks[0]?.onIceConnectionStateChange("failed");
-        expect(mocks.negotiation).toHaveBeenCalledTimes(2);
+        await vi.waitFor(() => expect(mocks.negotiation).toHaveBeenCalledTimes(2));
         restart.resolve(answer("session-1", 2));
         await settle();
         expect(mocks.negotiation.mock.calls[1]?.[0].forceIceRestart).toBe(true);
@@ -508,4 +508,101 @@ it("playback素材不良では再生素材を案内して終了する", async ()
     expect(mocks.systemErrors[mocks.systemErrors.length - 1]).toContain(
         "voice.opus・synthesis.json",
     );
+});
+
+it("接続後の旧改訂候補をすべて送り終えてから更新Offerを作る", async () => {
+    const candidate = deferred<void>();
+    mocks.negotiation
+        .mockResolvedValueOnce(answer("session-1", 1))
+        .mockResolvedValueOnce(answer("session-1", 2));
+    const client = createClient();
+    await client.start();
+    mocks.candidateSend.mockReturnValueOnce(candidate.promise);
+    mocks.callbacks[0]?.sendIceCandidate({ candidate: "old-a" });
+    mocks.callbacks[0]?.sendIceCandidate({ candidate: "old-b" });
+    await settle();
+    mocks.callbacks[0]?.onIceConnectionStateChange("failed");
+    mocks.callbacks[0]?.onIceConnectionStateChange("failed");
+    await settle();
+    expect(mocks.negotiation).toHaveBeenCalledTimes(1);
+    candidate.resolve();
+    await vi.waitFor(() => expect(mocks.negotiation).toHaveBeenCalledTimes(2));
+    expect(mocks.candidateSend).toHaveBeenCalledTimes(2);
+    expect(mocks.candidateSend.mock.invocationCallOrder[1]).toBeLessThan(
+        mocks.negotiation.mock.invocationCallOrder[1],
+    );
+    client.stop();
+});
+
+it("初回候補送信中の切断猶予満了を送信完了後に再評価する", async () => {
+    vi.useFakeTimers();
+    const initial = deferred<OfferResponse>();
+    const candidate = deferred<void>();
+    mocks.negotiation
+        .mockReturnValueOnce(initial.promise)
+        .mockResolvedValueOnce(answer("session-1", 2));
+    mocks.candidateSend.mockReturnValueOnce(candidate.promise);
+    const client = createClient();
+    const start = client.start();
+    mocks.callbacks[0]?.sendIceCandidate({ candidate: "old" });
+    initial.resolve(answer("session-1", 1));
+    await vi.advanceTimersByTimeAsync(0);
+    mocks.callbacks[0]?.onIceConnectionStateChange("disconnected");
+    await vi.advanceTimersByTimeAsync(10_000);
+    candidate.resolve();
+    await start;
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mocks.negotiation).toHaveBeenCalledTimes(2);
+    client.stop();
+});
+
+it("差し替え待機中の新トラックにもミュートと停止を反映する", async () => {
+    const replacement = deferred<void>();
+    mocks.replaceAudioTrack.mockReturnValueOnce(replacement.promise);
+    const oldTrack = createAudioTrack("old");
+    const newTrack = createAudioTrack("new");
+    const client = createClient(oldTrack);
+    const replace = client.replaceAudioTrack(newTrack);
+    client.setMute(true);
+    expect(newTrack.enabled).toBe(false);
+    client.stop();
+    expect(newTrack.stop).toHaveBeenCalledOnce();
+    replacement.resolve();
+    await replace;
+});
+
+it("サーバーセッションの置換時だけ受信状態をリセットする", async () => {
+    mocks.negotiation
+        .mockResolvedValueOnce(answer("session-1", 1))
+        .mockResolvedValueOnce(answer("session-2", 1));
+    const client = createClient();
+    const reset = vi.fn();
+    client.sessionResetCallback = reset;
+    await client.start();
+    mocks.candidateSend.mockRejectedValueOnce(
+        new RtcSignalingHttpError("gone", { operation: "candidate", status: 410 }),
+    );
+    mocks.callbacks[0]?.sendIceCandidate(null);
+    await vi.waitFor(() => expect(mocks.negotiation).toHaveBeenCalledTimes(2));
+    expect(reset).toHaveBeenCalledOnce();
+    client.stop();
+});
+
+it("Answer後も送信待ち候補が64件を超えたら世代を終了する", async () => {
+    mocks.negotiation.mockResolvedValueOnce(answer("session-1", 1));
+    const client = createClient();
+    await client.start();
+    const pending = deferred<void>();
+    mocks.candidateSend.mockReturnValueOnce(pending.promise);
+    mocks.callbacks[0]?.sendIceCandidate({ candidate: "first" });
+    await settle();
+    for (let index = 1; index <= 64; index += 1) {
+        mocks.callbacks[0]?.sendIceCandidate({ candidate: `candidate-${index}` });
+    }
+    expect(mocks.systemErrors).toHaveLength(1);
+    expect(mocks.systemErrors[0]).toContain("queue overflow");
+    expect(mocks.closeBundle).toHaveBeenCalledOnce();
+    pending.resolve();
+    await settle();
+    expect(mocks.candidateSend).toHaveBeenCalledOnce();
 });

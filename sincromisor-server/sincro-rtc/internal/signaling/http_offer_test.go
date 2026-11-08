@@ -28,8 +28,8 @@ func TestInitialOfferContractFixtures(t *testing.T) {
 	if err := json.Unmarshal(requestBytes, &request); err != nil {
 		t.Fatalf("decode request fixture: %v", err)
 	}
-	if request.OfferRequestID == nil || request.OfferRevision == nil ||
-		!validUUID(*request.OfferRequestID) || *request.OfferRevision != 1 {
+	requestID, revision, identityErr := decodeOfferIdentity(request)
+	if identityErr != nil || !validUUID(requestID) || revision != 1 {
 		t.Fatalf("request fixture identity = %v/%v", request.OfferRequestID, request.OfferRevision)
 	}
 	var previousSessionID string

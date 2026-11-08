@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
 
 	"github.com/Sincromisor/Sincromisor/sincromisor-server/sincro-rtc/internal/media/playback"
@@ -61,17 +60,8 @@ func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) 
 		writeError(writer, http.StatusBadRequest, "Invalid offer fields.")
 		return
 	}
-	// 配信済みfrontendのlegacy initial Offerだけはidentityを完全に省略する。
-	// request IDがないためretryを同一registry entryへ結び付けられず、部分欠損や明示的な
-	// 空/0は通常形式の不正identityとして拒否する。
-	if payload.OfferRequestID == nil && payload.OfferRevision == nil {
-		requestID := uuid.NewString()
-		revision := uint64(1)
-		payload.OfferRequestID = &requestID
-		payload.OfferRevision = &revision
-	}
-	if payload.OfferRequestID == nil || payload.OfferRevision == nil ||
-		!validUUID(*payload.OfferRequestID) || *payload.OfferRevision != 1 {
+	requestID, revision, identityErr := decodeOfferIdentity(payload)
+	if identityErr != nil || revision != 1 {
 		writeError(writer, http.StatusBadRequest, "Invalid initial offer identity.")
 		return
 	}
@@ -88,9 +78,9 @@ func (s *Server) handleOffer(writer http.ResponseWriter, request *http.Request) 
 		}
 	}
 	// Session admissionより先にregistryへ登録し、decoded SDP bytesをUUIDへSHA-256で結び付ける。
-	answer, err := s.offers.Resolve(request.Context(), *payload.OfferRequestID, []byte(payload.SDP), rtc.Offer{
+	answer, err := s.offers.Resolve(request.Context(), requestID, []byte(payload.SDP), rtc.Offer{
 		SDP: payload.SDP, Type: payload.Type, TalkMode: payload.TalkMode,
-		OfferRequestID: *payload.OfferRequestID,
+		OfferRequestID: requestID,
 	})
 	if err != nil {
 		// ownerのtyped failureをretry可否が異なるHTTP statusへ一度だけ変換し、失敗結果はcacheしない。

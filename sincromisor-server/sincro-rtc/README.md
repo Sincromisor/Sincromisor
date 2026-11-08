@@ -240,7 +240,7 @@ Pion の本番ネットワーク結合テストはループバック UDP ソケ�
 
 通常サービスは初回Offer、セッション ID付き更新Offer、候補を
 `documents/design/contracts/frontend-rtc.md`の契約に従って処理する。未知 / 閉じたセッションの候補は
-HTTP 200と`status:false`を返す。
+それぞれHTTP 404 / 410を返す。
 
 次は現在の運用範囲外である。
 

@@ -126,8 +126,13 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc(apiPrefix, func(writer http.ResponseWriter, _ *http.Request) {
 		writeError(writer, http.StatusNotFound, "API endpoint not found.")
 	})
-	mux.Handle("/", http.FileServer(http.Dir(s.frontendDir)))
+	// 大きなモデル・音声素材は応答全体を保持せず、標準FileServerで逐次配信する。
+	routes := http.NewServeMux()
+	routes.Handle(apiPrefix, s.recoverHTTP(mux))
+	routes.Handle("/health/", s.recoverHTTP(mux))
+	routes.Handle(metricsPath, s.recoverHTTP(mux))
+	routes.Handle("/", http.FileServer(http.Dir(s.frontendDir)))
 	// 観測処理を最外層の応答確定担当にする。recoverHTTPは正常応答またはpanic時の500を確定してから戻るため、
 	// 各シグナリング要求は最終状態と所要時間を必ず1回だけ記録する。
-	return s.observeHTTP(s.recoverHTTP(mux))
+	return s.observeHTTP(routes)
 }

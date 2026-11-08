@@ -5,17 +5,21 @@ import type { ChatMessage, TelopChannelMessage } from "../../features/rtc/rtcMes
 import { RTCTalkClient } from "../../features/rtc/rtcTalkClient";
 import type { SincroRTCConfigManager } from "../../features/rtc/sincroRtcConfigManager";
 
-// SincroController から分離した「RTC セッション開始/停止 + channel callback 配線」担当。
-// WebRTC本体(RTCTalkClient)と UI/表示系(TalkManager, DebugConsoleManager)の結線を担当する。
+/**
+ * 設定取得を待つ開始要求とRTC接続を所有し、会話表示・診断・キャラクター状態へ受信結果を渡す。
+ * 停止時は開始世代を失効させ、取得完了後に古い音声トラックで接続を作らない。
+ */
 export class SincroRtcSessionController {
     private readonly debugConsoleManager: Pick<DebugConsoleManager, "setLocalAudioTrack">;
     private readonly talkManager: Pick<
         TalkManager,
         "addTextChannelMessage" | "addTelopChannelMessage"
     >;
-    private readonly rtcConfigManager: Pick<SincroRTCConfigManager, "config">;
+    private readonly rtcConfigManager: Pick<SincroRTCConfigManager, "config" | "getConfig">;
     private readonly characterBehaviorState: CharacterBehaviorState;
     private rtcc?: RTCTalkClient;
+    private generation = 0;
+    private pendingAudioTrack?: MediaStreamTrack;
     private activeTalkMode = "chat";
     private manuallyMuted = false;
     private automaticallyMuted = false;
@@ -23,7 +27,7 @@ export class SincroRtcSessionController {
     constructor(
         debugConsoleManager: Pick<DebugConsoleManager, "setLocalAudioTrack">,
         talkManager: Pick<TalkManager, "addTextChannelMessage" | "addTelopChannelMessage">,
-        rtcConfigManager: Pick<SincroRTCConfigManager, "config">,
+        rtcConfigManager: Pick<SincroRTCConfigManager, "config" | "getConfig">,
     ) {
         this.debugConsoleManager = debugConsoleManager;
         this.talkManager = talkManager;
@@ -31,14 +35,36 @@ export class SincroRtcSessionController {
         this.characterBehaviorState = CharacterBehaviorState.getManager();
     }
 
-    // WebRTC接続を開始する。生成済みローカル音声トラックをRTCPeerConnectionへ渡す。
-    start(audioTrack: MediaStreamTrack, talkMode: string): void {
-        const config = this.rtcConfigManager.config;
-        if (config === undefined) {
-            // 設定取得前に start が呼ばれても、従来どおり例外化せず安全に無視する。
-            return;
+    /** 設定取得と音声入力の準備を合わせ、停止済みの開始要求は接続を生成せず破棄する。 */
+    async start(audioTrack: MediaStreamTrack, talkMode: string): Promise<void> {
+        const generation = ++this.generation;
+        this.rtcc?.stop();
+        this.rtcc = undefined;
+        this.pendingAudioTrack = audioTrack;
+        this.activeTalkMode = talkMode;
+        try {
+            const config =
+                this.rtcConfigManager.config ?? (await this.rtcConfigManager.getConfig());
+            if (generation !== this.generation) return;
+            const track = this.pendingAudioTrack;
+            this.pendingAudioTrack = undefined;
+            if (track !== undefined) this.connect(config, track, talkMode);
+        } catch {
+            if (generation !== this.generation) return;
+            this.pendingAudioTrack = undefined;
+            this.characterBehaviorState.setErrorSource(
+                "rtc",
+                "RTCの接続設定を取得できませんでした。接続を開始し直してください。",
+            );
         }
+    }
 
+    /** 設定確定後に受信通知とミュートを配線し、交渉を開始する。 */
+    private connect(
+        config: NonNullable<SincroRTCConfigManager["config"]>,
+        audioTrack: MediaStreamTrack,
+        talkMode: string,
+    ): void {
         // フロント側の入力音量を可視化できるよう、ローカルトラックをデバッグへ渡す。
         this.debugConsoleManager.setLocalAudioTrack(audioTrack);
         this.activeTalkMode = talkMode;
@@ -52,6 +78,7 @@ export class SincroRtcSessionController {
         const rtcc = new RTCTalkClient(config, audioTrack, talkMode);
         this.setTextChannelCallback(rtcc);
         this.setTelopChannelCallback(rtcc);
+        rtcc.sessionResetCallback = () => this.setTelopChannelCallback(rtcc);
         rtcc.rtcHealthCallback = (message) => {
             if (message === undefined) {
                 this.characterBehaviorState.clearErrorSource("rtc");
@@ -61,18 +88,21 @@ export class SincroRtcSessionController {
         };
         this.rtcc = rtcc;
         this.applyMute();
-        rtcc.start();
+        void rtcc.start();
     }
 
-    // 実行中の送信用音声トラックを差し替え、Debug Console の監視対象も追従させる。
+    /** 設定待機中または接続中の送信トラックを差し替え、音量監視も新トラックへ移す。 */
     replaceAudioTrack(audioTrack: MediaStreamTrack): void {
         this.debugConsoleManager.setLocalAudioTrack(audioTrack);
+        if (this.pendingAudioTrack !== undefined) this.pendingAudioTrack = audioTrack;
         void this.rtcc?.replaceAudioTrack(audioTrack);
     }
 
-    // WebRTC接続を停止する。
+    /** 設定待機中の開始要求を失効させ、そのトラックと生成済み接続を停止する。 */
     stop(): void {
-        // RTCTalkClient 側が stop の冪等性を担保しているため、ここは委譲に徹する。
+        ++this.generation;
+        this.pendingAudioTrack?.stop();
+        this.pendingAudioTrack = undefined;
         this.rtcc?.stop();
         this.characterBehaviorState.setErrorSource(
             "rtc",
@@ -108,7 +138,7 @@ export class SincroRtcSessionController {
         };
     }
 
-    // telopチャネル受信メッセージをTalkManagerへ連携する。
+    /** 接続世代ごとにテロップの順序判定を作り直し、受理したものだけを会話表示へ渡す。 */
     private setTelopChannelCallback(rtcc: RTCTalkClient): void {
         // telop_chは順不同で届く。playbackの周回IDは単調増加するため、遅れて届いた
         // 旧周回や同一周回の過去時刻を捨てる。判定は接続ごとに作り直す。

@@ -249,6 +249,7 @@ func (t *fakeTimer) fire(now time.Time) {
 		return
 	}
 	t.stopped = true
+	firedAt := t.deadline
 	t.mu.Unlock()
-	t.ticks <- now
+	t.ticks <- firedAt
 }

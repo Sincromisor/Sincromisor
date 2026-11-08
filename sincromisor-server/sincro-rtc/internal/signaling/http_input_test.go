@@ -31,3 +31,23 @@ func TestRequestBodyBoundary(t *testing.T) {
 		})
 	}
 }
+
+func TestInitialOfferRejectsNullIdentityBeforeCreation(t *testing.T) {
+	for _, fields := range []string{
+		`"offer_request_id":null`,
+		`"offer_revision":null`,
+		`"offer_request_id":null,"offer_revision":null`,
+	} {
+		t.Run(fields, func(t *testing.T) {
+			fake := &fakeSessions{}
+			body := `{"sdp":"v=0\r\n","type":"offer","talk_mode":"chat",` + fields + `}`
+			response := performRequest(newTestServer(t, fake, "").Handler(), http.MethodPost, offerPath, body)
+			if response.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want 400", response.Code)
+			}
+			if fake.lastOffer.OfferRequestID != "" {
+				t.Fatal("invalid identity reached session creation")
+			}
+		})
+	}
+}

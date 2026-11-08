@@ -18,8 +18,8 @@ type offerRequest struct {
 	Type              string          `json:"type"`
 	TalkMode          string          `json:"talk_mode"`
 	SessionID         json.RawMessage `json:"session_id,omitempty"`
-	OfferRequestID    *string         `json:"offer_request_id"`
-	OfferRevision     *uint64         `json:"offer_revision"`
+	OfferRequestID    json.RawMessage `json:"offer_request_id"`
+	OfferRevision     json.RawMessage `json:"offer_revision"`
 	PreviousSessionID json.RawMessage `json:"previous_session_id,omitempty"`
 }
 
@@ -53,4 +53,20 @@ func isMaxBytesError(err error) bool {
 func validUUID(value string) bool {
 	parsed, err := uuid.Parse(value)
 	return err == nil && strings.EqualFold(parsed.String(), value)
+}
+
+// decodeOfferIdentity は省略だけを旧形式と認め、null・片側欠落・型不正を作成前に拒否する。
+// 更新Offerでは識別情報を生成せず、同じ要求IDと正数の改訂番号を必須にする。
+func decodeOfferIdentity(payload offerRequest) (string, uint64, error) {
+	if payload.SessionID == nil && payload.OfferRequestID == nil && payload.OfferRevision == nil {
+		return uuid.NewString(), 1, nil
+	}
+	var requestID string
+	var revision uint64
+	if json.Unmarshal(payload.OfferRequestID, &requestID) != nil ||
+		json.Unmarshal(payload.OfferRevision, &revision) != nil ||
+		!validUUID(requestID) || revision == 0 {
+		return "", 0, errors.New("invalid offer identity")
+	}
+	return requestID, revision, nil
 }

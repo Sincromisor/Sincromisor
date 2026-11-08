@@ -21,7 +21,9 @@ func (p *Processor) Run(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case now := <-timer.C():
+		case <-timer.C():
+			// タイマーの通知値は予定発火時刻なので、処理再開時の時計で遅延を測る。
+			now := p.clock.Now()
 			lag := now.Sub(nextDeadline)
 			if lag > 0 {
 				p.observer.PacingLag(lag.Seconds())
@@ -86,6 +88,8 @@ func (p *Processor) skipSamplePositions(frames uint64) {
 
 func (p *Processor) abortCurrentSpeech(lag time.Duration) {
 	p.mu.Lock()
+	// 折り返し診断も遅延前のPCMを再生せず、次に届く入力から再開する。
+	p.echoPCM = nil
 	if len(p.queue) == 0 {
 		p.mu.Unlock()
 		return

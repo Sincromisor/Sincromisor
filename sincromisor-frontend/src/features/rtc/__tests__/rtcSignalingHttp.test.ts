@@ -182,7 +182,7 @@ describe("postRtcSignalingJson", () => {
                 operation: "initial-offer",
                 url: "/offer",
             }),
-        ).rejects.toThrow("invalid JSON");
+        ).rejects.toThrow("response JSON is invalid");
 
         expect(fetchMock).toHaveBeenCalledTimes(1);
         expect(json).toHaveBeenCalledTimes(1);
