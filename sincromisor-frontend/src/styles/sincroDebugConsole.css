@@ -50,10 +50,10 @@ button#debugMenuButton[aria-pressed="true"] {
 }
 
 div#debugMenuPanel {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 0;
+    position: fixed;
     width: min(200px, calc(100vw - 24px));
+    max-height: calc(100dvh - 24px);
+    overflow: auto;
     padding: 8px;
     border: 1px solid var(--sincro-main-overlay-border-strong, hsl(186deg 65% 52% / 20%));
     border-radius: 16px;
@@ -63,31 +63,16 @@ div#debugMenuPanel {
     box-shadow: var(--sincro-main-overlay-shadow, 0 8px 22px hsl(220deg 35% 4% / 42%));
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
-    visibility: hidden;
-    opacity: 0;
-    transform: translateY(-6px);
-    transition: opacity 120ms ease, transform 120ms ease;
-    pointer-events: none;
 }
 
-div#debugMenuPanel::before {
-    content: "";
-    position: absolute;
-    top: -7px;
-    right: 22px;
-    width: 14px;
-    height: 14px;
-    border-left: 1px solid var(--sincro-main-overlay-border-strong, hsl(186deg 65% 52% / 20%));
-    border-top: 1px solid var(--sincro-main-overlay-border-strong, hsl(186deg 65% 52% / 20%));
-    background: hsl(218deg 28% 10% / 98%);
-    transform: rotate(45deg);
-}
-
-div#debugMenu.is-open div#debugMenuPanel {
-    visibility: visible;
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: auto;
+/* 標準の暗黙アンカーを使い、対応外ではブラウザー既定の中央配置を保つ。 */
+@supports (position-area: block-end) {
+    div#debugMenuPanel {
+        inset: auto;
+        margin: 8px 0;
+        position-area: block-end span-inline-start;
+        position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+    }
 }
 
 div#debugMenuPanel > button[role="menuitem"] {
@@ -916,11 +901,6 @@ div#debugConsole .debugConsoleTabs .integratedTabs__tab.is-active {
     }
 
     div#debugMenuPanel {
-        right: -2px;
         width: min(200px, calc(100vw - 16px));
-    }
-
-    div#debugMenuPanel::before {
-        right: 20px;
     }
 }

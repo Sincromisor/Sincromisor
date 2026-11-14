@@ -33,10 +33,6 @@ export function closeRightToolMenu(): void {
     rightToolPanelService.closeMenu();
 }
 
-export function toggleRightToolMenu(): void {
-    rightToolPanelService.toggleMenu();
-}
-
 export function showRightToolDebugPanel(): void {
     rightToolPanelService.showDebugPanel();
 }

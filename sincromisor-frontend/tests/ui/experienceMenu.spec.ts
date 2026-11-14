@@ -70,6 +70,13 @@ test("模擬トラックで失敗回復とメニュー終了・再開始を確�
     );
     await page.route("**/fixture/**", (route) => route.fulfill({ status: 503, body: "fixture" }));
     await page.goto("/simple-vrm/");
+    await expect(page.getByRole("button", { name: "開始する", exact: true })).toBeVisible();
+    // メニュー・機器の確認に不要な3D描画は設定で止め、モデル交換はVRM試験で確認する。
+    await page.evaluate(async () => {
+        const path = "/app/controller/index.ts";
+        const { SincroAppController } = await import(path);
+        SincroAppController.getCurrent().applySettings({ enableCharacter: false });
+    });
     await page.getByRole("button", { name: "開始する", exact: true }).click();
     const notice = page.getByRole("alert", { name: "重要な通知" });
     const gear = page.locator("#debugMenuButton");

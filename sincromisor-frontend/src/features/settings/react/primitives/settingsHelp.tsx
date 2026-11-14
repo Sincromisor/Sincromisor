@@ -22,6 +22,8 @@ export function SettingsHelpTooltip({ label, help, children }: HelpTooltipProps)
         // モーダルのEscape抑止より先に説明を閉じ、親の設定パネルへ伝播させない。
         const onKeyDown = (event: KeyboardEvent) => {
             if (event.key !== "Escape" || !bubbleRef.current?.matches(":popover-open")) return;
+            // 自分で閉じた後に標準Escapeが下のautoメニューも閉じるのを防ぐ。
+            event.preventDefault();
             bubbleRef.current?.hidePopover();
             event.stopPropagation();
         };

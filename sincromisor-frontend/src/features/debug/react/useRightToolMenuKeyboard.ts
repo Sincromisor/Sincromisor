@@ -1,5 +1,4 @@
-import { type KeyboardEvent, useLayoutEffect, useRef } from "react";
-import { closeRightToolMenu, openRightToolMenu } from "../../../app/react/useRightToolPanelState";
+import { type KeyboardEvent, useLayoutEffect } from "react";
 
 // 起動前などで無効な体験操作は、矢印キーの移動先からも除く。
 function menuItems(): HTMLButtonElement[] {
@@ -10,6 +9,7 @@ function menuItems(): HTMLButtonElement[] {
     ];
 }
 
+// 非モーダルのメニューから、起点の前後にある見える操作へTabで離脱する。
 function focusOutsideMenu(backward: boolean): void {
     const candidates = [
         ...document.querySelectorAll<HTMLElement>(
@@ -28,42 +28,35 @@ function focusOutsideMenu(backward: boolean): void {
     (next ?? document.getElementById("debugMenuButton"))?.focus();
 }
 
-/** 標準のメニューボタン操作を実装し、非表示になる項目を復帰先にしない。 */
+/** Popoverが提供しない項目移動とTab離脱を補い、Escapeと復帰先は標準動作へ委ねる。 */
 export function useRightToolMenuKeyboard(menuOpen: boolean) {
-    const focusLast = useRef(false);
     useLayoutEffect(() => {
         if (!menuOpen) return;
-        // メニューのvisibility切り替えが反映されてから、見える項目へ移す。
-        const frame = requestAnimationFrame(() => {
-            const items = menuItems();
-            items[focusLast.current ? items.length - 1 : 0]?.focus();
-            focusLast.current = false;
-        });
-        return () => cancelAnimationFrame(frame);
+        // toggle通知前のキー入力で移動済みなら、その操作結果を上書きしない。
+        if (document.activeElement?.closest("#debugMenuPanel")) return;
+        menuItems()[0]?.focus();
     }, [menuOpen]);
     return (event: KeyboardEvent<HTMLElement>): void => {
+        // ネイティブの開閉と非同期toggle通知の間にもキー操作を受け付ける。
+        const panel = document.getElementById("debugMenuPanel");
+        const isOpen = panel?.matches(":popover-open");
         if (
             event.target instanceof HTMLElement &&
             event.target.id === "debugMenuButton" &&
             (event.key === "ArrowDown" || event.key === "ArrowUp")
         ) {
             event.preventDefault();
-            focusLast.current = event.key === "ArrowUp";
-            if (menuOpen) menuItems()[focusLast.current ? menuItems().length - 1 : 0]?.focus();
-            else openRightToolMenu();
+            if (!isOpen) panel?.showPopover({ source: event.target });
+            const items = menuItems();
+            items[event.key === "ArrowUp" ? items.length - 1 : 0]?.focus();
             return;
         }
-        if (!menuOpen) return;
+        if (!isOpen) return;
         const items = menuItems();
         const current = items.findIndex((item) => item === document.activeElement);
-        if (event.key === "Escape") {
+        if (event.key === "Tab") {
             event.preventDefault();
-            event.stopPropagation();
-            closeRightToolMenu();
-            document.getElementById("debugMenuButton")?.focus();
-        } else if (event.key === "Tab") {
-            event.preventDefault();
-            closeRightToolMenu();
+            panel?.hidePopover();
             focusOutsideMenu(event.shiftKey);
         } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
             event.preventDefault();

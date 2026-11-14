@@ -4,13 +4,7 @@
 
 ## タスク一覧（自動生成 / 全 54 件）
 
-### open（未完） — 1 件
-
-| タスク                                                                                                     | タイトル                                      | 判定 | 依存                                                |
-| ---------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ---- | --------------------------------------------------- |
-| [task-261114152037-modernize-right-tool-popover](./task-261114152037-modernize-right-tool-popover/task.md) | 右側ツールメニューの開閉と配置を標準APIへ移す | —    | `task-261114152036-modernize-settings-help-popover` |
-
-### done（完了） — 53 件
+### done（完了） — 54 件
 
 | タスク                                                                                                                 | タイトル                                                   | 判定    | 依存                                                                                                      |
 | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------- |
@@ -65,6 +59,7 @@
 | [task-261114152036-fix-character-reselection-restart](./task-261114152036-fix-character-reselection-restart/task.md)   | キャラクター選び直し後のモデル反映と再開始を修正する       | ✅ PASS | `task-261114152035-await-vrm-restore-before-start`, `task-261114152036-release-vrm-selection-object-urls` |
 | [task-261114152036-modernize-settings-help-popover](./task-261114152036-modernize-settings-help-popover/task.md)       | 説明ポップアップの移動操作を保ち標準APIへ整理する          | ✅ PASS | —                                                                                                         |
 | [task-261114152036-release-vrm-selection-object-urls](./task-261114152036-release-vrm-selection-object-urls/task.md)   | VRM選択で生成したBlob URLの所有と解放を管理する            | ✅ PASS | `task-261114152035-await-vrm-restore-before-start`                                                        |
+| [task-261114152037-modernize-right-tool-popover](./task-261114152037-modernize-right-tool-popover/task.md)             | 右側ツールメニューの開閉と配置を標準APIへ移す              | ✅ PASS | `task-261114152036-modernize-settings-help-popover`                                                       |
 | [task-261114152037-show-bootstrap-failure-recovery](./task-261114152037-show-bootstrap-failure-recovery/task.md)       | 起動失敗を画面へ表示して回復操作を用意する                 | ✅ PASS | —                                                                                                         |
 | [task-261114152804-guard-numeric-setting-ime-enter](./task-261114152804-guard-numeric-setting-ime-enter/task.md)       | 数値設定のIME変換確定で入力を早期適用しない                | ✅ PASS | —                                                                                                         |
 

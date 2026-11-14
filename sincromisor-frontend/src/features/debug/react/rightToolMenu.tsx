@@ -1,9 +1,9 @@
-import { type KeyboardEventHandler, useEffect } from "react";
+import { type KeyboardEventHandler, useEffect, useLayoutEffect, useRef } from "react";
 import {
     closeRightToolMenu,
+    openRightToolMenu,
     toggleRightToolDebugPanel,
     toggleRightToolHistoryPanel,
-    toggleRightToolMenu,
     toggleRightToolSettingsPanel,
     useRightToolPanelState,
 } from "../../../app/react/useRightToolPanelState";
@@ -25,11 +25,10 @@ export function RightToolMenu() {
           : state.activePanel === "history"
             ? "会話履歴"
             : "未選択";
-    useCloseMenuOnOutsideClick(state.menuOpen);
     useDebugPanelShortcut();
 
     return (
-        <div id="debugMenu" className={state.menuOpen ? "is-open" : ""}>
+        <div id="debugMenu">
             <RightToolMenuButton
                 menuOpen={state.menuOpen}
                 onKeyDown={onMenuKeyDown}
@@ -45,24 +44,6 @@ export function RightToolMenu() {
             />
         </div>
     );
-}
-
-function useCloseMenuOnOutsideClick(menuOpen: boolean): void {
-    useEffect(() => {
-        const handleClick = (event: MouseEvent): void => {
-            if (!(event.target instanceof Node)) {
-                return;
-            }
-            const debugMenu = document.getElementById("debugMenu");
-            if (menuOpen && debugMenu && !debugMenu.contains(event.target)) {
-                closeRightToolMenu();
-            }
-        };
-        document.addEventListener("click", handleClick, true);
-        return () => {
-            document.removeEventListener("click", handleClick, true);
-        };
-    }, [menuOpen]);
 }
 
 function useDebugPanelShortcut(): void {
@@ -99,7 +80,7 @@ function RightToolMenuButton({
             aria-haspopup="menu"
             aria-pressed={hasActivePanel}
             aria-controls="debugMenuPanel"
-            onClick={toggleRightToolMenu}
+            popoverTarget="debugMenuPanel"
             onKeyDown={onKeyDown}
         >
             <svg className="debugMenuButton__icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -109,6 +90,7 @@ function RightToolMenuButton({
     );
 }
 
+/** 表示はPopover、アプリ状態はパネルサービスと相互に同期する。 */
 function RightToolMenuPanel({
     menuOpen,
     settingsActive,
@@ -122,12 +104,32 @@ function RightToolMenuPanel({
     historyActive: boolean;
     onKeyDown: KeyboardEventHandler<HTMLElement>;
 }) {
+    const panelRef = useRef<HTMLDivElement>(null);
+    // キー操作やパネル選択による要求も、ブラウザーが所有する同じ表示状態へ反映する。
+    useLayoutEffect(() => {
+        const panel = panelRef.current;
+        if (!panel || panel.matches(":popover-open") === menuOpen) return;
+        if (menuOpen) {
+            const source = document.getElementById("debugMenuButton");
+            if (source) panel.showPopover({ source });
+        } else panel.hidePopover();
+    }, [menuOpen]);
+    const syncOpenState = () => {
+        if (panelRef.current?.matches(":popover-open")) openRightToolMenu();
+        else closeRightToolMenu();
+    };
     return (
         <div
             id="debugMenuPanel"
             role="menu"
-            aria-hidden={!menuOpen}
-            inert={!menuOpen}
+            ref={panelRef}
+            popover="auto"
+            onToggle={syncOpenState}
+            onClickCapture={(event) => {
+                // 開閉通知前に項目を実行しても閉じられるよう、まず実際のPopoverを閉じる。
+                if (event.target instanceof Element && event.target.closest('[role="menuitem"]'))
+                    panelRef.current?.hidePopover();
+            }}
             aria-label="右側ツール"
             onKeyDown={onKeyDown}
         >

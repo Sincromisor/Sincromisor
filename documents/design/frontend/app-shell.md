@@ -159,6 +159,8 @@
 
 共通の説明部品は起動前モーダル内と常設設定の同じDOM位置に置き、Popoverのトップレイヤーでスクロール枠からの切れを防ぐ。配置と画面端の反転はCSS Anchor Positioningへ委ねる。Escapeは説明だけを閉じ、親パネルの終了へ伝播させない。
 
+右側ツールメニューは`popover="auto"`とCSS Anchor Positioningを使う。外側操作・Escapeはブラウザーが閉じ、toggle通知からアプリの状態を同期する。アプリからの開閉要求も同じPopoverへ反映する。項目の矢印・Home/End移動とTab／Shift+Tabによる離脱は専用フックが補い、無効項目を除外する。起点との位置関係と画面端の反転はCSSへ委ね、OBS向けの要素・IDセレクターを維持する。説明のhint表示はメニューと親パネルを閉じない。
+
 ## 起動前と常設設定の役割
 
 起動前と開始後は共通の設定部品・購読値を使う。画面の分類、固定操作、診断との表示分担は[設定UIの画面構成](setting-and-debug-ui/settings-design.md#画面構成)と[失敗時の案内](setting-and-debug-ui/settings-design.md#失敗時の案内)を参照する。
