@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { SettingsShell } from "../../settings/react/shell/settingsShell";
-import { StartupMediaNotice } from "./components/startupMediaNotice";
+import { StartupDataNoticeDialog } from "./components/startupDataNoticeDialog";
+import { StartupMediaPermissionHint } from "./components/startupMediaPermissionHint";
 import { ConfigurationDialogOverview } from "./configurationDialogOverview";
 import "./configurationDialogSettings.css";
 import { ConfigurationDialogSettingsFooter } from "./configurationDialogSettingsFooter";
@@ -39,10 +40,13 @@ export function ConfigurationDialogSettingsPanel() {
         onOpenFilePicker: handleOpenVrmFilePicker,
     });
 
-    const backLink = (
-        <a className="configurationDialogReactSettingsPanel__backLink" href="/">
-            トップへ戻る
-        </a>
+    const headerActions = (
+        <div className="configurationDialogReactSettingsPanel__headerActions">
+            <StartupDataNoticeDialog settings={state.settings} />
+            <a className="configurationDialogReactSettingsPanel__backLink" href="/">
+                トップへ戻る
+            </a>
+        </div>
     );
 
     return (
@@ -72,13 +76,20 @@ export function ConfigurationDialogSettingsPanel() {
                     ariaLabel="起動前の詳しい設定"
                     title="詳しい設定"
                     titleId="configuration-dialog-title"
-                    headerAction={backLink}
+                    headerAction={headerActions}
                     className="settingsShell--startupDialog"
                     navigationPlacement="top"
                     responsiveMode="container"
                     initialPageId="experience"
                     pages={pages}
-                    scrollEnd={<StartupMediaNotice settings={state.settings} />}
+                    scrollEnd={
+                        <>
+                            <StartupMediaPermissionHint device="microphone" />
+                            {state.settings.enableCharacterGaze ? (
+                                <StartupMediaPermissionHint device="camera" />
+                            ) : null}
+                        </>
+                    }
                     footer={
                         <ConfigurationDialogSettingsFooter
                             currentController={currentController}
@@ -96,7 +107,7 @@ export function ConfigurationDialogSettingsPanel() {
                 >
                     <header className="settingsShell__header">
                         <h1 id="configuration-dialog-title">開始前の確認</h1>
-                        {backLink}
+                        {headerActions}
                     </header>
                     <ConfigurationDialogOverview
                         state={state}

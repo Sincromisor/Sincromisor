@@ -4,7 +4,7 @@ import {
 } from "../../settings/react/pages/purposeSettingsPages";
 import { SettingsToggle } from "../../settings/react/primitives/settingsPrimitives";
 import { VrmModelSection } from "./components/dialogSettingsSections";
-import { StartupMediaNotice } from "./components/startupMediaNotice";
+import { StartupMediaPermissionHint } from "./components/startupMediaPermissionHint";
 import type { useConfigurationDialogSettingsState } from "./useConfigurationDialogSettingsState";
 
 /** 開始に必要な体験・モデル・入力だけを見せ、細かい調整は詳細表示へ委ねる。 */
@@ -35,7 +35,10 @@ export function ConfigurationDialogOverview({
                 {state.settings.enableCharacterGaze ? (
                     <PurposeDeviceField state={state} kind="video" />
                 ) : null}
-                <StartupMediaNotice settings={state.settings} />
+                <StartupMediaPermissionHint device="microphone" />
+                {state.settings.enableCharacterGaze ? (
+                    <StartupMediaPermissionHint device="camera" />
+                ) : null}
             </div>
         </div>
     );

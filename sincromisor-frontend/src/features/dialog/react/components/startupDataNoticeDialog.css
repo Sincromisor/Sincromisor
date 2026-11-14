@@ -1,0 +1,44 @@
+@layer components {
+    .startupDataNoticeDialog {
+        box-sizing: border-box;
+        width: min(40rem, calc(100% - 2rem));
+        max-height: calc(100dvh - 2rem);
+        margin: auto;
+        padding: var(--sincro-space-400);
+        overflow: auto;
+        overscroll-behavior: contain;
+        border: 1px solid var(--sincro-color-border-default);
+        border-radius: var(--sincro-radius-300);
+        background: var(--sincro-surface-dialog);
+        color: var(--sincro-color-overlay-text-primary);
+        box-shadow: var(--sincro-shadow-dialog);
+        font-size: var(--sincro-font-size-200);
+        line-height: var(--sincro-line-height-normal);
+    }
+
+    .startupDataNoticeDialog::backdrop {
+        background: var(--sincro-surface-dialog-backdrop);
+        overflow: hidden;
+        overscroll-behavior: contain;
+    }
+
+    .startupDataNoticeDialog h2 {
+        margin: 0 0 var(--sincro-space-350);
+        font-size: 1.2rem;
+    }
+
+    .startupDataNoticeDialog ul {
+        margin: 0;
+        padding-inline-start: 1.5em;
+    }
+
+    .startupDataNoticeDialog li + li {
+        margin-top: var(--sincro-space-300);
+    }
+
+    .startupDataNoticeDialog form {
+        display: flex;
+        justify-content: end;
+        margin-top: var(--sincro-space-400);
+    }
+}

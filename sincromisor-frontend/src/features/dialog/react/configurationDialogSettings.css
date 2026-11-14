@@ -141,7 +141,19 @@
         flex-wrap: wrap;
     }
 
+    .configurationDialogReactSettingsPanel__headerActions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--sincro-space-200) var(--sincro-space-400);
+    }
+
     .configurationDialogReactSettingsPanel__backLink {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+        font-family: inherit;
         color: var(--sincro-color-overlay-text-primary);
         text-decoration: underline;
         text-underline-offset: 0.2em;

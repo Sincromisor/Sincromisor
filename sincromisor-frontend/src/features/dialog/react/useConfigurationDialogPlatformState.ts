@@ -6,8 +6,7 @@ type UseConfigurationDialogPlatformStateParams = {
     onClosed: () => void;
 };
 
-// HTMLDialogElement の platform API を React component 側へ閉じ込める hook。
-// 状態の正本は DialogManager/AppController に置き、ここは native dialog との同期だけを行う。
+/** DialogManagerの開閉状態を標準dialogへ同期し、開始前後のフォーカスを移す。 */
 export function useConfigurationDialogPlatformState(
     params: UseConfigurationDialogPlatformStateParams,
 ) {
@@ -34,11 +33,10 @@ export function useConfigurationDialogPlatformState(
         }
         const changed = adapterRef.current?.syncDialogOpenState(dialog, isOpen);
         if (!changed) return;
-        // 初期選択で隠したファイル入力へ入らず、開始後も見える操作へ移す。
+        // 開始前はヘッダーの補助操作より選択中の体験を優先し、開始後は常設メニューへ戻す。
         const target = isOpen
-            ? dialog.querySelector<HTMLElement>(
-                  'input[type="radio"]:checked:not(:disabled), select:not(:disabled), button:not(:disabled)',
-              )
+            ? (dialog.querySelector<HTMLElement>('input[type="radio"]:checked:not(:disabled)') ??
+              dialog.querySelector<HTMLElement>("select:not(:disabled), button:not(:disabled)"))
             : document.getElementById("debugMenuButton");
         target?.focus({ preventScroll: true });
     }, [isOpen]);
