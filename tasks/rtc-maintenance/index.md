@@ -4,13 +4,7 @@
 
 ## タスク一覧（自動生成 / 全 9 件）
 
-### open（未完） — 1 件
-
-| タスク                                                                                                     | タイトル                              | 判定 | 依存 |
-| ---------------------------------------------------------------------------------------------------------- | ------------------------------------- | ---- | ---- |
-| [task-261114194445-rtc-selected-candidate-stats](./task-261114194445-rtc-selected-candidate-stats/task.md) | RTC統計を使用中の候補ペアから取得する | —    | —    |
-
-### done（完了） — 8 件
+### done（完了） — 9 件
 
 | タスク                                                                                                                   | タイトル                                                  | 判定    | 依存 |
 | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- | ------- | ---- |
@@ -22,5 +16,6 @@
 | [task-261011214822-rtc-integration-editor-config](./task-261011214822-rtc-integration-editor-config/task.md)             | RTC統合試験の設定をVSCodeで読み込めるようにする           | ✅ PASS | —    |
 | [task-261018225548-stabilize-signaling-ice-gather](./task-261018225548-stabilize-signaling-ice-gather/task.md)           | シグナリング試験のICE収集タイムアウトを調査して安定化する | ✅ PASS | —    |
 | [task-261114194445-rtc-connection-health](./task-261114194445-rtc-connection-health/task.md)                             | RTC接続全体の状態を接続表示へ反映する                     | ✅ PASS | —    |
+| [task-261114194445-rtc-selected-candidate-stats](./task-261114194445-rtc-selected-candidate-stats/task.md)               | RTC統計を使用中の候補ペアから取得する                     | ✅ PASS | —    |
 
 <!-- AUTOGEN:tasks END -->

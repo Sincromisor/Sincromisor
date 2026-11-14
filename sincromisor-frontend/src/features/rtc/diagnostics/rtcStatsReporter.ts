@@ -1,5 +1,9 @@
 import type { DebugConsoleManager } from "../../debug/model/debugConsoleManager";
-import { normalizeRtcStatsRecord, type RtcStatsRecord } from "./rtcStatsRecords";
+import {
+    normalizeRtcStatsRecord,
+    type RtcStatsRecord,
+    selectedAudioCandidatePair,
+} from "./rtcStatsRecords";
 
 type RtcByteCounter = { bytes: number; timestamp: number };
 
@@ -101,6 +105,7 @@ export class RtcStatsReporter {
         this.logger.pushTrendPoint("trendInboundPacketLossRate", lossRate);
     }
 
+    /** 標準参照で選んだ経路だけを表示し、欠損は項目ごとに消去する。 */
     private renderCandidateRoute(summary: RtcStatsSummary): void {
         this.renderRoundTripTime(summary.selectedPair);
         this.logger.updateMetricValue(
@@ -114,24 +119,27 @@ export class RtcStatsReporter {
         const remoteCandidate = summary.selectedPair?.remoteCandidateId
             ? summary.remoteCandidates.get(summary.selectedPair.remoteCandidateId)
             : undefined;
-        if (!localCandidate || !remoteCandidate) {
-            this.renderMissingCandidateRoute();
-            return;
-        }
-
-        const localType = localCandidate.candidateType ?? "unknown";
-        const remoteType = remoteCandidate.candidateType ?? "unknown";
-        const localProtocol = localCandidate.protocol ?? "-";
-        const relayProtocol = localCandidate.relayProtocol
+        // 片側の候補欠落で、取得済みのRTT・反対側候補まで消さない。
+        const localType = localCandidate?.candidateType ?? "-";
+        const remoteType = remoteCandidate?.candidateType ?? "-";
+        const localProtocol = localCandidate?.protocol ?? "-";
+        const relayProtocol = localCandidate?.relayProtocol
             ? `/${localCandidate.relayProtocol}`
             : "";
         const localEndpoint = candidateEndpointLabel(localCandidate);
         const remoteEndpoint = candidateEndpointLabel(remoteCandidate);
 
-        this.logger.updateMetricValue("rtcCandidatePair", `${localType} -> ${remoteType}`);
+        this.logger.updateMetricValue(
+            "rtcCandidatePair",
+            localCandidate || remoteCandidate ? `${localType} -> ${remoteType}` : "-",
+        );
         this.logger.updateMetricValue("rtcTransportProtocol", `${localProtocol}${relayProtocol}`);
         this.logger.updateMetricValue("rtcLocalCandidate", localEndpoint);
         this.logger.updateMetricValue("rtcRemoteCandidate", remoteEndpoint);
+        if (!localCandidate || !remoteCandidate) {
+            this.currentRouteSignature = undefined;
+            return;
+        }
 
         const routeSignature = `${localEndpoint}=>${remoteEndpoint}`;
         if (this.currentRouteSignature !== routeSignature) {
@@ -153,14 +161,6 @@ export class RtcStatsReporter {
         );
         this.logger.pushTrendPoint("trendRoundTripTime", selectedPair.currentRoundTripTime * 1000);
     }
-
-    private renderMissingCandidateRoute(): void {
-        this.logger.updateMetricValue("rtcCandidatePair", "-");
-        this.logger.updateMetricValue("rtcTransportProtocol", "-");
-        this.logger.updateMetricValue("rtcLocalCandidate", "-");
-        this.logger.updateMetricValue("rtcRemoteCandidate", "-");
-        this.currentRouteSignature = undefined;
-    }
 }
 
 type RtcStatsSummary = {
@@ -171,10 +171,10 @@ type RtcStatsSummary = {
     remoteCandidates: Map<string, RtcStatsRecord>;
 };
 
+/** 音声カウンターと候補参照を集め、使用経路は共通の標準参照処理へ委ねる。 */
 function collectRtcStatsSummary(report: RTCStatsReport): RtcStatsSummary {
     const outboundAudioStats: RtcStatsRecord[] = [];
     const inboundAudioStats: RtcStatsRecord[] = [];
-    const selectedPairs: RtcStatsRecord[] = [];
     const localCandidates = new Map<string, RtcStatsRecord>();
     const remoteCandidates = new Map<string, RtcStatsRecord>();
 
@@ -194,12 +194,6 @@ function collectRtcStatsSummary(report: RTCStatsReport): RtcStatsSummary {
         ) {
             inboundAudioStats.push(statsRecord);
         }
-        if (
-            statsRecord.type === "candidate-pair" &&
-            (statsRecord.selected || statsRecord.nominated)
-        ) {
-            selectedPairs.push(statsRecord);
-        }
         if (statsRecord.type === "local-candidate") {
             localCandidates.set(statsRecord.id, statsRecord);
         }
@@ -211,7 +205,7 @@ function collectRtcStatsSummary(report: RTCStatsReport): RtcStatsSummary {
     return {
         outboundAudio: outboundAudioStats[0],
         inboundAudio: inboundAudioStats[0],
-        selectedPair: selectedPairs[0],
+        selectedPair: selectedAudioCandidatePair(report),
         localCandidates,
         remoteCandidates,
     };
@@ -255,13 +249,14 @@ function calcBitrate(
     };
 }
 
+/** 候補参照の取得済み項目を端末表示へ整形する。中央診断には渡さない。 */
 function candidateEndpointLabel(candidate: RtcStatsRecord | undefined): string {
     if (!candidate) {
         return "-";
     }
     const address = candidate.address ?? candidate.ip ?? "-";
     const port = candidate.port === undefined ? "-" : `${candidate.port}`;
-    const type = candidate.candidateType ?? "unknown";
+    const type = candidate.candidateType ?? "-";
     const protocol = candidate.protocol ?? "-";
     return `${address}:${port} (${type}/${protocol})`;
 }

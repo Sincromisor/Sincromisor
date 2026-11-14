@@ -1,7 +1,11 @@
 import { frontendLogger } from "../../../shared/logging/appLogger";
 import { iceDiagnosticSummarySchema } from "../../../shared/logging/iceDiagnosticSummary";
 import type { DebugConsoleManager } from "../../debug/model/debugConsoleManager";
-import { normalizeRtcStatsRecord, type RtcStatsRecord } from "./rtcStatsRecords";
+import {
+    normalizeRtcStatsRecord,
+    type RtcStatsRecord,
+    selectedAudioCandidatePair,
+} from "./rtcStatsRecords";
 
 type RtcIceDiagnosticsParams = {
     logger: Pick<DebugConsoleManager, "addRtcEventLog">;
@@ -11,7 +15,6 @@ type RtcIceDiagnosticsParams = {
 };
 
 type IceDiagnostics = {
-    selectedPairs: RtcStatsRecord[];
     pairTotal: number;
     pairSucceeded: number;
     localCandidates: Map<string, RtcStatsRecord>;
@@ -28,7 +31,7 @@ export async function captureIceFailureDiagnostics(params: RtcIceDiagnosticsPara
     try {
         const report = await params.peerConnection.getStats();
         const diagnostics = collectIceDiagnostics(report);
-        const selectedPair = diagnostics.selectedPairs[0];
+        const selectedPair = selectedAudioCandidatePair(report);
         const local = selectedPair?.localCandidateId
             ? diagnostics.localCandidates.get(selectedPair.localCandidateId)
             : undefined;
@@ -79,10 +82,9 @@ export async function captureIceFailureDiagnostics(params: RtcIceDiagnosticsPara
     }
 }
 
-/** 統計をペア数・選択候補・候補種別へ集約する。 */
+/** 選択経路とは独立に、全候補の件数と候補参照を集約する。 */
 function collectIceDiagnostics(report: RTCStatsReport): IceDiagnostics {
     const diagnostics: IceDiagnostics = {
-        selectedPairs: [],
         pairTotal: 0,
         pairSucceeded: 0,
         localCandidates: new Map<string, RtcStatsRecord>(),
@@ -96,7 +98,7 @@ function collectIceDiagnostics(report: RTCStatsReport): IceDiagnostics {
     return diagnostics;
 }
 
-/** selectedまたはnominatedのペアを統計順に保持し、要約には先頭を使う。 */
+/** 全ペアの総数・成功数を数え、未選択の候補も種別集計へ含める。 */
 function addIceDiagnosticStats(
     diagnostics: ReturnType<typeof collectIceDiagnostics>,
     stats: RTCStats,
@@ -106,9 +108,6 @@ function addIceDiagnosticStats(
         diagnostics.pairTotal += 1;
         if (pairStats.state === "succeeded") {
             diagnostics.pairSucceeded += 1;
-        }
-        if (pairStats.selected || pairStats.nominated) {
-            diagnostics.selectedPairs.push(pairStats);
         }
     }
     if (stats.type === "local-candidate" || stats.type === "remote-candidate") {

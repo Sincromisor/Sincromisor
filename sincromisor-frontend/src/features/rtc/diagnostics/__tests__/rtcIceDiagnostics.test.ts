@@ -10,6 +10,12 @@ const session = "01K1AF2Y0H0000000000000001";
 function report(selected: boolean): RTCStatsReport {
     const rows: RtcStatsRecord[] = [
         {
+            id: "private-transport",
+            timestamp: 1,
+            type: "transport",
+            selectedCandidatePairId: selected ? "private-pair" : undefined,
+        },
+        {
             id: "private-local",
             timestamp: 1,
             type: "local-candidate",
@@ -29,7 +35,7 @@ function report(selected: boolean): RTCStatsReport {
             timestamp: 1,
             type: "candidate-pair",
             state: "succeeded",
-            selected,
+
             localCandidateId: "private-local",
             remoteCandidateId: "private-remote",
             currentRoundTripTime: 0.025,

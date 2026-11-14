@@ -226,6 +226,8 @@ VAD方式・閾値・学習VADの調整は `echo` / `playback`だけで表示す
 | `Inbound Packet Loss`                             | 受信パケット損失率           |
 | `Inbound Jitter`                                  | 受信ジッター                 |
 
+使用経路は音声RTP統計の`transportId`から`transport.selectedCandidatePairId`を辿って取得し、通常表示と障害時診断で同じ規則を使う。RTP統計がない場合だけ、一意に特定できる`transport`を使う。複数の音声経路、選択IDなし、参照先欠落は旧候補の`nominated`や非標準の`selected`で補わず、取得できない項目だけ`-`（診断では省略）とする。候補の総数・成功数は選択経路とは独立に集計する。
+
 | 推移グラフ          | 表示範囲               |
 | ------------------- | ---------------------- |
 | `Outbound Bitrate`  | 60秒、縦軸上限256 kbps |
