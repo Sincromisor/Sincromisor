@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import { lazy, type ReactElement, Suspense } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { frontendLogger } from "../../shared/logging/appLogger";
 import type { SincroVRMRoots } from "../bootstrap/sincroVrmInitializer";
@@ -6,7 +6,7 @@ import { getActiveSincroAppController } from "../controller/activeSincroAppContr
 import { showBootstrapFailure } from "./bootstrapFailureView";
 import { SincroPageAppShell } from "./sincroPageAppShell";
 
-/** パネル読込後にReactを配置し、配置通知からページを一度だけ初期化する。再生成は扱わない。 */
+/** 共通画面を直ちに配置し、ページ初期化は一度だけ、常設設定の読込は初回表示時に行う。 */
 export function bootstrapSincroPageAppShell<TModule>(
     loadControlPanel: () => Promise<TModule>,
     renderControlPanel: (module: TModule) => ReactElement,
@@ -49,18 +49,32 @@ export function bootstrapSincroPageAppShell<TModule>(
             reportError(error);
         }
     };
-    void (async () => {
-        const module = await loadControlPanel();
-        const controlPanel = renderControlPanel(module);
-        if (failed) return;
+    // lazyの型は起動ごとに固定する。画面側が最初に設定を開くまで読込関数を呼ばない。
+    const ControlPanel = lazy(async () => {
+        try {
+            const module = await loadControlPanel();
+            // 失敗後の遅延解決は描画も副作用も再開しない。
+            return { default: () => (failed ? null : renderControlPanel(module)) };
+        } catch (error) {
+            reportError(error);
+            return { default: () => null };
+        }
+    });
+    try {
         root = createRoot(mountNode, { onUncaughtError: reportError });
         root.render(
             <SincroPageAppShell
-                controlPanel={controlPanel}
+                controlPanel={
+                    <Suspense fallback={<p role="status">設定を読み込んでいます…</p>}>
+                        <ControlPanel />
+                    </Suspense>
+                }
                 onCharacterMounted={onCharacterMounted}
             />,
         );
-    })().catch(reportError);
+    } catch (error) {
+        reportError(error);
+    }
 }
 
 /** 解除を先行して待機中の開始を拒否し、解除の失敗時にも機器終了を試みる。 */

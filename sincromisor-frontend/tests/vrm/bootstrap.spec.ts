@@ -24,17 +24,17 @@ async function replaceDeviceStart(page: Page) {
 
 async function currentSettings(page: Page) {
     return page.evaluate(async () => {
-        const path = "/app/controller";
-        const { SincroAppController } = await import(path);
-        return SincroAppController.getCurrent()?.getSettingsSnapshot();
+        const path = "/app/controller/activeSincroAppController.ts";
+        const { getActiveSincroAppController } = await import(path);
+        return getActiveSincroAppController()?.getSettingsSnapshot();
     });
 }
 
 async function startAgain(page: Page) {
     await page.evaluate(async () => {
-        const path = "/app/controller";
-        const { SincroAppController } = await import(path);
-        SincroAppController.getCurrent().start();
+        const path = "/app/controller/activeSincroAppController.ts";
+        const { getActiveSincroAppController } = await import(path);
+        getActiveSincroAppController().start();
     });
 }
 
@@ -60,9 +60,7 @@ test("3ページの配置と既定設定を維持し、通常ページを手動�
     await expect(page.getByText("こんにちは～!", { exact: true })).toHaveCount(0);
 });
 
-test("パネル遅延中は開始せず、実Reactの配置通知を再実行してもOBS開始は一度だけ", async ({
-    page,
-}) => {
+test("設定未取得でも配置・OBS開始を一度だけ行い、設定を開いてから取得する", async ({ page }) => {
     await replaceDeviceStart(page);
     await page.addInitScript(() => {
         Object.assign(window, { obsstudio: {} });
@@ -90,11 +88,18 @@ test("パネル遅延中は開始せず、実Reactの配置通知を再実行し
         await route.continue();
     });
     await page.goto("/simple-vrm/?talkMode=sincro", { waitUntil: "domcontentloaded" });
-    await expect.poll(() => panelRequested).toBe(true);
-    await expect(page.locator("#sincroCharacterBox")).toHaveCount(0);
-    expect(await currentSettings(page)).toBeUndefined();
-    releasePanel();
     await expect(page.locator("body")).toHaveAttribute("data-start-count", "1");
+    expect(panelRequested).toBe(false);
+    await expect(page.locator("#sincroCharacterBox")).toHaveCount(1);
+    await page.locator("#debugMenuButton").click();
+    await page.getByRole("menuitem", { name: "基本設定", exact: true }).click();
+    await expect.poll(() => panelRequested).toBe(true);
+    await expect(page.getByText("設定を読み込んでいます…", { exact: true })).toBeVisible();
+    await page.locator("#reactSettingsPanelClose").click();
+    releasePanel();
+    await page.locator("#debugMenuButton").click();
+    await page.getByRole("menuitem", { name: "基本設定", exact: true }).click();
+    await expect(page.getByRole("region", { name: "基本設定", exact: true })).toBeVisible();
     const settings = await page.locator("body").getAttribute("data-started-settings");
     expect(JSON.parse(settings ?? "{}")).toMatchObject({ talkMode: "sincro" });
     await startAgain(page);
@@ -103,7 +108,7 @@ test("パネル遅延中は開始せず、実Reactの配置通知を再実行し
     await expect(page.getByText("こんにちは～!", { exact: true })).toHaveCount(0);
 });
 
-test("パネル読込と描画の失敗は観測可能なエラーを残して開始しない", async ({ page }) => {
+test("開始後の設定読込と描画の失敗も機器を終了して回復画面へ移る", async ({ page }) => {
     await replaceDeviceStart(page);
     await page.addInitScript(() => {
         Object.assign(window, { obsstudio: {} });
@@ -121,11 +126,14 @@ test("パネル読込と描画の失敗は観測可能なエラーを残して�
             route.fulfill({ contentType: "text/javascript", body }),
         );
         await page.goto("/simple-vrm/");
+        await expect(page.locator("body")).toHaveAttribute("data-start-count", "1");
+        await page.locator("#debugMenuButton").click();
+        await page.getByRole("menuitem", { name: "基本設定", exact: true }).click();
         await expect
             .poll(() => errors.some((message) => message.includes("Failed to bootstrap VRM page.")))
             .toBe(true);
-        expect(await currentSettings(page)).toBeUndefined();
-        expect(await page.locator("body").getAttribute("data-start-count")).toBeNull();
+        await startAgain(page);
+        await expect(page.locator("body")).toHaveAttribute("data-start-count", "1");
         await expect(page.locator("#sincroCharacterBox")).toHaveCount(0);
         await expect(page.getByRole("heading", { name: "起動に失敗しました" })).toBeVisible();
         await expect(page.locator("main")).not.toContainText("rejected");
@@ -221,11 +229,11 @@ test("初期化失敗は部分アプリを解除・終了し、再開始と重�
             contentType: "text/javascript",
             body: `
             import { SincroVRMInitializer } from "/app/bootstrap/sincroVrmInitializer.ts";
-            import { SincroAppController } from "/app/controller/sincroAppController.ts";
+            import { getActiveSincroAppController } from "/app/controller/activeSincroAppController.ts";
             export function initializeSimpleVrmPage(roots) {
                 const initializer = new SincroVRMInitializer(roots);
                 initializer.initialize();
-                const app = SincroAppController.getCurrent();
+                const app = getActiveSincroAppController();
                 for (const [method, key] of [["releaseEventSubscriptions", "releaseCount"], ["endExperience", "endCount"]]) {
                     const original = app[method].bind(app);
                     app[method] = () => {
@@ -296,9 +304,9 @@ test("キャラクター選び直しは既存レンダラーでモデルを交�
         buffer: readFileSync("sincromisor-frontend/public/characters/default.vrm"),
     });
     await page.evaluate(async () => {
-        const path = "/app/controller/index.ts";
-        const { SincroAppController } = await import(path);
-        await SincroAppController.getCurrent().dialog.waitForVrmSelection();
+        const path = "/app/controller/activeSincroAppController.ts";
+        const { getActiveSincroAppController } = await import(path);
+        await getActiveSincroAppController().dialog.waitForVrmSelection();
     });
     await expect(page.getByRole("button", { name: "開始する", exact: true })).toBeEnabled();
     await page.getByRole("button", { name: "開始する", exact: true }).click();

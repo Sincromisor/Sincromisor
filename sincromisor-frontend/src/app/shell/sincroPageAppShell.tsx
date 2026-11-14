@@ -1,4 +1,4 @@
-import { type ReactElement, useEffect, useLayoutEffect, useRef } from "react";
+import { type ReactElement, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ChatAnnouncer } from "../../features/conversation/chat/react/chatAnnouncer";
 import { ConversationHistoryView } from "../../features/conversation/chat/react/conversationHistoryView";
 import { SincroChatView } from "../../features/conversation/chat/react/sincroChatView";
@@ -21,8 +21,7 @@ type SincroPageAppShellProps = {
     onCharacterMounted: (roots: SincroVRMRoots) => void;
 };
 
-// modern 系ページで共通利用する app shell。
-// React が UI 骨格と island 間の配置を一括で所有しつつ、既存 TS が参照する DOM id は維持する。
+/** 共通画面と制御処理が保持するDOMを配置し、設定内容は最初に開いてから保持する。 */
 export function SincroPageAppShell({ controlPanel, onCharacterMounted }: SincroPageAppShellProps) {
     const rightToolState = useRightToolPanelState();
 
@@ -166,8 +165,14 @@ type SincroRightToolFramesProps = {
     controlPanel: ReactElement;
 };
 
-// 両パネルを常設し、診断には表示状態を渡して購読だけを休止する。
+// 枠と診断の常設DOMを先に配置し、設定の内容は初回表示後に保持する。
 function SincroRightToolFrames({ activePanel, controlPanel }: SincroRightToolFramesProps) {
+    const [settingsOpened, setSettingsOpened] = useState(false);
+    useEffect(() => {
+        if (activePanel === "settings") setSettingsOpened(true);
+    }, [activePanel]);
+    // 初回は開いた描画で読込を開始し、その後は閉じても同じ設定画面を保持する。
+    const mountSettings = settingsOpened || activePanel === "settings";
     return (
         <>
             <RightToolFrame
@@ -198,7 +203,7 @@ function SincroRightToolFrames({ activePanel, controlPanel }: SincroRightToolFra
                 variant="settings"
             >
                 <div id="reactSettingsPanel">
-                    <div id="sincroReactSettingsPanelRoot">{controlPanel}</div>
+                    <div id="sincroReactSettingsPanelRoot">{mountSettings && controlPanel}</div>
                 </div>
             </RightToolFrame>
         </>
