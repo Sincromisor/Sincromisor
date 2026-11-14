@@ -1,3 +1,4 @@
+import { frontendLogger } from "../../shared/logging/appLogger";
 import { emitSincroAppLifecycle } from "../events/sincroAppEmitHelpers";
 import {
     buildStartupSettingsStatus,
@@ -34,6 +35,9 @@ export class SincroAppLifecycleController {
     };
     private applied?: SincroAppStartupAppliedSettings;
     private hooks: SincroAppStartHooks = {};
+    /** 待機中の開始だけを無効化する世代。選択側の共有復元・保存は継続する。 */
+    private startGeneration = 0;
+    private preparing = false;
 
     constructor(private readonly deps: LifecycleDependencies) {}
 
@@ -59,8 +63,41 @@ export class SincroAppLifecycleController {
             return;
         }
         if (this.deps.isReleased() || this.state === "starting" || this.state === "running") return;
-        const settings = this.deps.getSettings();
+        const generation = ++this.startGeneration;
+        this.preparing = true;
         this.notify("starting");
+        if (generation !== this.startGeneration || this.deps.isReleased()) return;
+        let preparation: Promise<void> | undefined;
+        try {
+            preparation = this.hooks.prepareStart?.();
+        } catch (error) {
+            this.preparing = false;
+            this.notify("stopped");
+            throw error;
+        }
+        if (generation !== this.startGeneration || this.deps.isReleased()) return;
+        if (!preparation) {
+            this.preparing = false;
+            this.startPrepared();
+            return;
+        }
+        void preparation
+            .then(() => {
+                if (generation !== this.startGeneration || this.deps.isReleased()) return;
+                this.preparing = false;
+                this.startPrepared();
+            })
+            .catch((error) => {
+                if (generation !== this.startGeneration || this.deps.isReleased()) return;
+                this.preparing = false;
+                this.notify("stopped");
+                frontendLogger.error("Failed to start prepared VRM page.", { error });
+            });
+    }
+
+    /** 準備中に変わった設定もここで確定し、較正・機器・シーンを一度だけ開始する。 */
+    private startPrepared(): void {
+        const settings = this.deps.getSettings();
         this.applied = {
             enableTalk: settings.enableTalk,
             enableInspector: settings.enableInspector,
@@ -95,6 +132,10 @@ export class SincroAppLifecycleController {
 
     /** 診断・再接続用にRTCだけを止め、機器の使用と設定購読は維持する。 */
     stopRTC(): void {
+        if (this.cancelPreparingStart() && !this.mediaState.experienceActive) {
+            this.notify("stopped");
+            return;
+        }
         if (this.state === "stopping" || this.state === "stopped" || this.state === "idle") return;
         this.deps.calibration.cancel("connection_stopped");
         this.notify("stopping");
@@ -104,18 +145,29 @@ export class SincroAppLifecycleController {
 
     /** RTC停止済みでも全機器と取得待ち・較正を終了し、明示再開始まで休止する。 */
     endExperience(): void {
+        const cancelled = this.cancelPreparingStart();
         if (
             !this.mediaState.experienceActive &&
             this.mediaState.microphone === "idle" &&
             this.mediaState.camera === "idle"
-        )
+        ) {
+            if (cancelled) this.notify("stopped");
             return;
+        }
         this.deps.calibration.cancel("experience_ended");
         try {
             this.deps.core.endExperience();
         } finally {
             this.notify("stopped");
         }
+    }
+
+    /** 機器未使用時の早期終了より先に、後着する開始継続だけを無効化する。 */
+    private cancelPreparingStart(): boolean {
+        ++this.startGeneration;
+        if (!this.preparing) return false;
+        this.preparing = false;
+        return true;
     }
 
     /** 開始時だけ効く設定を適用済み値と比較し、保存とは別に反映待ちを導出する。 */

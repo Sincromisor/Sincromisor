@@ -8,6 +8,8 @@ export type DialogUiStateValue = {
 
 export type DialogVrmUiStateValue = {
     isDragOver: boolean;
+    /** 復元・保存中は選択を受け付けず、開始も確定結果を待つ。 */
+    isSelectionPending: boolean;
     vrmStatusText: string;
 };
 
@@ -20,7 +22,8 @@ export class DialogStateStore {
     };
     private dialogVrmUiState: DialogVrmUiStateValue = {
         isDragOver: false,
-        vrmStatusText: "既定のVRMモデルを使用中",
+        isSelectionPending: true,
+        vrmStatusText: "開始準備中: 前回のVRMを復元しています",
     };
     private selectedVrmUrl: string = "/characters/default.vrm";
 
@@ -48,6 +51,11 @@ export class DialogStateStore {
 
     getDialogVrmUiState(): DialogVrmUiStateValue {
         return { ...this.dialogVrmUiState };
+    }
+
+    /** 選択処理だけが準備状態を変更し、表示側は復元・保存完了まで操作を無効にする。 */
+    setVrmSelectionPending(isSelectionPending: boolean): void {
+        this.dialogVrmUiState = { ...this.dialogVrmUiState, isSelectionPending };
     }
 
     setDialogVrmDragOver(isDragOver: boolean): void {

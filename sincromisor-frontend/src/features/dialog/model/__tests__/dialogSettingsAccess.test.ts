@@ -2,7 +2,9 @@ import { afterEach, expect, it, vi } from "vitest";
 import { applySincroAppSettingsPartial } from "../../../../app/settings/sincroAppSettingsApply";
 import { SincroAppSettingsModel } from "../../../../app/settings/sincroAppSettingsModel";
 import { buildSincroAppSettingsSnapshot } from "../../../../app/settings/sincroAppSettingsSnapshotBuilder";
+import type { DialogEventHub } from "../dialogEventHub";
 import { DialogManager } from "../dialogManager";
+import type { DialogStateStore } from "../dialogStateStore";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -14,7 +16,17 @@ vi.mock("../../../../character/behavior/characterBehaviorState", () => ({
 }));
 vi.mock("../dialogVrmStateController", () => ({
     DialogVrmStateController: class {
-        async loadInitialVrmSelection() {}
+        constructor(
+            private readonly store: DialogStateStore,
+            private readonly hub: DialogEventHub,
+        ) {}
+        async loadInitialVrmSelection() {
+            this.store.setVrmSelectionPending(false);
+            this.hub.emitCurrentVrmUiState(() => this.store.getDialogVrmUiState());
+        }
+        waitForSelection() {
+            return undefined;
+        }
     },
 }));
 vi.mock("../../../media/devices/sincroMediaDeviceService", () => ({

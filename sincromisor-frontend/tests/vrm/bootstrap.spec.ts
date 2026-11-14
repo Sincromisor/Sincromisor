@@ -129,3 +129,53 @@ test("パネル読込と描画の失敗は観測可能なエラーを残して�
         await page.unroute("**/app/settings/react/sincroControlPanel.tsx*");
     }
 });
+
+test("Cache Storageの復元待ちを表示し、保存モデルを最初の要求へ渡す", async ({ page }) => {
+    await replaceDeviceStart(page);
+    // 配布済み固定素材をキャッシュへ用意し、以後のモデル要求だけを観測する。
+    await page.goto("/");
+    await page.evaluate(async () => {
+        const cache = await caches.open("file-cache");
+        await cache.put("/simple-vrm/sincroVrmFile", await fetch("/characters/default.vrm"));
+    });
+    await page.addInitScript(() => {
+        Object.assign(window, { obsstudio: {} });
+        const ready = new Promise<void>((resolve) => {
+            window.addEventListener("vrm-test-ready", () => resolve(), { once: true });
+        });
+        const match = Cache.prototype.match;
+        Cache.prototype.match = async function (request, options) {
+            if (String(request).endsWith("sincroVrmFile")) await ready;
+            return match.call(this, request, options);
+        };
+    });
+    await page.addInitScript(() => {
+        // Blob URLはPlaywrightの通信イベントに現れないため、GLTFLoaderのfetch境界で観測する。
+        const fetchModel = window.fetch;
+        const requested: string[] = [];
+        window.fetch = (input, init) => {
+            const url = input instanceof Request ? input.url : String(input);
+            if (url.startsWith("blob:") || url.includes("default.vrm")) {
+                requested.push(url);
+                document.documentElement.dataset.modelRequests = JSON.stringify(requested);
+            }
+            return fetchModel(input, init);
+        };
+    });
+    await page.goto("/simple-vrm/?talkMode=sincro");
+    await expect(page.getByRole("button", { name: "開始準備中…", exact: true })).toBeDisabled();
+    await expect(
+        page.getByRole("button", { name: "VRMファイルを選択", exact: true }),
+    ).toBeDisabled();
+    await startAgain(page);
+    expect(await page.locator("html").getAttribute("data-model-requests")).toBeNull();
+    expect(await page.locator("body").getAttribute("data-start-count")).toBeNull();
+    await page.evaluate(() => window.dispatchEvent(new Event("vrm-test-ready")));
+    await expect(page.locator("body")).toHaveAttribute("data-start-count", "1");
+    await expect(page.locator("html")).toHaveAttribute("data-model-requests", /blob:/);
+    const modelRequests: string[] = JSON.parse(
+        (await page.locator("html").getAttribute("data-model-requests")) ?? "[]",
+    );
+    expect(modelRequests[0]).toMatch(/^blob:/);
+    expect(modelRequests.some((url) => url.includes("default.vrm"))).toBe(false);
+});

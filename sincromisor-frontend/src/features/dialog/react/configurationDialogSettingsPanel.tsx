@@ -60,6 +60,7 @@ export function ConfigurationDialogSettingsPanel() {
             <input
                 ref={vrmFileInputRef}
                 type="file"
+                disabled={dialogVrmUiState.isSelectionPending}
                 hidden
                 accept=".vrm"
                 className="configurationDialogReactSettingsPanel__fileInput"

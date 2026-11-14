@@ -19,6 +19,7 @@ export function VrmModelSection({ onOpenFilePicker, uiState }: VrmModelSectionPr
                 <SettingsButton
                     type="button"
                     onClick={onOpenFilePicker}
+                    disabled={uiState.isSelectionPending}
                     aria-describedby={statusId}
                 >
                     VRMファイルを選択

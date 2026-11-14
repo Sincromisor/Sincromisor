@@ -49,6 +49,7 @@ export class SincroVRMInitializer {
             enableVR: false,
         });
         this.appController.setStartHooks({
+            prepareStart: () => this.appController.dialog.waitForVrmSelection(),
             beforeStart: () => {
                 if (!this.initialized) throw new Error("VRM page is not initialized.");
             },

@@ -20,7 +20,9 @@ export type SincroAppMediaState = {
     camera: MediaUsageState;
 };
 
+/** 開始準備を機器・較正より先に待ち、確定後に同期開始の前後処理を行う。 */
 export type SincroAppStartHooks = {
+    prepareStart?: () => Promise<void> | undefined;
     beforeStart?: () => void;
     afterStart?: () => void;
 };

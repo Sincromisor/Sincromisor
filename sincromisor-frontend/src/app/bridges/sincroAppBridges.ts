@@ -17,6 +17,8 @@ export type SincroAppDialogBridge = {
     loadVrmThumbnailBlob: () => Promise<Blob | undefined>;
     saveVrmThumbnailBlob: (blob: Blob) => Promise<void>;
     getSelectedVrmUrl: () => string;
+    /** 初期復元・選択保存が未確定の間だけ共有Promiseを返す。 */
+    waitForVrmSelection: () => Promise<void> | undefined;
 };
 
 /** チャットの書き込みとReactのスナップショット購読に使う窓口。 */

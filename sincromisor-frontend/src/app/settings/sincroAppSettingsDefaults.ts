@@ -144,7 +144,8 @@ export const defaultSincroAppDialogUiState: SincroAppDialogUiState = {
 
 export const defaultSincroAppDialogVrmUiState: SincroAppDialogVrmUiState = {
     isDragOver: false,
-    vrmStatusText: "既定のVRMモデルを使用中",
+    isSelectionPending: true,
+    vrmStatusText: "開始準備中: 前回のVRMを復元しています",
 };
 
 /** 機器とページの利用可否が届く前の操作制限。設定モデルの初期状態に使う。 */

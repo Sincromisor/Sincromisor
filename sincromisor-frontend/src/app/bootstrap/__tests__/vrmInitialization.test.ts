@@ -147,10 +147,10 @@ it("実際の3ページ入口で設定確定後に手動・OBS開始し、再開
                 ).initializeLookingGlassVrmPage(roots);
             await vi.waitFor(() => expect(SincroAppController.getCurrent()).toBeDefined());
             const app = SincroAppController.getCurrent();
-            expect(coreStart).toHaveBeenCalledTimes(obs ? 1 : 0);
+            await vi.waitFor(() => expect(coreStart).toHaveBeenCalledTimes(obs ? 1 : 0));
             app?.start();
             app?.start();
-            expect(coreStart).toHaveBeenCalledOnce();
+            await vi.waitFor(() => expect(coreStart).toHaveBeenCalledOnce());
             expect(win.localStorage.setItem).not.toHaveBeenCalled();
             expect(sceneStart).toHaveBeenCalledOnce();
             expect(sceneOptions).toHaveBeenLastCalledWith(

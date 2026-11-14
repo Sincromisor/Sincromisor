@@ -1,5 +1,4 @@
 import { SincroAppSettingsModel } from "../../../app/settings/sincroAppSettingsModel";
-import { frontendLogger } from "../../../shared/logging/appLogger";
 import { DialogEventHub } from "./dialogEventHub";
 import {
     DialogStateStore,
@@ -38,23 +37,22 @@ export class DialogManager {
         // 通常設定の所有者から開始案内だけを受け取り、表示とVRM復元を始める。
         const refreshStartButton = () => {
             const state = settings.getStartButtonState();
+            const pending = this.stateStore.getDialogVrmUiState().isSelectionPending;
             this.dialogUiStateController.setStartButtonState(
-                state.startButtonDisabled,
-                state.startButtonText,
-                state.startButtonHint,
+                pending || state.startButtonDisabled,
+                pending ? "開始準備中…" : state.startButtonText,
+                pending ? "VRMの復元・保存が終わるまでお待ちください" : state.startButtonHint,
             );
         };
         // 設定モデルとダイアログはページ内で共有し、この購読もページの寿命まで保持する。
         settings.subscribeSettingsChange(refreshStartButton);
         refreshStartButton();
         this.showDialog();
-        this.loadVrmFile()
-            .then(() => {
-                frontendLogger.info("VRM file loaded.");
-            })
-            .catch((error) => {
-                frontendLogger.error("VRM file load failed.", { error });
-            });
+        this.eventHub.subscribeVrmUiState(
+            refreshStartButton,
+            this.stateStore.getDialogVrmUiState(),
+        );
+        void this.vrmStateController.loadInitialVrmSelection();
     }
 
     /** ダイアログを開く状態を通知する。ブラウザー上の表示操作はReactが担う。 */
@@ -109,8 +107,11 @@ export class DialogManager {
         return this.stateStore.getDialogVrmUiState();
     }
 
-    private async loadVrmFile(): Promise<void> {
-        await this.vrmStateController.loadInitialVrmSelection();
+    /** 復元・保存の確定を待つ。開始や取消しの副作用はアプリ側が所有する。 */
+    waitForVrmSelection(): Promise<void> | undefined {
+        const pending = this.vrmStateController.waitForSelection();
+        // 復元完了通知から新しい保存が始まった場合も、その選択の確定まで待つ。
+        return pending?.then(() => this.waitForVrmSelection());
     }
 
     /** 変換済みサムネイル画像を保存する。保存失敗は呼び出し元へ伝播する。 */
