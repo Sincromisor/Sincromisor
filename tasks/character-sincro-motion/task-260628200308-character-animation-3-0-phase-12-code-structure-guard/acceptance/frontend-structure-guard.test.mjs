@@ -92,9 +92,9 @@ try {
         cwd: tempRoot,
         env: { ...process.env, PATH: "/private/tmp/no-such-git" },
     });
-    assert.equal(fallback.code, 0);
-    assert.match(fallback.stderr, /strict target diff unavailable; running inventory only/);
-    assert.match(fallback.stdout, /strict=0, warnings=0, failures=0/);
+    assert.equal(fallback.code, 1);
+    assert.match(fallback.stderr, /target selection failed/);
+    assert.doesNotMatch(fallback.stdout, /failures=0/);
 
     console.log("frontend structure guard acceptance checks passed");
 } finally {

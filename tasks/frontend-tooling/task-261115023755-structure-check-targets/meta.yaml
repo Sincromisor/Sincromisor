@@ -1,13 +1,13 @@
 id: task-261115023755-structure-check-targets
 title: 構造検査の変更対象と行数基準を明確にする
 category: frontend-tooling
-status: open
+status: done
 depends_on: []
 superseded_by: null
 review: null
 reviewed_sha: null
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 1
 created_at: 2026-11-15
-closed_at: null
+closed_at: 2026-11-15
 legacy_ids: []
