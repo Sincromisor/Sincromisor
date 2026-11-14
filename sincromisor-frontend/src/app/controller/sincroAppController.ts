@@ -28,7 +28,11 @@ import { buildSincroAppSettingsRelatedSnapshotPayload } from "../settings/sincro
 import { buildSincroAppSettingsSnapshot } from "../settings/sincroAppSettingsSnapshotBuilder";
 import { SincroAppSettingsStore } from "../settings/sincroAppSettingsStore";
 import { buildSincroAppUiStateSnapshot } from "../settings/sincroAppUiStateSnapshotBuilder";
-import { SincroAppActiveControllerRegistry } from "./sincroAppActiveControllerRegistry";
+import {
+    getActiveSincroAppController,
+    subscribeCurrentSincroAppController,
+} from "./activeSincroAppController";
+import { sincroAppActiveControllerRegistry } from "./sincroAppActiveControllerRegistry";
 import { SincroAppCalibration } from "./sincroAppCalibration";
 import { SincroAppLifecycleController } from "./sincroAppLifecycleController";
 import type {
@@ -65,7 +69,6 @@ export type {
 /** 起動処理とReactの共通窓口。下位サービスを束ね、設定購読と起動・接続イベントを公開する。 */
 export class SincroAppController {
     // reason: structure-threshold-exception 既存の公開窓口と購読の所有権を同じクラスで保つ。保存の検証・I/Oは設定層へ分離する。
-    private static readonly activeRegistry = new SincroAppActiveControllerRegistry();
 
     private readonly runtime: SincroAppControllerRuntimeBundle;
     private readonly eventHub = new SincroAppEventHub();
@@ -204,14 +207,14 @@ export class SincroAppController {
 
     /** 現在有効な制御処理をReactやページ初期化処理へ公開する。 */
     static getCurrent(): SincroAppController | undefined {
-        return SincroAppController.activeRegistry.getCurrent();
+        return getActiveSincroAppController();
     }
 
     /** 有効な制御処理を即時通知し、以後の差し替えも購読する。戻り値で購読を解除する。 */
     static subscribeCurrent(
         listener: (controller: SincroAppController | undefined) => void,
     ): () => void {
-        return SincroAppController.activeRegistry.subscribe(listener);
+        return subscribeCurrentSincroAppController(listener);
     }
 
     /** 外部購読・較正・追跡結果の反映を終了する。再実行は無処理とし、RTCや機器は停止しない。 */
@@ -453,13 +456,13 @@ export class SincroAppController {
     }
 
     private static setCurrent(controller: SincroAppController | undefined): void {
-        // active controller の static 購読は React mount 後の attach 判定に使われる。
+        // 解除通知でReactが旧購読を外す前に、旧アプリのカメラ品質表示を消す。
         if (controller === undefined) {
-            SincroAppController.activeRegistry.getCurrent()?.emitEvent({
+            getActiveSincroAppController()?.emitEvent({
                 type: "camera-quality-reset",
             });
         }
-        SincroAppController.activeRegistry.setCurrent(controller);
+        sincroAppActiveControllerRegistry.setCurrent(controller);
     }
 
     // 接続全体・ICE・signaling・lifecycle の保持状態から UI向け connection_state を導出して通知する。

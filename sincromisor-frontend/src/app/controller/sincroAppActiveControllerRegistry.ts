@@ -32,3 +32,6 @@ export class SincroAppActiveControllerRegistry {
         }
     }
 }
+
+/** 全ページで共有する保持先。登録の変更はSincroAppControllerが行う。 */
+export const sincroAppActiveControllerRegistry = new SincroAppActiveControllerRegistry();
