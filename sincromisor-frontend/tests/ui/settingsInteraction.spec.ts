@@ -223,3 +223,41 @@ for (const fallback of [false, true]) {
         }
     });
 }
+
+test("数値欄のIME確定Enterは編集を保ち、通常Enterでだけ適用する", async ({ page }) => {
+    await page.goto("/looking-glass-vrm/");
+    await openBasicSettings(page);
+    await page.getByRole("combobox", { name: "基本設定 カテゴリ" }).selectOption("looking-glass");
+    const height = page.getByRole("spinbutton", { name: "タイルの高さ", exact: true });
+    const appliedHeight = () =>
+        page.evaluate(async () => {
+            const path = "/app/controller/index.ts";
+            const { SincroAppController } = await import(path);
+            return SincroAppController.getCurrent().getSettingsSnapshot().lgTileHeight;
+        });
+    for (const composing of [true, false]) {
+        await height.fill("512");
+        await height.press("Enter");
+        await height.fill("999");
+        const defaultAllowed = await height.evaluate(
+            (input, isComposing) =>
+                input.dispatchEvent(
+                    new KeyboardEvent("keydown", {
+                        key: "Enter",
+                        keyCode: isComposing ? 13 : 229,
+                        isComposing,
+                        bubbles: true,
+                        cancelable: true,
+                    }),
+                ),
+            composing,
+        );
+        expect(defaultAllowed).toBe(true);
+        await expect(height).toBeFocused();
+        await expect(height).toHaveValue("999");
+        expect(await appliedHeight()).toBe(512);
+        await height.press("Enter");
+        await expect.poll(appliedHeight).toBe(999);
+        await expect(height).not.toBeFocused();
+    }
+});

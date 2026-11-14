@@ -46,7 +46,12 @@ export function NumericSettingField({
                     setDraft(undefined);
                 }}
                 onKeyDown={(event) => {
-                    if (event.key === "Enter") event.currentTarget.blur();
+                    if (event.key === "Enter") {
+                        // 変換確定のEnterはIMEへ委ね、compositionendが先行する場合も229で除外する。
+                        if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229)
+                            return;
+                        event.currentTarget.blur();
+                    }
                     if (event.key === "Escape") {
                         event.stopPropagation();
                         setDraft(undefined);

@@ -8,10 +8,10 @@ ChromeでLooking Glassの「タイルの高さ」を512から999へ編集中に�
 
 ## 完了条件
 
-- [ ] IME変換中のEnterでは、独自のblur()とそれに伴う設定適用を行わず、入力欄のフォーカスと編集中の値を保持する。
-- [ ] ReactのnativeEvent.isComposingを確認し、EnterでnativeEvent.keyCodeが229の場合も独自の確定処理から除外する。変換確定自体のブラウザー処理を妨げない。
-- [ ] 変換中でない通常のEnterと利用者によるフォーカス移動では、従来どおり値を確定する。通常のEscapeによる取消し、空欄・未完成値の復元、数値の正規化、プリセット反映を維持する。
-- [ ] 回帰試験で変換中イベントが設定値を変更しないことと、変換終了後の通常Enterで確定できることを確認する。
+- [x] IME変換中のEnterでは、独自のblur()とそれに伴う設定適用を行わず、入力欄のフォーカスと編集中の値を保持する。
+- [x] ReactのnativeEvent.isComposingを確認し、EnterでnativeEvent.keyCodeが229の場合も独自の確定処理から除外する。変換確定自体のブラウザー処理を妨げない。
+- [x] 変換中でない通常のEnterと利用者によるフォーカス移動では、従来どおり値を確定する。通常のEscapeによる取消し、空欄・未完成値の復元、数値の正規化、プリセット反映を維持する。
+- [x] 回帰試験で変換中イベントが設定値を変更しないことと、変換終了後の通常Enterで確定できることを確認する。
 
 ## 設計判断・範囲
 
@@ -37,3 +37,11 @@ NumericSettingField内のキー処理を局所的に修正する通常変更と�
 ## 文書同期
 
 [設定UI設計](../../../documents/design/frontend/setting-and-debug-ui/settings-design.md)の数値欄の確定規則へ、IME変換確定のEnterでは設定を適用しないことを補足する。保存形式・RTC契約は変更しない。
+
+## 実装・確認結果
+
+Enterの独自確定処理で`nativeEvent.isComposing`と`nativeEvent.keyCode === 229`を確認し、変換確定ではblurもpreventDefaultも実行しない。通常のonBlur適用とEscape取消しを維持した。共通入力部品がイベント属性をそのまま渡すことも確認した。
+
+Chromeの数値設定試験2件が成功した。isComposing=trueと、isComposing=falseかつkeyCode=229の合成イベントでフォーカス・編集中の999・確定値512を保持し、通常Enterで999へ確定することを確認した。既存のEnter・Escape・Tab・空欄・負数・範囲正規化・プリセットも成功した。型検査、対象Biome、変更Markdownとタスク整合性を確認し、設定UI設計を同期した。コメント点検: PASS。
+
+実OSのIMEは未確認であり、合成イベントでの処理経路確認である。指定Node/npm版では未確認。
