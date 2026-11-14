@@ -135,6 +135,8 @@ export default defineConfig({
                 codeSplitting: {
                     groups: [
                         {
+                            // 名前関数で分類するグループをビルド時間レポートで識別する。
+                            debugName: "依存ライブラリ分類",
                             // 既存のvendor分類を一つの名前関数で保ち、依存だけを手動分割する。
                             name: (id) => {
                                 if (!id.includes("node_modules")) {

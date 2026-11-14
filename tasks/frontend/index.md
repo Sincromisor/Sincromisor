@@ -2,9 +2,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 55 件）
+## タスク一覧（自動生成 / 全 56 件）
 
-### done（完了） — 55 件
+### done（完了） — 56 件
 
 | タスク                                                                                                                 | タイトル                                                   | 判定    | 依存                                                                                                      |
 | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------- |
@@ -63,5 +63,6 @@
 | [task-261114152037-show-bootstrap-failure-recovery](./task-261114152037-show-bootstrap-failure-recovery/task.md)       | 起動失敗を画面へ表示して回復操作を用意する                 | ✅ PASS | —                                                                                                         |
 | [task-261114152804-guard-numeric-setting-ime-enter](./task-261114152804-guard-numeric-setting-ime-enter/task.md)       | 数値設定のIME変換確定で入力を早期適用しない                | ✅ PASS | —                                                                                                         |
 | [task-261115040500-startup-data-notice-modal](./task-261115040500-startup-data-notice-modal/task.md)                   | 開始前のデータ説明を共通モーダルへまとめる                 | ✅ PASS | —                                                                                                         |
+| [task-261115051938-chunk-group-debug-name](./task-261115051938-chunk-group-debug-name/task.md)                         | チャンク分類の表示名を指定してビルド警告を解消する         | ✅ PASS | —                                                                                                         |
 
 <!-- AUTOGEN:tasks END -->
