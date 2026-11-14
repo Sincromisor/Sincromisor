@@ -1,163 +1,101 @@
 import type { ReactNode, RefObject } from "react";
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useId, useRef, useState } from "react";
 
-type HelpTooltipProps = {
-    label: string;
-    help?: string;
-    children: ReactNode;
-};
+type HelpTooltipProps = { label: string; help?: string; children: ReactNode };
+type HelpBadgeProps = { label: string; help: string };
+type SettingsHelpLabelProps = { htmlFor?: string; text: string; help?: string };
 
-type HelpBadgeProps = {
-    label: string;
-    help: string;
-};
+// ボタンから本文へ斜めに移動する間の猶予。ネイティブ側のinterest-delay-endと揃える。
+const HOVER_EXIT_DELAY_MS = 600;
 
-type SettingsHelpLabelProps = {
-    htmlFor?: string;
-    text: string;
-    help?: string;
-};
-
-/** 対象項目が分かる名前で補足を開く。スクロール枠の外へ描画して長文を切らない。 */
+/** 説明をトップレイヤーに置き、起動前モーダル内でもスクロール枠で切らない。 */
 export function SettingsHelpTooltip({ label, help, children }: HelpTooltipProps) {
     const tooltipId = useId();
-    const containerRef = useRef<HTMLButtonElement | null>(null);
-    const bubbleRef = useRef<HTMLSpanElement | null>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+    const bubbleRef = useRef<HTMLSpanElement>(null);
     const [visible, setVisible] = useState(false);
-    const position = useTooltipPosition(visible, containerRef, bubbleRef);
-    useDismissTooltip(visible, containerRef, bubbleRef, setVisible);
+    const nativeInterest = "interestForElement" in HTMLButtonElement.prototype;
+    useFallbackInterest(nativeInterest, buttonRef, bubbleRef);
+    useEffect(() => {
+        // モーダルのEscape抑止より先に説明を閉じ、親の設定パネルへ伝播させない。
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== "Escape" || !bubbleRef.current?.matches(":popover-open")) return;
+            bubbleRef.current?.hidePopover();
+            event.stopPropagation();
+        };
+        document.addEventListener("keydown", onKeyDown, true);
+        return () => document.removeEventListener("keydown", onKeyDown, true);
+    }, []);
     if (!help) return <>{children}</>;
-    // modal dialogの外へ出すとブラウザーに隠されるため、起動前はdialog直下へ置く。
-    const portalRoot = visible ? (containerRef.current?.closest("dialog") ?? document.body) : null;
     return (
         <>
             <button
-                ref={containerRef}
+                ref={buttonRef}
                 type="button"
                 className="settingsPrimitiveHelpBadge"
                 aria-label={`${label}の説明を表示`}
-                aria-describedby={visible ? tooltipId : undefined}
-                onKeyDown={(event) => {
-                    if (event.key === "Escape") {
-                        event.stopPropagation();
-                        setVisible(false);
-                    }
-                }}
-                onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    // ホバーやフォーカス直後のクリックでも説明を閉じない。
-                    setVisible(true);
-                }}
-                onMouseEnter={() => setVisible(true)}
-                onMouseLeave={(event) => {
-                    if (
-                        document.activeElement !== containerRef.current &&
-                        !(
-                            event.relatedTarget instanceof Node &&
-                            bubbleRef.current?.contains(event.relatedTarget)
-                        )
-                    )
-                        setVisible(false);
-                }}
-                onFocus={() => setVisible(true)}
-                onBlur={() => setVisible(false)}
+                aria-expanded={visible}
+                aria-controls={tooltipId}
+                popoverTarget={tooltipId}
+                popoverTargetAction="show"
+                {...(nativeInterest ? { interestfor: tooltipId } : {})}
             >
                 {children}
             </button>
-            {portalRoot &&
-                createPortal(
-                    <span
-                        ref={bubbleRef}
-                        id={tooltipId}
-                        role="tooltip"
-                        className="settingsPrimitiveHelpTooltip__bubble"
-                        style={position}
-                        onMouseLeave={(event) => {
-                            if (
-                                document.activeElement !== containerRef.current &&
-                                !(
-                                    event.relatedTarget instanceof Node &&
-                                    containerRef.current?.contains(event.relatedTarget)
-                                )
-                            )
-                                setVisible(false);
-                        }}
-                    >
-                        {help}
-                    </span>,
-                    portalRoot,
-                )}
+            <span
+                ref={bubbleRef}
+                id={tooltipId}
+                role="tooltip"
+                popover="hint"
+                className="settingsPrimitiveHelpTooltip__bubble"
+                onToggle={(event) => setVisible(event.newState === "open")}
+            >
+                {help}
+            </span>
         </>
     );
 }
 
-/** 画面内で左右を制限し、下に収まらない説明はボタンの上へ置く。 */
-function useTooltipPosition(
-    visible: boolean,
-    anchorRef: RefObject<HTMLButtonElement | null>,
+/** Interest Invokers非対応時だけホバー・フォーカスを補う。配置と閉じる操作はPopoverに任せる。 */
+function useFallbackInterest(
+    nativeInterest: boolean,
+    buttonRef: RefObject<HTMLButtonElement | null>,
     bubbleRef: RefObject<HTMLSpanElement | null>,
-) {
-    const [position, setPosition] = useState({ left: 0, top: 0 });
-    useLayoutEffect(() => {
-        const anchor = anchorRef.current;
-        const bubble = bubbleRef.current;
-        if (!visible || !anchor || !bubble) return;
-        const update = () => {
-            const rect = anchor.getBoundingClientRect();
-            const { width, height } = bubble.getBoundingClientRect();
-            setPosition({
-                left: Math.max(12, Math.min(rect.left, window.innerWidth - width - 12)),
-                top: Math.max(
-                    12,
-                    rect.bottom + height + 8 > window.innerHeight
-                        ? rect.top - height - 8
-                        : rect.bottom + 8,
-                ),
-            });
-        };
-        update();
-        // Tab移動による自動スクロールでも補足を閉じず、移動先の位置へ追従する。
-        document.addEventListener("scroll", update, true);
-        return () => document.removeEventListener("scroll", update, true);
-    }, [visible, anchorRef, bubbleRef]);
-    return position;
-}
-
-/** アンカー移動後に古い位置の説明を残さず、外側操作とリサイズで閉じる。 */
-function useDismissTooltip(
-    visible: boolean,
-    containerRef: RefObject<HTMLButtonElement | null>,
-    bubbleRef: RefObject<HTMLSpanElement | null>,
-    setVisible: (visible: boolean) => void,
 ): void {
     useEffect(() => {
-        if (!visible) return;
-        const dismiss = () => setVisible(false);
-        const handlePointerDown = (event: PointerEvent) => {
-            if (
-                event.target instanceof Node &&
-                !containerRef.current?.contains(event.target) &&
-                !bubbleRef.current?.contains(event.target)
-            )
-                dismiss();
+        const button = buttonRef.current;
+        const bubble = bubbleRef.current;
+        if (nativeInterest || !button || !bubble) return;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const keep = () => clearTimeout(timer);
+        const show = () => {
+            keep();
+            bubble.showPopover({ source: button });
         };
-        // ホバーで開いた説明も、入力のフォーカス位置に依存せず閉じられる。
-        const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key !== "Escape") return;
-            event.stopPropagation();
-            dismiss();
+        const leave = () => {
+            keep();
+            timer = setTimeout(() => {
+                if (!button.matches(":hover, :focus") && !bubble.matches(":hover")) {
+                    bubble.hidePopover();
+                }
+            }, HOVER_EXIT_DELAY_MS);
         };
-        document.addEventListener("pointerdown", handlePointerDown);
-        document.addEventListener("keydown", handleKeyDown, true);
-        window.addEventListener("resize", dismiss);
+        button.addEventListener("mouseenter", show);
+        button.addEventListener("focus", show);
+        button.addEventListener("mouseleave", leave);
+        button.addEventListener("blur", leave);
+        bubble.addEventListener("mouseenter", keep);
+        bubble.addEventListener("mouseleave", leave);
         return () => {
-            document.removeEventListener("pointerdown", handlePointerDown);
-            document.removeEventListener("keydown", handleKeyDown, true);
-            window.removeEventListener("resize", dismiss);
+            keep();
+            button.removeEventListener("mouseenter", show);
+            button.removeEventListener("focus", show);
+            button.removeEventListener("mouseleave", leave);
+            button.removeEventListener("blur", leave);
+            bubble.removeEventListener("mouseenter", keep);
+            bubble.removeEventListener("mouseleave", leave);
         };
-    }, [visible, containerRef, bubbleRef, setVisible]);
+    }, [nativeInterest, buttonRef, bubbleRef]);
 }
 
 /** 項目名を保持する共通の説明ボタン。 */

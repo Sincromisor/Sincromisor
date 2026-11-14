@@ -132,8 +132,9 @@
 
     .settingsPrimitiveHelpTooltip__bubble {
         position: fixed;
-        z-index: 100;
-        width: min(300px, calc(100vw - 72px));
+        width: min(300px, calc(100vw - 24px));
+        max-height: min(60vh, 320px);
+        overflow: auto;
         border-radius: var(--sincro-radius-100);
         border: 1px solid rgba(255, 255, 255, 0.18);
         background: rgba(15, 18, 24, 0.96);
@@ -167,12 +168,19 @@
         touch-action: manipulation;
     }
 
-    /* アンカーと説明の隙間を渡る間もホバーを切らさず、拡大表示で読めるようにする。 */
-    .settingsPrimitiveHelpTooltip__bubble::before {
-        content: "";
-        position: absolute;
-        inset: -8px 0;
-        z-index: -1;
+    /* 対象のChromiumではネイティブ配置を使い、未対応時はUAの中央配置を残す。 */
+    @supports (position-area: block-end) {
+        .settingsPrimitiveHelpTooltip__bubble {
+            inset: auto;
+            margin: 8px 0;
+            position-area: block-end span-inline-end;
+            position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+        }
+    }
+
+    .settingsPrimitiveHelpBadge {
+        interest-delay-start: 0s;
+        interest-delay-end: 0.6s;
     }
 
     .settingsPrimitiveHelpLabel {

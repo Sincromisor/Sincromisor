@@ -166,3 +166,60 @@ test("空の履歴とスライダーの表示単位を伝え、ファイル選�
     await page.getByRole("menuitem", { name: "会話履歴", exact: true }).click();
     await expect(page.getByText("会話履歴はまだありません。", { exact: true })).toBeVisible();
 });
+
+for (const fallback of [false, true]) {
+    test(`説明へ斜め移動でき、狭幅と画面端でも読める（代替操作=${fallback}）`, async ({ page }) => {
+        if (fallback) {
+            await page.addInitScript(() => {
+                Reflect.deleteProperty(HTMLButtonElement.prototype, "interestForElement");
+            });
+        }
+        for (const width of [1440, 320]) {
+            await page.setViewportSize({ width, height: 900 });
+            await page.goto("/simple-vrm/");
+            for (const permanent of [false, true]) {
+                if (permanent) {
+                    await openBasicSettings(page);
+                    await selectSettingsCategory(page.locator(".sincroControlPanel"), "audio");
+                }
+                const help = page.getByRole("button", { name: "マイク入力の説明を表示" });
+                const tooltip = page.getByRole("tooltip");
+                // クリックやfocus()を先行させず、純粋なホバーから移動経路を確認する。
+                await page.mouse.move(0, 0);
+                await help.hover();
+                await expect(tooltip).toBeVisible();
+                const box = await tooltip.boundingBox();
+                if (!box) throw new Error("Tooltip is not rendered.");
+                expect(box.x).toBeGreaterThanOrEqual(0);
+                expect(box.y).toBeGreaterThanOrEqual(0);
+                expect(box.x + box.width).toBeLessThanOrEqual(width);
+                expect(box.y + box.height).toBeLessThanOrEqual(900);
+                await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 30 });
+                await page.waitForTimeout(700);
+                await expect(tooltip).toBeVisible();
+                await help.hover();
+                await help.click();
+                await expect(tooltip).toBeVisible();
+                await expect(help).toHaveAttribute("aria-expanded", "true");
+                await page.keyboard.press("Escape");
+                await expect(tooltip).toHaveCount(0);
+                await expect(help).toHaveAttribute("aria-expanded", "false");
+                if (permanent) {
+                    await expect(
+                        page.getByRole("dialog", { name: "基本設定", exact: true }),
+                    ).toBeVisible();
+                }
+                // 高さを狭めてスクロール後の画面端でも本文を読めることを確認する。
+                await page.setViewportSize({ width, height: 480 });
+                await help.scrollIntoViewIfNeeded();
+                await help.click();
+                await expect(tooltip).toBeVisible();
+                const edge = await tooltip.boundingBox();
+                expect(edge?.y).toBeGreaterThanOrEqual(0);
+                expect((edge?.y ?? 0) + (edge?.height ?? 0)).toBeLessThanOrEqual(480);
+                await page.keyboard.press("Escape");
+                await page.setViewportSize({ width, height: 900 });
+            }
+        }
+    });
+}
