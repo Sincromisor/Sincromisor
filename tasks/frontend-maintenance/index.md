@@ -30,14 +30,7 @@
 
 ## タスク一覧（自動生成 / 全 67 件）
 
-### open（未完） — 2 件
-
-| タスク                                                                                   | タイトル                                     | 判定 | 依存                                       |
-| ---------------------------------------------------------------------------------------- | -------------------------------------------- | ---- | ------------------------------------------ |
-| [task-261115055438-lazy-debug-panels](./task-261115055438-lazy-debug-panels/task.md)     | 診断表示を初回表示時に読み込む               | —    | `task-261115055438-panel-loading-baseline` |
-| [task-261115055438-lazy-settings-panel](./task-261115055438-lazy-settings-panel/task.md) | 常設設定パネルを起動処理から分離して読み込む | —    | `task-261115055438-panel-loading-baseline` |
-
-### done（完了） — 65 件
+### done（完了） — 67 件
 
 | タスク                                                                                                                                 | タイトル                                                   | 判定    | 依存                                                                                                                                                          |
 | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -105,6 +98,8 @@
 | [task-261115055437-motion-snapshot-import-cycle](./task-261115055437-motion-snapshot-import-cycle/task.md)                             | 動作スナップショットの循環インポートを解消する             | ✅ PASS | —                                                                                                                                                             |
 | [task-261115055437-ui-controller-imports](./task-261115055437-ui-controller-imports/task.md)                                           | 画面と購読フックを軽量なアプリ参照窓口へ移行する           | ✅ PASS | `task-261115055437-active-controller-access`                                                                                                                  |
 | [task-261115055437-vad-worklet-asset-url](./task-261115055437-vad-worklet-asset-url/task.md)                                           | 音声Workletの配信URLをビルド生成へ移行する                 | ✅ PASS | —                                                                                                                                                             |
+| [task-261115055438-lazy-debug-panels](./task-261115055438-lazy-debug-panels/task.md)                                                   | 診断表示を初回表示時に読み込む                             | ✅ PASS | `task-261115055438-panel-loading-baseline`                                                                                                                    |
+| [task-261115055438-lazy-settings-panel](./task-261115055438-lazy-settings-panel/task.md)                                               | 常設設定パネルを起動処理から分離して読み込む               | ✅ PASS | `task-261115055438-panel-loading-baseline`                                                                                                                    |
 | [task-261115055438-panel-loading-baseline](./task-261115055438-panel-loading-baseline/task.md)                                         | 画面の初期読み込みを計測して遅延対象を確定する             | ✅ PASS | `task-261115055437-ui-controller-imports`                                                                                                                     |
 
 <!-- AUTOGEN:tasks END -->
