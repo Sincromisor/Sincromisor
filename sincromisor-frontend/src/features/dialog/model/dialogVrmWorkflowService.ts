@@ -1,9 +1,10 @@
 import type { DialogVrmFileService } from "./dialogVrmFileService";
 
+/** 保存成功時のBlob、または選択を維持して案内する検証失敗を返す。URL生成は含めない。 */
 export type DialogVrmSelectResult =
     | {
           ok: true;
-          vrmUrl: string;
+          vrmBlob: Blob;
           statusText: string;
           popMessage: string;
       }
@@ -13,8 +14,9 @@ export type DialogVrmSelectResult =
           popError: string;
       };
 
+/** 前回のBlobと表示文言。保存がなければBlobを持たず、既定モデルの選択を維持する。 */
 export type DialogVrmInitialLoadResult = {
-    vrmUrl?: string;
+    vrmBlob?: Blob;
     statusText: string;
 };
 
@@ -23,6 +25,7 @@ export type DialogVrmInitialLoadResult = {
 export class DialogVrmWorkflowService {
     constructor(private readonly fileService: DialogVrmFileService) {}
 
+    /** 形式を検証して保存し、成功後だけ選択用Blobを返す。保存失敗は呼び出し元へ伝播する。 */
     async applySelectedVrmFile(file: File): Promise<DialogVrmSelectResult> {
         // UI通知文言はここで決め、DialogManager 側は結果に応じた state 更新/通知へ専念する。
         if (!this.fileService.isVrmFile(file)) {
@@ -33,24 +36,22 @@ export class DialogVrmWorkflowService {
             };
         }
 
-        const blob = new Blob([file], { type: "application/octet-stream" });
-        const vrmUrl = URL.createObjectURL(blob);
-
         // サムネイルはモデル差し替え後に再生成されるため先にクリアしておく。
-        // 失敗しても VRM 本体更新は継続できるため、ここでは握りつぶさずログのみで継続するのが呼び出し側方針。
+        // 保存成功後にBlobを選択所有者へ返すため、保存失敗時にはURLを生成しない。
         await this.fileService.clearVrmThumbnailCache();
         await this.fileService.saveVrmFile(file);
 
         return {
             ok: true,
-            vrmUrl,
+            vrmBlob: new Blob([file], { type: "application/octet-stream" }),
             statusText: `選択中: ${file.name}`,
             popMessage: "VRMファイルを更新しました。",
         };
     }
 
+    /** 保存済みBlobを復元する。URLの生成・保持・解放は選択所有者へ委ねる。 */
     async loadInitialVrmSelection(): Promise<DialogVrmInitialLoadResult> {
-        // 起動時は「前回選択あり / 既定モデル」の2択だけ返し、DialogManager が表示と scene 初期値へ反映する。
+        // URLを生成せずBlobだけを返し、選択所有者が生成・差し替え・解放をまとめて行う。
         const blob = await this.fileService.loadVrmFileBlob();
         if (!blob) {
             return {
@@ -58,7 +59,7 @@ export class DialogVrmWorkflowService {
             };
         }
         return {
-            vrmUrl: URL.createObjectURL(blob),
+            vrmBlob: blob,
             statusText: "前回選択したVRMモデルを使用中",
         };
     }

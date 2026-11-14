@@ -19,6 +19,7 @@ export class SincroLookingGlassVRMInitializer extends SincroVRMInitializer {
             canvasRoot: this.charCanvas,
             characterControlLayer: this.characterControlLayer,
             vrmUrl: this.appController.dialog.getSelectedVrmUrl(),
+            retainVrmUrl: (url) => this.appController.dialog.retainVrmUrl(url),
             xrMode: true,
             onThumbnailLoaded: (thumbnailImage) => {
                 this.updateSystemIconFromThumbnail(thumbnailImage);

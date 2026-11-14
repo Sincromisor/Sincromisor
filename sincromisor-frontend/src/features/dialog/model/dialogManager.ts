@@ -82,6 +82,11 @@ export class DialogManager {
         return this.stateStore.getSelectedVrmUrl();
     }
 
+    /** シーンの読込中だけURLを保持し、読込終端で呼ぶ解放通知を返す。 */
+    retainVrmUrl(url: string): () => void {
+        return this.vrmStateController.retainVrmUrl(url);
+    }
+
     /** 利用者のVRM選択開始を購読する。初期復元や状態文言の変更では通知しない。 */
     subscribeVrmSelectionChange(listener: () => void): () => void {
         return this.eventHub.subscribeVrmSelectionChange(listener);

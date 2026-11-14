@@ -15,6 +15,8 @@ export type VRMSceneOptions = {
     canvasRoot: HTMLDivElement;
     characterControlLayer: HTMLElement;
     vrmUrl: string;
+    /** 選択所有者から取得する読込中のURL保持。終了通知はモデル読込側が必ず返す。 */
+    retainVrmUrl?: (url: string) => () => void;
     xrMode?: boolean;
     onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | undefined) => void;
     enableInitialUpperBodyFraming?: boolean;
@@ -55,6 +57,7 @@ export class VRMScene {
             scene: this.scene,
             vrmCamera: this.vrmCamera,
             vrmUrl: options.vrmUrl,
+            retainVrmUrl: options.retainVrmUrl,
             onThumbnailLoaded: options.onThumbnailLoaded,
             enableInitialUpperBodyFraming: options.enableInitialUpperBodyFraming,
         });

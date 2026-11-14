@@ -17,6 +17,8 @@ export type SincroAppDialogBridge = {
     loadVrmThumbnailBlob: () => Promise<Blob | undefined>;
     saveVrmThumbnailBlob: (blob: Blob) => Promise<void>;
     getSelectedVrmUrl: () => string;
+    /** 読込終端までURLを保持し、冪等な利用終了通知を返す。 */
+    retainVrmUrl: (url: string) => () => void;
     /** 初期復元・選択保存が未確定の間だけ共有Promiseを返す。 */
     waitForVrmSelection: () => Promise<void> | undefined;
 };

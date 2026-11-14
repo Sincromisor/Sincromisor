@@ -9,6 +9,14 @@ const { coreStart, sceneStart, sceneOptions, poseSettings, motionTuning, charact
         motionTuning: vi.fn(),
         characterVisible: vi.fn(),
     }));
+// DOM通知は起動順序の確認対象外とし、復元失敗時の通常画面通知も置き換える。
+vi.mock("../../../features/dialog/model/dialogNotificationService", () => ({
+    DialogNotificationService: class {
+        writeInfo() {}
+        writeError() {}
+        writePageError() {}
+    },
+}));
 vi.mock("../../controller/sincroController", () => ({
     SincroController: class {
         restoreAudioTuning() {}

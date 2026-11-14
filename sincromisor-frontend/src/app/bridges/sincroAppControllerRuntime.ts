@@ -88,6 +88,7 @@ export function createSincroAppRuntimeBundle(params: {
                 await dialogManager.saveVrmThumbnailBlob(blob);
             },
             getSelectedVrmUrl: () => dialogManager.getSelectedVrmUrl(),
+            retainVrmUrl: (url) => dialogManager.retainVrmUrl(url),
             waitForVrmSelection: () => dialogManager.waitForVrmSelection(),
         },
         chatBridge: {

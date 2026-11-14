@@ -153,6 +153,7 @@ export class SincroVRMInitializer {
             canvasRoot: this.charCanvas,
             characterControlLayer: this.characterControlLayer,
             vrmUrl: this.appController.dialog.getSelectedVrmUrl(),
+            retainVrmUrl: (url) => this.appController.dialog.retainVrmUrl(url),
             xrMode: false,
             onThumbnailLoaded: (thumbnailImage) => {
                 this.updateSystemIconFromThumbnail(thumbnailImage);

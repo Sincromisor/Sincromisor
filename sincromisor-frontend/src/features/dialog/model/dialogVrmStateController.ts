@@ -5,8 +5,7 @@ import type { DialogStateStore } from "./dialogStateStore";
 import { DialogVrmFileService } from "./dialogVrmFileService";
 import { DialogVrmWorkflowService } from "./dialogVrmWorkflowService";
 
-// DialogManager から VRM 選択/保存/状態通知の流れを切り出す controller。
-// DialogManager 側は public API の facade に集中し、VRM 結果文言と cache 操作はここで扱う。
+/** VRMの復元・選択確定とURL所有を担い、表示状態をダイアログへ通知する。 */
 export class DialogVrmStateController {
     private readonly vrmFileService = new DialogVrmFileService();
     private readonly vrmWorkflowService = new DialogVrmWorkflowService(this.vrmFileService);
@@ -14,6 +13,12 @@ export class DialogVrmStateController {
 
     /** 復元・保存の結果を共有する。開始要求の取消しでは、この処理自体を中断しない。 */
     private pendingSelection?: Promise<void>;
+    /** 復元結果を一度だけ採用し、再要求で古い選択を再適用しない。 */
+    private initialRestoration?: Promise<void>;
+    /** この選択処理で生成したURLだけを所有し、選択と進行中の読込が手放すまで保持する。 */
+    private readonly ownedUrls = new Set<string>();
+    /** 同じURLの並行読込も個別に区別し、全利用の終端まで保持する。 */
+    private readonly loadingSelections = new Set<{ url: string }>();
 
     constructor(
         private readonly stateStore: DialogStateStore,
@@ -48,7 +53,7 @@ export class DialogVrmStateController {
                 this.notificationService.writeError(result.popError);
                 return;
             }
-            this.stateStore.setSelectedVrmUrl(result.vrmUrl);
+            this.selectBlob(result.vrmBlob);
             this.setStatusText(result.statusText);
             this.notificationService.writeInfo(result.popMessage);
             frontendLogger.info("VRM file updated.", { size: file.size, type: file.type });
@@ -61,17 +66,19 @@ export class DialogVrmStateController {
 
     /** キャッシュ復元の成功・失敗を確定し、利用者の選択変更としては通知しない。 */
     loadInitialVrmSelection(): Promise<void> {
+        if (this.initialRestoration) return this.initialRestoration;
         this.pendingSelection = this.restoreSelection().finally(() => {
             this.pendingSelection = undefined;
             this.setPending(false);
         });
-        return this.pendingSelection;
+        this.initialRestoration = this.pendingSelection;
+        return this.initialRestoration;
     }
 
     private async restoreSelection(): Promise<void> {
         try {
             const result = await this.vrmWorkflowService.loadInitialVrmSelection();
-            if (result.vrmUrl !== undefined) this.stateStore.setSelectedVrmUrl(result.vrmUrl);
+            if (result.vrmBlob !== undefined) this.selectBlob(result.vrmBlob);
             this.setStatusText(result.statusText);
             frontendLogger.info("VRM file loaded.");
         } catch (error) {
@@ -81,6 +88,33 @@ export class DialogVrmStateController {
             this.notificationService.writePageError(message);
             frontendLogger.error("VRM file load failed.", { error });
         }
+    }
+
+    /** 読込ごとの利用を登録する。成功・失敗・取消しの終端で、戻り値を必ず呼ぶ。 */
+    retainVrmUrl(url: string): () => void {
+        const loading = { url };
+        this.loadingSelections.add(loading);
+        // GLTFLoaderが成功コールバックの例外を失敗コールバックへ渡しても二重解放しない。
+        return () => {
+            if (!this.loadingSelections.delete(loading)) return;
+            this.releaseUnusedUrl(url);
+        };
+    }
+
+    /** 確定したBlobだけをURL化し、旧選択は読込利用がなければここで解放する。 */
+    private selectBlob(blob: Blob): void {
+        const previous = this.stateStore.getSelectedVrmUrl();
+        const url = URL.createObjectURL(blob);
+        this.ownedUrls.add(url);
+        this.stateStore.setSelectedVrmUrl(url);
+        this.releaseUnusedUrl(previous);
+    }
+
+    private releaseUnusedUrl(url: string): void {
+        if (url === this.stateStore.getSelectedVrmUrl()) return;
+        if ([...this.loadingSelections].some((loading) => loading.url === url)) return;
+        // 外部URLや解放済みURLをrevokeしない。GPU資源とCache StorageのBlobは別の所有者が扱う。
+        if (this.ownedUrls.delete(url)) URL.revokeObjectURL(url);
     }
 
     private setPending(pending: boolean): void {

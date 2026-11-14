@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+const restoredBlob = new Blob(["restored"]);
+const selectedBlob = new Blob(["new"]);
+
 const { coreStart, sceneOptions } = vi.hoisted(() => ({
     coreStart: vi.fn(),
     sceneOptions: vi.fn(),
@@ -39,6 +42,10 @@ function deferred<T>() {
 
 beforeEach(() => {
     vi.resetModules();
+    vi.spyOn(URL, "createObjectURL").mockImplementation((blob) =>
+        blob === restoredBlob ? "blob:restored" : "blob:new",
+    );
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
     coreStart.mockClear();
     sceneOptions.mockClear();
     vi.stubGlobal(
@@ -78,7 +85,7 @@ async function setup(obs = false) {
     const { DialogVrmWorkflowService } = await import(
         "../../../features/dialog/model/dialogVrmWorkflowService"
     );
-    const restoring = deferred<{ vrmUrl?: string; statusText: string }>();
+    const restoring = deferred<{ vrmBlob?: Blob; statusText: string }>();
     vi.spyOn(DialogVrmWorkflowService.prototype, "loadInitialVrmSelection").mockReturnValue(
         restoring.promise,
     );
@@ -109,7 +116,7 @@ it.each([false, true])(
         expect(coreStart).not.toHaveBeenCalled();
         expect(sceneOptions).not.toHaveBeenCalled();
         expect(app.calibration.getState()).toEqual({ status: "idle" });
-        restoring.resolve({ vrmUrl: "blob:restored", statusText: "前回選択したVRMモデルを使用中" });
+        restoring.resolve({ vrmBlob: restoredBlob, statusText: "前回選択したVRMモデルを使用中" });
         await vi.waitFor(() => expect(coreStart).toHaveBeenCalledOnce());
         expect(sceneOptions).toHaveBeenCalledExactlyOnceWith(
             expect.objectContaining({ vrmUrl: "blob:restored" }),
@@ -146,7 +153,7 @@ it.each(["stop", "end", "release"])(
         if (operation === "stop") app.stopRTC();
         else if (operation === "end") app.endExperience();
         else app.releaseEventSubscriptions();
-        restoring.resolve({ vrmUrl: "blob:restored", statusText: "復元済み" });
+        restoring.resolve({ vrmBlob: restoredBlob, statusText: "復元済み" });
         await app.dialog.waitForVrmSelection();
         await Promise.resolve();
         expect(coreStart).not.toHaveBeenCalled();
@@ -160,7 +167,7 @@ it("復元後の選択保存も確定まで開始せず、保存したモデル�
     const { app, restoring, selection } = await setup();
     restoring.resolve({ statusText: "既定のVRMモデルを使用中" });
     await app.dialog.waitForVrmSelection();
-    const saving = deferred<{ ok: true; vrmUrl: string; statusText: string; popMessage: string }>();
+    const saving = deferred<{ ok: true; vrmBlob: Blob; statusText: string; popMessage: string }>();
     selection.mockReturnValue(saving.promise);
     app.dialog.applySelectedVrmFile(new File(["vrm"], "new.vrm"));
     app.start();
@@ -168,7 +175,7 @@ it("復元後の選択保存も確定まで開始せず、保存したモデル�
     expect(app.getDialogUiState().startButtonDisabled).toBe(true);
     saving.resolve({
         ok: true,
-        vrmUrl: "blob:new",
+        vrmBlob: selectedBlob,
         statusText: "選択中: new.vrm",
         popMessage: "更新済み",
     });
@@ -182,13 +189,18 @@ it("保存開始の同期購読からの開始も保存を待つ", async () => {
     const { app, restoring, selection } = await setup();
     restoring.resolve({ statusText: "既定のVRMモデルを使用中" });
     await app.dialog.waitForVrmSelection();
-    const saving = deferred<{ ok: true; vrmUrl: string; statusText: string; popMessage: string }>();
+    const saving = deferred<{ ok: true; vrmBlob: Blob; statusText: string; popMessage: string }>();
     selection.mockReturnValue(saving.promise);
     const { DialogManager } = await import("../../../features/dialog/model/dialogManager");
     const unsubscribe = DialogManager.getManager().subscribeVrmSelectionChange(() => app.start());
     app.dialog.applySelectedVrmFile(new File(["vrm"], "new.vrm"));
     expect(coreStart).not.toHaveBeenCalled();
-    saving.resolve({ ok: true, vrmUrl: "blob:new", statusText: "選択中", popMessage: "更新済み" });
+    saving.resolve({
+        ok: true,
+        vrmBlob: selectedBlob,
+        statusText: "選択中",
+        popMessage: "更新済み",
+    });
     await vi.waitFor(() => expect(coreStart).toHaveBeenCalledOnce());
     expect(sceneOptions).toHaveBeenCalledExactlyOnceWith(
         expect.objectContaining({ vrmUrl: "blob:new" }),
@@ -202,7 +214,7 @@ it("開始準備の同期通知で終了した場合も開始しない", async (
         if (event.type === "lifecycle" && event.state === "starting") app.endExperience();
     });
     app.start();
-    restoring.resolve({ vrmUrl: "blob:restored", statusText: "復元済み" });
+    restoring.resolve({ vrmBlob: restoredBlob, statusText: "復元済み" });
     await app.dialog.waitForVrmSelection();
     await Promise.resolve();
     expect(coreStart).not.toHaveBeenCalled();

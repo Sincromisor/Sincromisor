@@ -1,4 +1,4 @@
-// reason: structure-threshold-exception VRM読込と毎フレーム制御の所有を保ち、今回の診断通知変更ではモデル初期化の分割へ範囲を広げない。
+// reason: structure-threshold-exception VRM読込と毎フレーム制御の所有を保つ。URL利用期間は読込境界に閉じ、選択側の所有管理は別層へ委ねる。
 import { type VRM, VRMLoaderPlugin, VRMMetaLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 import type { Object3D, Scene } from "three";
 import { Timer, Vector3 } from "three";
@@ -42,12 +42,11 @@ export type VRMCharacterManagerOptions = {
     scene: Scene;
     vrmCamera: VRMCamera;
     vrmUrl: string;
+    /** 読込終端で呼ぶ冪等な終了通知を返す。外部URLの場合は省略できる。 */
+    retainVrmUrl?: (url: string) => () => void;
     onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | undefined) => void;
     enableInitialUpperBodyFraming?: boolean;
 };
-
-// import { MToonMaterialLoaderPlugin } from '@pixiv/three-vrm';
-// import { MToonNodeMaterial } from '@pixiv/three-vrm/nodes';
 
 /**
  * VRM 1.0 の読込と各制御処理を所有し、描画ループから毎フレーム更新する。
@@ -82,50 +81,65 @@ export class VRMCharacterManager {
     private readonly diagnostics?: VRMDiagnostics;
     private readonly enableInitialUpperBodyFraming: boolean;
     private visible: boolean = true;
+    private readonly retainVrmUrl?: (url: string) => () => void;
 
     constructor(options: VRMCharacterManagerOptions) {
         this.diagnostics = options.diagnostics;
         this.scene = options.scene;
         this.vrmCamera = options.vrmCamera;
         this.onThumbnailLoaded = options.onThumbnailLoaded;
+        this.retainVrmUrl = options.retainVrmUrl;
         this.enableInitialUpperBodyFraming = options.enableInitialUpperBodyFraming ?? false;
         this.behaviorState = CharacterBehaviorState.getManager();
         this.load(options.vrmUrl);
     }
 
-    // VRMキャラクターの load。
-    // ロード完了後に各ボーン/表情 controller を生成し、UI 用サムネイルも callback で返す。
+    /** URLを読込終端まで保持し、成功処理内の例外も含めて選択所有者へ利用終了を返す。 */
     private load(url: string): void {
-        const loader: GLTFLoader = new GLTFLoader();
+        const releaseUrl = this.retainVrmUrl?.(url);
+        try {
+            this.createLoader().load(
+                url,
+                (gltf: GLTF) => {
+                    try {
+                        this.attachLoadedVrm(gltf);
+                        frontendLogger.diagnostic("model", "ready");
+                    } finally {
+                        releaseUrl?.();
+                    }
+                },
+                (progress) => {
+                    frontendLogger.debug("Loading VRM model.", {
+                        percent: 100.0 * (progress.loaded / progress.total),
+                    });
+                },
+                (error) => {
+                    try {
+                        frontendLogger.error("Failed to load VRM model.", { error });
+                        throw Object.assign(new Error("Failed to load VRM model."), {
+                            cause: error,
+                        });
+                    } finally {
+                        releaseUrl?.();
+                    }
+                },
+            );
+        } catch (error) {
+            // ローダー生成・要求開始の同期失敗でも、利用登録を残さない。
+            releaseUrl?.();
+            throw error;
+        }
+    }
+
+    private createLoader(): GLTFLoader {
+        const loader = new GLTFLoader();
         loader.register((parser: GLTFParser) => {
-            /*
-            const mtoonMaterialPlugin: MToonMaterialLoaderPlugin = new MToonMaterialLoaderPlugin(parser, {
-                materialType: MToonNodeMaterial,
-            });
-            return new VRMLoaderPlugin(parser, { mtoonMaterialPlugin });*/
-            // three-vrmはデフォルトでmeta.thumbnailImageを読まないため、
-            // needThumbnailImageを明示してチャットアイコン用途の画像を取得する。
+            // three-vrmは既定でサムネイルを読まないため、チャットアイコン向けに取得を指定する。
             return new VRMLoaderPlugin(parser, {
                 metaPlugin: new VRMMetaLoaderPlugin(parser, { needThumbnailImage: true }),
             });
         });
-
-        loader.load(
-            url,
-            (gltf: GLTF) => {
-                this.attachLoadedVrm(gltf);
-                frontendLogger.diagnostic("model", "ready");
-            },
-            (progress) => {
-                frontendLogger.debug("Loading VRM model.", {
-                    percent: 100.0 * (progress.loaded / progress.total),
-                });
-            },
-            (error) => {
-                frontendLogger.error("Failed to load VRM model.", { error });
-                throw new Error("Failed to load VRM model.");
-            },
-        );
+        return loader;
     }
 
     private attachLoadedVrm(gltf: GLTF): void {
