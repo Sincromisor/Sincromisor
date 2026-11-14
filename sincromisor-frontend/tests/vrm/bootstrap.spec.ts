@@ -143,7 +143,7 @@ test("開始後の設定読込と描画の失敗も機器を終了して回復�
         await expect(page.getByRole("link", { name: "トップへ戻る" })).toBeFocused();
         await page.unroute("**/app/settings/react/sincroControlPanel.tsx*");
         await page.keyboard.press("Shift+Tab");
-        await page.keyboard.press("Enter");
+        await Promise.all([page.waitForEvent("load"), page.keyboard.press("Enter")]);
         await expect(page.locator("body")).toHaveAttribute("data-start-count", "1");
         await expect(page.getByRole("heading", { name: "起動に失敗しました" })).toHaveCount(0);
     }
@@ -290,6 +290,7 @@ test("キャラクター選び直しは既存レンダラーでモデルを交�
     await page.locator("#debugMenuButton").click();
     await page.getByRole("menuitem", { name: "基本設定", exact: true }).click();
     const settings = page.getByRole("dialog", { name: "基本設定", exact: true });
+    await expect(settings.getByRole("region", { name: "基本設定", exact: true })).toBeVisible();
     const characterCategory = settings.getByRole("tab", { name: "キャラクター", exact: true });
     if (await characterCategory.isVisible()) await characterCategory.click();
     else
