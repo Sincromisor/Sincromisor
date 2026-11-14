@@ -212,12 +212,13 @@ export class UserMediaManager {
         this.acquisition.close();
     }
 
-    // 音声制約の boolean パラメータ更新を共通化する。
+    // 保持設定を先に更新し、適用待ちのトラックの古い制約で巻き戻さない。
     private updateAudioBooleanConstraint(key: AudioBooleanConstraintKey, enabled: boolean): void {
         if (!setAudioBooleanConstraintInConfig(this.config, key, enabled)) {
             return;
         }
         applyAudioBooleanConstraintToTrack({
+            config: this.config,
             key,
             enabled,
             rawTrack: this.acquisition.rawTrack,

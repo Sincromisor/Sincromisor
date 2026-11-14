@@ -9,9 +9,9 @@
 
 <!-- AUTOGEN:tasks START — scripts/tasks/genIndex.mjs が再生成します。手で編集しないでください -->
 
-## タスク一覧（自動生成 / 全 7 件）
+## タスク一覧（自動生成 / 全 8 件）
 
-### done（完了） — 7 件
+### done（完了） — 8 件
 
 | タスク                                                                                                                           | タイトル                                        | 判定    | 依存 |
 | -------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------- | ---- |
@@ -22,5 +22,6 @@
 | [task-2004-apply-selected-audio-input-device](./task-2004-apply-selected-audio-input-device/task.md)                             | apply selected audio input device               | ✅ PASS | —    |
 | [task-2005-apply-selected-gaze-camera-device](./task-2005-apply-selected-gaze-camera-device/task.md)                             | apply selected gaze camera device               | ✅ PASS | —    |
 | [task-2006-device-selection-ui-polish-and-status-alignment](./task-2006-device-selection-ui-polish-and-status-alignment/task.md) | device selection ui polish and status alignment | ✅ PASS | —    |
+| [task-261114194445-preserve-audio-constraints](./task-261114194445-preserve-audio-constraints/task.md)                           | マイク設定変更時に他の音声制約を維持する        | ✅ PASS | —    |
 
 <!-- AUTOGEN:tasks END -->
