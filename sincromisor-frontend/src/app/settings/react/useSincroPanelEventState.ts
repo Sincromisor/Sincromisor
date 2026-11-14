@@ -1,6 +1,10 @@
 import { useCallback, useMemo, useState } from "react";
-import type { SincroAppEvent, SincroAppLifecycleState } from "../../controller";
-import { SincroAppController } from "../../controller";
+import type {
+    SincroAppController,
+    SincroAppEvent,
+    SincroAppLifecycleState,
+} from "../../controller";
+import { getActiveSincroAppController } from "../../controller/activeSincroAppController";
 import { useSincroAppControllerSettingsState } from "../../react/useSincroAppControllerSettingsState";
 import { createPanelCameraGuideState, type PanelCameraGuideState } from "./panelCameraGuideState";
 import type {
@@ -101,7 +105,7 @@ function useSincroPanelRuntimeEventState(): {
 
 /** 有効アプリの通知をパネル表示へ反映し、解除時に古いカメラ案内を消す。 */
 export function useSincroPanelEventState(): SincroPanelEventState {
-    const initialController = SincroAppController.getCurrent();
+    const initialController = getActiveSincroAppController();
     const runtimeEventState = useSincroPanelRuntimeEventState();
     const eventHandlers = useMemo(
         () => createSincroPanelRuntimeEventHandlers(runtimeEventState.setters),

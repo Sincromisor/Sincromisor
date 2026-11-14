@@ -1,0 +1,14 @@
+id: task-261115055438-panel-loading-baseline
+title: 画面の初期読み込みを計測して遅延対象を確定する
+category: frontend-maintenance
+status: open
+depends_on:
+  - task-261115055437-ui-controller-imports
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-11-15
+closed_at: null
+legacy_ids: []

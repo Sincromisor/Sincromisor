@@ -1,5 +1,6 @@
 import { useCallback } from "react";
-import { SincroAppController, type SincroAppEvent } from "../../../app/controller";
+import type { SincroAppController, SincroAppEvent } from "../../../app/controller";
+import { getActiveSincroAppController } from "../../../app/controller/activeSincroAppController";
 import { useSincroAppControllerSettingsState } from "../../../app/react/useSincroAppControllerSettingsState";
 import { useSincroMediaDeviceState } from "../../../app/react/useSincroMediaDeviceState";
 import { buildConfigurationDialogActions } from "./configurationDialogActions";
@@ -12,9 +13,9 @@ import {
     useConfigurationDialogUiSnapshots,
 } from "./configurationDialogStateGroups";
 
-// dialog 用の最小購読 hook。Control Panel 用 hook の全状態を持たず、settings 系 + VRM UI状態だけを扱う。
+/** 起動前画面に必要な設定・機器・VRM選択を購読し、有効アプリへの操作を返す。 */
 export function useConfigurationDialogSettingsState() {
-    const initialController = SincroAppController.getCurrent();
+    const initialController = getActiveSincroAppController();
     const dialogState = useConfigurationDialogUiSnapshots(initialController);
     const dialogSetters = useConfigurationDialogStateSetters(dialogState);
     const hydrateDialogUi = useCallback(

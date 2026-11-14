@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { frontendLogger } from "../../shared/logging/appLogger";
 import type { SincroVRMRoots } from "../bootstrap/sincroVrmInitializer";
-import { SincroAppController } from "../controller/sincroAppController";
+import { getActiveSincroAppController } from "../controller/activeSincroAppController";
 import { showBootstrapFailure } from "./bootstrapFailureView";
 import { SincroPageAppShell } from "./sincroPageAppShell";
 
@@ -65,7 +65,7 @@ export function bootstrapSincroPageAppShell<TModule>(
 
 /** 解除を先行して待機中の開始を拒否し、解除の失敗時にも機器終了を試みる。 */
 function stopFailedApp(): void {
-    const app = SincroAppController.getCurrent();
+    const app = getActiveSincroAppController();
     if (!app) return;
     try {
         app.releaseEventSubscriptions();

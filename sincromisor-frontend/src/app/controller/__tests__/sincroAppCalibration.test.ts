@@ -8,6 +8,7 @@ import type { TrackerRuntimeCallbacks } from "../../../features/gaze/trackingRun
 import { UserMediaManager } from "../../../features/media/userMedia/userMediaManager";
 import { VideoInputManager } from "../../../features/media/userMedia/videoInputManager";
 import { SincroAppSettingsModel } from "../../settings/sincroAppSettingsModel";
+import { getActiveSincroAppController } from "../activeSincroAppController";
 import { SincroAppController } from "../sincroAppController";
 
 const rtcHealth = vi.hoisted(() => ({ notify: (_message?: string) => {} }));
@@ -90,7 +91,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-    SincroAppController.getCurrent()?.releaseEventSubscriptions();
+    getActiveSincroAppController()?.releaseEventSubscriptions();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
 });

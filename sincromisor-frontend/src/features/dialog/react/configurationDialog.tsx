@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
-import type { SincroAppDialogUiState, SincroAppEvent } from "../../../app/controller";
-import { SincroAppController } from "../../../app/controller";
+import type {
+    SincroAppController,
+    SincroAppDialogUiState,
+    SincroAppEvent,
+} from "../../../app/controller";
+import { getActiveSincroAppController } from "../../../app/controller/activeSincroAppController";
 import { subscribeActiveSincroAppEvents } from "../../../app/react/subscribeActiveSincroAppEvents";
 import { ImportantNotice } from "../../../app/shell/react/importantNotice";
 import { StartupDialogFrame } from "../../../app/shell/react/overlay/startupDialogFrame";
@@ -14,10 +18,9 @@ const defaultDialogUiState: SincroAppDialogUiState = {
     startButtonText: "開始する",
 };
 
-// 起動前 dialog の native dialog 要素と React UI を束ねる root component。
-// visible UI は React が所有し、HTMLDialogElement の開閉同期だけを platform hook 経由で扱う。
+/** 起動前の設定画面を描画し、有効アプリの状態に合わせてダイアログを開閉する。 */
 export function ConfigurationDialog() {
-    const initialController = SincroAppController.getCurrent();
+    const initialController = getActiveSincroAppController();
     const [currentController, setCurrentController] = useState<SincroAppController | undefined>(
         initialController,
     );

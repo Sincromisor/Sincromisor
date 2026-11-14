@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { DebugConsoleManager } from "../../../features/debug/model/debugConsoleManager";
+import { getActiveSincroAppController } from "../activeSincroAppController";
 import { SincroAppController } from "../sincroAppController";
 
 // 機器起動だけを代替し、実際のアプリ窓口・設定正規化・解除を通す。
@@ -21,7 +22,7 @@ vi.mock("../sincroController", () => ({
     ),
 }));
 afterEach(() => {
-    SincroAppController.getCurrent()?.releaseEventSubscriptions();
+    getActiveSincroAppController()?.releaseEventSubscriptions();
     vi.unstubAllGlobals();
 });
 

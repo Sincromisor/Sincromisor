@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { useChatSnapshot } from "../../../features/conversation/chat/react/useChatSnapshot";
 import { SettingsButton } from "../../../features/settings/react/primitives/settingsActionControls";
-import { SincroAppController } from "../../controller";
+import { getActiveSincroAppController } from "../../controller/activeSincroAppController";
 import { audioInputFailureMessage } from "../../controller/sincroAudioInputState";
 import { useRightToolPanelState } from "../../react/useRightToolPanelState";
 import { useSincroAppControllerSettingsState } from "../../react/useSincroAppControllerSettingsState";
@@ -55,7 +55,7 @@ export function ImportantNotice({ floating = false }: { floating?: boolean }) {
                     <SettingsButton
                         type="button"
                         onClick={() =>
-                            SincroAppController.getCurrent()?.chat.dismissImportantNotice()
+                            getActiveSincroAppController()?.chat.dismissImportantNotice()
                         }
                     >
                         通知を閉じる

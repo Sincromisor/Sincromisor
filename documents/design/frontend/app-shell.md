@@ -117,7 +117,7 @@
 - 内部イベント
     - React UIはアプリ制御のスナップショット / 購読APIを使う。
     - 管理処理単一インスタンスへの直接依存は段階的に減らす。
-    - 現在のアプリ取得・差し替え購読は `app/controller/activeSincroAppController.ts`、アプリごとの購読の接続・解除は `subscribeActiveSincroAppController.ts`を使う。いずれもController本体を実行時に読み込まない。保持先は `sincroAppActiveControllerRegistry.ts`の共有インスタンスとし、書き込みはControllerが行う。既存の静的取得・購読メソッドも同じ保持先へ委譲する。
+    - 現在のアプリ取得・差し替え購読は `app/controller/activeSincroAppController.ts`、アプリごとの購読の接続・解除は `subscribeActiveSincroAppController.ts`を使う。いずれもController本体を実行時に読み込まない。保持先は `sincroAppActiveControllerRegistry.ts`の共有インスタンスとし、書き込みはControllerが行う。UI・購読フックと起動失敗処理はこれらのモジュールを直接読み込み、Controllerとイベントの型は `import type`で参照する。Controllerの静的取得・購読APIと購読関数の再公開は置かず、Controllerの値参照は起動時の生成に限定する。
     - 各 `SincroAppController`は自分が登録した管理処理と `window`の購読解除関数を保持する。有効な制御処理の差し替えでは旧購読を解除してから新しい購読を接続する。解除を再実行しても共有サービスや新制御処理には影響しない。
     - Reactの設定値・操作可否・案内は `SincroAppController.settingsStore`の1つのスナップショットを `useSyncExternalStore`で購読する。内容が変わらない間は取得結果の参照を維持する。
     - 起動・接続・ページ固有状態は既存のイベント購読を使う。描画ごとのコールバックの作り直しでは再購読しない。VRMシーン向けの `settings_snapshot`イベントは維持する。

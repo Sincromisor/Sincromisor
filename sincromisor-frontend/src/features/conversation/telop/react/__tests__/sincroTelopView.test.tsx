@@ -4,10 +4,8 @@ import type { TelopChannelMessage } from "../../../../rtc/rtcMessage";
 import { TalkManager } from "../../../talk/talkManager";
 import { SincroTelopView } from "../sincroTelopView";
 
-vi.mock("../../../../../app/controller", () => ({
-    SincroAppController: {
-        getCurrent: () => ({ state: TalkManager.getManager() }),
-    },
+vi.mock("../../../../../app/controller/activeSincroAppController", () => ({
+    getActiveSincroAppController: () => ({ state: TalkManager.getManager() }),
 }));
 vi.mock("../../../../../app/react/subscribeActiveSincroAppEvents", () => ({
     subscribeActiveSincroAppEvents: vi.fn(),

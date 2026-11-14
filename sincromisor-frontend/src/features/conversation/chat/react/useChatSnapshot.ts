@@ -1,8 +1,6 @@
 import { useSyncExternalStore } from "react";
-import {
-    SincroAppController,
-    subscribeActiveSincroAppController,
-} from "../../../../app/controller";
+import { getActiveSincroAppController } from "../../../../app/controller/activeSincroAppController";
+import { subscribeActiveSincroAppController } from "../../../../app/controller/subscribeActiveSincroAppController";
 import type { ChatMessageSnapshot } from "../model/chatMessageService";
 
 const emptySnapshot: ChatMessageSnapshot = {
@@ -10,7 +8,7 @@ const emptySnapshot: ChatMessageSnapshot = {
     systemIconUrl: "../images/icon-system.webp",
 };
 function getSnapshot(): ChatMessageSnapshot {
-    return SincroAppController.getCurrent()?.chat.getSnapshot() ?? emptySnapshot;
+    return getActiveSincroAppController()?.chat.getSnapshot() ?? emptySnapshot;
 }
 function subscribe(listener: () => void): () => void {
     return subscribeActiveSincroAppController((controller) => {

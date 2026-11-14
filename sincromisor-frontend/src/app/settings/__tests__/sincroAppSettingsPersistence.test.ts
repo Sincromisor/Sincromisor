@@ -1,4 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
+import { getActiveSincroAppController } from "../../controller/activeSincroAppController";
 import { SincroAppController } from "../../controller/sincroAppController";
 import { SincroAppSettingsModel } from "../../settings/sincroAppSettingsModel";
 import {
@@ -22,7 +23,7 @@ vi.mock("../../controller/sincroController", () => ({
     },
 }));
 afterEach(() => {
-    SincroAppController.getCurrent()?.releaseEventSubscriptions();
+    getActiveSincroAppController()?.releaseEventSubscriptions();
     vi.unstubAllGlobals();
 });
 

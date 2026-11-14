@@ -99,13 +99,9 @@ it("差し替えで旧外部購読を解除し、Reactの初期同期とRTC停�
     });
     const old = new SincroAppController();
     const currentSeen = vi.fn();
-    const staticSeen = vi.fn();
     const unsubscribeCurrent = subscribeCurrentSincroAppController(currentSeen);
-    const unsubscribeStatic = SincroAppController.subscribeCurrent(staticSeen);
     expect(currentSeen).toHaveBeenCalledExactlyOnceWith(old);
-    expect(staticSeen).toHaveBeenCalledExactlyOnceWith(old);
     expect(getActiveSincroAppController()).toBe(old);
-    expect(SincroAppController.getCurrent()).toBe(old);
     const oldEvents = vi.fn();
     const unsubscribeOld = old.subscribe(oldEvents);
     const reactEvents = vi.fn();
@@ -128,14 +124,11 @@ it("差し替えで旧外部購読を解除し、Reactの初期同期とRTC停�
         reactEvents.mockClear();
         current = new SincroAppController();
         expect(getActiveSincroAppController()).toBe(current);
-        expect(SincroAppController.getCurrent()).toBe(current);
         expect(currentSeen).toHaveBeenLastCalledWith(current);
-        expect(staticSeen.mock.calls).toEqual(currentSeen.mock.calls);
         const releaseCurrent = vi.spyOn(current, "releaseEventSubscriptions");
         SincroAppController["setCurrent"](current);
         expect(releaseCurrent).not.toHaveBeenCalled();
         expect(currentSeen).toHaveBeenCalledTimes(3);
-        expect(staticSeen.mock.calls).toEqual(currentSeen.mock.calls);
         expect(reactEvents).toHaveBeenCalledWith(
             expect.objectContaining({ type: "lifecycle", state: "idle" }),
             current,
@@ -225,8 +218,6 @@ it("差し替えで旧外部購読を解除し、Reactの初期同期とRTC停�
         SincroAppController["setCurrent"](undefined);
         expect(order).toEqual(["reset", "unbind", "clear"]);
         expect(getActiveSincroAppController()).toBeUndefined();
-        expect(SincroAppController.getCurrent()).toBeUndefined();
-        expect(staticSeen.mock.calls).toEqual(currentSeen.mock.calls);
         unsubscribeClear();
         unsubscribeReset();
         current.releaseEventSubscriptions();
@@ -239,7 +230,6 @@ it("差し替えで旧外部購読を解除し、Reactの初期同期とRTC停�
         expect(reactEvents).not.toHaveBeenCalled();
     } finally {
         unsubscribeCurrent();
-        unsubscribeStatic();
         unsubscribeReact();
         unsubscribeSettings();
         unsubscribeOld();

@@ -1,6 +1,6 @@
 import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { TelopTextSegment } from "../../../../app/controller";
-import { SincroAppController } from "../../../../app/controller";
+import { getActiveSincroAppController } from "../../../../app/controller/activeSincroAppController";
 import { subscribeActiveSincroAppEvents } from "../../../../app/react/subscribeActiveSincroAppEvents";
 
 /** 発話単位の履歴と受信通知からテロップを描画し、最新文字へスクロールする。 */
@@ -11,7 +11,7 @@ export function SincroTelopView() {
 }
 
 function useSincroTelopSegments() {
-    const initialController = SincroAppController.getCurrent();
+    const initialController = getActiveSincroAppController();
     const [segments, setSegments] = useState<TelopTextSegment[]>(
         initialController?.state.getTelopTextSegmentsSnapshot() ?? [],
     );

@@ -5,6 +5,7 @@ import type { SincroTrackerWorkerOutputMessage } from "../../../features/gaze/tr
 import { TrackerRuntime } from "../../../features/gaze/trackingRuntime/trackerRuntime";
 import { UserMediaAudioProcessor } from "../../../features/media/vad/userMediaAudioProcessor";
 import { SincroAppSettingsModel } from "../../settings/sincroAppSettingsModel";
+import { getActiveSincroAppController } from "../activeSincroAppController";
 import { SincroAppController } from "../sincroAppController";
 import type { SincroAppEvent } from "../sincroAppTypes";
 import { SincroRtcSessionController } from "../sincroRtcSessionController";
@@ -115,8 +116,8 @@ beforeEach(() => {
     );
 });
 afterEach(() => {
-    SincroAppController.getCurrent()?.endExperience();
-    SincroAppController.getCurrent()?.releaseEventSubscriptions();
+    getActiveSincroAppController()?.endExperience();
+    getActiveSincroAppController()?.releaseEventSubscriptions();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
 });

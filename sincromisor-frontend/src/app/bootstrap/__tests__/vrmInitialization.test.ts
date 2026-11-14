@@ -107,7 +107,9 @@ it("実際の3ページ入口で設定確定後に手動・OBS開始し、再開
             vi.spyOn(frontendLogger, "debug").mockImplementation(() => {});
             vi.spyOn(frontendLogger, "error").mockImplementation(() => {});
             const cachedWarning = vi.spyOn(frontendLogger, "warn").mockImplementation(() => {});
-            const { SincroAppController } = await import("../../controller");
+            const { getActiveSincroAppController } = await import(
+                "../../controller/activeSincroAppController"
+            );
             const { ChatMessageService } = await import(
                 "../../../features/conversation/chat/model/chatMessageService"
             );
@@ -117,7 +119,7 @@ it("実際の3ページ入口で設定確定後に手動・OBS開始し、再開
                 "writeUnknownUserMessage",
             );
             coreStart.mockImplementation(() => {
-                const app = SincroAppController.getCurrent();
+                const app = getActiveSincroAppController();
                 expect(app?.getSettingsSnapshot()).toMatchObject({
                     titleText: "復元済み",
                     characterMotionScale: 0.72,
@@ -155,8 +157,8 @@ it("実際の3ページ入口で設定確定後に手動・OBS開始し、再開
                 (
                     await import("../../../pages/lookingGlassVrm/mainVrmLookingGlass")
                 ).initializeLookingGlassVrmPage(roots);
-            await vi.waitFor(() => expect(SincroAppController.getCurrent()).toBeDefined());
-            const app = SincroAppController.getCurrent();
+            await vi.waitFor(() => expect(getActiveSincroAppController()).toBeDefined());
+            const app = getActiveSincroAppController();
             await vi.waitFor(() => expect(coreStart).toHaveBeenCalledTimes(obs ? 1 : 0));
             app?.start();
             app?.start();
@@ -207,7 +209,9 @@ it("初期化失敗を入口へ報告し、OBSも手動も部分的に開始し�
         },
     });
     const { SincroAppSettingsModel } = await import("../../settings/sincroAppSettingsModel");
-    const { SincroAppController } = await import("../../controller");
+    const { getActiveSincroAppController } = await import(
+        "../../controller/activeSincroAppController"
+    );
     vi.spyOn(SincroAppSettingsModel.prototype, "updateCharacterStatus").mockImplementation(() => {
         throw new Error("initialization failed");
     });
@@ -218,9 +222,9 @@ it("初期化失敗を入口へ報告し、OBSも手動も部分的に開始し�
             characterControlLayer: Object.create(null),
         }),
     ).toThrow("initialization failed");
-    expect(() => SincroAppController.getCurrent()?.start()).not.toThrow();
-    expect(SincroAppController.getCurrent()?.calibration.getState()).toEqual({ status: "idle" });
+    expect(() => getActiveSincroAppController()?.start()).not.toThrow();
+    expect(getActiveSincroAppController()?.calibration.getState()).toEqual({ status: "idle" });
     expect(coreStart).not.toHaveBeenCalled();
     expect(sceneStart).not.toHaveBeenCalled();
-    SincroAppController.getCurrent()?.releaseEventSubscriptions();
+    getActiveSincroAppController()?.releaseEventSubscriptions();
 });

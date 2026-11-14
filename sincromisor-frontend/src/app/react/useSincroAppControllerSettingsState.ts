@@ -9,7 +9,7 @@ import type {
     SincroAppStartupSettingsCapabilities,
     SincroAppStartupSettingsStatus,
 } from "../controller";
-import { SincroAppController as SincroAppControllerClass } from "../controller";
+import { getActiveSincroAppController } from "../controller/activeSincroAppController";
 import {
     createDefaultSincroAppSettingsSnapshot,
     createDefaultSincroAppSettingsUiState,
@@ -76,7 +76,7 @@ const subscribeEmptySettings = () => () => {};
 export function useSincroAppControllerSettingsState(
     options: UseSincroAppControllerSettingsStateOptions = {},
 ): SincroAppControllerSettingsState {
-    const initialController = options.initialController ?? SincroAppControllerClass.getCurrent();
+    const initialController = options.initialController ?? getActiveSincroAppController();
     const [hasActiveController, setHasActiveController] = useState<boolean>(!!initialController);
     const [currentController, setCurrentController] = useState<SincroAppController | undefined>(
         initialController,

@@ -75,8 +75,10 @@ beforeEach(() => {
     });
 });
 afterEach(async () => {
-    const { SincroAppController } = await import("../../controller");
-    SincroAppController.getCurrent()?.releaseEventSubscriptions();
+    const { getActiveSincroAppController } = await import(
+        "../../controller/activeSincroAppController"
+    );
+    getActiveSincroAppController()?.releaseEventSubscriptions();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
 });
@@ -105,8 +107,10 @@ async function setup(obs = false) {
         canvasRoot: Object.create(null),
         characterControlLayer: Object.create(null),
     });
-    const { SincroAppController } = await import("../../controller");
-    const app = SincroAppController.getCurrent();
+    const { getActiveSincroAppController } = await import(
+        "../../controller/activeSincroAppController"
+    );
+    const app = getActiveSincroAppController();
     if (!app) throw new Error("Expected initialized app");
     return { app, restoring, selection, recoveryNotice };
 }

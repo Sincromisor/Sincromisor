@@ -28,3 +28,23 @@ it("Controller本体なしで現在値を取得・購読できる", async () => 
     unbind();
     expect(release).toHaveBeenCalledOnce();
 });
+
+it("UIの購読入口からController本体を読み込まない", async () => {
+    const { subscribeActiveSincroAppEvents } = await import(
+        "../../react/subscribeActiveSincroAppEvents"
+    );
+    const { useChatSnapshot } = await import(
+        "../../../features/conversation/chat/react/useChatSnapshot"
+    );
+    const { useSincroAppControllerSettingsState } = await import(
+        "../../react/useSincroAppControllerSettingsState"
+    );
+    expect(useChatSnapshot).toBeTypeOf("function");
+    expect(useSincroAppControllerSettingsState).toBeTypeOf("function");
+    const onControllerChange = vi.fn();
+    const onEvent = vi.fn();
+    const unsubscribe = subscribeActiveSincroAppEvents({ onControllerChange, onEvent });
+    expect(onControllerChange).toHaveBeenCalledExactlyOnceWith(undefined);
+    expect(onEvent).not.toHaveBeenCalled();
+    unsubscribe();
+});

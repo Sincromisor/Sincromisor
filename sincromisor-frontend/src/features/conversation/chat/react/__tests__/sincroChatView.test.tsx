@@ -3,11 +3,11 @@ import { expect, it, vi } from "vitest";
 import { ChatMessageService } from "../../model/chatMessageService";
 import { SincroChatView } from "../sincroChatView";
 
-vi.mock("../../../../../app/controller", () => ({
+vi.mock("../../../../../app/controller/activeSincroAppController", () => ({
+    getActiveSincroAppController: () => ({ chat: ChatMessageService.getService() }),
+}));
+vi.mock("../../../../../app/controller/subscribeActiveSincroAppController", () => ({
     subscribeActiveSincroAppController: vi.fn(),
-    SincroAppController: {
-        getCurrent: () => ({ chat: ChatMessageService.getService() }),
-    },
 }));
 
 it("DOMなしで履歴を保持し、同一ID更新・件数制限・文字列表示・アイコンを初期描画へ反映する", () => {

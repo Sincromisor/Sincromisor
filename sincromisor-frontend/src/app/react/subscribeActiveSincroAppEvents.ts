@@ -1,8 +1,8 @@
 import type { SincroAppController, SincroAppEvent } from "../controller";
-import { subscribeActiveSincroAppController } from "../controller";
+import { subscribeActiveSincroAppController } from "../controller/subscribeActiveSincroAppController";
 
 type ActiveEventOptions = {
-    // active controller 差し替え時の local state 同期用。
+    // 有効アプリの差し替え時に画面の保持状態を同期する。
     onControllerChange?: (controller: SincroAppController | undefined) => void;
     onEvent: (event: SincroAppEvent, controller: SincroAppController) => void;
 };

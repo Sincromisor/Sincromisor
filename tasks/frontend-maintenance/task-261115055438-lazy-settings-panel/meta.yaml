@@ -1,0 +1,14 @@
+id: task-261115055438-lazy-settings-panel
+title: 常設設定パネルを起動処理から分離して読み込む
+category: frontend-maintenance
+status: blocked
+depends_on:
+  - task-261115055438-panel-loading-baseline
+superseded_by: null
+review: APPROVED
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-11-15
+closed_at: null
+legacy_ids: []

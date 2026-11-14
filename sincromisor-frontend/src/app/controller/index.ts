@@ -17,4 +17,3 @@ export type {
     TelopTextSegment,
 } from "./sincroAppTypes";
 export { SincroController } from "./sincroController";
-export { subscribeActiveSincroAppController } from "./subscribeActiveSincroAppController";

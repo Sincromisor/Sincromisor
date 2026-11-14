@@ -28,10 +28,7 @@ import { buildSincroAppSettingsRelatedSnapshotPayload } from "../settings/sincro
 import { buildSincroAppSettingsSnapshot } from "../settings/sincroAppSettingsSnapshotBuilder";
 import { SincroAppSettingsStore } from "../settings/sincroAppSettingsStore";
 import { buildSincroAppUiStateSnapshot } from "../settings/sincroAppUiStateSnapshotBuilder";
-import {
-    getActiveSincroAppController,
-    subscribeCurrentSincroAppController,
-} from "./activeSincroAppController";
+import { getActiveSincroAppController } from "./activeSincroAppController";
 import { sincroAppActiveControllerRegistry } from "./sincroAppActiveControllerRegistry";
 import { SincroAppCalibration } from "./sincroAppCalibration";
 import { SincroAppLifecycleController } from "./sincroAppLifecycleController";
@@ -203,18 +200,6 @@ export class SincroAppController {
                 openDialog: () => this.dialog.open(),
             }),
         );
-    }
-
-    /** 現在有効な制御処理をReactやページ初期化処理へ公開する。 */
-    static getCurrent(): SincroAppController | undefined {
-        return getActiveSincroAppController();
-    }
-
-    /** 有効な制御処理を即時通知し、以後の差し替えも購読する。戻り値で購読を解除する。 */
-    static subscribeCurrent(
-        listener: (controller: SincroAppController | undefined) => void,
-    ): () => void {
-        return subscribeCurrentSincroAppController(listener);
     }
 
     /** 外部購読・較正・追跡結果の反映を終了する。再実行は無処理とし、RTCや機器は停止しない。 */
