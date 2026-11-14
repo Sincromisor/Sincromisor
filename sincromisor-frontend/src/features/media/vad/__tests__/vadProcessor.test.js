@@ -2,10 +2,7 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { expect, it } from "vitest";
 
-const source = readFileSync(
-    new URL("../../../../../public/worklets/vad-processor.js", import.meta.url),
-    "utf8",
-);
+const source = readFileSync(new URL("../vad-processor.js", import.meta.url), "utf8");
 
 // 配信する実ファイルを登録入口から読み、通知は実際と同様に複製・移譲する。
 function createProcessor(sampleRate = 48000) {
