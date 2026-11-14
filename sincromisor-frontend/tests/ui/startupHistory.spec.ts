@@ -10,6 +10,12 @@ test("機器取得失敗・体験再開始でも架空の会話を作らない",
     });
     await page.goto("/simple-vrm/");
     await page.getByRole("checkbox", { name: "カメラを使う", exact: true }).uncheck();
+    // 履歴の確認では3D描画を開始せず、機器の失敗と再開始に対象を絞る。
+    await page.evaluate(async () => {
+        const path = "/app/controller/activeSincroAppController.ts";
+        const { getActiveSincroAppController } = await import(path);
+        getActiveSincroAppController().applySettings({ enableCharacter: false });
+    });
     await page.getByRole("button", { name: "開始する", exact: true }).click();
     await expect(page.getByRole("dialog")).toBeHidden();
     for (let attempt = 0; attempt < 2; attempt++) {
