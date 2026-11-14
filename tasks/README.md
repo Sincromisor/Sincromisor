@@ -249,7 +249,7 @@ closed_at: null
 
 旧 `documents/tasks` 由来の `TASK-...` ID は `legacy_ids` に保持する。コミットメッセージ、設計履歴、古い TODO では `TASK-...` 表記を許容するが、新規のタスク本文と相互参照では正規 ID を優先する。
 
-TODO は新規コードでは `TODO(task-260601153000-example): ...` を推奨する。既存の `TODO(TASK-...)` は移行互換として残してよい。
+新規TODOは `TODO(task-<id>-<slug>): <内容>`を使う。旧形式のTODOが残っている場合は履歴・移行互換として扱い、今回変更するTODOは正規IDへ合わせる。旧IDを扱う移行ツールや過去のコミット・タスク記録は一括置換しない。
 
 旧 `done` タスクは正確な完了日が本文から機械的に取れないため、移行時の `closed_at` は `null` のまま保持する。新方式で完了処理するタスクは `tasks:set status=done` が `closed_at` を設定する。
 
@@ -370,7 +370,7 @@ npm run tasks:check
 
 ## 確認コマンド
 
-変更内容に応じて実行範囲を絞ってよい。実行できなかった確認は理由を記録する。
+通常は変更ファイルと、その影響を受けるパッケージ・テストに絞って確認する。共有契約・依存設定などの横断変更や、対象確認だけでは回帰を検出できない場合に範囲を広げる。実行できなかった確認は理由を記録する。
 
 ### Biomeの警告の扱い
 
@@ -387,43 +387,8 @@ Biomeの `warn` はコードを見直すための助言であり、警告があ�
 全体ゲートは `npm run gate` で実行する。`package.json` の `gateSteps` はフロントエンドの `check`,
 `build`, `test` を実行し、`check` にリポジトリ全体の Markdown 検査を含める。このため、通常変更の完了判定には使わない。全体ゲートが変更範囲外の既存不整合で失敗した場合は、該当パスを警告として報告し、今回の差分が悪化させていないことを対象確認で示せばよい。
 
-Python 全体確認は実行時間と環境依存が大きいため全体ゲートには入れず、Python サーバーを変更するタスクで下記コマンドから必要なものだけ実行する。
+言語別のコマンドと実行場所は [TypeScript](../documents/rules/coding-ts.md#2-静的検査--フォーマッタ--コミット前チェック)、[Python](../documents/rules/coding-py.md#2-静的検査--フォーマッタ--コミット前チェック)、[Go](../documents/rules/coding-go.md#2-整形--静的検査--コミット前チェック) を参照する。Pythonは全体ゲートに含まれず、必要な依存グループと対象を指定して確認する。AgentServerもルートのnpmワークスペース外なので、独立したコマンドで確認する。
 
-| ゲート              | 実装者                                                        | 評価者                                               |
-| ------------------- | ------------------------------------------------------------- | ---------------------------------------------------- |
-| 静的検査 / 整形     | `npm run check`, `uv run ruff check .` など                   | `npm run check`, `uv run ruff format --check .` など |
-| 型チェック / ビルド | `npm run build`, `uv run --group dev --group full ty check .` | 同左。差分を生まないビルド / 型検査を使う            |
-| テスト              | 変更範囲の `npm run test`, `uv run pytest`                    | 同左。受け入れ条件を満たすか批判的に確認する         |
+タスク管理のみの変更ではタスク管理ツールの検査を実行する。Markdownの整形・確認は [Markdown規約](../documents/rules/coding-md.md#2-静的検査--フォーマッタ--コミット前確認) に従い、変更ファイルを対象にする。リポジトリ全体のMarkdown検査は任意の健全性確認とし、変更範囲外の失敗でタスクを止めない。
 
-タスク管理のみの変更ではタスク管理ツールの検査を実行する。Markdownは変更ファイルだけをPrettierで整形・確認する。リポジトリ全体のMarkdown検査は任意の健全性確認とし、変更範囲外の失敗でタスクを止めない。
-
-フロントエンド:
-
-```sh
-npm run build
-npm run check
-npm run test
-```
-
-Python:
-
-```sh
-uv run ruff check .
-uv run ruff format --check .
-uv run --group dev --group full ty check .
-uv run pytest
-```
-
-Compose:
-
-```sh
-cp examples/compose.env .env
-chmod 600 .env
-docker compose --profile full up -d
-```
-
-Markdown:
-
-```sh
-npm run check:md
-```
+Composeの確認・起動は [Docker Compose管理ルール](../documents/rules/docker-compose.md) に従う。文書の確認だけのためにサービスを起動しない。

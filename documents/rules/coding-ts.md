@@ -30,6 +30,8 @@ PoCでは下記2軸を最優先する。
 
 ## 2. 静的検査 / フォーマッタ / コミット前チェック
 
+次の表はフロントエンドの構成を示す。AgentServerの実行方法は後述する。
+
 | 項目                          | ツール                           |
 | ----------------------------- | -------------------------------- |
 | 静的検査 (TS / JS / JSON)     | **Biome**                        |
@@ -40,13 +42,14 @@ PoCでは下記2軸を最優先する。
 
 - Biomeの設定は [biome.json](../../sincromisor-frontend/biome.json) を正本とする。静的検査は `recommended`を有効化し、PoCで支障が出る項目のみ明示オプトアウト
 - `noExcessiveCognitiveComplexity`は認知的複雑度を見直す目安として扱い、上限超過だけで修正必須とはしない。警告の確認・記録は [タスク管理の警告方針](../../tasks/README.md#biomeの警告の扱い) に従う。
-- Prettierは **Markdown専用**。Biome 2.xがMarkdown未対応のため、ドキュメント整形だけPrettierを残す。設定ファイルを導入する場合はリポジトリ直下に置き、`*.md`のみに適用する
+- PrettierはMarkdown専用で、設定はルートの [.prettierrc.json](../../.prettierrc.json) と [.prettierignore](../../.prettierignore) を使う。整形手順は [Markdown規約](coding-md.md#2-静的検査--フォーマッタ--コミット前確認) に従う。
 - 確認範囲は[タスク管理の確認コマンド](../../tasks/README.md#確認コマンド)に従う。通常変更では変更ファイルの整形と対象を絞った静的検査・型確認・テストを行う。
-- 全体確認が必要な場合は`npm run build`（型チェックとViteビルド）、`npm run check`（BiomeとMarkdownの検査）、`npm run test`（Vitest）を使う。
+- フロントエンドの全体確認はリポジトリルートで `npm run build`（型チェックとViteビルド）、`npm run check`（フロントエンドのBiomeとリポジトリ全体のMarkdown検査）、`npm run test`（Vitest）を使う。対象確認は `sincromisor-frontend/`で `../node_modules/.bin/biome check <変更ファイル...>`、`npm run test -- <対象テスト...>`を使う。型確認は同ディレクトリで `../node_modules/.bin/tsc --noEmit -p tsconfig.modern.json`を使う。
+- AgentServerはルートのnpmワークスペースに含まれない。`sincromisor-server/agent-server/`で独立した [package.json](../../sincromisor-server/agent-server/package.json) の `npm run check`（`tsc --noEmit`）、`npm run test`（Nodeのテストランナー）を使う。単体の対象確認は同ディレクトリで `node --import tsx --test <対象テスト...>`を実行する。
 - 静的検査警告を局所的に抑制する場合は `// biome-ignore <rule>: <reason>`を付ける(本書 §0の `// reason:`ルールに準ずる)
-- `npm run git:hooks:install`で`.githooks/commit-msg`を有効にし、コミットメッセージを検査する。コードの検査はこのフックでは実行しない。
+- フックの導入とコミット形式は [タスク管理のコミット規約](../../tasks/README.md#コミットメッセージ) に従う。
 
-**理由**: 静的検査と整形の取りこぼしは手動チェックでは必ず発生し、後で大量修正の負債になる。Biomeは単一バイナリでTS / JS / JSONの静的検査 + 整形を兼ね、PrettierはMarkdown専用に限定することで設定衝突を最小化する。BiomeがMarkdown対応した時点でPrettierを撤去する(本書 §2を更新する宿題)。
+**理由**: 静的検査と整形の取りこぼしは手動チェックでは必ず発生し、後で大量修正の負債になる。Biomeは単一バイナリでTS / JS / JSONの静的検査 + 整形を兼ね、PrettierはMarkdown専用に限定することで設定衝突を最小化する。
 
 **適用方法**: 対象確認が通ったら完了処理へ進む。検査の拡大・再実行は追加変更、失敗、未解決の懸念がある場合に行う。
 
@@ -95,7 +98,7 @@ PoCでは下記2軸を最優先する。
 ## 5. テスト
 
 - フロントエンドのテストは`npm run test`からVitestを実行する。ブラウザーの操作・画面確認は[Playwright CLI利用ルール](playwright-cli.md)に従う。
-- 配置は対象コードと同階層の `__tests__/`(例: `RTC/__tests__/RTCTalkClient.test.ts`)
+- 配置は対象コードと同階層の `__tests__/`、または対象ファイルに隣接するテストとする（例: `sincromisor-frontend/src/features/rtc/diagnostics/__tests__/rtcIceDiagnostics.test.ts`）。AgentServerは `sincromisor-server/agent-server/src/mastra/__tests__/`に置く。
 - ファイル名: `<対象>.test.ts`
 - フィクスチャは `__tests__/fixtures/`に置く。プロダクションコードからimportしない
 - テストのためだけに内部要素を `export`しない — 必要な時点で純粋関数や境界処理を別ファイル化する
@@ -131,7 +134,7 @@ PoCでは下記2軸を最優先する。
 
 ## 9. TODO / FIXME / `@deprecated`
 
-- 形式: `// TODO(task-<id>-<slug>): <内容>` — 標準化したタスクID紐付け必須。旧 `TODO(TASK-yymmddhhmmss): ...`は移行互換として許容する。ID無しのTODOはレビューで差し戻し
+- 形式: `// TODO(task-<id>-<slug>): <内容>` — 標準化したタスクID紐付け必須。新規TODOは正規IDを使い、旧ID・履歴の扱いは [タスク管理](../../tasks/README.md#旧形式の-id) に従う。ID無しのTODOはレビューで差し戻し
 - `FIXME`は使わない(`TODO`に統一)
 - `@deprecated`を付けたら **同タスクまたは次タスクで削除**。残置禁止
 - コメントに「あとで」「いずれ」だけ書くのは禁止 — 必ずタスク化する

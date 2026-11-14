@@ -15,15 +15,15 @@ Markdownは「次に読む人とLLMエージェントが短時間で判断でき
 
 ## 1. ファイル配置 / 命名
 
-| 対象                  | ルール                                    |
-| --------------------- | ----------------------------------------- |
-| Markdownファイル名    | kebab-case                                |
-| README                | `README.md`のみ例外                       |
-| タスクディレクトリ    | `tasks/<category>/task-<id>-<slug>/`      |
-| タスク本文            | `task.md`                                 |
-| ADR                   | `ADR-<YYMMDD>-<topic>.md`                 |
-| 一時メモ / 作業中メモ | 対応するタスクディレクトリの `artifacts/` |
-| 現在有効な設計 / 契約 | `documents/design/`に置く                 |
+| 対象                   | ルール                                                     |
+| ---------------------- | ---------------------------------------------------------- |
+| 一般文書のファイル名   | kebab-case                                                 |
+| ツール・運用上の規定名 | `README.md`、`AGENTS.md`、`SKILL.md`などは規定の表記を使う |
+| タスクディレクトリ     | `tasks/<category>/task-<id>-<slug>/`                       |
+| タスク本文             | `task.md`                                                  |
+| ADR                    | `ADR-<YYMMDD>-<topic>.md`                                  |
+| 一時メモ / 作業中メモ  | 対応するタスクディレクトリの `artifacts/`                  |
+| 現在有効な設計 / 契約  | `documents/design/`に置く                                  |
 
 閲覧制限のある調査記録は上表の公開保存先へ置かず、[成果物の公開範囲](../../tasks/README.md#公開成果物と非公開検証原本)に従う。本文・表・添付資料にも同じ基準を適用する。
 
@@ -93,10 +93,10 @@ Markdownは「次に読む人とLLMエージェントが短時間で判断でき
 - シークレット、実トークン、個人情報、実ユーザーの音声認識結果を例に書かない。
 - 長いコードをMarkdownに埋め込まない。文書から実装ファイルへリンクする。
 
-例
+例（リポジトリルートで、変更したMarkdownを確認する）
 
 ```sh
-npm run check:md
+node_modules/.bin/prettier --check documents/rules/coding-md.md
 ```
 
 ## 7. 表 / リスト
@@ -117,7 +117,7 @@ npm run check:md
 ## 9. TODO / コメントアウト
 
 - TODO形式: `TODO(task-<id>-<slug>): <内容>`
-- 旧 `TODO(TASK-yymmddhhmmss): <内容>`は移行互換として許容する。新規TODOは正規のタスクIDを使う。
+- 新規TODOは正規IDを使う。旧ID・履歴の扱いは [タスク管理](../../tasks/README.md#旧形式の-id) に従う。
 - IDなしTODOは禁止。必要なら先にタスクを作る。
 - Markdownコメントで本文を隠して残さない。不要な記述は削除し、必要なら完了タスクまたはADRに残す。
 - 未確定の検討メモを設計本文に置かない。対応するタスクディレクトリの `artifacts/`または `impl.md`に置く。

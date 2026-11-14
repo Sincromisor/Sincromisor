@@ -21,8 +21,18 @@
 
 ## 完了条件と確認
 
-- [ ] 上記の手順・例が現行の設定とソース配置に一致し、通常の確認範囲と各コマンドの役割を判別できる。
-- [ ] 設定・コマンド定義・リンク先を照合する。Pythonの実行確認は利用可能な依存の範囲で行い、未実行範囲を実施結果に記す。
-- [ ] リポジトリルートで変更MarkdownのPrettier整形・確認、`npm run tasks:index:check` と `npm run tasks:check` が通る。
+- [x] 上記の手順・例が現行の設定とソース配置に一致し、通常の確認範囲と各コマンドの役割を判別できる。
+- [x] 設定・コマンド定義・リンク先を照合する。Pythonの実行確認は利用可能な依存の範囲で行い、未実行範囲を実施結果に記す。
+- [x] リポジトリルートで変更MarkdownのPrettier整形・確認、`npm run tasks:index:check` と `npm run tasks:check` が通る。
 
 本タスクの確認は文書と設定の照合を中心とする。アプリ全体の試験やサービス起動は対象外とする。共有する言語別文書は他タスクの最新内容を読んでから編集する。
+
+## 実施結果
+
+Pythonの依存グループと実行場所、Goの対象パッケージ指定、フロントエンドとAgentServerの検査手段を現行設定へ合わせた。確認範囲はタスク管理、各言語のコマンドは言語別規約、Markdown整形とコミット手順はそれぞれの管理文書へ集約した。診断値と認証情報、一般文書・ADR・規定名の区別も更新した。
+
+`pyproject.toml`、ルート・フロントエンド・AgentServerの `package.json`、Prettier設定、テスト配置、Goモジュール、移行ツールを照合した。現行ソース（`sincromisor-server/`、`sincromisor-frontend/`、`scripts/`、`utils/`）に旧 `TODO(TASK-...)`はなく、旧ID・履歴・移行ツールの互換性は維持した。
+
+Pythonは既存依存を変更せず `uv run --offline --no-sync --group dev`経由でRuff・ty・pytestのバージョン表示を確認した。依存の新規同期、サービス依存を使う型検査・テストは実施していない。文書と設定の照合を対象とし、アプリ全体の試験やサービス起動は行っていない。
+
+変更MarkdownのPrettier整形・確認、相対リンクと見出しの確認、`npm run tasks:index:check`、`npm run tasks:check`は通過した。

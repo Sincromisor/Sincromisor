@@ -41,19 +41,21 @@ PoCでは下記2軸を最優先する。
 | パッケージ / 仮想環境 / 実行 | **uv**                           |
 
 - Ruffの設定は [pyproject.toml](../../pyproject.toml) の `[tool.ruff.*]`を正本とする。PoCで支障が出る項目のみ明示オプトアウト
-- コミット前の確認項目
-    1. `uv run ruff check .`
-    2. `uv run ruff format --check .`
-    3. `uv run --group dev --group full ty check .`
-    4. `uv run pytest`(変更レイヤ。重い統合テストは対象を絞る)
+- 確認範囲は [タスク管理の確認コマンド](../../tasks/README.md#確認コマンド) に従う。以下はリポジトリルートで実行し、`<変更対象...>`にはファイルまたはディレクトリ、`<対象テスト...>`にはテストのパスを指定する。
+    1. `uv run --group dev ruff check <変更対象...>`
+    2. `uv run --group dev ruff format --check <変更対象...>`
+    3. `uv run --group dev --group <対象サービス> ty check <変更対象...>`
+    4. `uv run --group dev --group <対象サービス> pytest <対象テスト...>`
+- [pyproject.toml](../../pyproject.toml) は `default-groups = []`のため、開発ツールには `--group dev`を指定する。サービス依存が必要な型検査・テストでは `speech-extractor`、`speech-recognizer-nemo`、`text-processor`、`voice-synthesizer`から必要なグループを追加する。サービス依存が不要な確認は `--group dev`だけでよい。
+- 全体確認を選ぶ場合はRuffとtyの対象を `.`へ、pytestの対象を関連するテストディレクトリ群へ広げる。全サービスの依存が必要なら `--group full`を使う。
 - 静的検査警告を局所的に抑制する場合は `# noqa: <rule>  # reason: <理由>`を付ける(本書 §0の `# reason:`ルールに準ずる)
 - tyの警告を局所的に抑制する場合は `# ty: ignore[rule]  # reason: <理由> / 解消条件: <条件>`を付ける
 - フォーマッタの出力と衝突する手整形をしない。importの並び順もRuff/isortに任せる
-- `npm run git:hooks:install`で`.githooks/commit-msg`を有効にし、コミットメッセージを検査する。Pythonの検査はこのフックでは実行しない。
+- フックの導入とコミット形式は [タスク管理のコミット規約](../../tasks/README.md#コミットメッセージ)、Markdownの整形は [Markdown規約](coding-md.md#2-静的検査--フォーマッタ--コミット前確認) に従う。
 
 **理由**: 静的検査と整形の取りこぼしは手動チェックでは必ず発生し、後で大量修正の負債になる。RuffはPythonの静的検査 + 整形 + import整列を単一ツールで扱えるため、設定の分散を避けられる。
 
-**適用方法**: 既存コードに警告が残る場合は、変更したパッケージから警告ゼロに寄せる。CI整備フェーズで `uv run ruff check .` / `uv run ruff format --check .` / `uv run --group dev --group full ty check .` / `uv run pytest`を自動化する。
+**適用方法**: 変更箇所の検査結果を確認し、失敗時の扱いは [タスク管理](../../tasks/README.md#失敗時の調査と継続) に従う。
 
 ## 3. エラーハンドリング
 
@@ -89,7 +91,7 @@ PoCでは下記2軸を最優先する。
 音声処理 / WebRTC / サービス発見は、環境依存の失敗が多い。開発時は再現に必要な診断情報を `debug`で出してよいが、常時出すとログがノイズ化し、実ユーザー環境ではプライバシー上のリスクも上がる。
 
 - `debug`レベルでは、接続先サービス名、再試行回数、キュー長、送受信データ検証の成否、音声フレーム数などを出してよい
-- 音声認識結果、チャット本文、Mastraトークン、TURN認証情報、S3パスなど、個人情報や機密情報になり得る値は必要最小限にする
+- 音声認識結果、チャット本文、S3パスなど、個人情報や機密情報になり得る値は、件数・長さ・成否など診断に必要な最小限の情報に絞る。認証情報の生の値は診断目的でも出力せず、§4.2に従う
 - ログファイル / 追跡記録出力(`*.log`等)は `.gitignore`で除外。リポジトリに未加工の診断データをコミットしない
 
 ### 4.2 PoC でも常時禁止
@@ -106,7 +108,7 @@ PoCでは下記2軸を最優先する。
 
 ## 5. テスト
 
-- ランナーは `uv run pytest`から呼び出す
+- ランナーはリポジトリルートから §2の依存グループを指定した `uv run ... pytest <対象テスト...>`で呼び出す
 - 配置はパッケージ直下の `tests/`を基本とする(例: `sincromisor-server/speech-recognizer-nemo/tests/`)
 - ファイル名: `test_<対象>.py`
 - フィクスチャは `tests/fixtures/`に置く。プロダクションコードからimportしない
@@ -152,7 +154,7 @@ PoCでは下記2軸を最優先する。
 
 ## 9. TODO / FIXME / `@deprecated`
 
-- 形式: `# TODO(task-<id>-<slug>): <内容>` — 標準化したタスクID紐付け必須。旧 `TODO(TASK-yymmddhhmmss): ...`は移行互換として許容する。ID無しのTODOはレビューで差し戻し
+- 形式: `# TODO(task-<id>-<slug>): <内容>` — 標準化したタスクID紐付け必須。新規TODOは正規IDを使い、旧ID・履歴の扱いは [タスク管理](../../tasks/README.md#旧形式の-id) に従う。ID無しのTODOはレビューで差し戻し
 - `FIXME`は使わない(`TODO`に統一)
 - 廃止予定コメントを付けたら **同タスクまたは次タスクで削除**。残置禁止
 - コメントに「あとで」「いずれ」だけ書くのは禁止 — 必ずタスク化する
