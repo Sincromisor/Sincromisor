@@ -28,3 +28,7 @@
 ## 作業経路と文書同期
 
 起動順と失敗時の終了をまたぐため高リスクとして独立仕様レビュー・実装評価を行う。[共通枠組み](../../../documents/design/frontend/app-shell.md)、[ページ構成](../../../documents/design/frontend/pages.md)、[設定UI設計](../../../documents/design/frontend/setting-and-debug-ui/settings-design.md)の配置順、読み込み時期、失敗時の扱いを同期する。公開通信・保存契約は変更しない。
+
+## 先行観測による採用判断
+
+[先行計測](../task-261115055438-panel-loading-baseline/task.md#観測結果と採否)で採用を決定した。3つの `mainReact.tsx` が渡すページ別パネルのimportを初回表示まで呼ばない。共通入力部品と機器サービスは起動前画面にも必要なため初期取得へ残す。`useSincroMediaDeviceState`の監視・更新は起動前画面から維持でき、専用パネルの購読effectを初期化の前提にする必要はない。既存の所有権・失敗処理・確認条件は維持する。

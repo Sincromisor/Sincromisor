@@ -1,7 +1,7 @@
 id: task-261115055438-lazy-debug-panels
 title: 診断表示を初回表示時に読み込む
 category: frontend-maintenance
-status: blocked
+status: open
 depends_on:
   - task-261115055438-panel-loading-baseline
 superseded_by: null

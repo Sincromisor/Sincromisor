@@ -26,3 +26,7 @@
 ## 作業経路と文書同期
 
 表示用購読と常設DOMの生存期間をまたぐため高リスクとして独立仕様レビュー・実装評価を行う。[診断UI設計](../../../documents/design/frontend/setting-and-debug-ui/debug-design.md)と[共通枠組み](../../../documents/design/frontend/app-shell.md)の読み込み時期・非表示時の扱い・失敗案内を同期する。
+
+## 先行観測による採用判断
+
+[先行計測](../task-261115055438-panel-loading-baseline/task.md#観測結果と採否)で採用を決定した。分離単位は `DebugConsolePanels` と詳細パネル群、`GazeDetails`。`DebugConsoleManager`は起動側でも使うため常設のままにし、削減量へ含めない。開発時に詳細モジュールの初期要求がないこと、本番で初期チャンクからの静的到達がないことを確認する。既存の所有権・失敗処理・確認条件は維持する。
