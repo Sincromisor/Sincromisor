@@ -126,7 +126,17 @@ test("パネル読込と描画の失敗は観測可能なエラーを残して�
         expect(await currentSettings(page)).toBeUndefined();
         expect(await page.locator("body").getAttribute("data-start-count")).toBeNull();
         await expect(page.locator("#sincroCharacterBox")).toHaveCount(0);
+        await expect(page.getByRole("heading", { name: "起動に失敗しました" })).toBeVisible();
+        await expect(page.locator("main")).not.toContainText("rejected");
+        await page.keyboard.press("Tab");
+        await expect(page.getByRole("button", { name: "再読み込み" })).toBeFocused();
+        await page.keyboard.press("Tab");
+        await expect(page.getByRole("link", { name: "トップへ戻る" })).toBeFocused();
         await page.unroute("**/app/settings/react/sincroControlPanel.tsx*");
+        await page.keyboard.press("Shift+Tab");
+        await page.keyboard.press("Enter");
+        await expect(page.locator("body")).toHaveAttribute("data-start-count", "1");
+        await expect(page.getByRole("heading", { name: "起動に失敗しました" })).toHaveCount(0);
     }
 });
 
@@ -198,4 +208,58 @@ test("OBSの復元失敗は開始後も通常画面で通知する", async ({ pa
         "VRMの復元に失敗しました。既定のモデルで開始できます",
     );
     await expect(page.locator("#sincroPopBox .popError")).toBeVisible();
+});
+
+test("初期化失敗は部分アプリを解除・終了し、再開始と重複起動を拒否する", async ({ page }) => {
+    await replaceDeviceStart(page);
+    await page.addInitScript(() => {
+        Object.assign(window, { obsstudio: {} });
+    });
+    await page.route("**/pages/simpleVrm/mainVrm.ts*", (route) =>
+        route.fulfill({
+            contentType: "text/javascript",
+            body: `
+            import { SincroVRMInitializer } from "/app/bootstrap/sincroVrmInitializer.ts";
+            import { SincroAppController } from "/app/controller/sincroAppController.ts";
+            export function initializeSimpleVrmPage(roots) {
+                const initializer = new SincroVRMInitializer(roots);
+                initializer.initialize();
+                const app = SincroAppController.getCurrent();
+                for (const [method, key] of [["releaseEventSubscriptions", "releaseCount"], ["endExperience", "endCount"]]) {
+                    const original = app[method].bind(app);
+                    app[method] = () => {
+                        document.body.dataset[key] = String(Number(document.body.dataset[key] ?? 0) + 1);
+                        return original();
+                    };
+                }
+                initializer.startAutomatically();
+                throw new Error("private initialization detail");
+            }
+        `,
+        }),
+    );
+    await page.goto("/simple-vrm/");
+    await expect(page.getByRole("heading", { name: "起動に失敗しました" })).toBeVisible();
+    await expect(page.locator("body")).toHaveAttribute("data-release-count", "1");
+    await expect(page.locator("body")).toHaveAttribute("data-end-count", "1");
+    await expect(page.locator("main")).not.toContainText("private initialization detail");
+    await startAgain(page);
+    await page.evaluate(async () => {
+        const path = "/app/shell/bootstrapSincroPageAppShell.tsx";
+        const { bootstrapSincroPageAppShell } = await import(path);
+        bootstrapSincroPageAppShell(
+            () => {
+                document.body.dataset.duplicateStart = "true";
+                return Promise.resolve({});
+            },
+            () => null,
+            () => {},
+        );
+    });
+    expect(await page.locator("body").getAttribute("data-start-count")).toBeNull();
+    expect(await page.locator("body").getAttribute("data-duplicate-start")).toBeNull();
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL("http://127.0.0.1:5173/");
 });

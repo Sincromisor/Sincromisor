@@ -1,0 +1,42 @@
+@layer components {
+    .sincroBootstrapFailure {
+        box-sizing: border-box;
+        width: min(100%, 36rem);
+        margin: 10vh auto;
+        padding: 24px;
+        color: #edf3ff;
+        background: #171d28;
+        border-radius: 12px;
+        display: grid;
+        gap: 20px;
+    }
+
+    .sincroBootstrapFailure h1 {
+        font-size: 1.5rem;
+    }
+
+    .sincroBootstrapFailure div {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .sincroBootstrapFailure :is(button, a) {
+        box-sizing: border-box;
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 8px 16px;
+        border: 1px solid #a8bfe0;
+        border-radius: 6px;
+        background: #263752;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+    }
+
+    .sincroBootstrapFailure :is(button, a):focus-visible {
+        outline: 3px solid #ffce79;
+        outline-offset: 3px;
+    }
+}
