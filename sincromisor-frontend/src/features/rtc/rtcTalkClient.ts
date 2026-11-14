@@ -4,7 +4,7 @@ import { ChatMessageService } from "../conversation/chat/model/chatMessageServic
 import { DebugConsoleManager } from "../debug/model/debugConsoleManager";
 import { replaceRtcAudioTrack, setRtcAudioMute } from "./rtcAudioTrackSender";
 import { RtcBundleDiagnostics } from "./rtcBundleDiagnostics";
-import { handleRtcIceConnectionState } from "./rtcConnectionStateHandler";
+import { handleRtcConnectionState, handleRtcIceConnectionState } from "./rtcConnectionStateHandler";
 import { RtcDisconnectedGraceTimer } from "./rtcDisconnectedGraceTimer";
 import { sendRtcIceCandidate } from "./rtcIceCandidateSender";
 import type { ChatMessage, TelopChannelMessage } from "./rtcMessage";
@@ -215,8 +215,11 @@ export class RTCTalkClient {
             this.pendingIdentity = undefined;
             await candidateFlush;
             if (!this.isCurrentGeneration(generation)) return;
-            this.diagnostics.resetFailureCapture();
-            this.rtcHealthCallback();
+            // Answerと候補送信の完了だけではDTLSを含む接続成功とは扱わない。
+            if (this.bundle.peerConnection.connectionState === "connected") {
+                this.diagnostics.resetFailureCapture();
+                this.rtcHealthCallback();
+            }
         } catch (error) {
             if (this.isCurrentGeneration(generation)) {
                 await this.handleGenerationFailure(error, identity);
@@ -304,6 +307,22 @@ export class RTCTalkClient {
         }
     }
 
+    /** 世代と実状態を照合し、遅着通知や交渉完了で失敗表示を解除しない。 */
+    private onConnectionState(generation: number, state: RTCPeerConnectionState): void {
+        if (
+            !this.isCurrentGeneration(generation) ||
+            this.bundle.peerConnection.connectionState !== state
+        )
+            return;
+        if (state === "connected") this.diagnostics.resetFailureCapture();
+        handleRtcConnectionState({
+            state,
+            talkMode: this.talkMode,
+            chatMessageService: this.chatMessageService,
+            rtcHealthCallback: this.rtcHealthCallback,
+        });
+    }
+
     private onIceConnectionState(generation: number, state: RTCIceConnectionState): void {
         if (!this.isCurrentGeneration(generation)) {
             return;
@@ -317,7 +336,6 @@ export class RTCTalkClient {
             onRecovered: () => {
                 this.disconnectedGrace.cancel();
                 this.negotiationState.restoreConnected();
-                this.diagnostics.resetFailureCapture();
             },
             rtcHealthCallback: this.rtcHealthCallback,
             state,
@@ -435,6 +453,7 @@ export class RTCTalkClient {
         return createRtcPeerConnectionBundle({
             audioTrack: this.audioTrack,
             logger: this.logger,
+            onConnectionStateChange: (state) => this.onConnectionState(generation, state),
             onIceConnectionStateChange: (state) => this.onIceConnectionState(generation, state),
             onTelopMessage: (msg) => this.telopChannelCallback(msg),
             onTextMessage: (msg) => this.textChannelCallback(msg),

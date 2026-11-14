@@ -7,6 +7,7 @@ import {
 /** 停止中・停止済みの操作状態を優先し、残った診断値で接続中へ戻さずUI向け接続状態へ変換する。 */
 export function buildSincroAppConnectionStateEvent(params: {
     lifecycleState: SincroAppLifecycleState;
+    connectionState?: RTCPeerConnectionState;
     iceConnectionState: string;
     signalingState: string;
     audioInputState?: SincroAudioInputState;
@@ -31,8 +32,13 @@ export function buildSincroAppConnectionStateEvent(params: {
     const ice = params.iceConnectionState.toLowerCase();
     const signaling = params.signalingState.toLowerCase();
 
-    if (ice === "connected" || ice === "completed") {
-        return { type: "connection_state", value: "connected", detail: `ice:${ice}` };
+    // ICE成功だけでは暗号通信の準備完了とは限らない。全体の失敗を優先する。
+    const connection = params.connectionState;
+    if (connection === "failed" || connection === "disconnected" || connection === "closed") {
+        return { type: "connection_state", value: "degraded", detail: `rtc:${connection}` };
+    }
+    if (connection === "connected") {
+        return { type: "connection_state", value: "connected", detail: "rtc:connected" };
     }
     if (ice === "checking") {
         return { type: "connection_state", value: "connecting", detail: "ice:checking" };

@@ -9,6 +9,7 @@ import type { SincroRTCConfig } from "./sincroRtcConfigManager";
 type RtcPeerConnectionFactoryParams = {
     audioTrack: MediaStreamTrack;
     logger: DebugConsoleManager;
+    onConnectionStateChange: (state: RTCPeerConnectionState) => void;
     onIceConnectionStateChange: (state: RTCIceConnectionState) => void;
     onTelopMessage: (msg: TelopChannelMessage) => void;
     onTextMessage: (msg: ChatMessage) => void;
@@ -37,6 +38,7 @@ export function createRtcPeerConnectionBundle(
     const peerConnection = new RTCPeerConnection(config);
     setupRtcPeerConnectionEvents({
         logger: params.logger,
+        onConnectionStateChange: params.onConnectionStateChange,
         onIceConnectionStateChange: params.onIceConnectionStateChange,
         peerConnection,
         signal: params.signal,

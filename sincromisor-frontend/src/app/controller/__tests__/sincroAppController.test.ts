@@ -143,21 +143,26 @@ it("差し替えで旧外部購読を解除し、Reactの初期同期とRTC停�
         dialogEvents.emitDialogUiStateChanged(dialogState.getDialogUiState());
         dialogEvents.emitVrmUiStateChanged(dialogState.getDialogVrmUiState());
         current.start();
-        // 次のイベントを待たず、通知されたICE状態を同じ回の接続表示へ反映する。
-        for (const [ice, value] of [
-            ["checking", "connecting"],
+        // ICEが成功しても、接続全体の成功までは接続済みと表示しない。
+        debug.emit({ type: "connection_state", value: "connecting" });
+        debug.emit({ type: "ice_connection_state", value: "connected" });
+        expect(reactEvents.mock.calls[reactEvents.mock.calls.length - 1]?.[0].value).not.toBe(
+            "connected",
+        );
+        for (const [connection, value] of [
             ["connected", "connected"],
-            ["completed", "connected"],
-            ["disconnected", "degraded"],
             ["failed", "degraded"],
             ["connected", "connected"],
-        ]) {
-            debug.emit({ type: "ice_connection_state", value: ice });
+            ["disconnected", "degraded"],
+        ] as const) {
+            debug.emit({ type: "connection_state", value: connection });
+            debug.emit({ type: "ice_connection_state", value: "completed" });
             expect(reactEvents).toHaveBeenLastCalledWith(
-                { type: "connection_state", value, detail: `ice:${ice}` },
+                { type: "connection_state", value, detail: `rtc:${connection}` },
                 current,
             );
         }
+        debug.emit({ type: "connection_state", value: "new" });
         debug.emit({ type: "ice_connection_state", value: "new" });
         debug.emit({ type: "signaling_state", value: "have-local-offer" });
         expect(reactEvents).toHaveBeenLastCalledWith(

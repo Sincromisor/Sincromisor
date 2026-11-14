@@ -237,6 +237,11 @@ export class DebugConsoleManager {
         this.rtcControls.addTextChannelLog(msg);
     }
 
+    /** 接続全体の状態を通常画面へ通知する。中央診断JSONには項目を追加しない。 */
+    updateConnectionState(value: RTCPeerConnectionState): void {
+        this.emitEvent({ type: "connection_state", value });
+    }
+
     newIceConnectionState(msg: string): void {
         this.rtcControls.newIceConnectionState(msg);
     }

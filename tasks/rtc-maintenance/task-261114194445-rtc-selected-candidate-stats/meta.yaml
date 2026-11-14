@@ -1,0 +1,13 @@
+id: task-261114194445-rtc-selected-candidate-stats
+title: RTC統計を使用中の候補ペアから取得する
+category: rtc-maintenance
+status: open
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: null
+attempts: 0
+created_at: 2026-11-14
+closed_at: null
+legacy_ids: []

@@ -35,6 +35,7 @@ export type DebugConsoleManagerEvent =
     | { type: "character_eye_status"; watching: boolean }
     | { type: "gaze_target_debug"; message: string }
     | { type: "rtc_event_log"; message: string }
+    | { type: "connection_state"; value: RTCPeerConnectionState }
     | { type: "ice_connection_state"; value: string }
     | { type: "signaling_state"; value: string };
 

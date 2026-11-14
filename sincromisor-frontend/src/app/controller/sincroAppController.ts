@@ -78,6 +78,7 @@ export class SincroAppController {
     private get lifecycleState() {
         return this.lifecycle.state;
     }
+    private connectionState?: RTCPeerConnectionState;
     private iceConnectionState: string = "";
     private signalingState: string = "";
     private suppressSettingsSnapshotEvent: boolean = false;
@@ -243,6 +244,7 @@ export class SincroAppController {
             buildConnectionStateEvent: () =>
                 buildSincroAppConnectionStateEvent({
                     lifecycleState: this.lifecycleState,
+                    connectionState: this.connectionState,
                     iceConnectionState: this.iceConnectionState,
                     signalingState: this.signalingState,
                     audioInputState: this.lifecycle.audioInputState,
@@ -416,10 +418,12 @@ export class SincroAppController {
             emitDerivedConnectionState: () => this.emitDerivedConnectionState(),
             emitSettingsRelatedSnapshots: () => this.emitSettingsRelatedSnapshots(),
             getRtcState: () => ({
+                connectionState: this.connectionState,
                 iceConnectionState: this.iceConnectionState,
                 signalingState: this.signalingState,
             }),
             setRtcState: (state) => {
+                this.connectionState = state.connectionState;
                 this.iceConnectionState = state.iceConnectionState;
                 this.signalingState = state.signalingState;
             },
@@ -458,11 +462,12 @@ export class SincroAppController {
         SincroAppController.activeRegistry.setCurrent(controller);
     }
 
-    // ICE/signaling/lifecycle の保持状態から UI向け connection_state を導出して通知する。
+    // 接続全体・ICE・signaling・lifecycle の保持状態から UI向け connection_state を導出して通知する。
     private emitDerivedConnectionState(): void {
         this.emitEvent(
             buildSincroAppConnectionStateEvent({
                 lifecycleState: this.lifecycleState,
+                connectionState: this.connectionState,
                 iceConnectionState: this.iceConnectionState,
                 signalingState: this.signalingState,
                 audioInputState: this.lifecycle.audioInputState,

@@ -4,6 +4,7 @@ type RtcPeerConnectionEventParams = {
     logger: Pick<
         DebugConsoleManager,
         | "addRtcEventLog"
+        | "updateConnectionState"
         | "newIceConnectionState"
         | "newIceGatheringState"
         | "newSignalingState"
@@ -11,6 +12,7 @@ type RtcPeerConnectionEventParams = {
         | "updateIceGatheringState"
         | "updateSignalingState"
     >;
+    onConnectionStateChange: (state: RTCPeerConnectionState) => void;
     onIceConnectionStateChange: (state: RTCIceConnectionState) => void;
     peerConnection: RTCPeerConnection;
     signal: AbortSignal;
@@ -18,7 +20,7 @@ type RtcPeerConnectionEventParams = {
 };
 
 /**
- * ICE・シグナリング通知を接続管理と診断へ渡す。
+ * 接続全体・ICE・シグナリング通知を接続管理と診断へ渡す。
  * 接続世代の中断時に全購読を解除し、旧接続から診断状態を書き戻さない。
  */
 export function setupRtcPeerConnectionEvents(params: RtcPeerConnectionEventParams): void {
@@ -45,6 +47,17 @@ export function setupRtcPeerConnectionEvents(params: RtcPeerConnectionEventParam
         { signal: params.signal },
     );
 
+    // 新世代の初期状態を先に表示へ渡し、旧接続の成功表示を引き継がない。
+    params.logger.updateConnectionState(params.peerConnection.connectionState);
+    params.peerConnection.addEventListener(
+        "connectionstatechange",
+        () => {
+            const state = params.peerConnection.connectionState;
+            params.logger.updateConnectionState(state);
+            params.onConnectionStateChange(state);
+        },
+        { signal: params.signal },
+    );
     setupIceGatheringStateLog(params);
     setupIceConnectionStateLog(params);
     setupSignalingStateLog(params);

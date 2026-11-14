@@ -1,0 +1,13 @@
+id: task-261114194445-rtc-connection-health
+title: RTC接続全体の状態を接続表示へ反映する
+category: rtc-maintenance
+status: done
+depends_on: []
+superseded_by: null
+review: null
+reviewed_sha: null
+verdict: PASS
+attempts: 1
+created_at: 2026-11-14
+closed_at: 2026-11-14
+legacy_ids: []

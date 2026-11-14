@@ -6,6 +6,7 @@ import type { SincroAppEvent } from "../controller/sincroAppTypes";
 export type DebugEventMapResult =
     | { kind: "none" }
     | { kind: "event"; event: SincroAppEvent }
+    | { kind: "connection_state"; value: RTCPeerConnectionState }
     | { kind: "ice_state"; value: string }
     | { kind: "signaling_state"; value: string };
 
@@ -54,6 +55,8 @@ export function mapDebugConsoleEvent(event: DebugConsoleManagerEvent): DebugEven
             return { kind: "event", event: { type: "gaze_status", watching: event.watching } };
         case "rtc_event_log":
             return { kind: "event", event: { type: "rtc_event_log", message: event.message } };
+        case "connection_state":
+            return { kind: "connection_state", value: event.value };
         case "ice_connection_state":
             return { kind: "ice_state", value: event.value };
         case "signaling_state":

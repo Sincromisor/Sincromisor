@@ -24,10 +24,15 @@ type SincroAppControllerSubscriptionParams = {
     emitDerivedConnectionState: () => void;
     emitSettingsRelatedSnapshots: () => void;
     getRtcState: () => {
+        connectionState?: RTCPeerConnectionState;
         iceConnectionState: string;
         signalingState: string;
     };
-    setRtcState: (state: { iceConnectionState: string; signalingState: string }) => void;
+    setRtcState: (state: {
+        connectionState?: RTCPeerConnectionState;
+        iceConnectionState: string;
+        signalingState: string;
+    }) => void;
 };
 
 /** 共有サービスの通知をアプリへ接続し、今回登録した購読だけをまとめて解除する関数を返す。 */

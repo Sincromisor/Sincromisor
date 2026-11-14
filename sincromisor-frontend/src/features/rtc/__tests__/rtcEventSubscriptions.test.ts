@@ -10,6 +10,7 @@ it("世代中断でICE・シグナリング・トラック・DataChannelの購�
     const controller = new AbortController();
     const channels = new Map<string, EventTarget>();
     const target = Object.assign(new EventTarget(), {
+        connectionState: "connected",
         iceConnectionState: "connected",
         iceGatheringState: "complete",
         signalingState: "stable",
@@ -22,6 +23,7 @@ it("世代中断でICE・シグナリング・トラック・DataChannelの購�
     const peerConnection = target as unknown as RTCPeerConnection; // reason: ブラウザー通信だけを代替し、購読と解除は標準EventTargetで検証する。
     const logger = {
         addRtcEventLog: vi.fn(),
+        updateConnectionState: vi.fn(),
         addTelopChannelLog: vi.fn(),
         addTextChannelLog: vi.fn(),
         newIceConnectionState: vi.fn(),
@@ -32,12 +34,18 @@ it("世代中断でICE・シグナリング・トラック・DataChannelの購�
         updateSignalingState: vi.fn(),
         setRemoteAudioTrack: vi.fn(),
     };
+    const onConnectionStateChange = vi.fn();
     const onIceConnectionStateChange = vi.fn();
     const sendIceCandidate = vi.fn();
     const onTextMessage = vi.fn();
     const onTelopMessage = vi.fn();
     const params = { logger, peerConnection, signal: controller.signal };
-    setupRtcPeerConnectionEvents({ ...params, onIceConnectionStateChange, sendIceCandidate });
+    setupRtcPeerConnectionEvents({
+        ...params,
+        onConnectionStateChange,
+        onIceConnectionStateChange,
+        sendIceCandidate,
+    });
     setupRtcRemoteTrackHandlers(params);
     createRtcDataChannels({ ...params, onTextMessage, onTelopMessage });
     const mediaElement = { srcObject: undefined };
@@ -54,6 +62,7 @@ it("世代中断でICE・シグナリング・トラック・DataChannelの購�
     });
     const dispatch = () => {
         for (const type of [
+            "connectionstatechange",
             "iceconnectionstatechange",
             "icegatheringstatechange",
             "signalingstatechange",
@@ -85,6 +94,7 @@ it("世代中断でICE・シグナリング・トラック・DataChannelの購�
         );
     };
     dispatch();
+    expect(onConnectionStateChange).toHaveBeenCalledExactlyOnceWith("connected");
     expect(onIceConnectionStateChange).toHaveBeenCalledExactlyOnceWith("connected");
     expect(sendIceCandidate).toHaveBeenCalledExactlyOnceWith(null);
     expect(onTextMessage).toHaveBeenCalledOnce();
@@ -98,6 +108,7 @@ it("世代中断でICE・シグナリング・トラック・DataChannelの購�
     dispatch();
     for (const callback of [
         ...Object.values(logger),
+        onConnectionStateChange,
         onIceConnectionStateChange,
         sendIceCandidate,
         onTextMessage,

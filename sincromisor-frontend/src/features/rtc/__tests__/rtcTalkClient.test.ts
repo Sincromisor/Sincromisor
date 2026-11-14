@@ -5,6 +5,7 @@ import type { OfferResponse } from "../rtcBoundarySchema";
 type OwnerCallbacks = {
     audioTrack: MediaStreamTrack;
     signal: AbortSignal;
+    onConnectionStateChange: (state: RTCPeerConnectionState) => void;
     onIceConnectionStateChange: (state: RTCIceConnectionState) => void;
     sendIceCandidate: (candidate: RTCIceCandidateInit | null) => void;
 };
@@ -14,6 +15,7 @@ const mocks = vi.hoisted(() => {
         peerConnection: {
             getSenders: ReturnType<typeof vi.fn>;
             signalingState: RTCSignalingState;
+            connectionState: RTCPeerConnectionState;
         };
         telopChannel: { close: ReturnType<typeof vi.fn> };
         textChannel: { close: ReturnType<typeof vi.fn> };
@@ -30,6 +32,7 @@ const mocks = vi.hoisted(() => {
                 peerConnection: {
                     getSenders: vi.fn(() => []),
                     signalingState: "stable",
+                    connectionState: "new",
                 },
                 telopChannel: { close: vi.fn() },
                 textChannel: { close: vi.fn() },
@@ -308,7 +311,7 @@ describe("RTCTalkClient owner state machine", () => {
                 previousSessionId: "session-1",
             });
             if (operation === "candidate") {
-                await vi.waitFor(() => expect(mocks.healthMessages).toHaveLength(2));
+                expect(mocks.healthMessages).not.toContain(undefined);
                 mocks.callbacks[1]?.sendIceCandidate({ candidate: "candidate-new-bundle" });
                 await vi.waitFor(() => expect(mocks.candidateSend).toHaveBeenCalledTimes(2));
                 expect(mocks.candidateSend.mock.calls[1]?.[0].sessionId).toBe("session-2");
@@ -605,4 +608,80 @@ it("Answer後も送信待ち候補が64件を超えたら世代を終了する",
     pending.resolve();
     await settle();
     expect(mocks.candidateSend).toHaveBeenCalledOnce();
+});
+
+function connection(state: RTCPeerConnectionState, index = 0): void {
+    const bundle = mocks.bundles[index];
+    if (!bundle) throw new Error("Missing bundle");
+    bundle.peerConnection.connectionState = state;
+    mocks.callbacks[index]?.onConnectionStateChange(state);
+}
+
+it.each(["before-answer", "during-flush", "after-flush"])(
+    "%sの接続全体失敗をICE成功や交渉完了で解除しない",
+    async (timing) => {
+        const initial = deferred<OfferResponse>();
+        const candidate = deferred<void>();
+        mocks.negotiation.mockReturnValue(initial.promise);
+        mocks.candidateSend.mockReturnValue(candidate.promise);
+        const client = createClient();
+        const start = client.start();
+        mocks.callbacks[0]?.sendIceCandidate(null);
+        if (timing === "before-answer") connection("failed");
+        initial.resolve(answer("session-1", 1));
+        await vi.waitFor(() => expect(mocks.candidateSend).toHaveBeenCalledOnce());
+        if (timing === "during-flush") connection("failed");
+        candidate.resolve();
+        await start;
+        if (timing === "after-flush") connection("failed");
+        mocks.callbacks[0]?.onIceConnectionStateChange("connected");
+        mocks.callbacks[0]?.onIceConnectionStateChange("completed");
+        mocks.callbacks[0]?.onConnectionStateChange("connected");
+        expect(mocks.healthMessages).toHaveLength(1);
+        expect(mocks.healthMessages[0]).toContain("失敗");
+        expect(mocks.negotiation).toHaveBeenCalledOnce();
+        connection("connected");
+        expect(mocks.healthMessages).toHaveLength(2);
+        expect(mocks.healthMessages[1]).toBeUndefined();
+        client.stop();
+        mocks.healthMessages.length = 0;
+        connection("failed");
+        connection("connected");
+        expect(mocks.healthMessages).toEqual([]);
+    },
+);
+
+it("接続全体が先に成功しても交渉完了時に現在の失敗を解除しない", async () => {
+    const initial = deferred<OfferResponse>();
+    mocks.negotiation.mockReturnValue(initial.promise);
+    const client = createClient();
+    const start = client.start();
+    connection("connected");
+    expect(mocks.healthMessages).toEqual([undefined]);
+    connection("failed");
+    initial.resolve(answer("session-1", 1));
+    await start;
+    expect(mocks.healthMessages).toHaveLength(2);
+    expect(mocks.healthMessages[1]).toContain("失敗");
+    client.stop();
+});
+
+it("世代置換後に旧接続の成功・失敗を受理しない", async () => {
+    mocks.negotiation
+        .mockResolvedValueOnce(answer("session-1", 1))
+        .mockResolvedValueOnce(answer("session-2", 1));
+    const client = createClient();
+    await client.start();
+    mocks.candidateSend.mockRejectedValueOnce(
+        new RtcSignalingHttpError("gone", { operation: "candidate", status: 410 }),
+    );
+    mocks.callbacks[0]?.sendIceCandidate(null);
+    await vi.waitFor(() => expect(mocks.createBundle).toHaveBeenCalledTimes(2));
+    mocks.healthMessages.length = 0;
+    connection("failed");
+    connection("connected");
+    expect(mocks.healthMessages).toEqual([]);
+    connection("connected", 1);
+    expect(mocks.healthMessages).toEqual([undefined]);
+    client.stop();
 });

@@ -3,6 +3,7 @@ import type { DebugEventMapResult } from "../events/sincroAppEventMappers";
 
 /** 接続表示の導出と新規購読への初期通知で共有する、最新のRTC診断状態。 */
 export type SincroAppRtcDebugState = {
+    connectionState?: RTCPeerConnectionState;
     iceConnectionState: string;
     signalingState: string;
 };
@@ -23,6 +24,11 @@ export function handleMappedDebugConsoleEvent(params: HandleMappedDebugEventPara
     }
     if (result.kind === "event") {
         emitEvent(result.event);
+        return;
+    }
+    if (result.kind === "connection_state") {
+        params.setRtcState({ ...rtcState, connectionState: result.value });
+        emitDerivedConnectionState();
         return;
     }
     if (result.kind === "ice_state") {

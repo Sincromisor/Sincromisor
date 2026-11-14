@@ -10,11 +10,14 @@ import { VideoInputManager } from "../../../features/media/userMedia/videoInputM
 import { SincroAppSettingsModel } from "../../settings/sincroAppSettingsModel";
 import { SincroAppController } from "../sincroAppController";
 
+const rtcHealth = vi.hoisted(() => ({ notify: (_message?: string) => {} }));
+
 // RTCのネットワーク境界だけを代替し、セッション制御の失敗通知は実装を通す。
 vi.mock("../../../features/rtc/rtcTalkClient", () => ({
     RTCTalkClient: class {
         rtcHealthCallback: (message?: string) => void = () => {};
         start() {
+            rtcHealth.notify = this.rtcHealthCallback;
             this.rtcHealthCallback("test rtc failed");
             return Promise.resolve();
         }
@@ -132,6 +135,11 @@ it("実際の開始窓口で較正を開始し、音声・RTC不通では維持�
     await settle();
     expect(app.calibration.getState().status).toBe("active");
     expect(rtcError).toHaveBeenCalledWith("rtc", "test rtc failed");
+    const rtcRecovered = vi.spyOn(CharacterBehaviorState.getManager(), "clearErrorSource");
+    rtcHealth.notify();
+    expect(rtcRecovered).toHaveBeenCalledWith("rtc");
+    rtcHealth.notify("connection failed");
+    expect(rtcError).toHaveBeenLastCalledWith("rtc", "connection failed");
     app.applySettings({ videoInputDeviceId: undefined });
     expect(app.calibration.getState()).toMatchObject({
         status: "cancelled",
