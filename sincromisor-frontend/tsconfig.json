@@ -8,6 +8,7 @@
         "skipLibCheck": true,
         /* Bundler mode */
         "moduleResolution": "bundler",
+        "verbatimModuleSyntax": true,
         "allowImportingTsExtensions": true,
         "isolatedModules": true,
         "jsx": "react-jsx",
