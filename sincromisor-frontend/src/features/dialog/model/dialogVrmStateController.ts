@@ -76,7 +76,9 @@ export class DialogVrmStateController {
             frontendLogger.info("VRM file loaded.");
         } catch (error) {
             // 復元失敗は開始不能にせず、既定モデルへ戻したことを画面とログへ残す。
-            this.setStatusText("VRMの復元に失敗しました。既定のモデルで開始できます");
+            const message = "VRMの復元に失敗しました。既定のモデルで開始できます";
+            this.setStatusText(message);
+            this.notificationService.writePageError(message);
             frontendLogger.error("VRM file load failed.", { error });
         }
     }

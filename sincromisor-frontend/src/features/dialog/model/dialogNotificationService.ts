@@ -10,6 +10,11 @@ export class DialogNotificationService {
         this.popMessageService.writeDialogPopMessage(message);
     }
 
+    /** OBSの自動開始でダイアログが閉じても、既存の通常画面通知へ失敗を残す。 */
+    writePageError(message: string): void {
+        this.popMessageService.writePopError(message);
+    }
+
     writeError(message: string): void {
         this.popMessageService.writeDialogPopError(message);
     }

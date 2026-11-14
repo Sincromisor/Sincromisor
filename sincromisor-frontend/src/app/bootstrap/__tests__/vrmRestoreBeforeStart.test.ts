@@ -69,6 +69,12 @@ async function setup(obs = false) {
     const { frontendLogger } = await import("../../../shared/logging/appLogger");
     vi.spyOn(frontendLogger, "error").mockImplementation(() => {});
     vi.spyOn(frontendLogger, "warn").mockImplementation(() => {});
+    const { DialogNotificationService } = await import(
+        "../../../features/dialog/model/dialogNotificationService"
+    );
+    const recoveryNotice = vi
+        .spyOn(DialogNotificationService.prototype, "writePageError")
+        .mockImplementation(() => {});
     const { DialogVrmWorkflowService } = await import(
         "../../../features/dialog/model/dialogVrmWorkflowService"
     );
@@ -85,7 +91,7 @@ async function setup(obs = false) {
     const { SincroAppController } = await import("../../controller");
     const app = SincroAppController.getCurrent();
     if (!app) throw new Error("Expected initialized app");
-    return { app, restoring, selection };
+    return { app, restoring, selection, recoveryNotice };
 }
 
 it.each([false, true])(
@@ -115,15 +121,21 @@ it.each([false, true])(
 it.each(["none", "failure"])(
     "保存なし・復元失敗は既定モデルで開始できる（%s）",
     async (outcome) => {
-        const { app, restoring } = await setup(true);
+        const { app, restoring, recoveryNotice } = await setup(true);
         if (outcome === "failure") restoring.reject(new Error("cache failure"));
         else restoring.resolve({ statusText: "既定のVRMモデルを使用中" });
         await vi.waitFor(() => expect(coreStart).toHaveBeenCalledOnce());
         expect(sceneOptions).toHaveBeenCalledExactlyOnceWith(
             expect.objectContaining({ vrmUrl: "/characters/default.vrm" }),
         );
-        if (outcome === "failure")
+        if (outcome === "failure") {
             expect(app.getDialogVrmUiState().vrmStatusText).toContain("復元に失敗");
+            expect(recoveryNotice).toHaveBeenCalledExactlyOnceWith(
+                "VRMの復元に失敗しました。既定のモデルで開始できます",
+            );
+        } else {
+            expect(recoveryNotice).not.toHaveBeenCalled();
+        }
     },
 );
 

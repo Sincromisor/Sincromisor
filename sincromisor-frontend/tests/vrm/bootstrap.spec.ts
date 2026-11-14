@@ -179,3 +179,23 @@ test("Cache Storageの復元待ちを表示し、保存モデルを最初の要�
     expect(modelRequests[0]).toMatch(/^blob:/);
     expect(modelRequests.some((url) => url.includes("default.vrm"))).toBe(false);
 });
+
+test("OBSの復元失敗は開始後も通常画面で通知する", async ({ page }) => {
+    await replaceDeviceStart(page);
+    await page.addInitScript(() => {
+        Object.assign(window, { obsstudio: {} });
+        const match = Cache.prototype.match;
+        Cache.prototype.match = async function (request, options) {
+            if (String(request).endsWith("sincroVrmFile"))
+                throw new Error("cache restoration failed");
+            return match.call(this, request, options);
+        };
+    });
+    await page.goto("/simple-vrm/");
+    await expect(page.locator("body")).toHaveAttribute("data-start-count", "1");
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+    await expect(page.locator("#sincroPopBox")).toContainText(
+        "VRMの復元に失敗しました。既定のモデルで開始できます",
+    );
+    await expect(page.locator("#sincroPopBox .popError")).toBeVisible();
+});
