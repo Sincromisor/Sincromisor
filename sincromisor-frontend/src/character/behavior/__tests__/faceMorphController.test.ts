@@ -1,10 +1,10 @@
 import type { VRMExpressionManager, VRMExpressionPresetName } from "@pixiv/three-vrm";
 import { describe, expect, it } from "vitest";
+import { createDefaultFaceMotionSnapshot } from "../../../features/gaze/faceTracking/sincroFaceMotionSnapshotClone";
 import type { SincroFaceRetargetFrame } from "../../retargeting/sincroFaceRetargeter";
 import {
     buildCharacterBehaviorSnapshot,
     createDefaultBehaviorAiSpeechSnapshot,
-    createDefaultBehaviorFaceMotionSnapshot,
     createDefaultBehaviorGazeSnapshot,
     createDefaultBehaviorPoseMotionSnapshot,
     createDefaultBehaviorVadSnapshot,
@@ -114,7 +114,7 @@ function createSnapshot(
         vad: createDefaultBehaviorVadSnapshot(),
         gaze: createDefaultBehaviorGazeSnapshot(),
         faceMotion: {
-            ...createDefaultBehaviorFaceMotionSnapshot(),
+            ...createDefaultFaceMotionSnapshot(),
             trackingEnabled: true,
             detected: true,
             confidence: 1,

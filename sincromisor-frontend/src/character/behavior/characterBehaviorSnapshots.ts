@@ -1,8 +1,5 @@
 import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
-import {
-    cloneSincroRoiObservation,
-    DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT,
-} from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
+import { cloneFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshotClone";
 import type {
     SincroPoseArmMotionSnapshot,
     SincroPoseMotionSnapshot,
@@ -62,10 +59,6 @@ export function createDefaultBehaviorGazeSnapshot(): CharacterBehaviorGazeSnapsh
     };
 }
 
-export function createDefaultBehaviorFaceMotionSnapshot(): SincroFaceMotionSnapshot {
-    return cloneFaceMotionSnapshot(DEFAULT_SINCRO_FACE_MOTION_SNAPSHOT);
-}
-
 export function createDefaultBehaviorPoseMotionSnapshot(): SincroPoseMotionSnapshot {
     return clonePoseMotionSnapshot(DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT);
 }
@@ -99,20 +92,6 @@ export function buildCharacterBehaviorSnapshot(
                 : cloneSincroMotionPipelineState(options.sincroMotionPipeline),
         aiSpeech: { ...options.aiSpeech },
         errorMessage: options.errorMessage,
-    };
-}
-
-export function cloneFaceMotionSnapshot(
-    snapshot: SincroFaceMotionSnapshot,
-    nowMs?: number,
-): SincroFaceMotionSnapshot {
-    return {
-        ...snapshot,
-        headPose: { ...snapshot.headPose },
-        blendshapes: { ...snapshot.blendshapes },
-        roi: cloneSincroRoiObservation(snapshot.roi),
-        warnings: [...snapshot.warnings],
-        lastUpdatedAtMs: snapshot.lastUpdatedAtMs ?? nowMs,
     };
 }
 

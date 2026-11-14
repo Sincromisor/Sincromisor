@@ -8,6 +8,7 @@
  * fallback させない。
  */
 import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
+import { clonePipelineFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshotClone";
 import type { SincroGestureMotionSnapshot } from "../../features/gaze/gestureTracking/sincroGestureMotionSnapshot";
 import {
     cloneSincroHandMotionSnapshot,
@@ -30,7 +31,6 @@ import {
     summarizeObserveOnlyStage,
 } from "./sincroMotionObserveOnlyPipelineTypes";
 import {
-    clonePipelineFaceMotionSnapshot,
     cloneSincroMotionPipelineState,
     createDefaultSincroMotionPipelineState,
     type SincroMotionPipelineState,

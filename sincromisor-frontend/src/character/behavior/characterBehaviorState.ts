@@ -3,6 +3,10 @@ import type { Detection } from "@mediapipe/tasks-vision";
 import { TalkManager, type TalkManagerEvent } from "../../features/conversation/talk/talkManager";
 import type { CharacterGaze } from "../../features/gaze/characterGaze/characterGaze";
 import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
+import {
+    cloneFaceMotionSnapshot,
+    createDefaultFaceMotionSnapshot,
+} from "../../features/gaze/faceTracking/sincroFaceMotionSnapshotClone";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import type { VadStateReport } from "../../features/media/userMedia/userMediaManager";
 import type { ChatMessage, TelopChannelMessage } from "../../features/rtc/rtcMessage";
@@ -26,10 +30,8 @@ import {
 } from "./characterBehaviorGaze";
 import {
     buildCharacterBehaviorSnapshot,
-    cloneFaceMotionSnapshot,
     clonePoseMotionSnapshot,
     createDefaultBehaviorAiSpeechSnapshot,
-    createDefaultBehaviorFaceMotionSnapshot,
     createDefaultBehaviorGazeSnapshot,
     createDefaultBehaviorPoseMotionSnapshot,
     createDefaultBehaviorVadSnapshot,
@@ -79,7 +81,7 @@ export class CharacterBehaviorState {
     private pendingRawSpeechStartedAtMs: number | undefined;
     private vad: CharacterBehaviorVadSnapshot = createDefaultBehaviorVadSnapshot();
     private gaze: CharacterBehaviorGazeSnapshot = createDefaultBehaviorGazeSnapshot();
-    private faceMotion: SincroFaceMotionSnapshot = createDefaultBehaviorFaceMotionSnapshot();
+    private faceMotion: SincroFaceMotionSnapshot = createDefaultFaceMotionSnapshot();
     private poseMotion: SincroPoseMotionSnapshot = createDefaultBehaviorPoseMotionSnapshot();
     private sincroMotionPipeline: SincroMotionPipelineState | undefined;
     private aiSpeech: CharacterBehaviorAiSpeechSnapshot = createDefaultBehaviorAiSpeechSnapshot();

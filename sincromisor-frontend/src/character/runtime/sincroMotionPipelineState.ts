@@ -14,15 +14,15 @@
  */
 
 import type { SincroFaceMotionSnapshot } from "../../features/gaze/faceTracking/sincroFaceMotionSnapshot";
+import {
+    clonePipelineFaceMotionSnapshot,
+    createDefaultFaceMotionSnapshot,
+} from "../../features/gaze/faceTracking/sincroFaceMotionSnapshotClone";
 import type { SincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import { cloneSincroHandMotionSnapshot } from "../../features/gaze/handTracking/sincroHandMotionSnapshot";
 import type { SincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import { DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshot";
 import { cloneSincroPoseMotionSnapshot } from "../../features/gaze/poseTracking/sincroPoseMotionSnapshotClone";
-import {
-    cloneFaceMotionSnapshot,
-    createDefaultBehaviorFaceMotionSnapshot,
-} from "../behavior/characterBehaviorSnapshots";
 import type { CanonicalUpperBodyState } from "../canonical/canonicalUpperBodyState";
 import type { GestureIntentObservation } from "../motionIntent/motionIntentEstimator";
 import type { MotionIntentState } from "../motionIntent/motionIntentState";
@@ -72,7 +72,7 @@ export type SincroMotionPipelineState = SincroMotionPipelineInputSnapshot & {
  */
 export function createDefaultSincroMotionPipelineState(): SincroMotionPipelineState {
     return {
-        face: createDefaultBehaviorFaceMotionSnapshot(),
+        face: createDefaultFaceMotionSnapshot(),
         pose: cloneSincroPoseMotionSnapshot(DEFAULT_SINCRO_POSE_MOTION_SNAPSHOT),
         updatedAtMs: 0,
     };
@@ -102,20 +102,5 @@ export function cloneSincroMotionPipelineState(
         composerDryRun:
             state.composerDryRun === undefined ? undefined : structuredClone(state.composerDryRun),
         updatedAtMs: state.updatedAtMs,
-    };
-}
-
-/** 観測の取り込みと状態の公開で、顔の警告・領域・頭部行列を呼び出し元から分離する。 */
-export function clonePipelineFaceMotionSnapshot(
-    snapshot: SincroFaceMotionSnapshot,
-): SincroFaceMotionSnapshot {
-    const cloned = cloneFaceMotionSnapshot(snapshot);
-    const matrix = snapshot.headPose.matrix;
-    return {
-        ...cloned,
-        headPose: {
-            ...cloned.headPose,
-            matrix: matrix === undefined ? undefined : [...matrix],
-        },
     };
 }

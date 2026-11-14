@@ -1,10 +1,10 @@
 import type { VRM, VRMHumanBoneName } from "@pixiv/three-vrm";
 import { Euler, Object3D, Quaternion, Timer, Vector3 } from "three";
 import { describe, expect, it, vi } from "vitest";
+import { createDefaultFaceMotionSnapshot } from "../../../features/gaze/faceTracking/sincroFaceMotionSnapshotClone";
 import {
     buildCharacterBehaviorSnapshot,
     createDefaultBehaviorAiSpeechSnapshot,
-    createDefaultBehaviorFaceMotionSnapshot,
     createDefaultBehaviorGazeSnapshot,
     createDefaultBehaviorPoseMotionSnapshot,
     createDefaultBehaviorVadSnapshot,
@@ -319,7 +319,7 @@ function createBehaviorSnapshot(): CharacterBehaviorSnapshot {
         nowMs: 1000,
         vad: createDefaultBehaviorVadSnapshot(),
         gaze: createDefaultBehaviorGazeSnapshot(),
-        faceMotion: createDefaultBehaviorFaceMotionSnapshot(),
+        faceMotion: createDefaultFaceMotionSnapshot(),
         poseMotion: createDefaultBehaviorPoseMotionSnapshot(),
         sincroMotionPipeline: createDefaultSincroMotionPipelineState(),
         aiSpeech: createDefaultBehaviorAiSpeechSnapshot(),
