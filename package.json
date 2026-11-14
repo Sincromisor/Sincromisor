@@ -24,6 +24,8 @@
         "git:hooks:install": "git config core.hooksPath .githooks",
         "commit:check": "node scripts/git/checkCommitMessage.mjs",
         "dev": "npm run dev --workspace sincromisor-frontend --",
+        "typecheck": "npm run typecheck --workspace sincromisor-frontend --",
+        "typecheck:watch": "npm run typecheck:watch --workspace sincromisor-frontend --",
         "build": "npm run build --workspace sincromisor-frontend --",
         "test": "npm run test --workspace sincromisor-frontend --",
         "assets:prepare": "npm run assets:prepare --workspace sincromisor-frontend --",

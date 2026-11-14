@@ -37,14 +37,14 @@ PoCでは下記2軸を最優先する。
 | 静的検査 (TS / JS / JSON)     | **Biome**                        |
 | フォーマッタ (TS / JS / JSON) | **Biome**                        |
 | フォーマッタ (Markdown)       | **Prettier**(`*.md`のみスコープ) |
-| 型チェック                    | TypeScript (`npm run build`経由) |
+| 型チェック                    | TypeScript (`npm run typecheck`) |
 | テスト                        | `npm run test`                   |
 
 - Biomeの設定は [biome.json](../../sincromisor-frontend/biome.json) を正本とする。静的検査は `recommended`を有効化し、PoCで支障が出る項目のみ明示オプトアウト
 - `noExcessiveCognitiveComplexity`は認知的複雑度を見直す目安として扱い、上限超過だけで修正必須とはしない。警告の確認・記録は [タスク管理の警告方針](../../tasks/README.md#biomeの警告の扱い) に従う。
 - PrettierはMarkdown専用で、設定はルートの [.prettierrc.json](../../.prettierrc.json) と [.prettierignore](../../.prettierignore) を使う。整形手順は [Markdown規約](coding-md.md#2-静的検査--フォーマッタ--コミット前確認) に従う。
 - 確認範囲は[タスク管理の確認コマンド](../../tasks/README.md#確認コマンド)に従う。通常変更では変更ファイルの整形と対象を絞った静的検査・型確認・テストを行う。
-- フロントエンドの全体確認はリポジトリルートで `npm run build`（型チェックとViteビルド）、`npm run check`（フロントエンドのBiomeとリポジトリ全体のMarkdown検査）、`npm run test`（Vitest）を使う。対象確認は `sincromisor-frontend/`で `../node_modules/.bin/biome check <変更ファイル...>`、`npm run test -- <対象テスト...>`を使う。型確認は同ディレクトリで `../node_modules/.bin/tsc --noEmit -p tsconfig.modern.json`を使う。
+- フロントエンドの全体確認はリポジトリルートで `npm run build`（型チェックとViteビルド）、`npm run check`（フロントエンドのBiomeとリポジトリ全体のMarkdown検査）、`npm run test`（Vitest）を使う。対象確認は `sincromisor-frontend/`で `../node_modules/.bin/biome check <変更ファイル...>`、`npm run test -- <対象テスト...>`を使う。型確認はルートと同ディレクトリのどちらでも `npm run typecheck`、変更の監視は別端末で `npm run typecheck:watch`を使う。どちらも素材準備・Viteビルドを行わず、`tsconfig.modern.json`を出力なしで検査する。`build`も同じ型検査を使い、失敗時にはViteビルドへ進まない。
 - AgentServerはルートのnpmワークスペースに含まれない。`sincromisor-server/agent-server/`で独立した [package.json](../../sincromisor-server/agent-server/package.json) の `npm run check`（`tsc --noEmit`）、`npm run test`（Nodeのテストランナー）を使う。単体の対象確認は同ディレクトリで `node --import tsx --test <対象テスト...>`を実行する。
 - 静的検査警告を局所的に抑制する場合は `// biome-ignore <rule>: <reason>`を付ける(本書 §0の `// reason:`ルールに準ずる)
 - フックの導入とコミット形式は [タスク管理のコミット規約](../../tasks/README.md#コミットメッセージ) に従う。

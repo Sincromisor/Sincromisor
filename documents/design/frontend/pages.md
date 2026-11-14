@@ -40,7 +40,7 @@ npm --prefix sincromisor-frontend run dev
 
 `npm run dev`と `npm run build`は前処理で `assets:prepare`を実行し、インストール済みの `@mediapipe/tasks-vision/wasm`から `public/mediapipe-wasm`を同期する。この配信先は生成物専用とし、手動の素材を置かない。コピーを一時領域で完了してから生成先を交換するため、古い素材・壊れたリンクを残さず、コピー元が不在なら既存の配信素材を保持して失敗する。開発環境のセットアップとDockerビルドも同じスクリプトを使う。単独で準備する場合は `npm --prefix sincromisor-frontend run assets:prepare`を実行する。
 
-通常ビルドは次のコマンドを使う。`tsc -p tsconfig.modern.json && vite build`により型を確認し、ページ一覧の6ページを `sincromisor-frontend/dist/`に出力する。
+通常ビルドは次のコマンドを使う。`npm run typecheck && vite build`により型を確認し、ページ一覧の6ページを `sincromisor-frontend/dist/`に出力する。
 
 ```sh
 npm --prefix sincromisor-frontend run build
@@ -56,6 +56,10 @@ ReactのJSX変換と開発時のFast Refreshは `@vitejs/plugin-react` のOxc経
 
 OBS更新時は同梱CEFの版を確認し、CSS対象を引き上げる際はトップ・起動前設定の広幅／狭幅での配置と操作を比較する。新しいCSS構文はCEFの対応を確認して採用する。他エンジンのブラウザーは、版の新しさだけで対応済みと判断しない。
 追加CSSの通常の`dialog`指定はアプリの寸法・枠色を上書きせず、`!important`による明示指定は反映する。`npm run browser:test:css`は専用サーバーを起動・終了し、開発・本番の3ページと2画面幅で、OBS既定CSS・通常指定・`!important`・挿入位置の違いを[ブラウザーテスト](../../../sincromisor-frontend/tests/styles/obsCss.spec.ts)で確認する。
+
+### 型検査だけを実行する
+
+リポジトリルートまたは `sincromisor-frontend/`で `npm run typecheck`を実行すると、素材準備やViteビルドを行わず型検査だけを実行する。開発サーバーと並べて監視する場合は別端末で `npm run typecheck:watch`を起動し、Ctrl+Cで終了する。`npm run build`も同じ検査を必須とし、成功後にViteビルドへ進む。
 
 ## 正式トップページ
 

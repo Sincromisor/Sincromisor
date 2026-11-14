@@ -6,7 +6,9 @@
     "scripts": {
         "assets:prepare": "node scripts/prepare-mediapipe-assets.js",
         "dev": "npm run assets:prepare && vite",
-        "build": "npm run assets:prepare && tsc -p tsconfig.modern.json && vite build",
+        "typecheck": "tsc --noEmit -p tsconfig.modern.json",
+        "typecheck:watch": "npm run typecheck -- --watch",
+        "build": "npm run assets:prepare && npm run typecheck && vite build",
         "test": "vitest run",
         "generate:temporal-recovery-fixtures": "SINCRO_WRITE_RECOVERY_FIXTURES=1 vitest run src/character/motionEvaluation/fixtures/temporalArmRecoveryFixture.generate.test.ts",
         "check": "npm run check:biome",
