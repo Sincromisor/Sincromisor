@@ -1,6 +1,6 @@
 import { PopMessageService } from "./popMessageService";
 
-// 起動前 dialog 内の通知表示（PopMessageService 経由）をラップする。
+// 起動前ダイアログと通常画面の通知表示をPopMessageServiceへ渡す。
 // DialogManager から PopMessageService シングルトン取得を隠し、UI通知の責務を分離する。
 export class DialogNotificationService {
     private readonly popMessageService = PopMessageService.getService();

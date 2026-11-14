@@ -1,13 +1,13 @@
 id: task-261114152035-await-vrm-restore-before-start
 title: VRM復元完了後に手動・OBSの開始を許可する
 category: frontend
-status: open
+status: done
 depends_on: []
 superseded_by: null
 review: APPROVED
 reviewed_sha: null
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 1
 created_at: 2026-11-14
-closed_at: null
+closed_at: 2026-11-14
 legacy_ids: []
