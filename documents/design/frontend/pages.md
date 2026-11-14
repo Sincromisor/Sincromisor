@@ -123,8 +123,7 @@ Use case: precise-object-edit. Edit the supplied full-body dark-brown-haired too
 ## 変更時の確認
 
 - 新しい通常ページを追加する場合
-    - Viteビルド入力
-    - Vite経路別名
+    - Vite設定の `pageRouteAliases`へ入力名 `inputName`、生成元 `source`、公開位置 `publicPath`、開発URLの別名 `devRoutes`を1件追加する。ビルド入力・開発時の書き換え・出力HTMLの配置はこの定義から導出する
     - アプリの共通枠組み取り付け
     - 設定 / デバッグ利用可否
     - `documents/design/index.md`

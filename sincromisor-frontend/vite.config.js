@@ -18,34 +18,40 @@ const mediapipeTasksVisionPackageJson = JSON.parse(
 const mediapipeTasksVisionVersion = mediapipeTasksVisionPackageJson.version;
 const gitCommit = process.env.SINCROMISOR_GIT_COMMIT;
 const reactRuntimePackages = ["/react/", "/react-dom/", "/scheduler/"];
-// 開発時の内部書き換えとビルド後のHTML移動で、同じ公開URLを使う。
+// ビルド入力・開発時の書き換え・出力HTMLの配置を、このページ定義に揃える。
 const pageRouteAliases = [
     {
+        inputName: "main",
         source: "pages/main/index.html",
         publicPath: "index.html",
         devRoutes: ["/", "/index.html"],
     },
     {
+        inputName: "simple_vrm",
         source: "pages/simpleVrm/index.html",
         publicPath: "simple-vrm/index.html",
         devRoutes: ["/simple-vrm", "/simple-vrm/", "/simple-vrm/index.html"],
     },
     {
+        inputName: "vrm360",
         source: "pages/vrm360/index.html",
         publicPath: "vrm360/index.html",
         devRoutes: ["/vrm360", "/vrm360/", "/vrm360/index.html"],
     },
     {
+        inputName: "looking_glass_vrm",
         source: "pages/lookingGlassVrm/index.html",
         publicPath: "looking-glass-vrm/index.html",
         devRoutes: ["/looking-glass-vrm", "/looking-glass-vrm/", "/looking-glass-vrm/index.html"],
     },
     {
+        inputName: "motion_debug",
         source: "pages/motionDebug/index.html",
         publicPath: "motion-debug/index.html",
         devRoutes: ["/motion-debug", "/motion-debug/", "/motion-debug/index.html"],
     },
     {
+        inputName: "pose_landmarker_spike",
         source: "pages/poseLandmarkerSpike/index.html",
         publicPath: "pose-landmarker-spike/index.html",
         devRoutes: [
@@ -56,6 +62,7 @@ const pageRouteAliases = [
     },
 ];
 
+/** 公開URLの別名を生成元へ書き換え、クエリーはそのまま渡す。 */
 function rewritePageRouteRequest(req, _res, next) {
     if (!req.url) {
         next();
@@ -71,6 +78,7 @@ function rewritePageRouteRequest(req, _res, next) {
     next();
 }
 
+/** 同じページ定義で開発サーバーを接続し、ビルド後のHTMLを公開位置へ移す。 */
 function sincroPageRouteAliasPlugin() {
     return {
         name: "sincro-page-route-alias",
@@ -94,16 +102,11 @@ function sincroPageRouteAliasPlugin() {
     };
 }
 
-/** 通常ビルドで配信するページのHTML入口を列挙する。 */
+/** 通常ビルドの入力名と生成元をページ定義から導出する。 */
 function buildInputMap() {
-    return {
-        main: resolve(contents_src, "pages/main/index.html"),
-        simple_vrm: resolve(contents_src, "pages/simpleVrm/index.html"),
-        vrm360: resolve(contents_src, "pages/vrm360/index.html"),
-        looking_glass_vrm: resolve(contents_src, "pages/lookingGlassVrm/index.html"),
-        motion_debug: resolve(contents_src, "pages/motionDebug/index.html"),
-        pose_landmarker_spike: resolve(contents_src, "pages/poseLandmarkerSpike/index.html"),
-    };
+    return Object.fromEntries(
+        pageRouteAliases.map((page) => [page.inputName, resolve(contents_src, page.source)]),
+    );
 }
 
 export default defineConfig({
