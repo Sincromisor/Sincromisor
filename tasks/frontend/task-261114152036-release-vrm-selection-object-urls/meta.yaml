@@ -1,14 +1,14 @@
 id: task-261114152036-release-vrm-selection-object-urls
 title: VRM選択で生成したBlob URLの所有と解放を管理する
 category: frontend
-status: open
+status: done
 depends_on:
   - task-261114152035-await-vrm-restore-before-start
 superseded_by: null
 review: APPROVED
 reviewed_sha: null
-verdict: null
-attempts: 0
+verdict: PASS
+attempts: 1
 created_at: 2026-11-14
-closed_at: null
+closed_at: 2026-11-14
 legacy_ids: []
