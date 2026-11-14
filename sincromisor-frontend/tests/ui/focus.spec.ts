@@ -44,9 +44,9 @@ test("起動前と右側パネルをキーボードで切り替えても見え�
         ).toBeFocused();
         // メニュー・機器の確認に不要な3D描画は設定で止め、モデル交換はVRM試験で確認する。
         await page.evaluate(async () => {
-            const path = "/app/controller/index.ts";
-            const { SincroAppController } = await import(path);
-            SincroAppController.getCurrent().applySettings({ enableCharacter: false });
+            const path = "/app/controller/activeSincroAppController.ts";
+            const { getActiveSincroAppController } = await import(path);
+            getActiveSincroAppController().applySettings({ enableCharacter: false });
         });
         await startup.getByRole("button", { name: "開始する", exact: true }).click();
         const gear = page.locator("#debugMenuButton");
@@ -105,9 +105,9 @@ test("標準メニューは画面端を避け、説明と併用してもパネ�
         await expect(page.getByRole("button", { name: "開始する", exact: true })).toBeVisible();
         // 機器の開始を経ずにパネルを使い、表示操作そのものを検査する。
         await page.evaluate(async () => {
-            const path = "/app/controller/index.ts";
-            const { SincroAppController } = await import(path);
-            SincroAppController.getCurrent().dialog.close();
+            const path = "/app/controller/activeSincroAppController.ts";
+            const { getActiveSincroAppController } = await import(path);
+            getActiveSincroAppController().dialog.close();
         });
         const gear = page.locator("#debugMenuButton");
         const menu = page.getByRole("menu", { name: "右側ツール" });

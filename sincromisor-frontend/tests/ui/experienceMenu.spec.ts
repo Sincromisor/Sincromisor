@@ -73,9 +73,9 @@ test("模擬トラックで失敗回復とメニュー終了・再開始を確�
     await expect(page.getByRole("button", { name: "開始する", exact: true })).toBeVisible();
     // メニュー・機器の確認に不要な3D描画は設定で止め、モデル交換はVRM試験で確認する。
     await page.evaluate(async () => {
-        const path = "/app/controller/index.ts";
-        const { SincroAppController } = await import(path);
-        SincroAppController.getCurrent().applySettings({ enableCharacter: false });
+        const path = "/app/controller/activeSincroAppController.ts";
+        const { getActiveSincroAppController } = await import(path);
+        getActiveSincroAppController().applySettings({ enableCharacter: false });
     });
     await page.getByRole("button", { name: "開始する", exact: true }).click();
     const notice = page.getByRole("alert", { name: "重要な通知" });
@@ -91,10 +91,10 @@ test("模擬トラックで失敗回復とメニュー終了・再開始を確�
     await expect(usage).toContainText("マイク 未使用");
     // 別の重要通知があっても音声回復で消さず、同じ失敗通知を二重に作らない。
     await page.evaluate(async () => {
-        const path = "/app/controller/index.ts";
-        const { SincroAppController } = await import(path);
+        const path = "/app/controller/activeSincroAppController.ts";
+        const { getActiveSincroAppController } = await import(path);
         window.experienceFixture.failSave = true;
-        SincroAppController.getCurrent().applySettings({ titleText: "保持する設定" });
+        getActiveSincroAppController().applySettings({ titleText: "保持する設定" });
         window.experienceFixture.failAudio = false;
         window.experienceFixture.holdAudio = true;
     });

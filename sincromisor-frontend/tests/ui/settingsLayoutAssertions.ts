@@ -78,6 +78,8 @@ export async function expectStartupActions(shell: Locator) {
 }
 
 export async function selectSettingsCategory(shell: Locator, id: string) {
+    // 遅延配置後の幅で分類UIを選び、読込待ちを狭幅のタブ非表示と取り違えない。
+    await expect(shell).toBeVisible();
     const select = shell.locator(".settingsShell__navSelect");
     if (await select.isVisible()) await select.selectOption(id);
     else await shell.locator(`[role="tab"][aria-controls$="-${id}"]`).click();

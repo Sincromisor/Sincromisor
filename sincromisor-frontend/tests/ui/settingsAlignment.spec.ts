@@ -100,11 +100,12 @@ test("基本設定の接続状態が長くなっても本文と操作欄の整�
     await page.goto("/simple-vrm/");
     await expect(page.getByRole("button", { name: "詳しい設定", exact: true })).toBeVisible();
     await openBasicSettings(page);
-    // 実通信は行わず、パネルが購読する通知経路へ表示状態だけを与える。
+    await expect(page.locator(".sincroControlPanel")).toBeVisible();
+    // 実通信は行わず、配置済みのパネルが購読する通知経路へ表示状態だけを与える。
     await page.evaluate(async () => {
-        const path = "/app/controller/index.ts";
-        const { SincroAppController } = await import(path);
-        const app = SincroAppController.getCurrent();
+        const path = "/app/controller/activeSincroAppController.ts";
+        const { getActiveSincroAppController } = await import(path);
+        const app = getActiveSincroAppController();
         app.emitEvent({ type: "lifecycle", state: "running" });
         app.emitEvent({ type: "connection_state", value: "connected", detail: "ice:connected" });
     });
@@ -112,9 +113,9 @@ test("基本設定の接続状態が長くなっても本文と操作欄の整�
     await expect(basic.getByText("接続済み", { exact: true })).toBeVisible();
     await expectSettingsAlignment(basic);
     await page.evaluate(async () => {
-        const path = "/app/controller/index.ts";
-        const { SincroAppController } = await import(path);
-        SincroAppController.getCurrent().emitEvent({
+        const path = "/app/controller/activeSincroAppController.ts";
+        const { getActiveSincroAppController } = await import(path);
+        getActiveSincroAppController().emitEvent({
             type: "connection_state",
             value: "input_failed",
             detail: "マイクの利用が許可されていません。ブラウザーの権限設定を確認してから再試行してください。",
@@ -135,9 +136,9 @@ test("基本設定の接続状態が長くなっても本文と操作欄の整�
 
 async function openBasicSettings(page: Page) {
     await page.evaluate(async () => {
-        const path = "/app/controller/index.ts";
-        const { SincroAppController } = await import(path);
-        SincroAppController.getCurrent().dialog.close();
+        const path = "/app/controller/activeSincroAppController.ts";
+        const { getActiveSincroAppController } = await import(path);
+        getActiveSincroAppController().dialog.close();
     });
     await page.locator("#debugMenuButton").click();
     await page.getByRole("menuitem", { name: "基本設定", exact: true }).click();

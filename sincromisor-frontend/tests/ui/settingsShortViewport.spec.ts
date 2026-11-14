@@ -49,9 +49,9 @@ for (const route of ["simple-vrm", "vrm360", "looking-glass-vrm"]) {
             await expectReachable(startup.getByRole("button", { name: "開始する", exact: true }));
             await expectReachable(startup.getByRole("link", { name: "トップへ戻る" }));
             await page.evaluate(async () => {
-                const path = "/app/controller/index.ts";
-                const { SincroAppController } = await import(path);
-                SincroAppController.getCurrent().dialog.close();
+                const path = "/app/controller/activeSincroAppController.ts";
+                const { getActiveSincroAppController } = await import(path);
+                getActiveSincroAppController().dialog.close();
             });
             await page.locator("#debugMenuButton").click();
             await page.getByRole("menuitem", { name: "基本設定", exact: true }).click();

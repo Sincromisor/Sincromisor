@@ -21,9 +21,9 @@ test.beforeEach(async ({ page }) => {
 async function openBasicSettings(page: Page) {
     await expect(page.getByRole("button", { name: "開始する", exact: true })).toBeVisible();
     await page.evaluate(async () => {
-        const path = "/app/controller/index.ts";
-        const { SincroAppController } = await import(path);
-        SincroAppController.getCurrent().dialog.close();
+        const path = "/app/controller/activeSincroAppController.ts";
+        const { getActiveSincroAppController } = await import(path);
+        getActiveSincroAppController().dialog.close();
     });
     await page.locator("#debugMenuButton").click();
     await page.getByRole("menuitem", { name: "基本設定", exact: true }).click();
@@ -231,9 +231,9 @@ test("数値欄のIME確定Enterは編集を保ち、通常Enterでだけ適用�
     const height = page.getByRole("spinbutton", { name: "タイルの高さ", exact: true });
     const appliedHeight = () =>
         page.evaluate(async () => {
-            const path = "/app/controller/index.ts";
-            const { SincroAppController } = await import(path);
-            return SincroAppController.getCurrent().getSettingsSnapshot().lgTileHeight;
+            const path = "/app/controller/activeSincroAppController.ts";
+            const { getActiveSincroAppController } = await import(path);
+            return getActiveSincroAppController().getSettingsSnapshot().lgTileHeight;
         });
     for (const composing of [true, false]) {
         await height.fill("512");

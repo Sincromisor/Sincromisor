@@ -22,9 +22,9 @@ test("機器取得失敗・体験再開始でも架空の会話を作らない",
             "マイク 未使用",
         );
         const messages = await page.evaluate(async () => {
-            const path = "/app/controller/index.ts";
-            const { SincroAppController } = await import(path);
-            return SincroAppController.getCurrent()
+            const path = "/app/controller/activeSincroAppController.ts";
+            const { getActiveSincroAppController } = await import(path);
+            return getActiveSincroAppController()
                 .chat.getSnapshot()
                 .messages.map((record: { message: { message: string } }) => record.message.message);
         });

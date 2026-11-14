@@ -29,9 +29,9 @@ test("題名の空欄・変換中の文字・選択置換を起動前後と再�
     await expect(title).toHaveValue("");
     // 機器取得と無関係に、同じ設定を開始後のパネルで編集する。
     await page.evaluate(async () => {
-        const path = "/app/controller/index.ts";
-        const { SincroAppController } = await import(path);
-        SincroAppController.getCurrent().dialog.close();
+        const path = "/app/controller/activeSincroAppController.ts";
+        const { getActiveSincroAppController } = await import(path);
+        getActiveSincroAppController().dialog.close();
     });
     await expect(page.locator("#sincroHeaderBox__text")).toHaveText("Sincromisor");
     await page.locator("#debugMenuButton").click();

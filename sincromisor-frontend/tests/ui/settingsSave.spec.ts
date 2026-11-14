@@ -29,9 +29,9 @@ test("起動前後で未保存の入力を保持し、最新値を再試行し�
     await expect(page.getByRole("alert")).toContainText("設定が未保存です");
     await title.fill("最新の入力");
     await page.evaluate(async () => {
-        const path = "/app/controller/index.ts";
-        const { SincroAppController } = await import(path);
-        SincroAppController.getCurrent().dialog.close();
+        const path = "/app/controller/activeSincroAppController.ts";
+        const { getActiveSincroAppController } = await import(path);
+        getActiveSincroAppController().dialog.close();
     });
     await page.locator("#debugMenuButton").click();
     await page.getByRole("menuitem", { name: "基本設定" }).click();

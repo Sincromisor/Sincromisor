@@ -26,9 +26,9 @@ test("診断の補助導線をキーボードで開き、起動前後と保存�
     await page.getByRole("button", { name: "詳しい設定", exact: true }).click();
     await expect(startup.getByRole("radio", { name: "入力音声を折り返す" })).toBeChecked();
     await page.evaluate(async () => {
-        const path = "/app/controller/index.ts";
-        const { SincroAppController } = await import(path);
-        SincroAppController.getCurrent().dialog.close();
+        const path = "/app/controller/activeSincroAppController.ts";
+        const { getActiveSincroAppController } = await import(path);
+        getActiveSincroAppController().dialog.close();
     });
     await page.locator("#debugMenuButton").click();
     await page.getByRole("menuitem", { name: "基本設定" }).click();
