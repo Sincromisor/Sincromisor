@@ -13,16 +13,17 @@ export class SincroLookingGlassVRMInitializer extends SincroVRMInitializer {
     };
 
     /** XRとLooking Glassの開始導線を備えたシーンを生成し、共通開始へ返す。 */
-    protected override createScene(): LookingGlassVRMScene {
+    protected override createScene(signal?: AbortSignal): LookingGlassVRMScene {
         const vrmScene: LookingGlassVRMScene = new LookingGlassVRMScene({
             diagnostics: this.appController.debug.vrmDiagnostics,
             canvasRoot: this.charCanvas,
             characterControlLayer: this.characterControlLayer,
             vrmUrl: this.appController.dialog.getSelectedVrmUrl(),
+            loadSignal: signal,
             retainVrmUrl: (url) => this.appController.dialog.retainVrmUrl(url),
             xrMode: true,
-            onThumbnailLoaded: (thumbnailImage) => {
-                this.updateSystemIconFromThumbnail(thumbnailImage);
+            onThumbnailLoaded: (thumbnailImage, isCurrent) => {
+                this.updateSystemIconFromThumbnail(thumbnailImage, isCurrent);
             },
         });
         vrmScene.enableLookingGlassStartButton();

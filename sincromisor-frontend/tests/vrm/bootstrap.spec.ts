@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 
 // 起動済み開発サーバーを使い、機器・RTCだけを置換してReactとページ初期化は本番経路を通す。
@@ -262,4 +263,56 @@ test("初期化失敗は部分アプリを解除・終了し、再開始と重�
     await page.keyboard.press("Tab");
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL("http://127.0.0.1:5173/");
+});
+
+test("キャラクター選び直しは既存レンダラーでモデルを交換し、同じモデルの再開始でも閉じる", async ({
+    page,
+}) => {
+    // 固定素材の転送と2回のVRM読込・描画準備を実行する。
+    test.slow();
+    await replaceDeviceStart(page);
+    await page.goto("/simple-vrm/");
+    await page.getByRole("button", { name: "開始する", exact: true }).click();
+    await expect(page.locator("body")).toHaveAttribute("data-start-count", "1");
+    await expect(page.locator("#configurationDialog")).not.toBeVisible();
+    const renderer = page.locator("#sincroCharacterBox canvas").last();
+    await renderer.evaluate((canvas) => {
+        canvas.setAttribute("data-original-renderer", "true");
+    });
+    await page.locator("#debugMenuButton").click();
+    await page.getByRole("menuitem", { name: "基本設定", exact: true }).click();
+    const settings = page.getByRole("dialog", { name: "基本設定", exact: true });
+    const characterCategory = settings.getByRole("tab", { name: "キャラクター", exact: true });
+    if (await characterCategory.isVisible()) await characterCategory.click();
+    else
+        await settings
+            .getByRole("combobox", { name: "基本設定 カテゴリ" })
+            .selectOption("character");
+    await settings.getByRole("button", { name: "キャラクターを選び直す", exact: true }).click();
+    await expect(page.locator("#configurationDialog")).toBeVisible();
+    await page.locator("#configurationDialog input[type=file]").setInputFiles({
+        name: "replacement.vrm",
+        mimeType: "application/octet-stream",
+        buffer: readFileSync("sincromisor-frontend/public/characters/default.vrm"),
+    });
+    await page.evaluate(async () => {
+        const path = "/app/controller/index.ts";
+        const { SincroAppController } = await import(path);
+        await SincroAppController.getCurrent().dialog.waitForVrmSelection();
+    });
+    await expect(page.getByRole("button", { name: "開始する", exact: true })).toBeEnabled();
+    await page.getByRole("button", { name: "開始する", exact: true }).click();
+    await expect(page.locator("body")).toHaveAttribute("data-start-count", "2");
+    await expect(page.locator("#configurationDialog")).not.toBeVisible();
+    await expect(
+        page.locator("#sincroCharacterBox canvas[data-original-renderer=true]"),
+    ).toHaveCount(1);
+    await expect(settings).toContainText("選択したモデルを表示中");
+    await settings.getByRole("button", { name: "キャラクターを選び直す", exact: true }).click();
+    await page.getByRole("button", { name: "開始する", exact: true }).click();
+    await expect(page.locator("body")).toHaveAttribute("data-start-count", "3");
+    await expect(page.locator("#configurationDialog")).not.toBeVisible();
+    await expect(
+        page.locator("#sincroCharacterBox canvas[data-original-renderer=true]"),
+    ).toHaveCount(1);
 });

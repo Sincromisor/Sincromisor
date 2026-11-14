@@ -28,6 +28,8 @@ vi.mock("../../controller/sincroController", () => ({
 }));
 vi.mock("../../../character/scene/vrmScene", () => ({
     VRMScene: class {
+        readonly ready = Promise.resolve();
+        async replaceVrm() {}
         constructor(options: unknown) {
             sceneOptions(options);
         }

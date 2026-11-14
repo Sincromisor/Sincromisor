@@ -1,8 +1,8 @@
 // reason: structure-threshold-exception VRM読込と毎フレーム制御の所有を保つ。URL利用期間は読込境界に閉じ、選択側の所有管理は別層へ委ねる。
-import { type VRM, VRMLoaderPlugin, VRMMetaLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
+import { type VRM, VRMUtils } from "@pixiv/three-vrm";
 import type { Object3D, Scene } from "three";
 import { Timer, Vector3 } from "three";
-import { type GLTF, GLTFLoader, type GLTFParser } from "three/examples/jsm/loaders/GLTFLoader.js";
+import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { frontendLogger } from "../../shared/logging/appLogger";
 import { toMinimalAvatarMotionProfile } from "../avatarProfile/avatarMotionProfileClone";
 import type { AvatarMotionProfile } from "../avatarProfile/avatarMotionProfileTypes";
@@ -10,10 +10,10 @@ import {
     type CharacterBehaviorSnapshot,
     CharacterBehaviorState,
 } from "../behavior/characterBehaviorState";
-import { EyeBehaviorController } from "../behavior/eyeBehaviorController";
-import { FaceEmotionController } from "../behavior/faceEmotionController";
-import { FaceMorphController } from "../behavior/faceMorphController";
-import { HeadBoneController } from "../behavior/headBoneController";
+import type { EyeBehaviorController } from "../behavior/eyeBehaviorController";
+import type { FaceEmotionController } from "../behavior/faceEmotionController";
+import type { FaceMorphController } from "../behavior/faceMorphController";
+import type { HeadBoneController } from "../behavior/headBoneController";
 import { SincroFaceRetargeter } from "../retargeting/sincroFaceRetargeter";
 import {
     type SincroPoseRetargetConfig,
@@ -25,16 +25,18 @@ import {
     SincroVrmPoseComposerService,
 } from "../runtime/sincroVrmPoseComposer";
 import type { VRMCamera } from "../scene/vrmCamera";
-import { ArmBoneController } from "./armBoneController";
+import type { ArmBoneController } from "./armBoneController";
 import type { CharacterMotionTuning } from "./characterMotionConfig";
-import { CharacterRootStabilizer } from "./characterRootStabilizer";
-import { LegBoneController } from "./legBoneController";
+import type { CharacterRootStabilizer } from "./characterRootStabilizer";
+import type { LegBoneController } from "./legBoneController";
 import {
     applyFullNormalizedPoseApplication,
     type FullNormalizedPoseApplicationResult,
 } from "./normalizedPoseWriter";
 import type { VRMDiagnostics } from "./vrmDiagnostics";
 import { applyInitialUpperBodyFraming } from "./vrmInitialUpperBodyFraming";
+import { loadVrmModel } from "./vrmModelLoader";
+import { createVrmModelRuntime } from "./vrmModelRuntime";
 
 /** VRM読込・表示設定と、呼び出し側が所有する任意の診断通知先。 */
 export type VRMCharacterManagerOptions = {
@@ -44,7 +46,11 @@ export type VRMCharacterManagerOptions = {
     vrmUrl: string;
     /** 読込終端で呼ぶ冪等な終了通知を返す。外部URLの場合は省略できる。 */
     retainVrmUrl?: (url: string) => () => void;
-    onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | undefined) => void;
+    onThumbnailLoaded?: (
+        thumbnailImage: HTMLImageElement | undefined,
+        isCurrent: () => boolean,
+    ) => void;
+    loadSignal?: AbortSignal;
     enableInitialUpperBodyFraming?: boolean;
 };
 
@@ -72,16 +78,22 @@ export class VRMCharacterManager {
     private rootBone?: Object3D;
     private readonly behaviorState: CharacterBehaviorState;
     private readonly sincroFaceRetargeter = new SincroFaceRetargeter();
-    private readonly sincroPoseRetargeter = new SincroPoseRetargeter();
-    private readonly poseComposer = new SincroVrmPoseComposerService();
+    private sincroPoseRetargeter = new SincroPoseRetargeter();
+    private poseConfig: Partial<SincroPoseRetargetConfig> = {};
+    private motionTuning: Partial<CharacterMotionTuning> = {};
+    private poseComposer = new SincroVrmPoseComposerService();
     private latestBehaviorSnapshot?: CharacterBehaviorSnapshot;
     private motionElapsedSeconds = 0;
     // VRMロード完了後、UI層へthumbnailImageを通知するためのフック。
-    private readonly onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | undefined) => void;
+    private readonly onThumbnailLoaded?: VRMCharacterManagerOptions["onThumbnailLoaded"];
     private readonly diagnostics?: VRMDiagnostics;
     private readonly enableInitialUpperBodyFraming: boolean;
     private visible: boolean = true;
     private readonly retainVrmUrl?: (url: string) => () => void;
+    private loadGeneration = 0;
+    private activeUrl?: string;
+    /** 初回読込の結果。再試行と交換はreplaceVrmへ渡す。 */
+    readonly ready: Promise<void>;
 
     constructor(options: VRMCharacterManagerOptions) {
         this.diagnostics = options.diagnostics;
@@ -91,135 +103,85 @@ export class VRMCharacterManager {
         this.retainVrmUrl = options.retainVrmUrl;
         this.enableInitialUpperBodyFraming = options.enableInitialUpperBodyFraming ?? false;
         this.behaviorState = CharacterBehaviorState.getManager();
-        this.load(options.vrmUrl);
+        this.ready = this.replaceVrm(options.vrmUrl, options.loadSignal);
+        // 初回失敗はreplaceVrmで記録済み。readyを待たない診断ページでも未処理拒否にしない。
+        void this.ready.catch(() => undefined);
     }
 
-    /** URLを読込終端まで保持し、成功処理内の例外も含めて選択所有者へ利用終了を返す。 */
-    private load(url: string): void {
+    /**
+     * 同一モデルは再利用し、現在の開始世代で準備できた候補だけを既存シーンへ反映する。
+     * 読込・準備失敗はrejectし、旧モデルを保持する。旧世代や取消し済みの候補は解放する。
+     */
+    async replaceVrm(url: string, signal?: AbortSignal): Promise<void> {
+        const generation = ++this.loadGeneration;
+        const isCurrent = () => generation === this.loadGeneration && !signal?.aborted;
+        if (!isCurrent()) throw new DOMException("Model loading cancelled", "AbortError");
+        if (url === this.activeUrl) return;
         const releaseUrl = this.retainVrmUrl?.(url);
+        let gltf: GLTF | undefined;
+        let adopted = false;
         try {
-            this.createLoader().load(
-                url,
-                (gltf: GLTF) => {
-                    try {
-                        this.attachLoadedVrm(gltf);
-                        frontendLogger.diagnostic("model", "ready");
-                    } finally {
-                        releaseUrl?.();
-                    }
-                },
-                (progress) => {
-                    frontendLogger.debug("Loading VRM model.", {
-                        percent: 100.0 * (progress.loaded / progress.total),
-                    });
-                },
-                (error) => {
-                    try {
-                        frontendLogger.error("Failed to load VRM model.", { error });
-                        throw Object.assign(new Error("Failed to load VRM model."), {
-                            cause: error,
-                        });
-                    } finally {
-                        releaseUrl?.();
-                    }
-                },
-            );
+            gltf = await loadVrmModel(url);
+            if (!isCurrent()) throw new DOMException("Model loading cancelled", "AbortError");
+            this.attachLoadedVrm(gltf, isCurrent);
+            this.activeUrl = url;
+            adopted = true;
+            frontendLogger.diagnostic("model", "ready");
         } catch (error) {
-            // ローダー生成・要求開始の同期失敗でも、利用登録を残さない。
-            releaseUrl?.();
+            if (gltf && !adopted) VRMUtils.deepDispose(gltf.scene);
+            if (isCurrent()) frontendLogger.error("Failed to load VRM model.", { error });
             throw error;
+        } finally {
+            releaseUrl?.();
         }
     }
 
-    private createLoader(): GLTFLoader {
-        const loader = new GLTFLoader();
-        loader.register((parser: GLTFParser) => {
-            // three-vrmは既定でサムネイルを読まないため、チャットアイコン向けに取得を指定する。
-            return new VRMLoaderPlugin(parser, {
-                metaPlugin: new VRMMetaLoaderPlugin(parser, { needThumbnailImage: true }),
-            });
-        });
-        return loader;
-    }
-
-    private attachLoadedVrm(gltf: GLTF): void {
-        const loadedVrm: unknown = gltf.userData.vrm;
-        if (!isLoadedVrm(loadedVrm)) {
+    private attachLoadedVrm(gltf: GLTF, isCurrent: () => boolean): void {
+        const candidate: unknown = gltf.userData.vrm;
+        if (!isLoadedVrm(candidate))
             throw new Error("Loaded GLTF does not contain a VRM instance.");
-        }
-        this.vrm = loadedVrm;
-        this.initializeVrmControllers(this.vrm);
-        this.optimizeLoadedVrm(gltf);
-        this.captureDefaultRootPosition();
-        this.scene.add(this.vrm.scene);
-        this.vrm.scene.visible = this.visible;
-        if (this.enableInitialUpperBodyFraming) {
-            applyInitialUpperBodyFraming(this.vrm, this.vrmCamera);
-        }
-        // サムネイルはVRM1.0のみ対象。未設定時は呼び出し側でフォールバックさせる。
-        this.onThumbnailLoaded?.(this.getVRMThumbnailImage());
-        this.enableVrmSceneShadows(this.vrm.scene);
-    }
-
-    private initializeVrmControllers(vrm: VRM): void {
-        // 視線/姿勢/表情の更新責務を個別 controller に分け、update() でまとめて進める。
-        this.headBoneController = new HeadBoneController(vrm, this.vrmCamera);
-        this.armBoneController = new ArmBoneController(vrm);
-        this.armBoneController.update(this.motionElapsedSeconds);
-        this.sincroPoseRetargeter.attachVrm(vrm);
-        this.poseComposer.reset();
-        const avatarMotionProfile = this.sincroPoseRetargeter.getAvatarMotionProfile();
-        this.diagnostics?.onAvatarMotionProfile?.(
-            avatarMotionProfile ? toMinimalAvatarMotionProfile(avatarMotionProfile) : undefined,
-        );
-        this.legBoneController = new LegBoneController(vrm);
-        this.legBoneController.update(this.motionElapsedSeconds);
-        this.rootStabilizer = new CharacterRootStabilizer(
-            vrm.humanoid.getNormalizedBoneNode("hips") ?? undefined,
-        );
-        if (vrm.expressionManager) {
-            this.mouthMorphController = new FaceMorphController(vrm.expressionManager);
-            this.emotionMorphController = new FaceEmotionController(
-                vrm.expressionManager,
-                this.diagnostics?.onEmotionLog,
-            );
-            this.eyeBehaviorController = new EyeBehaviorController(vrm, vrm.expressionManager);
-        }
-    }
-
-    private optimizeLoadedVrm(gltf: GLTF): void {
-        if (!this.vrm) {
-            return;
-        }
+        // 候補側の変換器と合成器も新規に作り、準備失敗で旧モデルの内部状態を壊さない。
+        const next = createVrmModelRuntime({
+            vrm: candidate,
+            camera: this.vrmCamera,
+            config: this.poseConfig,
+            tuning: this.motionTuning,
+            elapsedSeconds: this.motionElapsedSeconds,
+            diagnostics: this.diagnostics,
+        });
         VRMUtils.removeUnnecessaryVertices(gltf.scene);
         VRMUtils.combineSkeletons(gltf.scene);
-        VRMUtils.combineMorphs(this.vrm);
-    }
-
-    private captureDefaultRootPosition(): void {
-        if (!this.vrm) {
-            return;
-        }
-        // キャラクター全体の配置調整は hips 基準で扱う。
-        // Looking Glass / simple-vrm の位置合わせ時もここが基準点になる。
-        this.rootBone = this.vrm.humanoid.getNormalizedBoneNode("hips") ?? undefined;
-        if (this.rootBone) {
-            this.defaultPosition = this.rootBone.position.clone();
-        }
-    }
-
-    private enableVrmSceneShadows(scene: Object3D): void {
-        scene.traverse((obj: Object3D) => {
-            obj.castShadow = true;
+        VRMUtils.combineMorphs(candidate);
+        candidate.scene.visible = this.visible;
+        candidate.scene.traverse((object) => {
+            object.castShadow = true;
         });
-    }
-
-    private getVRMThumbnailImage(): HTMLImageElement | undefined {
-        // VRM0.xはthumbnailImageではなくtexture運用のため、本実装では対象外とする。
-        if (this.vrm?.meta.metaVersion !== "1") {
-            return undefined;
+        const profile = next.sincroPoseRetargeter.getAvatarMotionProfile();
+        this.diagnostics?.onAvatarMotionProfile?.(
+            profile ? toMinimalAvatarMotionProfile(profile) : undefined,
+        );
+        const thumbnail =
+            candidate.meta.metaVersion === "1"
+                ? (candidate.meta.thumbnailImage ?? undefined)
+                : undefined;
+        let adopted = false;
+        // 採用後の画像は要求世代ではなく表示中モデルへ結び、同一モデル再開始でも有効に保つ。
+        const thumbnailIsCurrent = () => (adopted ? this.vrm === candidate : isCurrent());
+        this.onThumbnailLoaded?.(thumbnail, thumbnailIsCurrent);
+        if (!isCurrent()) throw new DOMException("Model loading cancelled", "AbortError");
+        if (this.enableInitialUpperBodyFraming)
+            applyInitialUpperBodyFraming(candidate, this.vrmCamera);
+        const previous = this.vrm;
+        this.scene.add(candidate.scene);
+        Object.assign(this, next);
+        adopted = true;
+        this.motionSeries = undefined;
+        this.lastMotionTimeMs = undefined;
+        // 交換が成功するまで旧シーンと制御を保持し、その後だけ旧GPU資源を解放する。
+        if (previous) {
+            this.scene.remove(previous.scene);
+            VRMUtils.deepDispose(previous.scene);
         }
-        return this.vrm.meta.thumbnailImage ?? undefined;
     }
 
     /** 対話状態から姿勢を合成し、頭部・表情、最終姿勢、脚、VRM内部更新、腰の復元の順に反映する。 */
@@ -323,6 +285,7 @@ export class VRMCharacterManager {
     }
 
     setMotionTuning(tuning: Partial<CharacterMotionTuning>): void {
+        this.motionTuning = { ...this.motionTuning, ...tuning };
         this.eyeBehaviorController?.setTuning(tuning);
     }
 
@@ -331,6 +294,7 @@ export class VRMCharacterManager {
      * VRMの姿勢や表情への書き込みは毎フレームの更新処理に委ねる。
      */
     setSincroPoseRetargetConfig(config: Partial<SincroPoseRetargetConfig>): void {
+        this.poseConfig = { ...this.poseConfig, ...config };
         this.sincroPoseRetargeter.setConfig(config);
     }
 

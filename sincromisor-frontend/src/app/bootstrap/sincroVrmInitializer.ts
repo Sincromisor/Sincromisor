@@ -1,8 +1,8 @@
 import { VRMScene } from "../../character/scene/vrmScene";
 import { UserMediaManager } from "../../features/media/userMedia/userMediaManager";
-import { frontendLogger } from "../../shared/logging/appLogger";
 import { SincroAppController, type SincroAppSettingsSnapshot } from "../controller";
 import type { SincroSettingsPage } from "../settings/sincroAppSettingsPersistence";
+import { SincroVrmThumbnailController } from "./sincroVrmThumbnailController";
 
 /** Reactが配置済みの描画領域と操作領域。初期化処理はDOM探索を行わない。 */
 export type SincroVRMRoots = {
@@ -15,9 +15,9 @@ export class SincroVRMInitializer {
     protected readonly charCanvas: HTMLDivElement;
     protected readonly characterControlLayer: HTMLDivElement;
     protected readonly appController: SincroAppController;
-    // 自前生成したblob URLのみ解放対象として保持する。
-    private generatedSystemIconURL?: string;
-    private appUiStarted = false;
+    private readonly thumbnails: SincroVrmThumbnailController;
+    private selectionWasPending = true;
+    private displayedVrmUrl?: string;
     private initialized = false;
     protected activeScene?: VRMScene;
     protected readonly settingsPage: SincroSettingsPage = "simple-vrm";
@@ -41,6 +41,7 @@ export class SincroVRMInitializer {
         this.charCanvas = roots.canvasRoot;
         this.characterControlLayer = roots.characterControlLayer;
         this.appController = new SincroAppController();
+        this.thumbnails = new SincroVrmThumbnailController(this.appController);
         // startup toggles のページごとの有効性を先に知らせ、React UI の「未対応項目表示」に反映する。
         // simple-vrm 現行実装では startup toggles の Talk/Inspector/VR は scene初期化へ未接続。
         this.appController.setStartupSettingsCapabilities({
@@ -49,14 +50,12 @@ export class SincroVRMInitializer {
             enableVR: false,
         });
         this.appController.setStartHooks({
-            prepareStart: () => this.appController.dialog.waitForVrmSelection(),
+            prepareStart: (signal) => this.prepareStart(signal),
+            onRelease: () => this.thumbnails.release(),
             beforeStart: () => {
                 if (!this.initialized) throw new Error("VRM page is not initialized.");
             },
-            afterStart: () => {
-                // scene 起動や dialog close は RTC 開始後の副作用として hook 側へ寄せる。
-                this.startUiSideEffectsOnce();
-            },
+            afterStart: () => this.appController.dialog.close(),
         });
     }
 
@@ -82,7 +81,7 @@ export class SincroVRMInitializer {
 
     private initializePageBindings(): void {
         // VRMロード完了前でも、前回キャッシュ済みのアイコンを即座に表示する。
-        this.loadCachedSystemIcon();
+        this.thumbnails.restoreCached();
         this.appController.debug.setRTCStopButtonEventListener(() => {
             this.appController.rtc.stop();
         });
@@ -105,39 +104,40 @@ export class SincroVRMInitializer {
         }
     }
 
-    private loadCachedSystemIcon(): void {
-        // VRMロード完了前でもチャット system icon を出せるよう、キャッシュ済みサムネイルを先に復元する。
-        this.appController.dialog
-            .loadVrmThumbnailBlob()
-            .then((blob: Blob | undefined) => {
-                if (!blob) {
-                    return;
-                }
-                const iconURL = URL.createObjectURL(blob);
-                this.applySystemIcon(iconURL);
-            })
-            .catch((error) => {
-                frontendLogger.warn("Failed to load cached VRM thumbnail.", { error });
-            });
-    }
-
-    /** 初回だけシーンを生成し、会話を書き込まず開始前ダイアログを閉じる。 */
-    private startUiSideEffectsOnce(): void {
-        if (this.appUiStarted) {
-            return;
+    /** 保存確定とモデル反映を待ち、取消し・失敗後はダイアログと機器を開始しない。 */
+    private async prepareStart(signal: AbortSignal): Promise<void> {
+        await this.appController.dialog.waitForVrmSelection();
+        if (signal.aborted) return;
+        if (!this.initialized) throw new Error("VRM page is not initialized.");
+        if (!this.appController.dialog.isCharacterEnabled()) return;
+        const url = this.appController.dialog.getSelectedVrmUrl();
+        this.appController.dialog.setVrmModelStatus("選択したモデルを読み込んでいます");
+        if (signal.aborted) return;
+        try {
+            if (!this.activeScene) {
+                const scene = this.initializeSincroScene(signal);
+                await scene.ready;
+            } else {
+                await this.activeScene.replaceVrm(url, signal);
+            }
+            if (signal.aborted) return;
+            this.displayedVrmUrl = url;
+            this.appController.dialog.setVrmModelStatus("選択したモデルを表示中");
+        } catch (error) {
+            if (!signal.aborted) {
+                this.appController.dialog.setVrmModelStatus(
+                    this.displayedVrmUrl
+                        ? "選択したモデルを反映できませんでした。前のモデルを表示しています。「開始する」で再試行できます"
+                        : "キャラクターを表示できませんでした。別のVRMを選ぶか「開始する」で再試行できます",
+                );
+            }
+            throw error;
         }
-        // Character 無効時は scene を起動せず、RTC/UI だけ動かせる構成にしている。
-        if (this.appController.dialog.isCharacterEnabled()) {
-            this.initializeSincroScene();
-        }
-
-        this.appController.dialog.close();
-        this.appUiStarted = true;
     }
 
     /** ページ固有のシーンを開始し、保持した現在設定を初回描画へ渡す。 */
-    protected initializeSincroScene(): VRMScene {
-        const vrmScene = this.createScene();
+    protected initializeSincroScene(signal?: AbortSignal): VRMScene {
+        const vrmScene = this.createScene(signal);
         vrmScene.start();
         this.activeScene = vrmScene;
         vrmScene.setSincroPoseRetargetConfig(this.appController.pose.getConfig());
@@ -146,94 +146,40 @@ export class SincroVRMInitializer {
     }
 
     /** 通常ページはXRを無効にし、初期表示を上半身構図にする。開始と設定接続は基底が担う。 */
-    protected createScene(): VRMScene {
+    protected createScene(signal?: AbortSignal): VRMScene {
         // scene 初期値（VRM URL）は dialog bridge 経由で取得し、DialogManager 実装に直接依存しない。
         const vrmScene: VRMScene = new VRMScene({
             diagnostics: this.appController.debug.vrmDiagnostics,
             canvasRoot: this.charCanvas,
             characterControlLayer: this.characterControlLayer,
             vrmUrl: this.appController.dialog.getSelectedVrmUrl(),
+            loadSignal: signal,
             retainVrmUrl: (url) => this.appController.dialog.retainVrmUrl(url),
             xrMode: false,
-            onThumbnailLoaded: (thumbnailImage) => {
-                this.updateSystemIconFromThumbnail(thumbnailImage);
+            onThumbnailLoaded: (thumbnailImage, isCurrent) => {
+                this.updateSystemIconFromThumbnail(thumbnailImage, isCurrent);
             },
             enableInitialUpperBodyFraming: true,
         });
         return vrmScene;
     }
 
-    /** サムネイルを保存し、生成したURLでチャットのアイコンを更新する。保存失敗でも表示を継続する。 */
-    protected updateSystemIconFromThumbnail(thumbnailImage: HTMLImageElement | undefined): void {
-        if (!thumbnailImage) {
-            return;
-        }
-
-        const canvas = document.createElement("canvas");
-        const width = positiveDimensionOrDefault(thumbnailImage.naturalWidth, thumbnailImage.width);
-        const height = positiveDimensionOrDefault(
-            thumbnailImage.naturalHeight,
-            thumbnailImage.height,
-        );
-        if (width === 0 || height === 0) {
-            return;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-            return;
-        }
-
-        try {
-            ctx.drawImage(thumbnailImage, 0, 0, width, height);
-        } catch (error) {
-            // cross-origin等でdrawImageが失敗するケースはキャッシュ保存を諦めて表示だけ更新する
-            frontendLogger.warn("Failed to draw VRM thumbnail image.", { error });
-            this.applySystemIcon(thumbnailImage.src);
-            return;
-        }
-
-        canvas.toBlob((blob: Blob | null) => {
-            if (!blob) {
-                // Blob化できない環境ではキャッシュなしでそのまま表示する。
-                this.applySystemIcon(thumbnailImage.src);
-                return;
-            }
-            // 次回起動で即復元できるよう、チャット用サムネイルを dialog 側キャッシュへ保存する。
-            this.appController.dialog.saveVrmThumbnailBlob(blob).catch((error) => {
-                frontendLogger.warn("Failed to cache VRM thumbnail.", { error });
-            });
-            const iconURL = URL.createObjectURL(blob);
-            this.applySystemIcon(iconURL);
-        }, "image/png");
-    }
-
-    /** 以前の生成URLを解放してチャットのアイコンだけを差し替える。 */
-    protected applySystemIcon(iconURL: string): void {
-        // 差し替えを繰り返してもblob URLがリークしないように先に解放する。
-        this.revokeGeneratedSystemIconURL();
-        if (iconURL.startsWith("blob:")) {
-            this.generatedSystemIconURL = iconURL;
-        }
-
-        // ヘッダー左上は透過背景前提の見た目崩れがあるため更新対象外にし、
-        // チャット内 system アイコンだけを更新する。
-        this.appController.chat.setSystemIcon(iconURL);
-    }
-
-    private revokeGeneratedSystemIconURL(): void {
-        if (!this.generatedSystemIconURL) {
-            return;
-        }
-        URL.revokeObjectURL(this.generatedSystemIconURL);
-        this.generatedSystemIconURL = undefined;
+    /** モデル読込世代とサムネイル世代の両方が有効な画像だけを反映する。 */
+    protected updateSystemIconFromThumbnail(
+        image: HTMLImageElement | undefined,
+        isCurrent: () => boolean,
+    ): void {
+        this.thumbnails.update(image, isCurrent);
     }
 
     /** 起動後の通常設定を生成済みシーンへ通知する。生成前の通知は初回接続時に補う。 */
     protected bindRuntimeSettingsSync(): void {
         this.appController.subscribe((event) => {
+            if (event.type === "dialog_vrm_ui_state") {
+                const pending = event.uiState.isSelectionPending;
+                if (pending && !this.selectionWasPending) this.thumbnails.invalidate();
+                this.selectionWasPending = pending;
+            }
             if (event.type !== "settings_snapshot") {
                 return;
             }
@@ -257,8 +203,4 @@ export class SincroVRMInitializer {
             eyeTrackingScale: settings.characterEyeTrackingScale,
         });
     }
-}
-
-function positiveDimensionOrDefault(...values: number[]): number {
-    return values.find((value) => value > 0) ?? 0;
 }

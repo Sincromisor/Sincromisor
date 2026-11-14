@@ -13,17 +13,18 @@ export class SincroVRM360Initializer extends SincroVRMInitializer {
     };
 
     /** XRとLooking Glassの開始導線を備えたシーンを生成し、共通開始へ返す。 */
-    protected override createScene(): VRM360Scene {
+    protected override createScene(signal?: AbortSignal): VRM360Scene {
         // 360 ページも VRM サムネイル生成/保存フローは base と同じ callback を使う。
         const vrmScene: VRM360Scene = new VRM360Scene({
             diagnostics: this.appController.debug.vrmDiagnostics,
             canvasRoot: this.charCanvas,
             characterControlLayer: this.characterControlLayer,
             vrmUrl: this.appController.dialog.getSelectedVrmUrl(),
+            loadSignal: signal,
             retainVrmUrl: (url) => this.appController.dialog.retainVrmUrl(url),
             xrMode: true,
-            onThumbnailLoaded: (thumbnailImage) => {
-                this.updateSystemIconFromThumbnail(thumbnailImage);
+            onThumbnailLoaded: (thumbnailImage, isCurrent) => {
+                this.updateSystemIconFromThumbnail(thumbnailImage, isCurrent);
             },
         });
         // VRM1.0系から Looking Glass を起動する入口。Babylon legacy を経由しない。

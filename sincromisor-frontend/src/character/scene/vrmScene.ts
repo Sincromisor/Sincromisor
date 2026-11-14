@@ -18,7 +18,11 @@ export type VRMSceneOptions = {
     /** 選択所有者から取得する読込中のURL保持。終了通知はモデル読込側が必ず返す。 */
     retainVrmUrl?: (url: string) => () => void;
     xrMode?: boolean;
-    onThumbnailLoaded?: (thumbnailImage: HTMLImageElement | undefined) => void;
+    onThumbnailLoaded?: (
+        thumbnailImage: HTMLImageElement | undefined,
+        isCurrent: () => boolean,
+    ) => void;
+    loadSignal?: AbortSignal;
     enableInitialUpperBodyFraming?: boolean;
 };
 
@@ -59,6 +63,7 @@ export class VRMScene {
             vrmUrl: options.vrmUrl,
             retainVrmUrl: options.retainVrmUrl,
             onThumbnailLoaded: options.onThumbnailLoaded,
+            loadSignal: options.loadSignal,
             enableInitialUpperBodyFraming: options.enableInitialUpperBodyFraming,
         });
 
@@ -88,6 +93,16 @@ export class VRMScene {
             this.renderer.xr.enabled = true;
             this.checkXRSupport();
         }
+    }
+
+    /** 初回モデルの読込・反映結果。シーンとレンダラーの寿命とは分離する。 */
+    get ready(): Promise<void> {
+        return this.vrmCharacterManager.ready;
+    }
+
+    /** 同じ描画資源を保ち、モデルとモデル固有制御だけを交換する。 */
+    replaceVrm(url: string, signal?: AbortSignal): Promise<void> {
+        return this.vrmCharacterManager.replaceVrm(url, signal);
     }
 
     /** 継続描画の予約とXR切替はレンダラーが所有し、通常起動だけ即時に初回描画する。 */

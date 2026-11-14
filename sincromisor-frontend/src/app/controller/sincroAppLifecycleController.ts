@@ -38,6 +38,7 @@ export class SincroAppLifecycleController {
     /** 待機中の開始だけを無効化する世代。選択側の共有復元・保存は継続する。 */
     private startGeneration = 0;
     private preparing = false;
+    private preparationAbort?: AbortController;
 
     constructor(private readonly deps: LifecycleDependencies) {}
 
@@ -64,20 +65,24 @@ export class SincroAppLifecycleController {
         }
         if (this.deps.isReleased() || this.state === "starting" || this.state === "running") return;
         const generation = ++this.startGeneration;
+        const preparationAbort = new AbortController();
+        this.preparationAbort = preparationAbort;
         this.preparing = true;
         this.notify("starting");
         if (generation !== this.startGeneration || this.deps.isReleased()) return;
         let preparation: Promise<void> | undefined;
         try {
-            preparation = this.hooks.prepareStart?.();
+            preparation = this.hooks.prepareStart?.(preparationAbort.signal);
         } catch (error) {
             this.preparing = false;
+            preparationAbort.abort();
             this.notify("stopped");
             throw error;
         }
-        if (generation !== this.startGeneration || this.deps.isReleased()) return;
         if (!preparation) {
+            if (generation !== this.startGeneration || this.deps.isReleased()) return;
             this.preparing = false;
+            this.preparationAbort = undefined;
             this.startPrepared();
             return;
         }
@@ -85,11 +90,13 @@ export class SincroAppLifecycleController {
             .then(() => {
                 if (generation !== this.startGeneration || this.deps.isReleased()) return;
                 this.preparing = false;
+                this.preparationAbort = undefined;
                 this.startPrepared();
             })
             .catch((error) => {
                 if (generation !== this.startGeneration || this.deps.isReleased()) return;
                 this.preparing = false;
+                preparationAbort.abort();
                 this.notify("stopped");
                 frontendLogger.error("Failed to start prepared VRM page.", { error });
             });
@@ -162,9 +169,22 @@ export class SincroAppLifecycleController {
         }
     }
 
+    /** 選択変更・アプリ解除は準備中の開始だけを取り消し、既存の機器範囲を変えない。 */
+    cancelPendingStart(): void {
+        if (this.cancelPreparingStart()) this.notify("stopped");
+    }
+
+    /** 所有アプリの解除時に、開始継続と初期化処理の遅延結果を無効にする。 */
+    release(): void {
+        this.cancelPendingStart();
+        this.hooks.onRelease?.();
+    }
+
     /** 機器未使用時の早期終了より先に、後着する開始継続だけを無効化する。 */
     private cancelPreparingStart(): boolean {
         ++this.startGeneration;
+        this.preparationAbort?.abort();
+        this.preparationAbort = undefined;
         if (!this.preparing) return false;
         this.preparing = false;
         return true;

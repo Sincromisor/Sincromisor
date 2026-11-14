@@ -29,6 +29,7 @@ export function VrmModelSection({ onOpenFilePicker, uiState }: VrmModelSectionPr
             <div id={statusId} role="status">
                 {uiState.vrmStatusText}
             </div>
+            {uiState.modelStatusText ? <div role="status">{uiState.modelStatusText}</div> : null}
             {uiState.isDragOver ? <div>ここにドロップ</div> : null}
         </section>
     );

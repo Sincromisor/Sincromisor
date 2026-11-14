@@ -31,6 +31,9 @@ function CurrentCharacter() {
     return (
         <>
             <SettingsHint>{dialogVrmUiState.vrmStatusText}</SettingsHint>
+            {dialogVrmUiState.modelStatusText ? (
+                <SettingsHint>{dialogVrmUiState.modelStatusText}</SettingsHint>
+            ) : null}
             <SettingsButton
                 type="button"
                 disabled={!currentController}

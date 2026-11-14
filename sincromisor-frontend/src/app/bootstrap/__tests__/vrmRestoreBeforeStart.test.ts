@@ -3,7 +3,9 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const restoredBlob = new Blob(["restored"]);
 const selectedBlob = new Blob(["new"]);
 
-const { coreStart, sceneOptions } = vi.hoisted(() => ({
+const { coreStart, sceneOptions, sceneReplace, sceneReadiness } = vi.hoisted(() => ({
+    sceneReplace: vi.fn(async (_url: string, _signal?: AbortSignal) => {}),
+    sceneReadiness: { promise: undefined as Promise<void> | undefined },
     coreStart: vi.fn(),
     sceneOptions: vi.fn(),
 }));
@@ -20,6 +22,12 @@ vi.mock("../../controller/sincroController", () => ({
 }));
 vi.mock("../../../character/scene/vrmScene", () => ({
     VRMScene: class {
+        get ready() {
+            return sceneReadiness.promise ?? Promise.resolve();
+        }
+        replaceVrm(url: string, signal?: AbortSignal) {
+            return sceneReplace(url, signal);
+        }
         constructor(options: unknown) {
             sceneOptions(options);
         }
@@ -48,6 +56,8 @@ beforeEach(() => {
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
     coreStart.mockClear();
     sceneOptions.mockClear();
+    sceneReplace.mockReset().mockResolvedValue();
+    sceneReadiness.promise = undefined;
     vi.stubGlobal(
         "window",
         Object.assign(new EventTarget(), {
@@ -237,5 +247,147 @@ it("開始準備の同期例外は停止状態へ戻り、再試行できる", a
     app.setStartHooks({});
     app.start();
     expect(coreStart).toHaveBeenCalledOnce();
+    unsubscribe();
+});
+
+async function startRestored() {
+    const state = await setup();
+    state.restoring.resolve({ vrmBlob: restoredBlob, statusText: "復元済み" });
+    state.app.start();
+    await vi.waitFor(() => expect(coreStart).toHaveBeenCalledOnce());
+    return state;
+}
+async function chooseReplacement(state: Awaited<ReturnType<typeof setup>>) {
+    state.selection.mockResolvedValue({
+        ok: true,
+        vrmBlob: selectedBlob,
+        statusText: "選択中: B.vrm",
+        popMessage: "更新済み",
+    });
+    state.app.dialog.applySelectedVrmFile(new File(["B"], "B.vrm"));
+    await state.app.dialog.waitForVrmSelection();
+}
+
+it("同じモデルでの再開始はシーンを増やさず、毎回ダイアログを閉じる", async () => {
+    const { app } = await startRestored();
+    expect(app.getDialogUiState().isOpen).toBe(false);
+    app.stopRTC();
+    app.dialog.open();
+    app.start();
+    await vi.waitFor(() => expect(coreStart).toHaveBeenCalledTimes(2));
+    expect(sceneOptions).toHaveBeenCalledOnce();
+    expect(app.getDialogUiState().isOpen).toBe(false);
+});
+
+it("別モデルの交換成功を待ち、失敗時はダイアログを保持して同じ選択を再試行する", async () => {
+    const state = await startRestored();
+    const { app } = state;
+    app.stopRTC();
+    app.dialog.open();
+    await chooseReplacement(state);
+    const replacing = deferred<void>();
+    sceneReplace.mockReturnValueOnce(replacing.promise);
+    app.start();
+    await vi.waitFor(() => expect(sceneReplace).toHaveBeenCalledOnce());
+    expect(app.getDialogUiState().isOpen).toBe(true);
+    expect(coreStart).toHaveBeenCalledOnce();
+    replacing.reject(new Error("replacement failed"));
+    await vi.waitFor(() =>
+        expect(app.getDialogVrmUiState().modelStatusText).toContain("前のモデル"),
+    );
+    expect(app.getDialogUiState().isOpen).toBe(true);
+    app.start();
+    await vi.waitFor(() => expect(coreStart).toHaveBeenCalledTimes(2));
+    expect(app.getDialogUiState().isOpen).toBe(false);
+    expect(app.getDialogVrmUiState().modelStatusText).toBe("選択したモデルを表示中");
+    expect(sceneOptions).toHaveBeenCalledOnce();
+    expect(sceneReplace).toHaveBeenLastCalledWith("blob:new", expect.any(AbortSignal));
+});
+
+it("初回Character無効から有効にした再開始で初めてシーンを生成する", async () => {
+    const { app, restoring } = await setup();
+    app.applySettings({ enableCharacter: false });
+    restoring.resolve({ statusText: "既定モデル" });
+    app.start();
+    await vi.waitFor(() => expect(coreStart).toHaveBeenCalledOnce());
+    expect(sceneOptions).not.toHaveBeenCalled();
+    app.stopRTC();
+    app.dialog.open();
+    app.applySettings({ enableCharacter: true });
+    app.start();
+    await vi.waitFor(() => expect(coreStart).toHaveBeenCalledTimes(2));
+    expect(sceneOptions).toHaveBeenCalledOnce();
+    expect(app.getDialogUiState().isOpen).toBe(false);
+});
+
+it.each(["stop", "end", "release"])(
+    "モデル読込中の%s後はダイアログと機器を開始しない",
+    async (operation) => {
+        const { app, restoring } = await setup();
+        const loading = deferred<void>();
+        sceneReadiness.promise = loading.promise;
+        restoring.resolve({ statusText: "既定モデル" });
+        app.start();
+        await vi.waitFor(() => expect(sceneOptions).toHaveBeenCalledOnce());
+        const signal = sceneOptions.mock.calls[0]?.[0].loadSignal as AbortSignal;
+        if (operation === "stop") app.stopRTC();
+        else if (operation === "end") app.endExperience();
+        else app.releaseEventSubscriptions();
+        expect(signal.aborted).toBe(true);
+        loading.resolve();
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        expect(coreStart).not.toHaveBeenCalled();
+        expect(app.getDialogUiState().isOpen).toBe(true);
+    },
+);
+
+it("モデル読込中の選択変更は旧開始を取り消し、新しい開始だけを完了させる", async () => {
+    const state = await startRestored();
+    const { app } = state;
+    app.stopRTC();
+    app.dialog.open();
+    await chooseReplacement(state);
+    const old = deferred<void>();
+    sceneReplace.mockReturnValueOnce(old.promise);
+    app.start();
+    await vi.waitFor(() => expect(sceneReplace).toHaveBeenCalledOnce());
+    const oldSignal = sceneReplace.mock.calls[0]?.[1];
+    await chooseReplacement(state);
+    expect(oldSignal?.aborted).toBe(true);
+    app.start();
+    await vi.waitFor(() => expect(coreStart).toHaveBeenCalledTimes(2));
+    old.resolve();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(coreStart).toHaveBeenCalledTimes(2);
+    expect(app.getDialogUiState().isOpen).toBe(false);
+});
+
+it("準備フック内の同期取消し後のPromise失敗も終端購読して未処理拒否にしない", async () => {
+    const { app } = await setup();
+    app.setStartHooks({
+        prepareStart: () => {
+            app.endExperience();
+            return Promise.reject(new Error("cancelled preparation"));
+        },
+    });
+    app.start();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(coreStart).not.toHaveBeenCalled();
+});
+
+it("読込中の同期状態通知で終了した場合はシーンも生成しない", async () => {
+    const { app, restoring } = await setup();
+    const unsubscribe = app.subscribe((event) => {
+        if (
+            event.type === "dialog_vrm_ui_state" &&
+            event.uiState.modelStatusText === "選択したモデルを読み込んでいます"
+        )
+            app.endExperience();
+    });
+    restoring.resolve({ statusText: "既定モデル" });
+    app.start();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(sceneOptions).not.toHaveBeenCalled();
+    expect(coreStart).not.toHaveBeenCalled();
     unsubscribe();
 });

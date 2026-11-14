@@ -11,6 +11,8 @@ export type DialogVrmUiStateValue = {
     /** 復元・保存中は選択を受け付けず、開始も確定結果を待つ。 */
     isSelectionPending: boolean;
     vrmStatusText: string;
+    /** 保存した選択と、現在のモデル反映の違いを案内する。 */
+    modelStatusText?: string;
 };
 
 /** ダイアログの表示とVRM選択だけを保持する。通常設定はアプリ層が所有する。 */
@@ -64,6 +66,11 @@ export class DialogStateStore {
 
     setDialogVrmStatusText(vrmStatusText: string): void {
         this.dialogVrmUiState = { ...this.dialogVrmUiState, vrmStatusText };
+    }
+
+    /** モデル読込の所有者が作る進行・失敗・表示済みの案内を保持する。 */
+    setModelStatusText(modelStatusText: string | undefined): void {
+        this.dialogVrmUiState = { ...this.dialogVrmUiState, modelStatusText };
     }
 
     getSelectedVrmUrl(): string {

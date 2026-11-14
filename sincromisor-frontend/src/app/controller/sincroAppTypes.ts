@@ -22,7 +22,9 @@ export type SincroAppMediaState = {
 
 /** 開始準備を機器・較正より先に待ち、確定後に同期開始の前後処理を行う。 */
 export type SincroAppStartHooks = {
-    prepareStart?: () => Promise<void> | undefined;
+    /** 停止・終了・選択変更・解除で取り消される開始準備。共有保存処理の取消しには使わない。 */
+    prepareStart?: (signal: AbortSignal) => Promise<void> | undefined;
+    onRelease?: () => void;
     beforeStart?: () => void;
     afterStart?: () => void;
 };

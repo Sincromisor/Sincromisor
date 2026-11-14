@@ -1,3 +1,4 @@
+import { VRMUtils } from "@pixiv/three-vrm";
 import { Group, Scene } from "three";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -36,11 +37,13 @@ vi.mock("../../../../character/behavior/characterBehaviorState", () => ({
     CharacterBehaviorState: { getManager: () => ({}) },
 }));
 
-// 読込・attach・サムネイル通知は本番を通し、URL寿命に無関係な骨制御と最適化だけを省く。
-const modelPrototype = VRMCharacterManager.prototype as unknown as {
-    initializeVrmControllers: () => void;
-    optimizeLoadedVrm: () => void;
-};
+// URL寿命に無関係な骨制御だけを代替し、読込・attach・サムネイル通知の境界を通す。
+vi.mock("../../../../character/vrmCharacter/vrmModelRuntime", () => ({
+    createVrmModelRuntime: ({ vrm }: { vrm: unknown }) => ({
+        vrm,
+        sincroPoseRetargeter: { getAvatarMotionProfile: () => undefined },
+    }),
+}));
 
 beforeEach(() => {
     requests.length = 0;
@@ -56,8 +59,9 @@ beforeEach(() => {
     vi.spyOn(DialogNotificationService.prototype, "writeError").mockImplementation(() => {});
     vi.spyOn(DialogNotificationService.prototype, "writePageError").mockImplementation(() => {});
     vi.spyOn(frontendLogger, "error").mockImplementation(() => {});
-    vi.spyOn(modelPrototype, "initializeVrmControllers").mockImplementation(() => {});
-    vi.spyOn(modelPrototype, "optimizeLoadedVrm").mockImplementation(() => {});
+    vi.spyOn(VRMUtils, "removeUnnecessaryVertices").mockImplementation(() => {});
+    vi.spyOn(VRMUtils, "combineSkeletons").mockImplementation(() => {});
+    vi.spyOn(VRMUtils, "combineMorphs").mockImplementation(() => {});
 });
 afterEach(() => {
     vi.restoreAllMocks();
@@ -123,10 +127,12 @@ it("A読込中にBを選んでもAのURLを保ち、読込・attach成功後に�
     expect(requests[0]?.url).toBe("blob:vrm-1");
     expect(URL.revokeObjectURL).not.toHaveBeenCalled();
     requests[0]?.success(loadedModel());
+    await manager.ready;
     expect(manager.vrm).toBeDefined();
     expect(URL.revokeObjectURL).toHaveBeenCalledExactlyOnceWith("blob:vrm-1");
     expect(state.getSelectedVrmUrl()).toBe("blob:vrm-2");
-    expect(() => requests[0]?.failure(new Error("duplicate failure"))).toThrow();
+    requests[0]?.failure(new Error("duplicate failure"));
+    await manager.ready;
     expect(URL.revokeObjectURL).toHaveBeenCalledTimes(1);
 });
 
@@ -138,12 +144,12 @@ it.each(["failure", "abort", "attach", "thumbnail", "sync"])(
         await select(controller, "A.vrm");
         if (outcome === "sync") {
             loaderFailure.value = new Error("loader start failed");
-            expect(() => load(controller, state.getSelectedVrmUrl())).toThrow(
+            await expect(load(controller, state.getSelectedVrmUrl()).ready).rejects.toThrow(
                 "loader start failed",
             );
             await select(controller, "B.vrm");
         } else {
-            load(
+            const manager = load(
                 controller,
                 state.getSelectedVrmUrl(),
                 outcome === "thumbnail"
@@ -154,17 +160,17 @@ it.each(["failure", "abort", "attach", "thumbnail", "sync"])(
             );
             await select(controller, "B.vrm");
             expect(URL.revokeObjectURL).not.toHaveBeenCalled();
-            expect(() => {
-                if (outcome === "attach") requests[0]?.success({ userData: {} } as GLTF);
-                else if (outcome === "thumbnail") requests[0]?.success(loadedModel());
-                else
-                    requests[0]?.failure(
-                        new DOMException(
-                            "loading stopped",
-                            outcome === "abort" ? "AbortError" : "NetworkError",
-                        ),
-                    );
-            }).toThrow();
+
+            if (outcome === "attach") requests[0]?.success({ userData: {} } as GLTF);
+            else if (outcome === "thumbnail") requests[0]?.success(loadedModel());
+            else
+                requests[0]?.failure(
+                    new DOMException(
+                        "loading stopped",
+                        outcome === "abort" ? "AbortError" : "NetworkError",
+                    ),
+                );
+            await expect(manager.ready).rejects.toBeDefined();
         }
         expect(URL.revokeObjectURL).toHaveBeenCalledExactlyOnceWith("blob:vrm-1");
         expect(state.getSelectedVrmUrl()).toBe("blob:vrm-2");
@@ -175,12 +181,14 @@ it("同じURLの複数読込は全利用が終了するまで解放しない", a
     const { state, controller } = setup();
     await controller.loadInitialVrmSelection();
     await select(controller, "A.vrm");
-    load(controller, state.getSelectedVrmUrl());
-    load(controller, state.getSelectedVrmUrl());
+    const first = load(controller, state.getSelectedVrmUrl());
+    const second = load(controller, state.getSelectedVrmUrl());
     await select(controller, "B.vrm");
     requests[0]?.success(loadedModel());
+    await first.ready;
     expect(URL.revokeObjectURL).not.toHaveBeenCalled();
-    expect(() => requests[1]?.failure(new Error("load failed"))).toThrow();
+    requests[1]?.failure(new Error("load failed"));
+    await expect(second.ready).rejects.toThrow("load failed");
     expect(URL.revokeObjectURL).toHaveBeenCalledExactlyOnceWith("blob:vrm-1");
 });
 
@@ -189,9 +197,10 @@ it.each(["/characters/default.vrm", "https://example.test/model.vrm", "blob:exte
     async (url) => {
         const { controller } = setup();
         await controller.loadInitialVrmSelection();
-        load(controller, url);
+        const manager = load(controller, url);
         await select(controller, "A.vrm");
         requests[0]?.success(loadedModel());
+        await manager.ready;
         expect(URL.revokeObjectURL).not.toHaveBeenCalled();
     },
 );
@@ -228,4 +237,23 @@ it("復元の重複要求と復元・保存中の不採用選択からURLを生�
     expect(URL.createObjectURL).toHaveBeenCalledTimes(2);
     expect(state.getSelectedVrmUrl()).toBe("blob:vrm-2");
     expect(URL.revokeObjectURL).toHaveBeenCalledExactlyOnceWith("blob:vrm-1");
+});
+
+it("旧サムネイルの保存終端を待ってからキャッシュを消し、後着保存で旧画像を戻さない", async () => {
+    vi.mocked(DialogVrmFileService.prototype.clearVrmThumbnailCache).mockRestore();
+    let finishPut!: () => void;
+    const writing = new Promise<void>((resolve) => {
+        finishPut = resolve;
+    });
+    const cache = { put: vi.fn(() => writing), delete: vi.fn(async () => true) };
+    vi.stubGlobal("caches", { open: async () => cache });
+    const files = new DialogVrmFileService();
+    const saved = files.saveVrmThumbnailBlob(new Blob(["old thumbnail"]));
+    const cleared = files.clearVrmThumbnailCache();
+    await vi.waitFor(() => expect(cache.put).toHaveBeenCalledOnce());
+    expect(cache.delete).not.toHaveBeenCalled();
+    finishPut();
+    await saved;
+    await cleared;
+    expect(cache.delete).toHaveBeenCalledExactlyOnceWith("sincroVrmThumbnail");
 });

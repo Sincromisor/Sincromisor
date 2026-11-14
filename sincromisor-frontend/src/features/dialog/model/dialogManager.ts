@@ -87,6 +87,11 @@ export class DialogManager {
         return this.vrmStateController.retainVrmUrl(url);
     }
 
+    /** 初期化処理からモデル反映の状態を受け取り、保存された選択と分けて表示する。 */
+    setVrmModelStatus(text: string | undefined): void {
+        this.vrmStateController.setModelStatusText(text);
+    }
+
     /** 利用者のVRM選択開始を購読する。初期復元や状態文言の変更では通知しない。 */
     subscribeVrmSelectionChange(listener: () => void): () => void {
         return this.eventHub.subscribeVrmSelectionChange(listener);

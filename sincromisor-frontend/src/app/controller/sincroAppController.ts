@@ -176,9 +176,10 @@ export class SincroAppController {
         this.pose.applyConfig({ intensityScale: initialSettings.settings.sincroPoseRetargetScale });
         this.eventUnsubscribers.push(this.calibration.connectSettings(runtime.settingsModel));
         this.eventUnsubscribers.push(
-            runtime.dialogManager.subscribeVrmSelectionChange(() =>
-                this.calibration.cancel("vrm_source_changed"),
-            ),
+            runtime.dialogManager.subscribeVrmSelectionChange(() => {
+                this.lifecycle.cancelPendingStart();
+                this.calibration.cancel("vrm_source_changed");
+            }),
         );
         this.eventUnsubscribers.push(runtime.settingsModel.connectMediaDevices());
         this.eventUnsubscribers.push(
@@ -216,6 +217,7 @@ export class SincroAppController {
     releaseEventSubscriptions(): void {
         if (this.released) return;
         this.released = true;
+        this.lifecycle.release();
         this.calibration.cancel("app_released");
         this.runtime.coreController.releaseTrackingSubscriptions();
         for (const unsubscribe of this.eventUnsubscribers.splice(0)) {

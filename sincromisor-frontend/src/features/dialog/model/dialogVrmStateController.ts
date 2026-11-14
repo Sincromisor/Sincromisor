@@ -107,6 +107,7 @@ export class DialogVrmStateController {
         const url = URL.createObjectURL(blob);
         this.ownedUrls.add(url);
         this.stateStore.setSelectedVrmUrl(url);
+        this.stateStore.setModelStatusText("選択したモデルは次の開始で反映します");
         this.releaseUnusedUrl(previous);
     }
 
@@ -115,6 +116,12 @@ export class DialogVrmStateController {
         if ([...this.loadingSelections].some((loading) => loading.url === url)) return;
         // 外部URLや解放済みURLをrevokeしない。GPU資源とCache StorageのBlobは別の所有者が扱う。
         if (this.ownedUrls.delete(url)) URL.revokeObjectURL(url);
+    }
+
+    /** 表示中モデルと選択モデルの反映状態を、保存結果とは別に画面へ通知する。 */
+    setModelStatusText(text: string | undefined): void {
+        this.stateStore.setModelStatusText(text);
+        this.emitCurrentState();
     }
 
     private setPending(pending: boolean): void {

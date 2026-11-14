@@ -51,6 +51,8 @@ export class DialogVrmFileService {
 
     // モデル更新時にキャッシュ不整合を防ぐための明示削除。
     async clearVrmThumbnailCache(): Promise<void> {
+        // 旧モデルの書込みが削除後に戻らないよう、開始済み保存の終端を先に待つ。
+        await Promise.allSettled(DialogVrmFileService.pendingWrites);
         const cache = await caches.open(DialogVrmFileService.fileCacheName);
         await cache.delete(DialogVrmFileService.vrmThumbnailCacheKey);
     }
