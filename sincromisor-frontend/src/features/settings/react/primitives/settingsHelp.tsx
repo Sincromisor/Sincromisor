@@ -14,7 +14,9 @@ export function SettingsHelpTooltip({ label, help, children }: HelpTooltipProps)
     const buttonRef = useRef<HTMLButtonElement>(null);
     const bubbleRef = useRef<HTMLSpanElement>(null);
     const [visible, setVisible] = useState(false);
-    const nativeInterest = "interestForElement" in HTMLButtonElement.prototype;
+    const nativeInterest =
+        typeof HTMLButtonElement !== "undefined" &&
+        "interestForElement" in HTMLButtonElement.prototype;
     useFallbackInterest(nativeInterest, buttonRef, bubbleRef);
     useEffect(() => {
         // モーダルのEscape抑止より先に説明を閉じ、親の設定パネルへ伝播させない。

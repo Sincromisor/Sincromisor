@@ -3,6 +3,14 @@ import { DebugConsoleManager } from "../../../features/debug/model/debugConsoleM
 import { SincroAppController } from "../sincroAppController";
 
 // 機器起動だけを代替し、実際のアプリ窓口・設定正規化・解除を通す。
+// DOMを持たない設定試験では、復元失敗時の画面通知を描画しない。
+vi.mock("../../../features/dialog/model/dialogNotificationService", () => ({
+    DialogNotificationService: class {
+        writeInfo() {}
+        writeError() {}
+        writePageError() {}
+    },
+}));
 vi.mock("../sincroController", () => ({
     SincroController: vi.fn(
         class {

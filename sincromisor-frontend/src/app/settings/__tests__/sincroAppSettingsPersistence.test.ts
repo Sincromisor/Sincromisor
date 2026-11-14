@@ -6,6 +6,14 @@ import {
     sincroSettingsStorageKey,
 } from "../sincroAppSettingsPersistence";
 
+// DOMを持たない設定試験では、復元失敗時の画面通知を描画しない。
+vi.mock("../../../features/dialog/model/dialogNotificationService", () => ({
+    DialogNotificationService: class {
+        writeInfo() {}
+        writeError() {}
+        writePageError() {}
+    },
+}));
 vi.mock("../../controller/sincroController", () => ({
     SincroController: class {
         restoreAudioTuning() {}
